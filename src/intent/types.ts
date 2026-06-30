@@ -224,12 +224,14 @@ export interface AgentResultArtifact {
     componentSemanticChangeCount: number;
     relatedSnapshotAvailable: boolean;
     relatedDiffLineCount: number;
+    relatedSemanticChangeCount: number;
   };
   sourceDiff: string | null;
   semanticDiff: AgentSemanticClassNameDiff | null;
   componentSourceDiff: string | null;
   componentSemanticDiff: AgentSemanticClassNameDiff | null;
   relatedSourceDiff: string | null;
+  relatedSemanticDiff: AgentSemanticClassNameDiff | null;
   metrics: {
     resultMs: number;
   };

@@ -237,6 +237,7 @@ const agentResultRequiredSections = [
   "## Source Diff",
   "## Semantic Intent Diff",
   "## Related Source Diff",
+  "## Related Semantic Intent Diff",
   "## Component Source Diff",
   "## Component Semantic Intent Diff",
   "## Intent Diff"
@@ -668,7 +669,17 @@ const report = {
     componentSourceDiffPresent: readOnlyResult.ok ? Boolean(readOnlyResult.componentSourceDiff) : false,
     relatedSnapshotAvailable: readOnlyResult.ok ? readOnlyResult.source.relatedSnapshotAvailable : false,
     relatedDiffLineCount: readOnlyResult.ok ? readOnlyResult.source.relatedDiffLineCount : 0,
-    relatedSourceDiffPresent: readOnlyResult.ok ? Boolean(readOnlyResult.relatedSourceDiff) : false
+    relatedSourceDiffPresent: readOnlyResult.ok ? Boolean(readOnlyResult.relatedSourceDiff) : false,
+    relatedSemanticChangeCount: readOnlyResult.ok
+      ? readOnlyResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedSemanticDiffPresent: readOnlyResult.ok ? Boolean(readOnlyResult.relatedSemanticDiff) : false,
+    relatedSemanticTokenAddedCount: readOnlyResult.ok
+      ? readOnlyResult.relatedSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedSemanticTokenRemovedCount: readOnlyResult.ok
+      ? readOnlyResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
   },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
@@ -716,6 +727,8 @@ const report = {
       readOnlyResult.source.relatedSnapshotAvailable &&
       readOnlyResult.source.relatedDiffLineCount > 0 &&
       Boolean(readOnlyResult.relatedSourceDiff) &&
+      readOnlyResult.source.relatedSemanticChangeCount > 0 &&
+      Boolean(readOnlyResult.relatedSemanticDiff) &&
       readOnlySyntaxErrorsAfterResult === 0,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch",

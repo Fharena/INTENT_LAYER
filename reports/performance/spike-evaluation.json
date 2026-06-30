@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-30T06:08:27.028Z",
+  "generatedAt": "2026-06-30T06:15:44.912Z",
   "contextPackUsed": true,
   "corpus": {
-    "generatedAt": "2026-06-30T06:08:26.589Z",
+    "generatedAt": "2026-06-30T06:15:44.531Z",
     "filesScanned": 8,
     "classNameOccurrences": 40,
     "classification": {
@@ -480,7 +480,7 @@
     ]
   },
   "aiGeneratedCorpus": {
-    "generatedAt": "2026-06-30T06:08:26.644Z",
+    "generatedAt": "2026-06-30T06:15:44.589Z",
     "filesScanned": 50,
     "classNameOccurrences": 390,
     "classification": {
@@ -536,37 +536,37 @@
         "file": "src/App.tsx",
         "entries": 13,
         "samples": [
-          2.865,
-          0.721,
-          0.738,
-          0.552,
-          0.781
+          4.517,
+          1.239,
+          1.214,
+          0.931,
+          1.181
         ],
-        "averageMs": 1.131,
-        "p95Ms": 2.865,
-        "maxMs": 2.865
+        "averageMs": 1.816,
+        "p95Ms": 4.517,
+        "maxMs": 4.517
       },
       {
         "file": "src/main.tsx",
         "entries": 0,
         "samples": [
-          0.009,
-          0.039,
+          0.01,
+          0.006,
           0.005,
           0.005,
-          0.004
+          0.005
         ],
-        "averageMs": 0.012,
-        "p95Ms": 0.039,
-        "maxMs": 0.039
+        "averageMs": 0.006,
+        "p95Ms": 0.01,
+        "maxMs": 0.01
       }
     ],
-    "averageMs": 0.572,
-    "p95Ms": 2.865,
-    "maxMs": 2.865,
-    "warmAverageMs": 0.356,
-    "warmP95Ms": 0.781,
-    "warmMaxMs": 0.781,
+    "averageMs": 0.911,
+    "p95Ms": 4.517,
+    "maxMs": 4.517,
+    "warmAverageMs": 0.573,
+    "warmP95Ms": 1.239,
+    "warmMaxMs": 1.239,
     "warmTargetMs": 5,
     "coldTargetMs": 10
   },
@@ -577,39 +577,39 @@
     "bytes": 45352,
     "iterations": 5,
     "samples": [
-      14.128,
-      10.461,
-      6.29,
-      8.806,
-      3.21
+      15.749,
+      8.232,
+      6.168,
+      5.282,
+      3.269
     ],
-    "averageMs": 8.579,
-    "p95Ms": 14.128,
-    "maxMs": 14.128,
+    "averageMs": 7.74,
+    "p95Ms": 15.749,
+    "maxMs": 15.749,
     "targetMs": 20,
     "pass": true
   },
   "graphLookupProxy": {
     "iterations": 1000,
-    "totalMs": 0.101,
-    "averageMs": 0.000101,
+    "totalMs": 0.089,
+    "averageMs": 0.000089,
     "note": "This measures id-to-binding graph lookup only, not a real browser click event."
   },
   "patch": {
     "previewOk": true,
-    "previewMs": 1.026,
-    "previewRoundTripMs": 1.438,
+    "previewMs": 1.163,
+    "previewRoundTripMs": 1.633,
     "applyOk": true,
-    "applyMs": 30.465,
+    "applyMs": 25.313,
     "syntaxErrorsAfterPatch": 0,
     "revertOk": true,
-    "revertMs": 24.389,
+    "revertMs": 11.385,
     "syntaxErrorsAfterRevert": 0,
     "staleRejectionOk": true,
     "staleRejectionReason": "source-hash-mismatch",
     "simpleCnClsx": {
       "applyOk": true,
-      "applyMs": 18.576,
+      "applyMs": 7.679,
       "syntaxErrorsAfterPatch": 0,
       "bindingKind": "call-literals",
       "callee": "cn",
@@ -629,17 +629,17 @@
   },
   "agentTask": {
     "ok": true,
-    "taskMs": 9.794,
+    "taskMs": 11.1,
     "sectionsPresent": true,
-    "taskFile": ".intent/agent/task_2026-06-30T06-08-26-846Z.md"
+    "taskFile": ".intent/agent/task_2026-06-30T06-15-44-760Z.md"
   },
   "agentResult": {
     "ok": true,
-    "resultMs": 20.399,
+    "resultMs": 17.432,
     "sectionsPresent": true,
     "filesExist": true,
-    "resultFile": ".intent/agent/result_2026-06-30T06-08-26-854Z.md",
-    "diffFile": ".intent/diffs/2026-06-30T06-08-26-854Z_agent.intent-diff.yml",
+    "resultFile": ".intent/agent/result_2026-06-30T06-15-44-770Z.md",
+    "diffFile": ".intent/diffs/2026-06-30T06-15-44-770Z_agent.intent-diff.yml",
     "sourceHashChanged": true,
     "snapshotAvailable": true,
     "diffLineCount": 2,
@@ -667,7 +667,7 @@
         "entryCreated": true,
         "entryCount": 3,
         "taskOk": true,
-        "taskMs": 2.971,
+        "taskMs": 11.18,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotFunction",
         "markersPresent": true,
@@ -679,7 +679,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 2.803,
+        "taskMs": 3.034,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowBlock",
         "markersPresent": true,
@@ -691,7 +691,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 2.147,
+        "taskMs": 2.31,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowParen",
         "markersPresent": true,
@@ -703,7 +703,7 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 3.218,
+        "taskMs": 2.583,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowJsx",
         "markersPresent": true,
@@ -717,9 +717,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 2.878,
+    "taskMs": 2.467,
     "resultOk": true,
-    "resultMs": 13.861,
+    "resultMs": 8.882,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -727,7 +727,11 @@
     "componentSourceDiffPresent": false,
     "relatedSnapshotAvailable": true,
     "relatedDiffLineCount": 2,
-    "relatedSourceDiffPresent": true
+    "relatedSourceDiffPresent": true,
+    "relatedSemanticChangeCount": 1,
+    "relatedSemanticDiffPresent": true,
+    "relatedSemanticTokenAddedCount": 3,
+    "relatedSemanticTokenRemovedCount": 3
   },
   "gates": {
     "staticEditableTokenCoveragePass": true,
