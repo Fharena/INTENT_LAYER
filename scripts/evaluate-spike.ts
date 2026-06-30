@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { analyzeClassNames } from "./analyze-classnames";
+import { runCli } from "../src/intent/cli";
 import { recordAgentResult } from "../src/intent/agentResult";
 import { createAgentTask } from "../src/intent/agentTask";
 import { instrumentSource } from "../src/intent/instrument";
@@ -967,6 +968,22 @@ const pendingAfterOperationConflictResolve = pendingUndoStackFromOperationLog(ro
 const operationConflictReportAfterResolve = readPatchConflictReport(rootDir);
 const syntaxErrorsAfterOperationConflict = parseSyntaxErrorCount(operationConflictFixture);
 
+const cliScan = runCli(["scan", "fixtures/corpus", "src/App.tsx"], rootDir);
+const cliScanReport = cliScan.report?.command === "scan" ? cliScan.report : null;
+const cliCheck = runCli(
+  [
+    "check",
+    "fixtures/corpus",
+    "src/App.tsx",
+    "--min-supported-direct",
+    "0.5",
+    "--max-file-transform-ms",
+    "20"
+  ],
+  rootDir
+);
+const cliCheckReport = cliCheck.report?.command === "check" ? cliCheck.report : null;
+
 const graphLookupIterations = 1000;
 const graphLookup = new Map(patchInstrument.entries.map((entry) => [entry.id, entry]));
 const lookupStarted = performance.now();
@@ -1028,6 +1045,23 @@ const report = {
     totalMs: Number(graphLookupTotalMs.toFixed(3)),
     averageMs: Number((graphLookupTotalMs / graphLookupIterations).toFixed(6)),
     note: "This measures id-to-binding graph lookup only, not a real browser click event."
+  },
+  cli: {
+    scanExitCode: cliScan.exitCode,
+    checkExitCode: cliCheck.exitCode,
+    scanCommand: cliScanReport?.command ?? null,
+    checkCommand: cliCheckReport?.command ?? null,
+    filesScanned: cliCheckReport?.summary.filesScanned ?? 0,
+    bindingCount: cliCheckReport?.summary.bindingCount ?? 0,
+    directEditBindingCount: cliCheckReport?.summary.directEditBindingCount ?? 0,
+    readOnlyBindingCount: cliCheckReport?.summary.readOnlyBindingCount ?? 0,
+    supportedDirectCoverage: cliCheckReport?.summary.supportedDirectCoverage ?? 0,
+    editableTokenCoverage: cliCheckReport?.summary.editableTokenCoverage ?? 0,
+    syntaxErrorCount: cliCheckReport?.summary.syntaxErrorCount ?? 0,
+    maxTransformMs: cliCheckReport?.summary.maxTransformMs ?? 0,
+    gates: cliCheckReport?.gates ?? null,
+    scanStdoutBytes: cliScan.stdout.length,
+    checkStdoutBytes: cliCheck.stdout.length
   },
   patch: {
     previewOk: preview.ok,
@@ -1398,6 +1432,20 @@ const report = {
     warmTransformTargetPass:
       warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
     largeTransformTargetPass: Math.max(...largeTransformTimes) <= largeTransformTargetMs,
+    cliScanPass:
+      cliScan.exitCode === 0 &&
+      cliScanReport?.command === "scan" &&
+      cliScanReport.summary.filesScanned >= 8 &&
+      cliScanReport.summary.bindingCount > 0 &&
+      cliScan.stdout.includes("\"command\": \"scan\""),
+    cliCheckPass:
+      cliCheck.exitCode === 0 &&
+      cliCheckReport?.command === "check" &&
+      cliCheckReport.ok &&
+      cliCheckReport.gates.filesScanned.pass &&
+      cliCheckReport.gates.syntaxClean.pass &&
+      cliCheckReport.gates.supportedDirectCoverage.pass &&
+      cliCheckReport.gates.maxFileTransformMs.pass,
     supportedPatchPass: apply.ok && syntaxErrorsAfterPatch === 0,
     revertPatchPass: revert.ok && syntaxErrorsAfterRevert === 0,
     agentTaskPass: agentTask.ok && agentTaskSectionsPresent,

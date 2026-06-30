@@ -3,10 +3,16 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "bin": {
+    "intent-layer": "src/intent/cli.ts"
+  },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "intent": "tsx src/intent/cli.ts",
+    "intent:scan": "tsx src/intent/cli.ts scan",
+    "intent:check": "tsx src/intent/cli.ts check",
     "generate:ai-corpus": "tsx scripts/generate-ai-corpus.ts",
     "analyze:classnames": "tsx scripts/analyze-classnames.ts fixtures/corpus src --out reports/performance/corpus-audit.json",
     "analyze:ai-corpus": "tsx scripts/analyze-classnames.ts fixtures/ai-generated --out reports/performance/ai-corpus-audit.json",
