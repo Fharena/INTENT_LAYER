@@ -87,3 +87,24 @@ export interface PatchApplyResult extends PatchPreview {
     applyMs: number;
   };
 }
+
+export interface PatchRevertResult {
+  ok: true;
+  reverted: true;
+  id: string;
+  file: string;
+  relativeFile: string;
+  oldToken: string;
+  restoredToken: string;
+  range: {
+    start: number;
+    end: number;
+  };
+  before: string;
+  after: string;
+  operationFile: string;
+  diffFile: string;
+  metrics: {
+    revertMs: number;
+  };
+}

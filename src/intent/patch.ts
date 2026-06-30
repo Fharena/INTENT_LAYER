@@ -7,7 +7,8 @@ import type {
   PatchApplyResult,
   PatchFailure,
   PatchPreview,
-  PatchRequest
+  PatchRequest,
+  PatchRevertResult
 } from "./types";
 
 function lineSnippet(source: string, offset: number): string {
@@ -118,7 +119,13 @@ function timestampSlug(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
-function writeIntentArtifacts(rootDir: string, entry: IntentBinding, preview: PatchPreview) {
+function writeIntentArtifacts(params: {
+  rootDir: string;
+  entry: IntentBinding;
+  preview: PatchPreview;
+  kind?: "tailwind-token-replace" | "tailwind-token-revert";
+}) {
+  const { rootDir, entry, preview, kind = "tailwind-token-replace" } = params;
   const timestamp = timestampSlug();
   const operationsDir = path.join(rootDir, ".intent", "operations");
   const diffsDir = path.join(rootDir, ".intent", "diffs");
@@ -133,7 +140,7 @@ function writeIntentArtifacts(rootDir: string, entry: IntentBinding, preview: Pa
     `${JSON.stringify(
       {
         version: 1,
-        kind: "tailwind-token-replace",
+        kind,
         createdAt: new Date().toISOString(),
         target: {
           id: entry.id,
@@ -160,7 +167,7 @@ function writeIntentArtifacts(rootDir: string, entry: IntentBinding, preview: Pa
       `createdAt: ${new Date().toISOString()}`,
       "changes:",
       `  - target: ${entry.componentName ?? "Unknown"}.${entry.tagName}.${entry.id}`,
-      "    type: tailwind-token-replace",
+      `    type: ${kind}`,
       `    file: ${entry.relativeFile}`,
       `    from: ${preview.oldToken}`,
       `    to: ${preview.nextToken}`,
@@ -194,7 +201,7 @@ export function applyTokenPatch(
   )}`;
   fs.writeFileSync(preview.file, patchedSource);
 
-  const artifacts = writeIntentArtifacts(rootDir, entry!, preview);
+  const artifacts = writeIntentArtifacts({ rootDir, entry: entry!, preview });
 
   return {
     ...preview,
@@ -204,6 +211,98 @@ export function applyTokenPatch(
     metrics: {
       previewMs: preview.metrics.previewMs,
       applyMs: Number((performance.now() - applyStarted).toFixed(3))
+    }
+  };
+}
+
+export function revertTokenPatch(
+  rootDir: string,
+  lastPatch: PatchApplyResult | null | undefined,
+  entry: IntentBinding | undefined
+): PatchRevertResult | PatchFailure {
+  const started = performance.now();
+
+  if (!lastPatch) {
+    return {
+      ok: false,
+      reason: "missing-last-patch",
+      detail: "No applied patch is available to revert.",
+      metrics: { applyMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
+  if (!entry) {
+    return {
+      ok: false,
+      id: lastPatch.id,
+      reason: "missing-binding",
+      detail: "No source binding exists for the last patch.",
+      metrics: { applyMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
+  const source = fs.readFileSync(lastPatch.file, "utf8");
+  const start = lastPatch.range.start;
+  const end = start + lastPatch.nextToken.length;
+  const currentToken = source.slice(start, end);
+
+  if (currentToken !== lastPatch.nextToken) {
+    return {
+      ok: false,
+      id: lastPatch.id,
+      reason: "revert-token-mismatch",
+      detail: `Expected "${lastPatch.nextToken}" at the last patch range, found "${currentToken}".`,
+      metrics: { applyMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
+  const before = lineSnippet(source, start);
+  const revertedSource = `${source.slice(0, start)}${lastPatch.oldToken}${source.slice(end)}`;
+  const after = lineSnippet(revertedSource, start);
+  fs.writeFileSync(lastPatch.file, revertedSource);
+
+  const preview: PatchPreview = {
+    ok: true,
+    id: lastPatch.id,
+    file: lastPatch.file,
+    relativeFile: lastPatch.relativeFile,
+    oldToken: lastPatch.nextToken,
+    nextToken: lastPatch.oldToken,
+    range: {
+      start,
+      end
+    },
+    before,
+    after,
+    metrics: {
+      previewMs: 0
+    }
+  };
+  const artifacts = writeIntentArtifacts({
+    rootDir,
+    entry,
+    preview,
+    kind: "tailwind-token-revert"
+  });
+
+  return {
+    ok: true,
+    reverted: true,
+    id: lastPatch.id,
+    file: lastPatch.file,
+    relativeFile: lastPatch.relativeFile,
+    oldToken: lastPatch.nextToken,
+    restoredToken: lastPatch.oldToken,
+    range: {
+      start,
+      end
+    },
+    before,
+    after,
+    operationFile: artifacts.operationFile,
+    diffFile: artifacts.diffFile,
+    metrics: {
+      revertMs: Number((performance.now() - started).toFixed(3))
     }
   };
 }

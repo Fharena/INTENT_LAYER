@@ -3,13 +3,14 @@ import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import { instrumentSource } from "./instrument";
-import { applyTokenPatch, planTokenPatch } from "./patch";
-import type { IntentBinding, IntentGraph, PatchRequest } from "./types";
+import { applyTokenPatch, planTokenPatch, revertTokenPatch } from "./patch";
+import type { IntentBinding, IntentGraph, PatchApplyResult, PatchRequest } from "./types";
 
 interface IntentState {
   rootDir: string;
   entriesByFile: Map<string, IntentBinding[]>;
   entriesById: Map<string, IntentBinding>;
+  lastAppliedPatch: PatchApplyResult | null;
 }
 
 function writeJson(response: ServerResponse, statusCode: number, value: unknown) {
@@ -70,7 +71,8 @@ export function intentLayerSpike(): Plugin {
   const state: IntentState = {
     rootDir: process.cwd(),
     entriesByFile: new Map(),
-    entriesById: new Map()
+    entriesById: new Map(),
+    lastAppliedPatch: null
   };
 
   return {
@@ -121,10 +123,35 @@ export function intentLayerSpike(): Plugin {
           try {
             const body = JSON.parse(await readBody(request)) as PatchRequest;
             const entry = state.entriesById.get(body.id);
-            const result =
-              url.pathname === "/__intent/apply"
-                ? applyTokenPatch(state.rootDir, entry, body)
-                : planTokenPatch(entry, body);
+            if (url.pathname === "/__intent/apply") {
+              const result = applyTokenPatch(state.rootDir, entry, body);
+              if (result.ok) {
+                state.lastAppliedPatch = result;
+              }
+              writeJson(response, result.ok ? 200 : 409, result);
+            } else {
+              const result = planTokenPatch(entry, body);
+              writeJson(response, result.ok ? 200 : 409, result);
+            }
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/revert-last" && request.method === "POST") {
+          try {
+            const entry = state.lastAppliedPatch
+              ? state.entriesById.get(state.lastAppliedPatch.id)
+              : undefined;
+            const result = revertTokenPatch(state.rootDir, state.lastAppliedPatch, entry);
+            if (result.ok) {
+              state.lastAppliedPatch = null;
+            }
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
             writeJson(response, 500, {

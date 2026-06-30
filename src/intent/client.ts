@@ -1,7 +1,17 @@
 import { candidatesForToken } from "./tailwind";
-import type { IntentBinding, IntentGraph, IntentToken, PatchApplyResult, PatchFailure } from "./types";
+import type {
+  IntentBinding,
+  IntentGraph,
+  IntentToken,
+  PatchApplyResult,
+  PatchFailure,
+  PatchPreview,
+  PatchRevertResult
+} from "./types";
 
 type PatchResponse = PatchApplyResult | PatchFailure;
+type PreviewResponse = PatchPreview | PatchFailure;
+type RevertResponse = PatchRevertResult | PatchFailure;
 
 function createButton(label: string): HTMLButtonElement {
   const button = document.createElement("button");
@@ -45,7 +55,7 @@ function renderTokenRow(
 ) {
   const row = document.createElement("div");
   row.style.display = "grid";
-  row.style.gridTemplateColumns = "1fr 1fr auto";
+  row.style.gridTemplateColumns = "1fr 1fr auto auto";
   row.style.gap = "8px";
   row.style.alignItems = "center";
   row.style.marginTop = "8px";
@@ -70,18 +80,52 @@ function renderTokenRow(
     select.appendChild(option);
   }
 
+  const preview = createButton("Preview");
   const apply = createButton("Apply");
+  const previewBox = document.createElement("pre");
+  previewBox.style.gridColumn = "1 / -1";
+  previewBox.style.margin = "0";
+  previewBox.style.padding = "8px";
+  previewBox.style.borderRadius = "6px";
+  previewBox.style.background = "#f8fafc";
+  previewBox.style.border = "1px solid #e2e8f0";
+  previewBox.style.fontSize = "11px";
+  previewBox.style.whiteSpace = "pre-wrap";
+  previewBox.style.display = "none";
+
+  function patchBody() {
+    return JSON.stringify({
+      id: binding.id,
+      oldToken: token.token,
+      nextToken: select.value,
+      sourceStart: token.sourceStart,
+      sourceEnd: token.sourceEnd
+    });
+  }
+
+  preview.addEventListener("click", async () => {
+    const response = await fetch("/__intent/preview", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: patchBody()
+    });
+    const result = (await response.json()) as PreviewResponse;
+    if (result.ok) {
+      previewBox.style.display = "block";
+      previewBox.textContent = [`- ${result.before}`, `+ ${result.after}`].join("\n");
+      setStatus(`Preview ${result.oldToken} -> ${result.nextToken} in ${result.metrics.previewMs}ms`);
+    } else {
+      previewBox.style.display = "block";
+      previewBox.textContent = result.detail ?? result.reason;
+      setStatus(`Preview rejected: ${result.reason}`);
+    }
+  });
+
   apply.addEventListener("click", async () => {
     const response = await fetch("/__intent/apply", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        id: binding.id,
-        oldToken: token.token,
-        nextToken: select.value,
-        sourceStart: token.sourceStart,
-        sourceEnd: token.sourceEnd
-      })
+      body: patchBody()
     });
     const result = (await response.json()) as PatchResponse;
     if (result.ok) {
@@ -91,7 +135,7 @@ function renderTokenRow(
     }
   });
 
-  row.append(label, select, apply);
+  row.append(label, select, preview, apply, previewBox);
   root.appendChild(row);
 }
 
@@ -114,6 +158,26 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   const pick = createButton("Pick element");
   pick.style.marginTop = "10px";
   panel.appendChild(pick);
+
+  const undo = createButton("Undo last");
+  undo.style.marginTop = "10px";
+  undo.style.marginLeft = "8px";
+  undo.addEventListener("click", async () => {
+    const response = await fetch("/__intent/revert-last", {
+      method: "POST"
+    });
+    const result = (await response.json()) as RevertResponse;
+    if (result.ok) {
+      renderBinding(
+        panel,
+        binding,
+        `Reverted ${result.oldToken} -> ${result.restoredToken} in ${result.metrics.revertMs}ms`
+      );
+    } else {
+      renderBinding(panel, binding, `Undo rejected: ${result.reason}`);
+    }
+  });
+  panel.appendChild(undo);
 
   if (!binding) {
     const hint = document.createElement("p");

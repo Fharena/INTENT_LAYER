@@ -3,7 +3,7 @@ import path from "node:path";
 import ts from "typescript";
 import { analyzeClassNames } from "./analyze-classnames";
 import { instrumentSource } from "../src/intent/instrument";
-import { applyTokenPatch, planTokenPatch } from "../src/intent/patch";
+import { applyTokenPatch, planTokenPatch, revertTokenPatch } from "../src/intent/patch";
 
 const rootDir = process.cwd();
 const reportsDir = path.join(rootDir, "reports", "performance");
@@ -114,6 +114,8 @@ const apply = applyTokenPatch(rootDir, patchEntry, {
 });
 
 const syntaxErrorsAfterPatch = parseSyntaxErrorCount(patchFixture);
+const revert = revertTokenPatch(rootDir, apply.ok ? apply : null, patchEntry);
+const syntaxErrorsAfterRevert = parseSyntaxErrorCount(patchFixture);
 
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
 fs.writeFileSync(
@@ -202,6 +204,9 @@ const report = {
     applyOk: apply.ok,
     applyMs: apply.ok ? apply.metrics.applyMs : apply.metrics?.applyMs,
     syntaxErrorsAfterPatch,
+    revertOk: revert.ok,
+    revertMs: revert.ok ? revert.metrics.revertMs : revert.metrics?.applyMs,
+    syntaxErrorsAfterRevert,
     staleRejectionOk: !staleApply.ok && staleApply.reason === "source-hash-mismatch",
     staleRejectionReason: staleApply.ok ? null : staleApply.reason,
     simpleCnClsx: {
@@ -221,6 +226,7 @@ const report = {
     coldTransformTargetPass: transformTimes.length > 0 && Math.max(...transformTimes) <= 5,
     warmTransformTargetPass: warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= 5,
     supportedPatchPass: apply.ok && syntaxErrorsAfterPatch === 0,
+    revertPatchPass: revert.ok && syntaxErrorsAfterRevert === 0,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch"
   }
