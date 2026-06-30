@@ -274,7 +274,7 @@ npm run dev
 npx intent-layer
 ```
 
-현재 MVP package surface는 `bin/intent-layer.cjs` wrapper와 package `/vite` export로 검증한다. `npm run eval`은 `npm pack --dry-run`, 실제 tarball 생성, 임시 폴더 설치, 설치된 `intent-layer --help`, 설치된 `intent-layer-spike/vite` import, 설치된 plugin transform/graph, 실제 Vite dev server의 graph/preview/apply, 3-file graph refresh smoke, generated 24-file/624-binding product-sized graph refresh를 package/performance smoke gate로 측정한다. 공개 npm package 이름과 외부 사용자용 install guide 문구는 launch polish에서 확정한다.
+현재 MVP package surface는 `bin/intent-layer.cjs` wrapper와 package `/vite` export로 검증한다. `npm run eval`은 `npm pack --dry-run`, 실제 tarball 생성, 임시 폴더 설치, 설치된 `intent-layer --help`, 설치된 `intent-layer-spike/vite` import, 설치된 plugin transform/graph, 실제 Vite dev server의 graph/preview/apply, apply refresh 56.162ms, 3-file graph refresh 113.79ms, generated 24-file/624-binding product-sized graph refresh를 package/performance smoke gate로 측정한다. 공개 npm package 이름과 외부 사용자용 install guide 문구는 launch polish에서 확정한다.
 
 ### 8.2 기본 흐름
 
@@ -615,6 +615,7 @@ Vite transform 추가 비용: 파일당 5ms 이하 목표
 요소 선택 -> 패널 표시: 100ms 이하
 단순 patch 저장: 50ms 이하
 HMR 반영: 기존 Vite 속도 유지
+installed Vite smoke HMR refresh: apply 56.162ms, 3-file change 113.79ms, smoke target 500ms 이하
 DOM id 추가 오버헤드: node당 20 bytes 내외 목표
 sidecar graph write: 의미 fingerprint 변경 시에만 수행
 external corpus 검증: 외부 source는 `.intent/external-corpus/` 로컬 복사본과 manifest로만 측정
@@ -851,7 +852,7 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 - 단순 patch 성공률 95% 이상
 - patch 후 syntax error 0건
 - 지원 가능한 Tailwind class 인식률 90% 이상
-- HMR 반영 300ms 내외
+- HMR 반영 300ms 내외, installed smoke gate는 500ms 이하
 
 정성:
 

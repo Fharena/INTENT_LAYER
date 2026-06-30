@@ -272,7 +272,7 @@ npm run dev
 npx intent-layer
 ```
 
-The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper and package `/vite` export. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, installed `intent-layer --help`, installed `intent-layer-spike/vite` import, installed plugin transform/graph, real Vite dev server graph/preview/apply, a 3-file graph refresh smoke, and a generated 24-file/624-binding product-sized graph refresh as package/performance smoke gates. Public npm package naming and external install-guide wording remain launch-polish decisions.
+The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper and package `/vite` export. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, installed `intent-layer --help`, installed `intent-layer-spike/vite` import, installed plugin transform/graph, real Vite dev server graph/preview/apply, 56.162ms apply refresh, 113.79ms 3-file graph refresh, and a generated 24-file/624-binding product-sized graph refresh as package/performance smoke gates. Public npm package naming and external install-guide wording remain launch-polish decisions.
 
 ### 8.2 Basic Flow
 
@@ -613,6 +613,7 @@ Vite transform overhead: under 5ms per file
 element select -> panel display: under 100ms
 simple patch write: under 50ms
 HMR update: preserve existing Vite speed
+installed Vite smoke HMR refresh: apply 56.162ms, 3-file change 113.79ms, smoke target <= 500ms
 DOM id overhead: roughly under 20 bytes per node
 sidecar graph write: only when the semantic fingerprint changes
 external corpus validation: measure external source only through local `.intent/external-corpus/` copies and manifests
@@ -849,7 +850,7 @@ Quantitative:
 - simple patch success rate over 95%
 - zero syntax errors after supported patches
 - over 90% recognition for supported Tailwind classes
-- HMR reflect time around 300ms or less
+- HMR reflect time around 300ms or less, with installed smoke gate at <= 500ms
 
 Qualitative:
 

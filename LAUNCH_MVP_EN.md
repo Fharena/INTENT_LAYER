@@ -524,7 +524,7 @@ product-sized graph refresh: generated 24-file/624-binding fixture passes, real 
 1. demo project
 2. docs
 3. landing README
-4. install guide: local tarball install, `/vite` wrapper export smoke, installed plugin transform/graph smoke, and real Vite dev server HTTP preview/apply plus 3-file graph refresh smoke are implemented; public package name/copy remains
+4. install guide: local tarball install, `/vite` wrapper export smoke, installed plugin transform/graph smoke, and real Vite dev server HTTP preview/apply, apply refresh, plus 3-file graph refresh smoke are implemented; public package name/copy remains
 5. failure mode guide
 6. examples for Codex/Cursor
 

@@ -148,6 +148,8 @@ DOM click -> source binding time
 patch preview generation time
 patch apply time
 HMR reflection time when measurable
+installed Vite smoke apply/module/graph refresh time and target
+installed multi-file one-changed-file refresh time and target
 supported fixture success rate
 intentional stale-token rejection rate
 syntax error count after supported patches

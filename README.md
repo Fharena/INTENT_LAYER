@@ -83,7 +83,7 @@ npm run analyze:external-corpus
 
 External corpus copies are written under `.intent/external-corpus/`, and the numeric report is written to `reports/performance/external-corpus-audit.json`.
 
-`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer-spike/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, and a 3-file graph refresh after one TSX file changes. It also runs generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture and a 24-file/624-binding multi-file fixture.
+`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer-spike/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, apply refresh, and a 3-file graph refresh after one TSX file changes. It also runs generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture and a 24-file/624-binding multi-file fixture.
 
 The demo currently supports:
 
@@ -97,7 +97,7 @@ The demo currently supports:
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
 - read-only bindings for unsupported `className` expressions so agent handoff still works
 - minimal `intent-layer init` / `dev` / `scan` / `check` / `apply` / `diff` / `agent-context` / `agent-task` / `agent-result` CLI surface through `src/intent/cli.ts`
-- installable `intent-layer` bin wrapper through `bin/intent-layer.cjs`, plus package `/vite` wrapper export, installed plugin transform smoke, installed Vite dev server preview/apply smoke, and installed multi-file graph refresh metrics in `reports/performance/spike-evaluation.json`
+- installable `intent-layer` bin wrapper through `bin/intent-layer.cjs`, plus package `/vite` wrapper export, installed plugin transform smoke, installed Vite dev server preview/apply smoke, apply refresh timing, and installed multi-file graph refresh metrics in `reports/performance/spike-evaluation.json`
 - Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
 - operation-log-backed undo stack and pending undo history display for applied patches
 - pending undo discard and safe non-top revert controls for branch undo handling
