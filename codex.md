@@ -150,6 +150,7 @@ patch apply time
 HMR reflection time when measurable
 installed Vite smoke apply/module/graph refresh time and target
 installed multi-file one-changed-file refresh time and target
+installed package import path should stay aligned with `intent-layer/vite`
 supported fixture success rate
 intentional stale-token rejection rate
 syntax error count after supported patches
