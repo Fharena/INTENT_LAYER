@@ -262,6 +262,7 @@ Support model:
 - Agent results record related source diffs and related semantic token diffs for simple variable-reference read-only bindings.
 - Related semantic token diffing is covered by fixtures for simple quoted variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal declaration segments.
 - Variant-function read-only bindings store same-file local `function` / `const` variant declarations, one-hop relative named imports, and variant declarations behind tsconfig paths aliases plus one-hop named barrel re-exports as related source snapshots, then record related source and semantic diffs on result.
+- The package smoke now transforms an external temp fixture through the installed `/vite` export after tarball install and verifies `data-intent-id` plus `.intent/graph.intent.json` output.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
 - Component snapshot fixtures cover 8 cases: function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens, memo, forwardRef, HOC, and namespace object export.
 - They still do not infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.

@@ -518,7 +518,7 @@ sidecar graph write: only when the semantic fingerprint changes
 1. demo project
 2. docs
 3. landing README
-4. install guide: local tarball install and `/vite` export smoke are implemented; public package name/copy remains
+4. install guide: local tarball install, `/vite` export smoke, and installed plugin transform/graph smoke are implemented; public package name/copy remains
 5. failure mode guide
 6. examples for Codex/Cursor
 

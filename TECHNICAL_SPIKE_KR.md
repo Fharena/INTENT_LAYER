@@ -261,6 +261,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - agent result는 단순 변수 참조 read-only binding의 related source diff와 related semantic token diff를 기록한다.
 - related semantic token diff는 단순 quoted 변수 선언, simple `cn()` / `clsx()` 변수 선언, 배열/object map/template literal literal segment를 fixture로 검증한다.
 - variant 함수 read-only binding은 같은 파일 안의 local `function` / `const` variant 선언, one-hop relative named import, tsconfig paths alias + one-hop named barrel re-export 뒤의 variant 선언을 related source snapshot으로 저장하고, result 기록 시 related source/semantic diff를 남긴다.
+- package smoke는 tarball install 뒤 설치된 `/vite` export로 외부 temp fixture를 transform하고 `data-intent-id`/`.intent/graph.intent.json` 생성까지 확인한다.
 - agent result는 선택 source window와 선택 component 범위에서 `className` semantic token diff를 기록한다.
 - component snapshot fixture는 function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens, memo, forwardRef, HOC, namespace object export 8개 case를 검증한다.
 - 아직 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 추론하지는 않는다.
