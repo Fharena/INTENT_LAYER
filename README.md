@@ -55,8 +55,10 @@ The demo currently supports:
 - compile-time `data-intent-id` injection for intrinsic JSX elements with static `className`
 - source sidecar graph generation at `.intent/graph.intent.json`
 - floating browser overlay
+- patch preview before apply
 - direct Tailwind token replacement for supported static tokens
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
+- undo for the last applied patch
 - source hash validation before patching
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply
 

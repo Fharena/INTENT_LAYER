@@ -27,9 +27,11 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 - static `className` token 목록 표시
 - simple `cn()` / `clsx()` literal segment token 표시
 - 지원 가능한 Tailwind token 후보 선택
+- apply 전 patch preview
 - source hash 검증
 - old token 검증
 - range patch 적용
+- 마지막 patch 되돌리기
 - 최소 intent operation/diff 파일 생성
 - corpus 분석 스크립트
 - 성능/안전성 평가 스크립트
@@ -92,6 +94,16 @@ AST code generation으로 파일을 다시 출력하지 않는다.
 4. 저장된 token source range에서 old token 검증
 5. old token이 정확히 있으면 해당 token range만 교체
 6. operation/diff 파일 생성
+
+되돌리기 방식:
+
+1. dev server가 마지막 apply 결과를 메모리에 저장한다.
+2. `/__intent/revert-last` 호출 시 마지막 patch range에 `nextToken`이 그대로 있는지 확인한다.
+3. 정확히 일치하면 `oldToken`으로 다시 교체한다.
+4. revert operation/diff 파일을 생성한다.
+
+이 방식은 현재 MVP용 last-patch undo다.
+긴 undo stack이나 cross-session undo는 아직 만들지 않았다.
 
 source hash가 다르면 patch를 거부한다.
 old token이 없으면 patch를 거부한다.
@@ -182,6 +194,8 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - `className={someVariable}`는 read-only다.
 - template literal은 read-only다.
 - variant 함수와 props forwarding은 read-only다.
+- undo는 마지막 patch 1개만 지원한다.
+- dev server 재시작 후에는 in-memory undo 상태가 사라진다.
 - 현재 click-to-binding 시간은 실제 브라우저 클릭 전체 시간이 아니라 graph lookup proxy만 측정했다.
 - warm transform은 5ms 목표를 만족했지만, cold first transform은 5ms를 넘을 수 있다.
 - 대형 TSX 파일에서는 아직 검증하지 않았다.
@@ -192,6 +206,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 1. 대형 TSX 파일에서도 transform time을 5ms 이하로 유지할 수 있는지 측정한다.
 2. 실제 브라우저 click -> binding -> patch round trip 시간을 측정한다.
-3. 실제 브라우저 click-to-panel 시간을 측정한다.
-4. read-only 이유를 UI에 더 명확히 표시한다.
-5. fixture를 nested component, map render, conditional render, fragment로 확장한다.
+3. undo stack과 operation log 기반 revert를 설계한다.
+4. 실제 브라우저 click-to-panel 시간을 측정한다.
+5. read-only 이유를 UI에 더 명확히 표시한다.
+6. fixture를 nested component, map render, conditional render, fragment로 확장한다.

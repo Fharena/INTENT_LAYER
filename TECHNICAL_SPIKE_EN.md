@@ -28,9 +28,11 @@ Included:
 - static `className` token display
 - simple `cn()` / `clsx()` literal segment token display
 - supported Tailwind token candidate selection
+- patch preview before apply
 - source hash validation
 - old token validation
 - range patch apply
+- undo for the last patch
 - minimal intent operation/diff output
 - corpus analysis script
 - performance and safety evaluation script
@@ -93,6 +95,16 @@ Patch flow:
 4. Validate the old token at the stored token source range.
 5. Replace only the exact token range.
 6. Write minimal operation/diff artifacts.
+
+Revert flow:
+
+1. The dev server keeps the last apply result in memory.
+2. `/__intent/revert-last` checks whether `nextToken` still exists at the last patch range.
+3. If it matches, the range is replaced with `oldToken`.
+4. Revert operation/diff artifacts are written.
+
+This is last-patch undo for the MVP.
+Long undo stacks and cross-session undo are not implemented yet.
 
 If the source hash changed, the patch is rejected.
 If the old token is missing, the patch is rejected.
@@ -183,6 +195,8 @@ Support model:
 - `className={someVariable}` is read-only.
 - Template literals are read-only.
 - Variant functions and props forwarding are read-only.
+- Undo supports only the last patch.
+- Restarting the dev server clears the in-memory undo state.
 - The current click-to-binding metric is only a graph lookup proxy, not a full browser click measurement.
 - Warm transform meets the 5ms target, but cold first transform can exceed 5ms.
 - Larger TSX files are not tested yet.
@@ -193,6 +207,7 @@ Priority order:
 
 1. Measure whether transform time stays under 5ms on larger TSX files.
 2. Measure real browser click -> binding -> patch round trip time.
-3. Measure real browser click-to-panel time.
-4. Show read-only reasons clearly in the UI.
-5. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
+3. Design an undo stack and operation-log-backed revert.
+4. Measure real browser click-to-panel time.
+5. Show read-only reasons clearly in the UI.
+6. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.

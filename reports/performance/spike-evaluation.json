@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-30T04:03:25.734Z",
+  "generatedAt": "2026-06-30T04:09:41.814Z",
   "contextPackUsed": true,
   "corpus": {
-    "generatedAt": "2026-06-30T04:03:25.614Z",
+    "generatedAt": "2026-06-30T04:09:41.680Z",
     "filesScanned": 8,
     "classNameOccurrences": 40,
     "classification": {
@@ -487,56 +487,59 @@
         "file": "src/App.tsx",
         "entries": 13,
         "samples": [
-          6.862,
-          3.196,
-          2.168,
-          2.075,
-          1.867
+          8.491,
+          3.857,
+          2.629,
+          3.165,
+          2.005
         ],
-        "averageMs": 3.234,
-        "p95Ms": 6.862,
-        "maxMs": 6.862
+        "averageMs": 4.029,
+        "p95Ms": 8.491,
+        "maxMs": 8.491
       },
       {
         "file": "src/main.tsx",
         "entries": 0,
         "samples": [
-          1.726,
-          0.75,
-          0.783,
-          0.807,
-          0.973
+          2.791,
+          0.947,
+          0.822,
+          0.635,
+          1.035
         ],
-        "averageMs": 1.008,
-        "p95Ms": 1.726,
-        "maxMs": 1.726
+        "averageMs": 1.246,
+        "p95Ms": 2.791,
+        "maxMs": 2.791
       }
     ],
-    "averageMs": 2.121,
-    "p95Ms": 6.862,
-    "maxMs": 6.862,
-    "warmAverageMs": 1.577,
-    "warmP95Ms": 3.196,
-    "warmMaxMs": 3.196
+    "averageMs": 2.638,
+    "p95Ms": 8.491,
+    "maxMs": 8.491,
+    "warmAverageMs": 1.887,
+    "warmP95Ms": 3.857,
+    "warmMaxMs": 3.857
   },
   "graphLookupProxy": {
     "iterations": 1000,
-    "totalMs": 0.482,
-    "averageMs": 0.000482,
+    "totalMs": 0.313,
+    "averageMs": 0.000313,
     "note": "This measures id-to-binding graph lookup only, not a real browser click event."
   },
   "patch": {
     "previewOk": true,
-    "previewMs": 0.788,
-    "previewRoundTripMs": 1.156,
+    "previewMs": 0.735,
+    "previewRoundTripMs": 1.069,
     "applyOk": true,
-    "applyMs": 3.771,
+    "applyMs": 3.742,
     "syntaxErrorsAfterPatch": 0,
+    "revertOk": true,
+    "revertMs": 11.577,
+    "syntaxErrorsAfterRevert": 0,
     "staleRejectionOk": true,
     "staleRejectionReason": "source-hash-mismatch",
     "simpleCnClsx": {
       "applyOk": true,
-      "applyMs": 3.376,
+      "applyMs": 3.812,
       "syntaxErrorsAfterPatch": 0,
       "bindingKind": "call-literals",
       "callee": "cn",
@@ -551,6 +554,7 @@
     "coldTransformTargetPass": false,
     "warmTransformTargetPass": true,
     "supportedPatchPass": true,
+    "revertPatchPass": true,
     "simpleCnClsxPatchPass": true,
     "staleRejectionPass": true
   }

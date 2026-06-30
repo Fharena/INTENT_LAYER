@@ -17,6 +17,7 @@ Measured inputs:
 - `src/**/*.tsx` instrumentation transform
 - static patch fixture
 - simple `cn()` patch fixture
+- last-patch revert fixture
 
 Important caveat:
 
@@ -82,8 +83,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 3.234ms / p95 6.862ms / max 6.862ms |
-| `src/main.tsx` | 0 | avg 1.008ms / p95 1.726ms / max 1.726ms |
+| `src/App.tsx` | 13 | avg 4.029ms / p95 8.491ms / max 8.491ms |
+| `src/main.tsx` | 0 | avg 1.246ms / p95 2.791ms / max 2.791ms |
 
 Summary:
 
@@ -91,12 +92,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 2.121ms |
-| Overall p95 transform time | 6.862ms |
-| Overall max transform time | 6.862ms |
-| Warm average transform time | 1.577ms |
-| Warm p95 transform time | 3.196ms |
-| Warm max transform time | 3.196ms |
+| Overall average transform time | 2.638ms |
+| Overall p95 transform time | 8.491ms |
+| Overall max transform time | 8.491ms |
+| Warm average transform time | 1.887ms |
+| Warm p95 transform time | 3.857ms |
+| Warm max transform time | 3.857ms |
 | Target | <= 5ms per warm transform |
 | Result | warm pass / cold fail |
 
@@ -112,12 +113,15 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 0.788ms |
-| Preview round trip | 1.156ms |
+| Preview time | 0.735ms |
+| Preview round trip | 1.069ms |
 | Apply success | true |
-| Static apply time | 3.771ms |
-| Simple `cn()` apply time | 3.376ms |
+| Static apply time | 3.742ms |
+| Simple `cn()` apply time | 3.812ms |
+| Revert success | true |
+| Revert time | 11.577ms |
 | Syntax errors after patch | 0 |
+| Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
 | Stale source rejection | true |
 | Stale rejection reason | `source-hash-mismatch` |
@@ -126,6 +130,7 @@ Interpretation:
 
 - Patch preview and apply are far below the 50ms target.
 - Simple `cn()` literal segment patching also succeeds.
+- Last-patch revert is also far below the 50ms target.
 - Patches are rejected when the source hash does not match.
 - No syntax error was produced after supported static/simple token patches.
 
@@ -134,8 +139,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.482ms |
-| Average lookup | 0.000482ms |
+| Total time | 0.313ms |
+| Average lookup | 0.000313ms |
 
 Caveat:
 
@@ -153,6 +158,7 @@ A real click-to-panel measurement still needs to be captured in the dev server a
 | warm transform target | max <= 5ms | pass |
 | cold transform target | max <= 5ms | fail |
 | supported static patch | apply success + syntax error 0 | pass |
+| last patch revert | revert success + syntax error 0 | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
@@ -166,6 +172,8 @@ What worked:
 - simple/partial `cn()` / `clsx()` literal segment analysis
 - compile-time source binding generation
 - source token range patching
+- patch preview before apply
+- last-patch revert
 - simple `cn()` literal segment patching
 - source hash stale rejection
 - minimal intent operation/diff output

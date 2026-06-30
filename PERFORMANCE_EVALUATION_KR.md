@@ -17,6 +17,7 @@ npm run build
 - `src/**/*.tsx` instrumentation transform
 - static patch fixture
 - simple `cn()` patch fixture
+- last-patch revert fixture
 
 주의:
 
@@ -82,8 +83,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 3.234ms / p95 6.862ms / max 6.862ms |
-| `src/main.tsx` | 0 | avg 1.008ms / p95 1.726ms / max 1.726ms |
+| `src/App.tsx` | 13 | avg 4.029ms / p95 8.491ms / max 8.491ms |
+| `src/main.tsx` | 0 | avg 1.246ms / p95 2.791ms / max 2.791ms |
 
 요약:
 
@@ -91,12 +92,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 2.121ms |
-| 전체 p95 transform time | 6.862ms |
-| 전체 최대 transform time | 6.862ms |
-| warm 평균 transform time | 1.577ms |
-| warm p95 transform time | 3.196ms |
-| warm 최대 transform time | 3.196ms |
+| 전체 평균 transform time | 2.638ms |
+| 전체 p95 transform time | 8.491ms |
+| 전체 최대 transform time | 8.491ms |
+| warm 평균 transform time | 1.887ms |
+| warm p95 transform time | 3.857ms |
+| warm 최대 transform time | 3.857ms |
 | 목표 | warm 파일당 5ms 이하 |
 | 결과 | warm 통과 / cold 미통과 |
 
@@ -112,12 +113,15 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 0.788ms |
-| preview round trip | 1.156ms |
+| preview time | 0.735ms |
+| preview round trip | 1.069ms |
 | apply 성공 | true |
-| static apply time | 3.771ms |
-| simple `cn()` apply time | 3.376ms |
+| static apply time | 3.742ms |
+| simple `cn()` apply time | 3.812ms |
+| revert 성공 | true |
+| revert time | 11.577ms |
 | patch 후 syntax error | 0 |
+| revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
 | stale source rejection | true |
 | stale rejection reason | `source-hash-mismatch` |
@@ -126,6 +130,7 @@ reports/performance/spike-evaluation.json
 
 - patch preview와 apply는 목표 50ms보다 충분히 빠르다.
 - simple `cn()` literal segment patch도 성공했다.
+- 마지막 patch 되돌리기도 목표 50ms보다 충분히 빠르다.
 - source hash mismatch가 발생하면 patch를 거부한다.
 - 지원되는 static/simple token patch 후 syntax error는 발생하지 않았다.
 
@@ -134,8 +139,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.482ms |
-| 평균 lookup | 0.000482ms |
+| 총 시간 | 0.313ms |
+| 평균 lookup | 0.000313ms |
 
 주의:
 
@@ -153,6 +158,7 @@ reports/performance/spike-evaluation.json
 | warm transform target | max <= 5ms | 통과 |
 | cold transform target | max <= 5ms | 미통과 |
 | supported static patch | apply 성공 + syntax error 0 | 통과 |
+| last patch revert | revert 성공 + syntax error 0 | 통과 |
 | simple `cn()` / `clsx()` patch | apply 성공 + syntax error 0 | 통과 |
 | stale rejection | source mismatch 거부 | 통과 |
 
@@ -166,6 +172,8 @@ reports/performance/spike-evaluation.json
 - simple/partial `cn()` / `clsx()` literal segment 분석
 - compile-time source binding 생성
 - source token range 기반 patch
+- apply 전 patch preview
+- last-patch revert
 - simple `cn()` literal segment patch
 - source hash stale rejection
 - intent operation/diff 최소 출력
