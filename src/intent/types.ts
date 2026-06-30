@@ -185,8 +185,23 @@ export interface AgentResultArtifact {
     sourceHashChanged: boolean | null;
     snapshotAvailable: boolean;
     diffLineCount: number;
+    semanticChangeCount: number;
   };
   sourceDiff: string | null;
+  semanticDiff: {
+    classNameChangeCount: number;
+    tokenAddedCount: number;
+    tokenRemovedCount: number;
+    classNameChanges: Array<{
+      index: number;
+      beforeKind: string | null;
+      afterKind: string | null;
+      beforeValue: string | null;
+      afterValue: string | null;
+      addedTokens: Array<{ token: string; category: IntentTokenCategory | null }>;
+      removedTokens: Array<{ token: string; category: IntentTokenCategory | null }>;
+    }>;
+  } | null;
   metrics: {
     resultMs: number;
   };

@@ -161,7 +161,7 @@ const revert = revertTokenPatch(rootDir, apply.ok ? apply : null, patchEntry);
 const syntaxErrorsAfterRevert = parseSyntaxErrorCount(patchFixture);
 const agentTask = createAgentTask(rootDir, patchEntry, {
   id: patchEntry.id,
-  desiredChange: "Add an empty state below this selected grid without changing the current spacing tokens."
+  desiredChange: "Increase the selected grid radius and padding, then document the result as a semantic intent diff."
 });
 const agentTaskMarkdown = agentTask.ok ? agentTask.markdown : "";
 const agentTaskRequiredSections = [
@@ -181,14 +181,17 @@ const agentTaskSectionsPresent = agentTaskRequiredSections.every((section) =>
 if (agentTask.ok) {
   fs.writeFileSync(
     patchFixture,
-    fs.readFileSync(patchFixture, "utf8").replace("Patch target", "Patch target with empty state")
+    fs
+      .readFileSync(patchFixture, "utf8")
+      .replace("rounded-lg p-6", "rounded-xl p-8")
+      .replace("Patch target", "Patch target with semantic className change")
   );
 }
 const agentResult = recordAgentResult(rootDir, patchEntry, {
   id: patchEntry.id,
   taskFile: agentTask.ok ? agentTask.taskFile : undefined,
   summary:
-    "Agent result fixture: documented the requested empty state outcome without making an unrelated source rewrite.",
+    "Agent result fixture: increased radius and padding on the selected grid without making an unrelated source rewrite.",
   changedFiles: [path.relative(rootDir, patchFixture).replace(/\\/g, "/")],
   checks: ["npm run typecheck", "npm run eval", "npm run build"],
   notes: "Evaluation fixture only; no LLM call is made."
@@ -201,6 +204,7 @@ const agentResultRequiredSections = [
   "## Changed Files",
   "## Checks",
   "## Source Diff",
+  "## Semantic Intent Diff",
   "## Intent Diff"
 ];
 const agentResultSectionsPresent = agentResultRequiredSections.every((section) =>
@@ -384,7 +388,11 @@ const report = {
     sourceHashChanged: agentResult.ok ? agentResult.source.sourceHashChanged : null,
     snapshotAvailable: agentResult.ok ? agentResult.source.snapshotAvailable : false,
     diffLineCount: agentResult.ok ? agentResult.source.diffLineCount : 0,
-    sourceDiffPresent: agentResult.ok ? Boolean(agentResult.sourceDiff) : false
+    sourceDiffPresent: agentResult.ok ? Boolean(agentResult.sourceDiff) : false,
+    semanticChangeCount: agentResult.ok ? agentResult.source.semanticChangeCount : 0,
+    semanticDiffPresent: agentResult.ok ? Boolean(agentResult.semanticDiff) : false,
+    semanticTokenAddedCount: agentResult.ok ? agentResult.semanticDiff?.tokenAddedCount ?? 0 : 0,
+    semanticTokenRemovedCount: agentResult.ok ? agentResult.semanticDiff?.tokenRemovedCount ?? 0 : 0
   },
   readOnlyBinding: {
     entryCreated: Boolean(readOnlyEntry),
@@ -420,7 +428,9 @@ const report = {
       agentResultSectionsPresent &&
       agentResultFilesExist &&
       agentResult.source.snapshotAvailable &&
-      agentResult.source.diffLineCount > 0,
+      agentResult.source.diffLineCount > 0 &&
+      agentResult.source.semanticChangeCount > 0 &&
+      Boolean(agentResult.semanticDiff),
     readOnlyHandoffPass:
       Boolean(readOnlyEntry) &&
       readOnlyEntry?.className.kind === "read-only" &&
