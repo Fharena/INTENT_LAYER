@@ -111,6 +111,14 @@ function scanExpressionStatementEnd(source: string, start: number): number {
   return source.length;
 }
 
+function scanFunctionDeclarationEnd(source: string, start: number): number {
+  const paramsStart = source.indexOf("(", start);
+  const paramsEnd = paramsStart >= 0 ? scanBalanced(source, paramsStart, "(", ")") : -1;
+  const bodyStart = paramsEnd > paramsStart ? source.indexOf("{", paramsEnd) : -1;
+  const bodyEnd = bodyStart >= 0 ? scanBalanced(source, bodyStart, "{", "}") : -1;
+  return bodyEnd > bodyStart ? bodyEnd : scanExpressionStatementEnd(source, start);
+}
+
 function variableComponentRange(
   source: string,
   start: number
@@ -195,21 +203,48 @@ function findComponentRange(source: string, componentName: string | null): { sta
 function findRelatedSourceRange(
   source: string,
   binding: IntentBinding
-): { kind: "variable-declaration"; identifier: string; start: number; end: number } | null {
+): { kind: "variable-declaration" | "variant-function"; identifier: string; start: number; end: number } | null {
   if (binding.className.kind !== "read-only") return null;
-  if (binding.className.unsupportedReason !== "variable-reference") return null;
 
-  const identifier = binding.className.value.trim();
-  if (!/^[A-Za-z_$][\w$]*$/.test(identifier)) return null;
+  if (binding.className.unsupportedReason === "variable-reference") {
+    const identifier = binding.className.value.trim();
+    if (!/^[A-Za-z_$][\w$]*$/.test(identifier)) return null;
 
-  const match = new RegExp(`\\b(?:const|let|var)\\s+${escapeRegExp(identifier)}\\b`).exec(source);
-  if (!match) return null;
+    const match = new RegExp(`\\b(?:const|let|var)\\s+${escapeRegExp(identifier)}\\b`).exec(source);
+    if (!match) return null;
+
+    return {
+      kind: "variable-declaration",
+      identifier,
+      start: match.index,
+      end: scanExpressionStatementEnd(source, match.index)
+    };
+  }
+
+  if (binding.className.unsupportedReason !== "variant-function") return null;
+
+  const calleeMatch = /^\s*([A-Za-z_$][\w$]*)\s*\(/.exec(binding.className.value);
+  const identifier = calleeMatch?.[1];
+  if (!identifier) return null;
+
+  const functionMatch = new RegExp(`\\bfunction\\s+${escapeRegExp(identifier)}\\s*\\(`).exec(source);
+  if (functionMatch) {
+    return {
+      kind: "variant-function",
+      identifier,
+      start: functionMatch.index,
+      end: scanFunctionDeclarationEnd(source, functionMatch.index)
+    };
+  }
+
+  const variableMatch = new RegExp(`\\b(?:const|let|var)\\s+${escapeRegExp(identifier)}\\b`).exec(source);
+  if (!variableMatch) return null;
 
   return {
-    kind: "variable-declaration",
+    kind: "variant-function",
     identifier,
-    start: match.index,
-    end: scanExpressionStatementEnd(source, match.index)
+    start: variableMatch.index,
+    end: scanExpressionStatementEnd(source, variableMatch.index)
   };
 }
 

@@ -96,6 +96,17 @@ interface TaskComponentSnapshot {
   excerpt: string;
 }
 
+interface TaskRelatedSourceSnapshot {
+  file: string;
+  kind: string;
+  identifier: string;
+  range: {
+    start: number;
+    end: number;
+  };
+  excerpt: string;
+}
+
 function parseTaskJsonSection<T>(markdown: string, heading: string): T | null {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(new RegExp(`## ${escapedHeading}\\s+\`\`\`json\\s+([\\s\\S]*?)\\s+\`\`\``));
@@ -553,6 +564,67 @@ const readOnlyCompositeVariableResult = recordAgentResult(rootDir, readOnlyCompo
     "Evaluation fixture for related source semantic diff across arrays, object maps, and template literals; no LLM call is made."
 });
 
+const variantHandoffFixture = path.join(tmpDir, "VariantHandoffFixture.tsx");
+fs.writeFileSync(
+  variantHandoffFixture,
+  [
+    "declare function cva(base: string, options: unknown): (value: { variant: \"primary\" | \"ghost\" }) => string;",
+    "const buttonVariants = cva(\"inline-flex items-center gap-4 rounded-lg px-4 py-2\", {",
+    "  variants: {",
+    "    variant: {",
+    "      primary: \"bg-teal-700 text-white\",",
+    "      ghost: \"bg-white text-slate-700\"",
+    "    }",
+    "  }",
+    "});",
+    "",
+    "export function VariantHandoffFixture() {",
+    "  return <button className={buttonVariants({ variant: \"primary\" })}>Variant handoff target</button>;",
+    "}",
+    ""
+  ].join("\n")
+);
+
+const variantHandoffInstrument = instrumentSource({
+  code: fs.readFileSync(variantHandoffFixture, "utf8"),
+  file: variantHandoffFixture,
+  rootDir
+});
+const variantHandoffEntry = variantHandoffInstrument.entries[0];
+const variantHandoffTask = createAgentTask(rootDir, variantHandoffEntry, {
+  id: variantHandoffEntry?.id ?? "missing-variant-handoff-binding",
+  desiredChange: "Change this variant-backed className through an agent handoff."
+});
+const variantHandoffRelatedSnapshot = variantHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedSourceSnapshot | null>(
+      variantHandoffTask.markdown,
+      "Related Source Snapshot"
+    )
+  : null;
+if (variantHandoffTask.ok) {
+  fs.writeFileSync(
+    variantHandoffFixture,
+    fs
+      .readFileSync(variantHandoffFixture, "utf8")
+      .replace(
+        "inline-flex items-center gap-4 rounded-lg px-4 py-2",
+        "inline-flex items-center gap-6 rounded-xl px-5 py-3"
+      )
+      .replace("bg-teal-700", "bg-cyan-700")
+  );
+}
+const variantHandoffSyntaxErrorsAfterResult = parseSyntaxErrorCount(variantHandoffFixture);
+const variantHandoffResult = recordAgentResult(rootDir, variantHandoffEntry, {
+  id: variantHandoffEntry?.id ?? "missing-variant-handoff-binding",
+  taskFile: variantHandoffTask.ok ? variantHandoffTask.taskFile : undefined,
+  summary:
+    "Variant handoff fixture: updated the cva-like variant declaration through an agent handoff result.",
+  changedFiles: [path.relative(rootDir, variantHandoffFixture).replace(/\\/g, "/")],
+  checks: ["npm run typecheck", "npm run eval", "npm run build"],
+  notes:
+    "Evaluation fixture for variant-function related source handoff context; no LLM call is made."
+});
+
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
 fs.writeFileSync(
   cnPatchFixture,
@@ -944,6 +1016,55 @@ const report = {
       ? readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  variantHandoffBinding: {
+    entryCreated: Boolean(variantHandoffEntry),
+    kind: variantHandoffEntry?.className.kind ?? null,
+    unsupportedReason: variantHandoffEntry?.className.unsupportedReason ?? null,
+    value: variantHandoffEntry?.className.value ?? null,
+    tokenCount: variantHandoffEntry?.tokens.length ?? 0,
+    taskOk: variantHandoffTask.ok,
+    taskMs: variantHandoffTask.ok
+      ? variantHandoffTask.metrics.taskMs
+      : variantHandoffTask.metrics?.taskMs,
+    relatedSnapshotAvailable: Boolean(variantHandoffRelatedSnapshot),
+    relatedSnapshotKind: variantHandoffRelatedSnapshot?.kind ?? null,
+    relatedSnapshotIdentifier: variantHandoffRelatedSnapshot?.identifier ?? null,
+    relatedSnapshotIncludesCva: Boolean(variantHandoffRelatedSnapshot?.excerpt.includes("cva(")),
+    resultOk: variantHandoffResult.ok,
+    resultMs: variantHandoffResult.ok
+      ? variantHandoffResult.metrics.resultMs
+      : variantHandoffResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: variantHandoffSyntaxErrorsAfterResult,
+    sourceDiffLineCount: variantHandoffResult.ok ? variantHandoffResult.source.diffLineCount : 0,
+    sourceDiffPresent: variantHandoffResult.ok ? Boolean(variantHandoffResult.sourceDiff) : false,
+    componentDiffLineCount: variantHandoffResult.ok
+      ? variantHandoffResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: variantHandoffResult.ok
+      ? Boolean(variantHandoffResult.componentSourceDiff)
+      : false,
+    relatedResultSnapshotAvailable: variantHandoffResult.ok
+      ? variantHandoffResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: variantHandoffResult.ok
+      ? variantHandoffResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: variantHandoffResult.ok
+      ? Boolean(variantHandoffResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: variantHandoffResult.ok
+      ? variantHandoffResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedSemanticDiffPresent: variantHandoffResult.ok
+      ? Boolean(variantHandoffResult.relatedSemanticDiff)
+      : false,
+    relatedSemanticTokenAddedCount: variantHandoffResult.ok
+      ? variantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedSemanticTokenRemovedCount: variantHandoffResult.ok
+      ? variantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
@@ -1011,6 +1132,21 @@ const report = {
       (readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 6 &&
       (readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 6 &&
       readOnlyCompositeVariableSyntaxErrorsAfterResult === 0,
+    variantHandoffRelatedSourcePass:
+      variantHandoffEntry?.className.kind === "read-only" &&
+      variantHandoffEntry.className.unsupportedReason === "variant-function" &&
+      variantHandoffTask.ok &&
+      variantHandoffRelatedSnapshot?.kind === "variant-function" &&
+      variantHandoffRelatedSnapshot.identifier === "buttonVariants" &&
+      variantHandoffRelatedSnapshot.excerpt.includes("cva(") &&
+      variantHandoffResult.ok &&
+      variantHandoffResult.source.relatedSnapshotAvailable &&
+      variantHandoffResult.source.relatedDiffLineCount > 0 &&
+      Boolean(variantHandoffResult.relatedSourceDiff) &&
+      variantHandoffResult.source.relatedSemanticChangeCount >= 2 &&
+      (variantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
+      (variantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
+      variantHandoffSyntaxErrorsAfterResult === 0,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch",
     operationLogUndoStackPass:
