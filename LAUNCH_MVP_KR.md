@@ -547,7 +547,7 @@ Vite transform overhead: <5ms/file target
 1. demo project
 2. docs
 3. landing README
-4. install guide
+4. install guide: local tarball install smoke는 구현됨, public package 이름/export 문구는 남음
 5. failure mode guide
 6. examples for Codex/Cursor
 

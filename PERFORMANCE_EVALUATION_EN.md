@@ -36,6 +36,7 @@ Measured inputs:
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
 - CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
+- package install smoke fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -705,19 +706,19 @@ Interpretation:
 | Supported direct coverage | 87.5% |
 | Editable token coverage | 81.08% |
 | Syntax error count | 0 |
-| Max transform time | 0.221ms |
-| Init stdout bytes | 498 |
+| Max transform time | 0.219ms |
+| Init stdout bytes | 496 |
 | Dev stdout bytes | 499 |
-| Scan stdout bytes | 3262 |
-| Check stdout bytes | 3658 |
+| Scan stdout bytes | 3261 |
+| Check stdout bytes | 3655 |
 
 Init gate:
 
 | Metric | Value |
 | --- | ---: |
 | Init ok | true |
-| Created path count | 6 |
-| Existing path count | 4 |
+| Created path count | 0 |
+| Existing path count | 10 |
 | Schema files present | true |
 
 Dev dry-run gate:
@@ -732,7 +733,7 @@ Dev dry-run gate:
 | Uses local Vite | true |
 | Executable present | true |
 | Dev arg count | 5 |
-| Dev command plan time | 0.148ms |
+| Dev command plan time | 0.137ms |
 
 Check gates:
 
@@ -741,7 +742,7 @@ Check gates:
 | files scanned | 8 | >= 1 | pass |
 | syntax errors | 0 | 0 | pass |
 | supported direct coverage | 87.5% | >= 50% | pass |
-| max file transform | 0.221ms | <= 20ms | pass |
+| max file transform | 0.219ms | <= 20ms | pass |
 
 Apply/diff gate:
 
@@ -751,10 +752,10 @@ Apply/diff gate:
 | Apply exit code | 0 |
 | Diff exit code | 0 |
 | Apply target file | `.intent/tmp/CliApplyFixture.tsx` |
-| Operation file | `.intent/operations/2026-06-30T10-29-38-960Z.intent-op.json` |
-| Diff file | `.intent/diffs/2026-06-30T10-29-38-960Z.intent-diff.yml` |
+| Operation file | `.intent/operations/2026-06-30T10-47-15-185Z.intent-op.json` |
+| Diff file | `.intent/diffs/2026-06-30T10-47-15-185Z.intent-diff.yml` |
 | Operation log file | `.intent/operations/operation-log.json` |
-| Apply time | 2.09ms |
+| Apply time | 3.058ms |
 | Syntax errors after apply | 0 |
 | Diff bytes | 229 |
 | Diff change count | 1 |
@@ -766,7 +767,7 @@ Agent-context gate:
 | Graph scan exit code | 0 |
 | Agent-context exit code | 0 |
 | Subject | `DynamicRuntime` |
-| Context file | `.intent/agent/context_2026-06-30T10-29-38-915Z.md` |
+| Context file | `.intent/agent/context_2026-06-30T10-47-15-142Z.md` |
 | Selected binding id | `il_aecb838907` |
 | Selected file | `fixtures/corpus/DynamicRuntime.tsx` |
 | Graph entry count | 40 |
@@ -774,7 +775,7 @@ Agent-context gate:
 | Read-only binding count | 5 |
 | Editable token coverage | 81.08% |
 | Context markdown bytes | 9078 |
-| Context generation time | 19.122ms |
+| Context generation time | 14.545ms |
 | Required sections present | true |
 
 Agent-task gate:
@@ -785,10 +786,10 @@ Agent-task gate:
 | Agent-task exit code | 0 |
 | Graph entry count | 40 |
 | Selected binding id | `il_aecb838907` |
-| Task file | `.intent/agent/task_2026-06-30T10-29-38-936Z.md` |
+| Task file | `.intent/agent/task_2026-06-30T10-47-15-158Z.md` |
 | Task target file | `fixtures/corpus/DynamicRuntime.tsx` |
 | Task markdown bytes | 3541 |
-| Task generation time | 1.03ms |
+| Task generation time | 0.956ms |
 | Required sections present | true |
 
 Agent-result gate:
@@ -796,11 +797,11 @@ Agent-result gate:
 | Metric | Value |
 | --- | ---: |
 | Agent-result exit code | 0 |
-| Result file | `.intent/agent/result_2026-06-30T10-29-38-946Z.md` |
-| Diff file | `.intent/diffs/2026-06-30T10-29-38-946Z_agent.intent-diff.yml` |
+| Result file | `.intent/agent/result_2026-06-30T10-47-15-168Z.md` |
+| Diff file | `.intent/diffs/2026-06-30T10-47-15-168Z_agent.intent-diff.yml` |
 | Result target file | `.intent/tmp/CliAgentResultFixture.tsx` |
 | Result markdown bytes | 2388 |
-| Result generation time | 3.489ms |
+| Result generation time | 4.251ms |
 | Source diff line count | 2 |
 | Semantic change count | 1 |
 | Required sections present | true |
@@ -820,6 +821,36 @@ Interpretation:
 - `agent-result` takes a task file, result summary, changed files, and checks, then creates result markdown plus `.intent-diff.yml`.
 - The current CLI MVP implements `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`.
 
+Package install smoke gate:
+
+| Metric | Value |
+| --- | ---: |
+| Package name | `intent-layer-spike` |
+| Package version | `0.0.1` |
+| Bin target | `bin/intent-layer.cjs` |
+| Dry-run exit code | 0 |
+| Pack exit code | 0 |
+| Install exit code | 0 |
+| Installed help exit code | 0 |
+| Package file count | 20 |
+| Package size | 79780 bytes |
+| Unpacked size | 333921 bytes |
+| Includes bin wrapper | true |
+| Includes CLI source | true |
+| Includes context-pack files | false |
+| Help includes Usage | true |
+| Help includes dev command | true |
+| Dry-run time | 2370.277ms |
+| Pack time | 2460.447ms |
+| Install time | 3877.232ms |
+| Installed help time | 2330.799ms |
+
+Interpretation:
+
+- `bin/intent-layer.cjs` is a thin Node wrapper that runs `src/intent/cli.ts` through the package's `tsx` dependency.
+- The package smoke creates the tarball in an OS temp folder, installs it into a separate temp install folder, then runs installed `intent-layer --help`.
+- Public npm package naming, a stable `intent-layer/vite` export, and external install-guide copy remain launch-polish work.
+
 ## 10. Gate Results
 
 | Gate | Threshold | Result |
@@ -836,6 +867,7 @@ Interpretation:
 | large transform stress | 401 bindings max <= 20ms | pass |
 | CLI init | `.intent` folders/schema created or present + exit code 0 | pass |
 | CLI dev dry-run | local Vite command plan created + host/port verified + exit code 0 | pass |
+| package install smoke | pack dry-run + tarball install + installed `intent-layer --help` + context-pack excluded | pass |
 | CLI scan | command `scan` + files >= 8 + bindings > 0 + JSON output | pass |
 | CLI check | files/syntax/coverage/transform gates all pass + exit code 0 | pass |
 | CLI apply/diff | `.intent-op.json` apply success + operation/diff/log created + diff summary change > 0 + syntax error 0 | pass |
@@ -867,7 +899,7 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable CLI smoke also passes through tarball install and installed bin execution.
 
 What worked:
 
@@ -902,6 +934,7 @@ What worked:
 - CLI `scan`/`check` JSON report and gate pass
 - CLI `init` workspace/schema creation and gate pass
 - CLI `dev --dry-run` local Vite command plan creation and gate pass
+- package tarball dry-run, real pack, temp install, and installed `intent-layer --help` gate pass
 - CLI `apply` safe patch execution from `.intent-op.json` plus operation/diff/log output
 - CLI `diff` `.intent-diff.yml` JSON summary and gate pass
 - CLI `agent-context` AI-ready graph/binding context markdown generation and required-section gate pass
@@ -915,7 +948,7 @@ What remains weak:
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - branch undo currently supports pending undo discard only; arbitrary non-top patches are not directly reverted from source
-- CLI currently implements `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`; npm packaging/install guidance remains launch polish work
+- CLI tarball install smoke passes, but public npm package naming, stable package exports, and external install-guide copy remain launch-polish work
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
 - automatic semantic analysis across path aliases, barrel re-exports, package imports, and cross-variable data flow is still missing

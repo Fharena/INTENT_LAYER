@@ -36,6 +36,7 @@ npm run build
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
 - CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
+- package install smoke fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, revert 측정
 
@@ -704,19 +705,19 @@ dev server endpoint smoke test:
 | supported direct coverage | 87.5% |
 | editable token coverage | 81.08% |
 | syntax error 수 | 0 |
-| max transform time | 0.221ms |
-| init stdout bytes | 498 |
+| max transform time | 0.219ms |
+| init stdout bytes | 496 |
 | dev stdout bytes | 499 |
-| scan stdout bytes | 3262 |
-| check stdout bytes | 3658 |
+| scan stdout bytes | 3261 |
+| check stdout bytes | 3655 |
 
 init gate:
 
 | 항목 | 값 |
 | --- | ---: |
 | init ok | true |
-| created path 수 | 6 |
-| existing path 수 | 4 |
+| created path 수 | 0 |
+| existing path 수 | 10 |
 | schema 파일 존재 | true |
 
 dev dry-run gate:
@@ -731,7 +732,7 @@ dev dry-run gate:
 | local Vite 사용 | true |
 | executable 존재 | true |
 | dev args 수 | 5 |
-| dev command plan 시간 | 0.148ms |
+| dev command plan 시간 | 0.137ms |
 
 check gate:
 
@@ -740,7 +741,7 @@ check gate:
 | files scanned | 8 | >= 1 | 통과 |
 | syntax errors | 0 | 0 | 통과 |
 | supported direct coverage | 87.5% | >= 50% | 통과 |
-| max file transform | 0.221ms | <= 20ms | 통과 |
+| max file transform | 0.219ms | <= 20ms | 통과 |
 
 apply/diff gate:
 
@@ -750,10 +751,10 @@ apply/diff gate:
 | apply exit code | 0 |
 | diff exit code | 0 |
 | apply 대상 파일 | `.intent/tmp/CliApplyFixture.tsx` |
-| operation file | `.intent/operations/2026-06-30T10-29-38-960Z.intent-op.json` |
-| diff file | `.intent/diffs/2026-06-30T10-29-38-960Z.intent-diff.yml` |
+| operation file | `.intent/operations/2026-06-30T10-47-15-185Z.intent-op.json` |
+| diff file | `.intent/diffs/2026-06-30T10-47-15-185Z.intent-diff.yml` |
 | operation log file | `.intent/operations/operation-log.json` |
-| apply 시간 | 2.09ms |
+| apply 시간 | 3.058ms |
 | apply 후 syntax error | 0 |
 | diff bytes | 229 |
 | diff change 수 | 1 |
@@ -765,7 +766,7 @@ agent-context gate:
 | graph scan exit code | 0 |
 | agent-context exit code | 0 |
 | subject | `DynamicRuntime` |
-| context file | `.intent/agent/context_2026-06-30T10-29-38-915Z.md` |
+| context file | `.intent/agent/context_2026-06-30T10-47-15-142Z.md` |
 | 선택 binding id | `il_aecb838907` |
 | 선택 파일 | `fixtures/corpus/DynamicRuntime.tsx` |
 | graph entry 수 | 40 |
@@ -773,7 +774,7 @@ agent-context gate:
 | read-only binding 수 | 5 |
 | editable token coverage | 81.08% |
 | context markdown bytes | 9078 |
-| context 생성 시간 | 19.122ms |
+| context 생성 시간 | 14.545ms |
 | 필수 섹션 포함 | true |
 
 agent-task gate:
@@ -784,10 +785,10 @@ agent-task gate:
 | agent-task exit code | 0 |
 | graph entry 수 | 40 |
 | 선택 binding id | `il_aecb838907` |
-| task file | `.intent/agent/task_2026-06-30T10-29-38-936Z.md` |
+| task file | `.intent/agent/task_2026-06-30T10-47-15-158Z.md` |
 | task 대상 파일 | `fixtures/corpus/DynamicRuntime.tsx` |
 | task markdown bytes | 3541 |
-| task 생성 시간 | 1.03ms |
+| task 생성 시간 | 0.956ms |
 | 필수 섹션 포함 | true |
 
 agent-result gate:
@@ -795,11 +796,11 @@ agent-result gate:
 | 항목 | 값 |
 | --- | ---: |
 | agent-result exit code | 0 |
-| result file | `.intent/agent/result_2026-06-30T10-29-38-946Z.md` |
-| diff file | `.intent/diffs/2026-06-30T10-29-38-946Z_agent.intent-diff.yml` |
+| result file | `.intent/agent/result_2026-06-30T10-47-15-168Z.md` |
+| diff file | `.intent/diffs/2026-06-30T10-47-15-168Z_agent.intent-diff.yml` |
 | result 대상 파일 | `.intent/tmp/CliAgentResultFixture.tsx` |
 | result markdown bytes | 2388 |
-| result 생성 시간 | 3.489ms |
+| result 생성 시간 | 4.251ms |
 | source diff line 수 | 2 |
 | semantic change 수 | 1 |
 | 필수 섹션 포함 | true |
@@ -819,6 +820,36 @@ agent-result gate:
 - `agent-result`는 task file, result summary, changed files, checks를 받아 result markdown과 `.intent-diff.yml`을 생성한다.
 - 현재 CLI MVP는 `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`를 구현했다.
 
+package install smoke gate:
+
+| 항목 | 값 |
+| --- | ---: |
+| package name | `intent-layer-spike` |
+| package version | `0.0.1` |
+| bin target | `bin/intent-layer.cjs` |
+| dry-run exit code | 0 |
+| pack exit code | 0 |
+| install exit code | 0 |
+| installed help exit code | 0 |
+| package file 수 | 20 |
+| package size | 79780 bytes |
+| unpacked size | 333921 bytes |
+| bin wrapper 포함 | true |
+| CLI source 포함 | true |
+| context-pack 파일 포함 | false |
+| help에 Usage 포함 | true |
+| help에 dev command 포함 | true |
+| dry-run 시간 | 2370.277ms |
+| pack 시간 | 2460.447ms |
+| install 시간 | 3877.232ms |
+| installed help 시간 | 2330.799ms |
+
+해석:
+
+- `bin/intent-layer.cjs`는 package 내부 `tsx` dependency로 `src/intent/cli.ts`를 실행하는 얇은 Node wrapper다.
+- package smoke는 OS temp 폴더에 tarball을 만들고, 별도 temp install 폴더에서 `npm install` 후 설치된 `intent-layer --help`를 실행한다.
+- npm publish 이름, stable `intent-layer/vite` export, 외부 사용자용 install guide 문구는 아직 launch polish로 남겨둔다.
+
 ## 10. Gate 결과
 
 | Gate | 기준 | 결과 |
@@ -835,6 +866,7 @@ agent-result gate:
 | large transform stress | 401 bindings max <= 20ms | 통과 |
 | CLI init | `.intent` folders/schema 생성 또는 존재 확인 + exit code 0 | 통과 |
 | CLI dev dry-run | local Vite command plan 생성 + host/port 검증 + exit code 0 | 통과 |
+| package install smoke | pack dry-run + tarball install + installed `intent-layer --help` + context-pack 제외 | 통과 |
 | CLI scan | command `scan` + files >= 8 + bindings > 0 + JSON output | 통과 |
 | CLI check | files/syntax/coverage/transform gate 모두 통과 + exit code 0 | 통과 |
 | CLI apply/diff | `.intent-op.json` apply 성공 + operation/diff/log 생성 + diff summary change > 0 + syntax error 0 | 통과 |
@@ -866,7 +898,7 @@ agent-result gate:
 
 ## 11. 결론
 
-이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local 및 one-hop relative imported variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다.
+이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local 및 one-hop relative imported variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 CLI smoke도 tarball install과 설치된 bin 실행까지 통과했다.
 
 성공한 것:
 
@@ -901,6 +933,7 @@ agent-result gate:
 - CLI `scan`/`check` JSON report와 gate 통과
 - CLI `init` workspace/schema 생성과 gate 통과
 - CLI `dev --dry-run` local Vite command plan 생성과 gate 통과
+- package tarball dry-run, 실제 pack, temp install, 설치된 `intent-layer --help` gate 통과
 - CLI `apply` `.intent-op.json` 기반 safe patch 적용과 operation/diff/log 생성
 - CLI `diff` `.intent-diff.yml` JSON summary와 gate 통과
 - CLI `agent-context` AI용 graph/binding context markdown 생성과 필수 섹션 검증 통과
@@ -914,7 +947,7 @@ agent-result gate:
 - 실제 제품급 대형 TSX 파일에서 cache/write throttling 검증
 - 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
 - branch undo는 현재 pending undo 폐기까지만 지원하며, 임의 non-top patch를 소스에서 직접 되돌리지는 않는다.
-- CLI는 현재 `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`를 구현했지만, npm 배포/설치 가이드는 출시 polish로 남아 있다.
+- CLI tarball install smoke는 통과했지만, public npm package 이름, stable package export, 외부 사용자용 install guide copy는 출시 polish로 남아 있다.
 - 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
 - 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
 - path alias, barrel re-export, package import를 포함한 imported variant 함수와 cross-variable data flow 자동 분석
