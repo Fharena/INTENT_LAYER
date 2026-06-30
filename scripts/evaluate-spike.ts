@@ -1091,6 +1091,10 @@ interface TaskRelatedSourceSnapshot {
   excerpt: string;
 }
 
+interface TaskRelatedDependencySnapshot extends TaskRelatedSourceSnapshot {
+  referencedBy?: string;
+}
+
 function parseTaskJsonSection<T>(markdown: string, heading: string): T | null {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(new RegExp(`## ${escapedHeading}\\s+\`\`\`json\\s+([\\s\\S]*?)\\s+\`\`\``));
@@ -1647,6 +1651,62 @@ const readOnlyCompositeVariableResult = recordAgentResult(rootDir, readOnlyCompo
   checks: ["npm run typecheck", "npm run eval", "npm run build"],
   notes:
     "Evaluation fixture for related source semantic diff across arrays, object maps, and template literals; no LLM call is made."
+});
+
+const crossVariableDependencyFixture = path.join(tmpDir, "CrossVariableDependencyFixture.tsx");
+fs.writeFileSync(
+  crossVariableDependencyFixture,
+  [
+    "declare function cn(...value: Array<string | false>): string;",
+    "const baseCardClass = \"grid grid-cols-3 gap-4 rounded-lg p-6\";",
+    "const toneClass = \"bg-teal-50 text-teal-700\";",
+    "const cardClass = cn(baseCardClass, toneClass);",
+    "",
+    "export function CrossVariableDependencyFixture() {",
+    "  return <section className={cardClass}>Cross-variable dependency target</section>;",
+    "}",
+    ""
+  ].join("\n")
+);
+
+const crossVariableDependencyInstrument = instrumentSource({
+  code: fs.readFileSync(crossVariableDependencyFixture, "utf8"),
+  file: crossVariableDependencyFixture,
+  rootDir
+});
+const crossVariableDependencyEntry = crossVariableDependencyInstrument.entries[0];
+const crossVariableDependencyTask = createAgentTask(rootDir, crossVariableDependencyEntry, {
+  id: crossVariableDependencyEntry?.id ?? "missing-cross-variable-dependency-binding",
+  desiredChange:
+    "Change this className whose handoff variable depends on sibling class variables."
+});
+const crossVariableDependencySnapshots = crossVariableDependencyTask.ok
+  ? parseTaskJsonSection<TaskRelatedDependencySnapshot[] | null>(
+      crossVariableDependencyTask.markdown,
+      "Related Dependency Snapshots"
+    ) ?? []
+  : [];
+if (crossVariableDependencyTask.ok) {
+  fs.writeFileSync(
+    crossVariableDependencyFixture,
+    fs
+      .readFileSync(crossVariableDependencyFixture, "utf8")
+      .replace("grid grid-cols-3 gap-4 rounded-lg p-6", "grid grid-cols-3 gap-6 rounded-xl p-8")
+      .replace("bg-teal-50 text-teal-700", "bg-cyan-50 text-cyan-700")
+  );
+}
+const crossVariableDependencySyntaxErrorsAfterResult = parseSyntaxErrorCount(
+  crossVariableDependencyFixture
+);
+const crossVariableDependencyResult = recordAgentResult(rootDir, crossVariableDependencyEntry, {
+  id: crossVariableDependencyEntry?.id ?? "missing-cross-variable-dependency-binding",
+  taskFile: crossVariableDependencyTask.ok ? crossVariableDependencyTask.taskFile : undefined,
+  summary:
+    "Cross-variable dependency fixture: updated sibling variables referenced by the related className declaration.",
+  changedFiles: [path.relative(rootDir, crossVariableDependencyFixture).replace(/\\/g, "/")],
+  checks: ["npm run typecheck", "npm run eval", "npm run build"],
+  notes:
+    "Evaluation fixture for one-hop same-file dependency handoff context; no LLM call is made."
 });
 
 const importedVariableRoot = resetTmpSubdir("imported-variable-handoff");
@@ -3107,6 +3167,69 @@ const report = {
       ? readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  crossVariableDependencyBinding: {
+    entryCreated: Boolean(crossVariableDependencyEntry),
+    kind: crossVariableDependencyEntry?.className.kind ?? null,
+    unsupportedReason: crossVariableDependencyEntry?.className.unsupportedReason ?? null,
+    value: crossVariableDependencyEntry?.className.value ?? null,
+    tokenCount: crossVariableDependencyEntry?.tokens.length ?? 0,
+    taskOk: crossVariableDependencyTask.ok,
+    taskMs: crossVariableDependencyTask.ok
+      ? crossVariableDependencyTask.metrics.taskMs
+      : crossVariableDependencyTask.metrics?.taskMs,
+    dependencySnapshotCount: crossVariableDependencySnapshots.length,
+    dependencySnapshotFiles: crossVariableDependencySnapshots.map((snapshot) => snapshot.file),
+    dependencySnapshotIdentifiers: crossVariableDependencySnapshots.map(
+      (snapshot) => snapshot.identifier
+    ),
+    dependencySnapshotsReferenceCardClass: crossVariableDependencySnapshots.every(
+      (snapshot) => snapshot.referencedBy === "cardClass"
+    ),
+    dependencySnapshotsIncludeClassTokens: crossVariableDependencySnapshots.every((snapshot) =>
+      snapshot.excerpt.includes("Class")
+    ),
+    resultOk: crossVariableDependencyResult.ok,
+    resultMs: crossVariableDependencyResult.ok
+      ? crossVariableDependencyResult.metrics.resultMs
+      : crossVariableDependencyResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: crossVariableDependencySyntaxErrorsAfterResult,
+    sourceDiffLineCount: crossVariableDependencyResult.ok
+      ? crossVariableDependencyResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: crossVariableDependencyResult.ok
+      ? Boolean(crossVariableDependencyResult.sourceDiff)
+      : false,
+    relatedDiffLineCount: crossVariableDependencyResult.ok
+      ? crossVariableDependencyResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: crossVariableDependencyResult.ok
+      ? Boolean(crossVariableDependencyResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: crossVariableDependencyResult.ok
+      ? crossVariableDependencyResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedDependencySnapshotCount: crossVariableDependencyResult.ok
+      ? crossVariableDependencyResult.source.relatedDependencySnapshotCount
+      : 0,
+    relatedDependencyDiffLineCount: crossVariableDependencyResult.ok
+      ? crossVariableDependencyResult.source.relatedDependencyDiffLineCount
+      : 0,
+    relatedDependencySourceDiffPresent: crossVariableDependencyResult.ok
+      ? Boolean(crossVariableDependencyResult.relatedDependencySourceDiff)
+      : false,
+    relatedDependencySemanticChangeCount: crossVariableDependencyResult.ok
+      ? crossVariableDependencyResult.source.relatedDependencySemanticChangeCount
+      : 0,
+    relatedDependencySemanticDiffPresent: crossVariableDependencyResult.ok
+      ? Boolean(crossVariableDependencyResult.relatedDependencySemanticDiff)
+      : false,
+    relatedDependencySemanticTokenAddedCount: crossVariableDependencyResult.ok
+      ? crossVariableDependencyResult.relatedDependencySemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedDependencySemanticTokenRemovedCount: crossVariableDependencyResult.ok
+      ? crossVariableDependencyResult.relatedDependencySemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   importedVariableHandoffBinding: {
     entryCreated: Boolean(importedVariableHandoffEntry),
     root: reportPath(importedVariableRoot),
@@ -3589,6 +3712,22 @@ const report = {
       (readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 6 &&
       (readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 6 &&
       readOnlyCompositeVariableSyntaxErrorsAfterResult === 0,
+    crossVariableDependencyHandoffPass:
+      crossVariableDependencyEntry?.className.kind === "read-only" &&
+      crossVariableDependencyEntry.className.unsupportedReason === "variable-reference" &&
+      crossVariableDependencyTask.ok &&
+      crossVariableDependencySnapshots.length === 2 &&
+      crossVariableDependencySnapshots.some((snapshot) => snapshot.identifier === "baseCardClass") &&
+      crossVariableDependencySnapshots.some((snapshot) => snapshot.identifier === "toneClass") &&
+      crossVariableDependencySnapshots.every((snapshot) => snapshot.referencedBy === "cardClass") &&
+      crossVariableDependencyResult.ok &&
+      crossVariableDependencyResult.source.relatedDependencySnapshotCount === 2 &&
+      crossVariableDependencyResult.source.relatedDependencyDiffLineCount > 0 &&
+      Boolean(crossVariableDependencyResult.relatedDependencySourceDiff) &&
+      crossVariableDependencyResult.source.relatedDependencySemanticChangeCount >= 2 &&
+      (crossVariableDependencyResult.relatedDependencySemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
+      (crossVariableDependencyResult.relatedDependencySemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
+      crossVariableDependencySyntaxErrorsAfterResult === 0,
     importedVariableRelatedSourcePass:
       importedVariableHandoffEntry?.className.kind === "read-only" &&
       importedVariableHandoffEntry.className.unsupportedReason === "variable-reference" &&

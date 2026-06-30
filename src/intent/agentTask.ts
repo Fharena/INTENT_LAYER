@@ -213,6 +213,28 @@ interface RelatedSourceRange {
   end: number;
 }
 
+const dependencyIdentifierDenylist = new Set([
+  "Array",
+  "Boolean",
+  "Math",
+  "Number",
+  "Object",
+  "React",
+  "String",
+  "as",
+  "clsx",
+  "cn",
+  "const",
+  "false",
+  "function",
+  "let",
+  "null",
+  "return",
+  "true",
+  "undefined",
+  "var"
+]);
+
 function resolveRelativeImport(fromFile: string, specifier: string): string | null {
   if (!specifier.startsWith(".")) return null;
 
@@ -406,6 +428,110 @@ function relatedRangeFromLocalDeclaration(
   };
 }
 
+function maskStringAndCommentContent(source: string): string {
+  let output = "";
+  let quote: string | null = null;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1];
+    const previous = source[index - 1];
+
+    if (lineComment) {
+      if (character === "\n") {
+        lineComment = false;
+        output += "\n";
+      } else {
+        output += " ";
+      }
+      continue;
+    }
+
+    if (blockComment) {
+      if (character === "*" && next === "/") {
+        blockComment = false;
+        output += "  ";
+        index += 1;
+      } else {
+        output += character === "\n" ? "\n" : " ";
+      }
+      continue;
+    }
+
+    if (quote) {
+      if (character === quote && previous !== "\\") quote = null;
+      output += character === "\n" ? "\n" : " ";
+      continue;
+    }
+
+    if (character === "/" && next === "/") {
+      lineComment = true;
+      output += "  ";
+      index += 1;
+      continue;
+    }
+
+    if (character === "/" && next === "*") {
+      blockComment = true;
+      output += "  ";
+      index += 1;
+      continue;
+    }
+
+    if (character === "\"" || character === "'" || character === "`") {
+      quote = character;
+      output += " ";
+      continue;
+    }
+
+    output += character;
+  }
+
+  return output;
+}
+
+function findRelatedDependencyRanges(
+  rootDir: string,
+  relatedRange: RelatedSourceRange
+): RelatedSourceRange[] {
+  const relatedSource = relatedRange.source.slice(relatedRange.start, relatedRange.end);
+  const maskedSource = maskStringAndCommentContent(relatedSource);
+  const identifiers = new Set<string>();
+  const identifierPattern = /\b[A-Za-z_$][\w$]*\b/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = identifierPattern.exec(maskedSource)) !== null) {
+    const identifier = match[0];
+    if (identifier === relatedRange.identifier || dependencyIdentifierDenylist.has(identifier)) {
+      continue;
+    }
+    identifiers.add(identifier);
+  }
+
+  const dependencies: RelatedSourceRange[] = [];
+  for (const identifier of identifiers) {
+    const range = findVariableDeclarationRange(relatedRange.source, identifier);
+    if (!range || (range.start >= relatedRange.start && range.end <= relatedRange.end)) {
+      continue;
+    }
+
+    dependencies.push(
+      relatedRangeFromLocalDeclaration(
+        rootDir,
+        relatedRange.file,
+        relatedRange.source,
+        "variable-declaration",
+        identifier,
+        range
+      )
+    );
+  }
+
+  return dependencies.slice(0, 8);
+}
+
 function findImportedVariableDeclaration(
   rootDir: string,
   file: string,
@@ -596,10 +722,27 @@ export function createAgentTask(
         ...lineWindow(relatedRange.source, relatedRange.start, relatedRange.end, 1)
       }
     : null;
+  const relatedDependencySnapshots = relatedRange
+    ? findRelatedDependencyRanges(rootDir, relatedRange).map((dependency) => ({
+        file: dependency.relativeFile,
+        sourceHash: dependency.sourceHash,
+        kind: dependency.kind,
+        identifier: dependency.identifier,
+        referencedBy: relatedRange.identifier,
+        range: {
+          start: dependency.start,
+          end: dependency.end
+        },
+        ...lineWindow(dependency.source, dependency.start, dependency.end, 1)
+      }))
+    : [];
   const editableFiles = Array.from(
     new Set([
       binding.relativeFile,
-      ...(relatedSnapshot && relatedSnapshot.file !== binding.relativeFile ? [relatedSnapshot.file] : [])
+      ...(relatedSnapshot && relatedSnapshot.file !== binding.relativeFile ? [relatedSnapshot.file] : []),
+      ...relatedDependencySnapshots
+        .map((snapshot) => snapshot.file)
+        .filter((file) => file !== binding.relativeFile && file !== relatedSnapshot?.file)
     ])
   );
   const taskDir = path.join(rootDir, ".intent", "agent");
@@ -641,6 +784,10 @@ export function createAgentTask(
     "## Related Source Snapshot",
     "",
     codeFence(relatedSnapshot),
+    "",
+    "## Related Dependency Snapshots",
+    "",
+    codeFence(relatedDependencySnapshots),
     "",
     "## Source Snapshot",
     "",

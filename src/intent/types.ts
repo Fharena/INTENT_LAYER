@@ -357,6 +357,9 @@ export interface AgentResultArtifact {
     relatedSnapshotAvailable: boolean;
     relatedDiffLineCount: number;
     relatedSemanticChangeCount: number;
+    relatedDependencySnapshotCount: number;
+    relatedDependencyDiffLineCount: number;
+    relatedDependencySemanticChangeCount: number;
   };
   sourceDiff: string | null;
   semanticDiff: AgentSemanticClassNameDiff | null;
@@ -364,6 +367,8 @@ export interface AgentResultArtifact {
   componentSemanticDiff: AgentSemanticClassNameDiff | null;
   relatedSourceDiff: string | null;
   relatedSemanticDiff: AgentSemanticClassNameDiff | null;
+  relatedDependencySourceDiff: string | null;
+  relatedDependencySemanticDiff: AgentSemanticClassNameDiff | null;
   metrics: {
     resultMs: number;
   };

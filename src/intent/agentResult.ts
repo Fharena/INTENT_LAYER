@@ -78,6 +78,10 @@ interface RelatedSourceSnapshot extends SourceSnapshot {
   identifier: string;
 }
 
+interface RelatedDependencySnapshot extends RelatedSourceSnapshot {
+  referencedBy?: string;
+}
+
 interface ClassNameIntent {
   kind: "static" | "call-literals" | "read-only";
   value: string;
@@ -123,6 +127,26 @@ function parseRelatedSourceSnapshot(rootDir: string, taskFile: string | null): R
   const parsed = parseJsonSection<RelatedSourceSnapshot | null>(rootDir, taskFile, "Related Source Snapshot");
   if (!parsed || !parsed.file || typeof parsed.excerpt !== "string") return null;
   return parsed;
+}
+
+function parseRelatedDependencySnapshots(
+  rootDir: string,
+  taskFile: string | null
+): RelatedDependencySnapshot[] {
+  const parsed = parseJsonSection<RelatedDependencySnapshot[] | null>(
+    rootDir,
+    taskFile,
+    "Related Dependency Snapshots"
+  );
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed.filter(
+    (snapshot) =>
+      Boolean(snapshot) &&
+      typeof snapshot.file === "string" &&
+      typeof snapshot.identifier === "string" &&
+      typeof snapshot.excerpt === "string"
+  );
 }
 
 function excerptBySnapshot(source: string, snapshot: SourceSnapshot): string {
@@ -499,6 +523,18 @@ function semanticLiteralClassNameDiff(
   return semanticIntentDiff(extractLiteralClassNameIntents(beforeSource), extractLiteralClassNameIntents(afterSource));
 }
 
+function combineSemanticDiffs(diffs: AgentSemanticClassNameDiff[]): AgentSemanticClassNameDiff | null {
+  if (diffs.length === 0) return null;
+
+  const classNameChanges = diffs.flatMap((diff) => diff.classNameChanges);
+  return {
+    classNameChangeCount: classNameChanges.length,
+    tokenAddedCount: classNameChanges.reduce((sum, change) => sum + change.addedTokens.length, 0),
+    tokenRemovedCount: classNameChanges.reduce((sum, change) => sum + change.removedTokens.length, 0),
+    classNameChanges
+  };
+}
+
 function tokenDiffMarkdown(tokens: Array<{ token: string; category: IntentTokenCategory | null }>): string {
   if (tokens.length === 0) return "none";
   return tokens.map((token) => `\`${token.token}\` (${token.category ?? "unknown"})`).join(", ");
@@ -620,6 +656,7 @@ export function recordAgentResult(
   const snapshot = parseSourceSnapshot(rootDir, taskFile);
   const componentSnapshot = parseComponentSnapshot(rootDir, taskFile);
   const relatedSnapshot = parseRelatedSourceSnapshot(rootDir, taskFile);
+  const relatedDependencySnapshots = parseRelatedDependencySnapshots(rootDir, taskFile);
 
   let sourceHashAfter: string | null = null;
   let currentSource: string | null = null;
@@ -662,6 +699,44 @@ export function recordAgentResult(
       ? semanticLiteralClassNameDiff(relatedSnapshot.excerpt, currentRelatedExcerpt)
       : null;
   const relatedSemanticChangeCount = relatedSemanticDiff?.classNameChangeCount ?? 0;
+  const relatedDependencyComparisons = relatedDependencySnapshots.map((dependency) => {
+    const currentDependencySource = readSnapshotFile(rootDir, dependency);
+    const currentDependencyExcerpt = currentDependencySource
+      ? excerptBySnapshot(currentDependencySource, dependency)
+      : "";
+    const sourceDiff = currentDependencySource
+      ? unifiedLineDiff(
+          dependency.excerpt,
+          currentDependencyExcerpt,
+          `related-dependency-${dependency.identifier}`
+        )
+      : "";
+    const semanticDiff = currentDependencySource
+      ? semanticLiteralClassNameDiff(dependency.excerpt, currentDependencyExcerpt)
+      : null;
+
+    return {
+      snapshot: dependency,
+      sourceDiff,
+      diffLineCount: diffLineCount(sourceDiff),
+      semanticDiff
+    };
+  });
+  const relatedDependencySourceDiff = relatedDependencyComparisons
+    .map((comparison) => comparison.sourceDiff)
+    .filter(Boolean)
+    .join("\n");
+  const relatedDependencyChangedLineCount = relatedDependencyComparisons.reduce(
+    (sum, comparison) => sum + comparison.diffLineCount,
+    0
+  );
+  const relatedDependencySemanticDiff = combineSemanticDiffs(
+    relatedDependencyComparisons
+      .map((comparison) => comparison.semanticDiff)
+      .filter((diff): diff is AgentSemanticClassNameDiff => Boolean(diff))
+  );
+  const relatedDependencySemanticChangeCount =
+    relatedDependencySemanticDiff?.classNameChangeCount ?? 0;
   const markdown = [
     "# Intent Agent Result",
     "",
@@ -732,6 +807,28 @@ export function recordAgentResult(
         ].join("\n")
       : "- No related source snapshot was available from the task file.",
     "",
+    "## Related Dependency Source Diff",
+    "",
+    relatedDependencySnapshots.length > 0
+      ? relatedDependencySourceDiff
+        ? [
+            `- Snapshot count: \`${relatedDependencySnapshots.length}\``,
+            "",
+            codeFence(relatedDependencySourceDiff, "diff")
+          ].join("\n")
+        : "- Related dependency snapshots matched current source. No line diff recorded."
+      : "- No related dependency snapshots were available from the task file.",
+    "",
+    "## Related Dependency Semantic Intent Diff",
+    "",
+    relatedDependencySnapshots.length > 0
+      ? [
+          `- Snapshot count: \`${relatedDependencySnapshots.length}\``,
+          "",
+          semanticDiffMarkdown(relatedDependencySemanticDiff, "related dependency snapshots")
+        ].join("\n")
+      : "- No related dependency snapshots were available from the task file.",
+    "",
     "## Component Source Diff",
     "",
     componentSnapshot
@@ -792,6 +889,16 @@ export function recordAgentResult(
       relatedSnapshot ? `kind: ${yamlString(relatedSnapshot.kind)}` : "kind: null",
       relatedSnapshot ? `identifier: ${yamlString(relatedSnapshot.identifier)}` : "identifier: null"
     ]),
+    "relatedDependencySourceDiff:",
+    `  snapshotCount: ${relatedDependencySnapshots.length}`,
+    `  diffLineCount: ${relatedDependencyChangedLineCount}`,
+    relatedDependencySourceDiff ? "  patch: |-" : "  patch: null",
+    ...(relatedDependencySourceDiff
+      ? relatedDependencySourceDiff.split(/\r?\n/).map((line) => `    ${line}`)
+      : []),
+    ...semanticDiffYaml(relatedDependencySemanticDiff, "relatedDependencySemanticDiff", [
+      `snapshotCount: ${relatedDependencySnapshots.length}`
+    ]),
     "componentSourceDiff:",
     `  snapshotAvailable: ${Boolean(componentSnapshot)}`,
     `  componentName: ${yamlString(componentSnapshot?.componentName ?? binding.componentName ?? "Unknown")}`,
@@ -810,6 +917,7 @@ export function recordAgentResult(
     `    semanticChangeCount: ${semanticChangeCount}`,
     `    componentSemanticChangeCount: ${componentSemanticChangeCount}`,
     `    relatedSemanticChangeCount: ${relatedSemanticChangeCount}`,
+    `    relatedDependencySemanticChangeCount: ${relatedDependencySemanticChangeCount}`,
     "    changedFiles:",
     ...changedFiles.map((file) => `      - ${yamlString(file)}`),
     "    checks:",
@@ -840,7 +948,10 @@ export function recordAgentResult(
       componentSemanticChangeCount,
       relatedSnapshotAvailable: Boolean(relatedSnapshot),
       relatedDiffLineCount: relatedChangedLineCount,
-      relatedSemanticChangeCount
+      relatedSemanticChangeCount,
+      relatedDependencySnapshotCount: relatedDependencySnapshots.length,
+      relatedDependencyDiffLineCount: relatedDependencyChangedLineCount,
+      relatedDependencySemanticChangeCount
     },
     sourceDiff: sourceDiff || null,
     semanticDiff,
@@ -848,6 +959,8 @@ export function recordAgentResult(
     componentSemanticDiff,
     relatedSourceDiff: relatedSourceDiff || null,
     relatedSemanticDiff,
+    relatedDependencySourceDiff: relatedDependencySourceDiff || null,
+    relatedDependencySemanticDiff,
     metrics: {
       resultMs: Number((performance.now() - started).toFixed(3))
     }
