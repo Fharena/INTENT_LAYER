@@ -264,7 +264,7 @@ npm run dev
 npx intent-layer
 ```
 
-The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, and installed `intent-layer --help` as the package smoke gate. Public npm package naming, the stable `intent-layer/vite` export, and install-guide wording remain launch-polish decisions.
+The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper and package `/vite` export. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, installed `intent-layer --help`, and installed `intent-layer-spike/vite` import as the package smoke gate. Public npm package naming and external install-guide wording remain launch-polish decisions.
 
 ### 8.2 Basic Flow
 

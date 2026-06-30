@@ -266,7 +266,7 @@ npm run dev
 npx intent-layer
 ```
 
-현재 MVP package surface는 `bin/intent-layer.cjs` wrapper로 검증한다. `npm run eval`은 `npm pack --dry-run`, 실제 tarball 생성, 임시 폴더 설치, 설치된 `intent-layer --help` 실행을 package smoke gate로 측정한다. 공개 npm package 이름, `intent-layer/vite` export 안정화, install guide 문구는 launch polish에서 확정한다.
+현재 MVP package surface는 `bin/intent-layer.cjs` wrapper와 package `/vite` export로 검증한다. `npm run eval`은 `npm pack --dry-run`, 실제 tarball 생성, 임시 폴더 설치, 설치된 `intent-layer --help`, 설치된 `intent-layer-spike/vite` import를 package smoke gate로 측정한다. 공개 npm package 이름과 외부 사용자용 install guide 문구는 launch polish에서 확정한다.
 
 ### 8.2 기본 흐름
 

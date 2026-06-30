@@ -517,7 +517,7 @@ Vite transform overhead: <5ms/file target
 1. demo project
 2. docs
 3. landing README
-4. install guide: local tarball install smoke is implemented; public package name/export wording remains
+4. install guide: local tarball install and `/vite` export smoke are implemented; public package name/copy remains
 5. failure mode guide
 6. examples for Codex/Cursor
 
