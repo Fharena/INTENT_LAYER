@@ -1,0 +1,179 @@
+# INTENT_LAYER 기술 스파이크
+
+## 1. 목적
+
+이번 스파이크의 목적은 제품 전체를 만드는 것이 아니라, 가장 위험한 가정 하나를 작게 검증하는 것이다.
+
+검증 질문:
+
+```text
+React/Vite/Tailwind 프로젝트에서 정적 className을 가진 DOM 요소를 클릭하고,
+그 요소를 원본 TSX source range로 연결한 뒤,
+Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
+```
+
+이번 단계에서는 큰 패키지 구조, 정교한 intent schema, Next.js, shadcn/ui 전체 지원을 의도적으로 제외했다.
+
+## 2. 구현 범위
+
+포함:
+
+- React + Vite + Tailwind 데모 앱
+- Vite compile-time instrumentation
+- intrinsic JSX element 대상 `data-intent-id` 삽입
+- `.intent/graph.intent.json` sidecar graph 생성
+- 브라우저 floating overlay
+- element pick -> intent binding 표시
+- static `className` token 목록 표시
+- 지원 가능한 Tailwind token 후보 선택
+- source hash 검증
+- old token 검증
+- range patch 적용
+- 최소 intent operation/diff 파일 생성
+- corpus 분석 스크립트
+- 성능/안전성 평가 스크립트
+
+제외:
+
+- 완성형 제품 UI
+- full `cn()` / `clsx()` patch
+- shadcn/ui 전체 패턴 직접 편집
+- Next.js
+- portal mapping
+- props className forwarding
+- 전체 프로젝트 AST 상시 분석
+- 큰 `.intent.yml` schema
+- npm 배포
+
+## 3. 핵심 구현 결정
+
+### 3.1 Compile-time instrumentation
+
+DOM-to-source mapping은 브라우저 런타임에서 추론하지 않는다.
+
+현재 구현은 Vite plugin에서 TSX 파일을 파싱하고, 정적 `className`을 가진 intrinsic JSX element에 `data-intent-id`를 삽입한다.
+
+대상 예:
+
+```tsx
+<section className="grid grid-cols-3 gap-4 p-6">
+```
+
+변환 방향:
+
+```tsx
+<section className="grid grid-cols-3 gap-4 p-6" data-intent-id="il_...">
+```
+
+동시에 sidecar graph에 다음 정보를 저장한다.
+
+```text
+intent id
+source file
+component name
+tag name
+className source range
+className value
+token list
+source hash
+transform time
+```
+
+### 3.2 Range patch only
+
+AST code generation으로 파일을 다시 출력하지 않는다.
+
+현재 patch 방식:
+
+1. 선택된 `intent id`로 source binding 조회
+2. 파일을 다시 읽음
+3. 저장된 `sourceHash`와 현재 파일 hash 비교
+4. 저장된 `className` range 안에서 old token 검색
+5. old token이 정확히 있으면 해당 token range만 교체
+6. operation/diff 파일 생성
+
+source hash가 다르면 patch를 거부한다.
+old token이 없으면 patch를 거부한다.
+
+## 4. 주요 파일
+
+```text
+vite.config.ts
+src/App.tsx
+src/intent/vitePlugin.ts
+src/intent/instrument.ts
+src/intent/patch.ts
+src/intent/tailwind.ts
+src/intent/client.ts
+scripts/analyze-classnames.ts
+scripts/evaluate-spike.ts
+fixtures/corpus/*.tsx
+reports/performance/*.json
+```
+
+## 5. 실행 방법
+
+의존성 설치:
+
+```bash
+npm install
+```
+
+개발 서버:
+
+```bash
+npm run dev
+```
+
+검증:
+
+```bash
+npm run typecheck
+npm run eval
+npm run build
+```
+
+`npm run eval`은 다음을 생성한다.
+
+```text
+reports/performance/corpus-audit.json
+reports/performance/spike-evaluation.json
+```
+
+## 6. Context Pack 사용
+
+사용한 외부 프로젝트:
+
+```text
+https://github.com/Fharena/context-pack
+```
+
+적용 방식:
+
+1. `context-pack setup --dry-run`으로 생성 계획 확인
+2. `context-pack setup`으로 `.context-pack` 문맥 라이브러리 생성
+3. `context-pack start --task "Build INTENT_LAYER static className click-to-patch spike with numeric evaluation docs"` 실행
+4. 생성된 context pack의 read-first 문서를 읽고 작업 범위를 확인
+
+이번 작업에서 context-pack은 전체 repo를 무작정 읽지 않고 `docs`, `overview` 영역을 먼저 보도록 라우팅했다.
+생성된 `.context-pack/packs/CONTEXT_PACK.md`는 임시 파일이므로 커밋하지 않는다.
+
+## 7. 현재 한계
+
+- patch 대상은 static `className`만이다.
+- `cn()` / `clsx()`는 corpus 분석에서만 분류하고, 실제 patch는 아직 하지 않는다.
+- `className={someVariable}`는 read-only다.
+- template literal은 read-only다.
+- variant 함수와 props forwarding은 read-only다.
+- 현재 click-to-binding 시간은 실제 브라우저 클릭 전체 시간이 아니라 graph lookup proxy만 측정했다.
+- 현재 작은 fixture에서는 transform 시간 5ms 목표를 만족했지만, 대형 TSX 파일에서는 아직 검증하지 않았다.
+
+## 8. 다음 작업
+
+우선순위:
+
+1. 대형 TSX 파일에서도 transform time을 5ms 이하로 유지할 수 있는지 측정한다.
+2. 실제 브라우저 click -> binding -> patch round trip 시간을 측정한다.
+3. simple `cn()` / `clsx()` 문자열 literal patch를 추가한다.
+4. read-only 이유를 UI에 더 명확히 표시한다.
+5. fixture를 nested component, map render, conditional render, fragment로 확장한다.

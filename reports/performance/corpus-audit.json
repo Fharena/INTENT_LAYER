@@ -1,0 +1,473 @@
+{
+  "generatedAt": "2026-06-30T03:52:10.313Z",
+  "filesScanned": 8,
+  "classNameOccurrences": 40,
+  "classification": {
+    "static": 30,
+    "simple-cn-clsx": 3,
+    "read-only": 7
+  },
+  "classificationRatio": {
+    "static": 0.75,
+    "simple-cn-clsx": 0.075,
+    "read-only": 0.175
+  },
+  "tokenTotals": {
+    "static": 154,
+    "staticEditable": 126,
+    "staticAndSimple": 172,
+    "staticAndSimpleEditable": 143,
+    "all": 182,
+    "allEditable": 149
+  },
+  "editableCoverage": {
+    "staticOnly": 0.8182,
+    "staticAndSimpleCnClsx": 0.8314,
+    "allObservedTokens": 0.8187
+  },
+  "unsupportedReasons": {
+    "variable-reference": 2,
+    "template-expression": 1,
+    "complex-cn-variable-reference": 1,
+    "complex-cn-runtime-expression": 1,
+    "variant-function": 1,
+    "unsupported-expression": 1
+  },
+  "records": [
+    {
+      "file": "fixtures/corpus/DynamicRuntime.tsx",
+      "line": 5,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/corpus/DynamicRuntime.tsx",
+      "line": 6,
+      "classification": "read-only",
+      "reason": "template-expression",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/corpus/DynamicRuntime.tsx",
+      "line": 7,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/corpus/ResponsivePatterns.tsx",
+      "line": 3,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/corpus/ResponsivePatterns.tsx",
+      "line": 4,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-slate-200 bg-white p-4 md:p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/corpus/ResponsivePatterns.tsx",
+      "line": 5,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold md:text-xl"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/corpus/ResponsivePatterns.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-slate-200 bg-white p-4 md:p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/corpus/ResponsivePatterns.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold md:text-xl"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/corpus/ShadcnLikeCard.tsx",
+      "line": 10,
+      "classification": "read-only",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "rounded-xl border bg-card p-6 text-card-foreground shadow",
+        "opacity-70"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/corpus/ShadcnLikeCard.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/corpus/ShadcnLikeCard.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold leading-none"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/corpus/ShadcnLikeCard.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm text-muted-foreground"
+      ],
+      "tokenCount": 2,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/corpus/SimpleCnClsx.tsx",
+      "line": 6,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl p-6",
+        "bg-teal-50"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/corpus/SimpleCnClsx.tsx",
+      "line": 7,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "rounded-lg px-4 py-2 text-sm font-semibold",
+        "bg-teal-700 text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/corpus/SimpleCnClsx.tsx",
+      "line": 10,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600",
+        "font-medium",
+        "font-normal"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/corpus/StaticDashboard.tsx",
+      "line": 5,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 p-6"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/corpus/StaticDashboard.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 p-5"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/corpus/StaticDashboard.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-medium text-slate-500"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/corpus/StaticDashboard.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/corpus/StaticLanding.tsx",
+      "line": 3,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-slate-50 px-8 py-10 text-slate-950"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/corpus/StaticLanding.tsx",
+      "line": 4,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-2xl bg-white p-8 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/corpus/StaticLanding.tsx",
+      "line": 5,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-4xl font-bold leading-tight text-slate-950"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/corpus/StaticLanding.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-slate-600"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/corpus/StaticLanding.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/corpus/VariantPatterns.tsx",
+      "line": 6,
+      "classification": "read-only",
+      "reason": "complex-cn-runtime-expression",
+      "stringValues": [
+        "flex gap-4 p-6"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/corpus/VariantPatterns.tsx",
+      "line": 7,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/corpus/VariantPatterns.tsx",
+      "line": 8,
+      "classification": "read-only",
+      "reason": "unsupported-expression",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 21,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-slate-50 px-8 py-10 text-slate-950"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 22,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 23,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 24,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 27,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-4xl font-bold leading-tight text-slate-950"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 30,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-slate-600"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 36,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 40,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 42,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-center justify-between gap-3"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 43,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 44,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-teal-100 px-3 py-1 text-sm font-semibold text-teal-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 48,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 49,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mt-auto rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 8
+    }
+  ]
+}

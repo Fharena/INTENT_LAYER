@@ -2,13 +2,22 @@
 
 Working product folder for the Intent Layer concept.
 
+Current state:
+
+> Static `className` click-to-patch spike for React + Vite + Tailwind.
+
 Documents:
 
 - `PRODUCT_PLAN_KR.md` - Korean detailed product plan
 - `PRODUCT_PLAN_EN.md` - English detailed product plan
 - `LAUNCH_MVP_KR.md` - Korean expanded launch MVP plan
 - `LAUNCH_MVP_EN.md` - English expanded launch MVP plan
+- `TECHNICAL_SPIKE_KR.md` - Korean technical spike notes
+- `TECHNICAL_SPIKE_EN.md` - English technical spike notes
+- `PERFORMANCE_EVALUATION_KR.md` - Korean numeric evaluation
+- `PERFORMANCE_EVALUATION_EN.md` - English numeric evaluation
 - `AGENTS.md` - instructions for AI coding agents working on this product
+- `codex.md` - Codex-specific working notes and user preferences
 
 Working definition:
 
@@ -17,3 +26,42 @@ Working definition:
 Expanded launch definition:
 
 > Deterministic direct edits for simple UI changes, structured AI handoff tasks for complex changes, and intent diffs for human review.
+
+## Spike Usage
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the demo:
+
+```bash
+npm run dev
+```
+
+Run checks:
+
+```bash
+npm run typecheck
+npm run eval
+npm run build
+```
+
+The demo currently supports:
+
+- React + Vite + Tailwind demo UI
+- compile-time `data-intent-id` injection for intrinsic JSX elements with static `className`
+- source sidecar graph generation at `.intent/graph.intent.json`
+- floating browser overlay
+- direct Tailwind token replacement for supported static tokens
+- source hash validation before patching
+- minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply
+
+The first evaluation result is stored in:
+
+```text
+reports/performance/corpus-audit.json
+reports/performance/spike-evaluation.json
+```
