@@ -25,6 +25,7 @@ Measured inputs:
 - agent result source diff fixture
 - agent result selected `className` semantic diff fixture
 - agent result component snapshot/source diff/semantic diff fixture
+- component snapshot discovery fixture set
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -151,8 +152,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.443ms / p95 3.258ms / max 3.258ms |
-| `src/main.tsx` | 0 | avg 0.005ms / p95 0.008ms / max 0.008ms |
+| `src/App.tsx` | 13 | avg 1.057ms / p95 2.714ms / max 2.714ms |
+| `src/main.tsx` | 0 | avg 0.004ms / p95 0.006ms / max 0.006ms |
 
 Summary:
 
@@ -160,12 +161,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.724ms |
-| Overall p95 transform time | 3.258ms |
-| Overall max transform time | 3.258ms |
-| Warm average transform time | 0.497ms |
-| Warm p95 transform time | 1.701ms |
-| Warm max transform time | 1.701ms |
+| Overall average transform time | 0.531ms |
+| Overall p95 transform time | 2.714ms |
+| Overall max transform time | 2.714ms |
+| Warm average transform time | 0.323ms |
+| Warm p95 transform time | 0.719ms |
+| Warm max transform time | 0.719ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -189,9 +190,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 10.991ms |
-| p95 transform time | 18.089ms |
-| Max transform time | 18.089ms |
+| Average transform time | 8.374ms |
+| p95 transform time | 12.903ms |
+| Max transform time | 12.903ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -206,13 +207,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.427ms |
-| Preview round trip | 1.821ms |
+| Preview time | 1.761ms |
+| Preview round trip | 2.184ms |
 | Apply success | true |
-| Static apply time | 34.63ms |
-| Simple `cn()` apply time | 11.377ms |
+| Static apply time | 38.862ms |
+| Simple `cn()` apply time | 11.618ms |
 | Revert success | true |
-| Revert time | 34.014ms |
+| Revert time | 28.019ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -252,8 +253,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.102ms |
-| Average lookup | 0.000102ms |
+| Total time | 0.096ms |
+| Average lookup | 0.000096ms |
 
 Caveat:
 
@@ -335,7 +336,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 6.986ms |
+| Task generation time | 11.611ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -358,7 +359,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 22.542ms |
+| Result generation time | 11.094ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -415,6 +416,31 @@ Interpretation:
 - The component-level semantic diff records the same fixture change: 2 added tokens (`rounded-xl`, `p-8`) and 2 removed tokens (`rounded-lg`, `p-6`).
 - It does not yet infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 
+## 8.1 Component Snapshot Discovery Fixture
+
+| Metric | Value |
+| --- | ---: |
+| Fixture cases | 4 |
+| Passing cases | 4 |
+| Pass rate | 100% |
+| Gate | pass |
+
+Cases checked:
+
+| Case | Component | Bindings | Task time | Result |
+| --- | --- | ---: | ---: | --- |
+| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 4.32ms | pass |
+| arrow block | `ComponentSnapshotArrowBlock` | 2 | 3.23ms | pass |
+| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 2.671ms | pass |
+| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 3.43ms | pass |
+
+Interpretation:
+
+- The fixture caught a real bug where function component parameter destructuring/type annotation made body `{` detection stop too early.
+- Body range discovery now balances the function parameter list before looking for the component body.
+- Arrow components are covered for block body, parenthesized expression body, and no-parens JSX expression body.
+- HOC-wrapped components, memo/forwardRef, and namespace component exports still need separate fixtures.
+
 ## 9. Read-only Binding Handoff
 
 | Metric | Value |
@@ -424,7 +450,7 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.609ms |
+| Agent task generation time | 2.234ms |
 
 Interpretation:
 
@@ -455,6 +481,7 @@ Interpretation:
 | operation log undo stack | 2 applies + 2 reverts + pending stack 0 + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
 | agent result generation | result/diff created + source diff + selected/component semantic diff present | pass |
+| component snapshot discovery | all 4 fixture cases pass | pass |
 | read-only handoff | read-only binding created + agent task created | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
@@ -476,6 +503,7 @@ What worked:
 - LIFO stack behavior through the last-patch revert endpoint
 - agent handoff task markdown generation
 - agent result markdown, selected source-window diff, component source diff, and selected/component `className` semantic diff generation
+- component snapshot discovery fixture pass 4/4
 - real browser click-to-panel, preview, apply, and revert round-trip measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
@@ -491,12 +519,12 @@ What remains weak:
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - undo history UI and conflict-resolution UX are still missing
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
-- component snapshot discovery fixtures still need to cover nested components, map rendering, conditional rendering, fragments, and arrow components
+- component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports are still missing
 - variant functions and runtime template literals remain unsupported
 
 Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, component snapshot fixture expansion, and undo history UI design.
+The next priority is independent external corpus validation, read-only source diff expansion, and undo history UI design.
 ```

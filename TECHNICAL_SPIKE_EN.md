@@ -250,6 +250,7 @@ Support model:
 - Agent handoff records a selected source-window snapshot, component snapshot, task/result markdown, and intent diffs.
 - Agent results record before/after line diffs for both the selected source window and the selected component snapshot.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
+- Component snapshot fixtures cover 4 cases: function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, and arrow JSX no-parens.
 - They still do not infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
 - The latest browser measurement repeats 3 desktop samples and 3 mobile 390x844 viewport samples.
@@ -263,8 +264,8 @@ Support model:
 Priority order:
 
 1. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
-2. Expand component snapshot discovery fixtures to nested components, map rendering, conditional rendering, fragments, and arrow components.
-3. Connect read-only source diffs to a wider source window.
+2. Connect read-only source diffs to a wider source window.
+3. Add component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports.
 4. Validate caching and graph write throttling on product-sized TSX files.
 5. Design undo history UI and conflict-resolution UX.
 
