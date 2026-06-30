@@ -35,6 +35,10 @@ function markdownList(values: string[]): string {
   return values.map((value) => `- \`${value}\``).join("\n");
 }
 
+function codeFence(value: string, language: string): string {
+  return [`\`\`\`${language}`, value, "```"].join("\n");
+}
+
 function blockScalar(value: string, indent = "      "): string {
   const clean = value.trim();
   if (!clean) return `${indent}none`;
@@ -46,6 +50,90 @@ function blockScalar(value: string, indent = "      "): string {
 
 function yamlString(value: string): string {
   return JSON.stringify(value);
+}
+
+interface SourceSnapshot {
+  file: string;
+  sourceHash: string;
+  range: {
+    start: number;
+    end: number;
+  };
+  startLine: number;
+  endLine: number;
+  windowStartLine: number;
+  windowEndLine: number;
+  excerpt: string;
+}
+
+function parseSourceSnapshot(rootDir: string, taskFile: string | null): SourceSnapshot | null {
+  if (!taskFile) return null;
+
+  const fullPath = path.isAbsolute(taskFile) ? taskFile : path.join(rootDir, taskFile);
+  if (!fs.existsSync(fullPath)) return null;
+
+  const markdown = fs.readFileSync(fullPath, "utf8");
+  const match = markdown.match(/## Source Snapshot\s+```json\s+([\s\S]*?)\s+```/);
+  if (!match) return null;
+
+  try {
+    const parsed = JSON.parse(match[1]) as SourceSnapshot;
+    if (!parsed.file || typeof parsed.excerpt !== "string") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function excerptBySnapshot(source: string, snapshot: SourceSnapshot): string {
+  const lines = source.split(/\r?\n/);
+  const start = Math.max(1, snapshot.windowStartLine);
+  const end = Math.min(lines.length, snapshot.windowEndLine);
+  return lines.slice(start - 1, end).join("\n");
+}
+
+function unifiedLineDiff(before: string, after: string): string {
+  const beforeLines = before.split(/\r?\n/);
+  const afterLines = after.split(/\r?\n/);
+
+  let prefix = 0;
+  while (
+    prefix < beforeLines.length &&
+    prefix < afterLines.length &&
+    beforeLines[prefix] === afterLines[prefix]
+  ) {
+    prefix += 1;
+  }
+
+  let suffix = 0;
+  while (
+    suffix < beforeLines.length - prefix &&
+    suffix < afterLines.length - prefix &&
+    beforeLines[beforeLines.length - 1 - suffix] === afterLines[afterLines.length - 1 - suffix]
+  ) {
+    suffix += 1;
+  }
+
+  const removed = beforeLines.slice(prefix, beforeLines.length - suffix);
+  const added = afterLines.slice(prefix, afterLines.length - suffix);
+  if (removed.length === 0 && added.length === 0) return "";
+
+  const contextBefore = beforeLines.slice(Math.max(0, prefix - 2), prefix);
+  const contextAfter = beforeLines.slice(beforeLines.length - suffix, beforeLines.length - suffix + 2);
+  return [
+    "@@ selected-source-window @@",
+    ...contextBefore.map((line) => ` ${line}`),
+    ...removed.map((line) => `-${line}`),
+    ...added.map((line) => `+${line}`),
+    ...contextAfter.map((line) => ` ${line}`)
+  ].join("\n");
+}
+
+function diffLineCount(diff: string): number {
+  if (!diff) return 0;
+  return diff
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("+") || line.startsWith("-")).length;
 }
 
 export function recordAgentResult(
@@ -91,15 +179,21 @@ export function recordAgentResult(
   ).map((file) => normalizeRelativePath(rootDir, file));
   const checks = uniqueNonEmpty(request.checks ?? []);
   const notes = request.notes?.trim() ?? "";
+  const snapshot = parseSourceSnapshot(rootDir, taskFile);
 
   let sourceHashAfter: string | null = null;
+  let currentSource: string | null = null;
   try {
-    sourceHashAfter = sha256(fs.readFileSync(binding.file, "utf8"));
+    currentSource = fs.readFileSync(binding.file, "utf8");
+    sourceHashAfter = sha256(currentSource);
   } catch {
     sourceHashAfter = null;
   }
 
   const sourceHashChanged = sourceHashAfter === null ? null : sourceHashAfter !== binding.sourceHash;
+  const sourceDiff =
+    snapshot && currentSource ? unifiedLineDiff(snapshot.excerpt, excerptBySnapshot(currentSource, snapshot)) : "";
+  const changedLineCount = diffLineCount(sourceDiff);
   const markdown = [
     "# Intent Agent Result",
     "",
@@ -133,6 +227,14 @@ export function recordAgentResult(
     "",
     notes ? truncate(notes, 1000) : "None recorded.",
     "",
+    "## Source Diff",
+    "",
+    snapshot
+      ? sourceDiff
+        ? [`- Snapshot file: \`${snapshot.file}\``, "", codeFence(sourceDiff, "diff")].join("\n")
+        : "- Snapshot matched current source window. No line diff recorded."
+      : "- No source snapshot was available from the task file.",
+    "",
     "## Intent Diff",
     "",
     `- Diff file: \`${path.relative(rootDir, diffFile).replace(/\\/g, "/")}\``,
@@ -154,6 +256,11 @@ export function recordAgentResult(
     `  before: ${yamlString(binding.sourceHash)}`,
     sourceHashAfter ? `  after: ${yamlString(sourceHashAfter)}` : "  after: null",
     `  changed: ${sourceHashChanged}`,
+    "sourceDiff:",
+    `  snapshotAvailable: ${Boolean(snapshot)}`,
+    `  diffLineCount: ${changedLineCount}`,
+    sourceDiff ? "  patch: |-" : "  patch: null",
+    ...(sourceDiff ? sourceDiff.split(/\r?\n/).map((line) => `    ${line}`) : []),
     "changes:",
     "  - type: agent-handoff-result",
     `    file: ${yamlString(binding.relativeFile)}`,
@@ -180,8 +287,11 @@ export function recordAgentResult(
     source: {
       sourceHashBefore: binding.sourceHash,
       sourceHashAfter,
-      sourceHashChanged
+      sourceHashChanged,
+      snapshotAvailable: Boolean(snapshot),
+      diffLineCount: changedLineCount
     },
+    sourceDiff: sourceDiff || null,
     metrics: {
       resultMs: Number((performance.now() - started).toFixed(3))
     }

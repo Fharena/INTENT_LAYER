@@ -17,6 +17,36 @@ function codeFence(value: unknown, language = "json"): string {
   );
 }
 
+function lineWindow(source: string, start: number, end: number, contextLines = 4) {
+  const lines = source.split(/\r?\n/);
+  let offset = 0;
+  let startLine = 1;
+  let endLine = 1;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const nextOffset = offset + lines[index].length + 1;
+    if (offset <= start && start < nextOffset) {
+      startLine = index + 1;
+    }
+    if (offset < end && end <= nextOffset) {
+      endLine = index + 1;
+      break;
+    }
+    offset = nextOffset;
+  }
+
+  const windowStartLine = Math.max(1, startLine - contextLines);
+  const windowEndLine = Math.min(lines.length, endLine + contextLines);
+
+  return {
+    startLine,
+    endLine,
+    windowStartLine,
+    windowEndLine,
+    excerpt: lines.slice(windowStartLine - 1, windowEndLine).join("\n")
+  };
+}
+
 function sourceRange(binding: IntentBinding) {
   const tokenStarts = binding.tokens.map((token) => token.sourceStart);
   const tokenEnds = binding.tokens.map((token) => token.sourceEnd);
@@ -55,6 +85,13 @@ export function createAgentTask(
   }
 
   const range = sourceRange(binding);
+  const currentSource = fs.readFileSync(binding.file, "utf8");
+  const snapshot = {
+    file: binding.relativeFile,
+    sourceHash: binding.sourceHash,
+    range,
+    ...lineWindow(currentSource, range.start, range.end)
+  };
   const taskDir = path.join(rootDir, ".intent", "agent");
   fs.mkdirSync(taskDir, { recursive: true });
   const taskFile = path.join(taskDir, `task_${timestampSlug()}.md`);
@@ -86,6 +123,10 @@ export function createAgentTask(
     "## Current Intent Document",
     "",
     codeFence(source),
+    "",
+    "## Source Snapshot",
+    "",
+    codeFence(snapshot),
     "",
     "## Desired Change",
     "",

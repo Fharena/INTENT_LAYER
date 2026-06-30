@@ -127,6 +127,7 @@ const agentTaskRequiredSections = [
   "## Goal",
   "## Selected Component",
   "## Current Intent Document",
+  "## Source Snapshot",
   "## Desired Change",
   "## Constraints",
   "## Files That May Be Edited",
@@ -136,6 +137,12 @@ const agentTaskRequiredSections = [
 const agentTaskSectionsPresent = agentTaskRequiredSections.every((section) =>
   agentTaskMarkdown.includes(section)
 );
+if (agentTask.ok) {
+  fs.writeFileSync(
+    patchFixture,
+    fs.readFileSync(patchFixture, "utf8").replace("Patch target", "Patch target with empty state")
+  );
+}
 const agentResult = recordAgentResult(rootDir, patchEntry, {
   id: patchEntry.id,
   taskFile: agentTask.ok ? agentTask.taskFile : undefined,
@@ -152,6 +159,7 @@ const agentResultRequiredSections = [
   "## Task",
   "## Changed Files",
   "## Checks",
+  "## Source Diff",
   "## Intent Diff"
 ];
 const agentResultSectionsPresent = agentResultRequiredSections.every((section) =>
@@ -299,7 +307,10 @@ const report = {
       ? path.relative(rootDir, agentResult.resultFile).replace(/\\/g, "/")
       : null,
     diffFile: agentResult.ok ? path.relative(rootDir, agentResult.diffFile).replace(/\\/g, "/") : null,
-    sourceHashChanged: agentResult.ok ? agentResult.source.sourceHashChanged : null
+    sourceHashChanged: agentResult.ok ? agentResult.source.sourceHashChanged : null,
+    snapshotAvailable: agentResult.ok ? agentResult.source.snapshotAvailable : false,
+    diffLineCount: agentResult.ok ? agentResult.source.diffLineCount : 0,
+    sourceDiffPresent: agentResult.ok ? Boolean(agentResult.sourceDiff) : false
   },
   readOnlyBinding: {
     entryCreated: Boolean(readOnlyEntry),
@@ -319,7 +330,12 @@ const report = {
     supportedPatchPass: apply.ok && syntaxErrorsAfterPatch === 0,
     revertPatchPass: revert.ok && syntaxErrorsAfterRevert === 0,
     agentTaskPass: agentTask.ok && agentTaskSectionsPresent,
-    agentResultPass: agentResult.ok && agentResultSectionsPresent && agentResultFilesExist,
+    agentResultPass:
+      agentResult.ok &&
+      agentResultSectionsPresent &&
+      agentResultFilesExist &&
+      agentResult.source.snapshotAvailable &&
+      agentResult.source.diffLineCount > 0,
     readOnlyHandoffPass:
       Boolean(readOnlyEntry) &&
       readOnlyEntry?.className.kind === "read-only" &&

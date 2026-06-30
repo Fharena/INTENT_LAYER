@@ -149,7 +149,10 @@ export interface AgentResultArtifact {
     sourceHashBefore: string;
     sourceHashAfter: string | null;
     sourceHashChanged: boolean | null;
+    snapshotAvailable: boolean;
+    diffLineCount: number;
   };
+  sourceDiff: string | null;
   metrics: {
     resultMs: number;
   };
