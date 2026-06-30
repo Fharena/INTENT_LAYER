@@ -1,61 +1,111 @@
 ﻿{
-    "generatedAt":  "2026-06-30T04:51:18.4022819Z",
+    "generatedAt":  "2026-06-30T04:59:46.8289287Z",
     "contextPackUsed":  true,
-    "targetUrl":  "http://127.0.0.1:5180/",
-    "measurement":  "real-browser-click-to-panel-and-preview",
-    "method":  "In-app browser opened the Vite dev server, clicked Pick element, clicked the visible Patch Preview heading, then clicked the first Preview button for the selected h2 token row. The overlay posted performance.now measurements to /__intent/client-metric.",
+    "targetUrl":  "http://127.0.0.1:5181/",
+    "measurement":  "real-browser-click-to-panel-preview-apply-revert",
+    "method":  "In-app browser opened the Vite dev server, clicked Pick element, clicked the visible Patch Preview heading, changed the first h2 typography token from text-lg to text-xl, clicked Preview, clicked Apply, then clicked Undo last. The overlay posted performance.now measurements to /__intent/client-metric.",
     "samples":  [
                     {
                         "kind":  "click-to-panel",
                         "id":  "il_9e496b23d7",
                         "status":  "selected",
-                        "createdAt":  "2026-06-30T04:50:57.708Z",
-                        "graphFetchMs":  4.2,
-                        "pickToPanelMs":  374.3,
-                        "clickToPanelMs":  1.8,
+                        "createdAt":  "2026-06-30T04:58:57.338Z",
+                        "graphFetchMs":  4.4,
+                        "pickToPanelMs":  343.3,
+                        "clickToPanelMs":  1.3,
                         "bindingLookupMs":  0,
-                        "renderMs":  1.8
+                        "renderMs":  1.3
                     },
                     {
                         "kind":  "patch-preview",
                         "id":  "il_9e496b23d7",
                         "status":  "ok",
-                        "createdAt":  "2026-06-30T04:50:58.119Z",
+                        "createdAt":  "2026-06-30T04:58:58.097Z",
                         "oldToken":  "text-lg",
+                        "nextToken":  "text-xl",
+                        "roundTripMs":  3.3,
+                        "serverMs":  0.466,
+                        "renderMs":  0.2
+                    },
+                    {
+                        "kind":  "patch-apply",
+                        "id":  "il_9e496b23d7",
+                        "status":  "ok",
+                        "createdAt":  "2026-06-30T04:58:58.745Z",
+                        "oldToken":  "text-lg",
+                        "nextToken":  "text-xl",
+                        "roundTripMs":  11.7,
+                        "serverMs":  8.475,
+                        "renderMs":  0.2
+                    },
+                    {
+                        "kind":  "patch-revert",
+                        "id":  "il_9e496b23d7",
+                        "status":  "ok",
+                        "createdAt":  "2026-06-30T04:58:59.946Z",
+                        "oldToken":  "text-xl",
                         "nextToken":  "text-lg",
-                        "roundTripMs":  6.1,
-                        "serverMs":  0.473,
-                        "renderMs":  2
+                        "roundTripMs":  12.5,
+                        "serverMs":  9.257,
+                        "renderMs":  1.4
                     }
                 ],
     "latestClickToPanel":  {
                                "kind":  "click-to-panel",
                                "id":  "il_9e496b23d7",
                                "status":  "selected",
-                               "createdAt":  "2026-06-30T04:50:57.708Z",
-                               "graphFetchMs":  4.2,
-                               "pickToPanelMs":  374.3,
-                               "clickToPanelMs":  1.8,
+                               "createdAt":  "2026-06-30T04:58:57.338Z",
+                               "graphFetchMs":  4.4,
+                               "pickToPanelMs":  343.3,
+                               "clickToPanelMs":  1.3,
                                "bindingLookupMs":  0,
-                               "renderMs":  1.8
+                               "renderMs":  1.3
                            },
     "latestPreview":  {
                           "kind":  "patch-preview",
                           "id":  "il_9e496b23d7",
                           "status":  "ok",
-                          "createdAt":  "2026-06-30T04:50:58.119Z",
+                          "createdAt":  "2026-06-30T04:58:58.097Z",
                           "oldToken":  "text-lg",
-                          "nextToken":  "text-lg",
-                          "roundTripMs":  6.1,
-                          "serverMs":  0.473,
-                          "renderMs":  2
+                          "nextToken":  "text-xl",
+                          "roundTripMs":  3.3,
+                          "serverMs":  0.466,
+                          "renderMs":  0.2
                       },
+    "latestApply":  {
+                        "kind":  "patch-apply",
+                        "id":  "il_9e496b23d7",
+                        "status":  "ok",
+                        "createdAt":  "2026-06-30T04:58:58.745Z",
+                        "oldToken":  "text-lg",
+                        "nextToken":  "text-xl",
+                        "roundTripMs":  11.7,
+                        "serverMs":  8.475,
+                        "renderMs":  0.2
+                    },
+    "latestRevert":  {
+                         "kind":  "patch-revert",
+                         "id":  "il_9e496b23d7",
+                         "status":  "ok",
+                         "createdAt":  "2026-06-30T04:58:59.946Z",
+                         "oldToken":  "text-xl",
+                         "nextToken":  "text-lg",
+                         "roundTripMs":  12.5,
+                         "serverMs":  9.257,
+                         "renderMs":  1.4
+                     },
     "gates":  {
                   "clickToPanelUnder100ms":  true,
                   "graphFetchUnder100ms":  true,
                   "previewRoundTripUnder50ms":  true,
                   "previewServerUnder50ms":  true,
+                  "applyRoundTripUnder50ms":  true,
+                  "applyServerUnder50ms":  true,
+                  "revertRoundTripUnder50ms":  true,
+                  "revertServerUnder50ms":  true,
                   "selectedBinding":  true,
-                  "previewOk":  true
+                  "previewOk":  true,
+                  "applyOk":  true,
+                  "revertOk":  true
               }
 }

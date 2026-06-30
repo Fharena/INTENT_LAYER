@@ -36,7 +36,7 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 - 구조화된 agent handoff task 생성
 - 구조화된 agent result 문서 생성
 - agent handoff source snapshot과 result source diff 생성
-- 브라우저 click-to-panel 및 preview round-trip latency 측정
+- 브라우저 click-to-panel, preview, apply, revert round-trip latency 측정
 - 최소 intent operation/diff 파일 생성
 - corpus 분석 스크립트
 - 성능/안전성 평가 스크립트
@@ -209,7 +209,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - dev server 재시작 후에는 in-memory undo 상태가 사라진다.
 - agent handoff는 선택 source window snapshot과 task/result markdown, intent diff 기록을 지원한다.
 - agent result는 선택 source window의 before/after line diff를 기록하지만, 아직 전체 파일 semantic diff를 자동 추론하지 않는다.
-- 실제 브라우저 click-to-panel 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
+- 실제 브라우저 click-to-panel, preview, apply, revert 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
 - warm transform은 5ms 목표를 만족했지만, cold first transform은 5ms를 넘을 수 있다.
 - 대형 TSX 파일에서는 아직 검증하지 않았다.
 
@@ -218,12 +218,12 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 우선순위:
 
 1. 대형 TSX 파일에서도 transform time을 5ms 이하로 유지할 수 있는지 측정한다.
-2. 실제 브라우저 preview -> apply round trip 시간을 측정한다.
+2. browser metric 측정을 여러 샘플과 모바일 viewport로 확장한다.
 3. agent result source window diff를 실제 semantic intent diff로 확장한다.
 4. undo stack과 operation log 기반 revert를 설계한다.
-5. browser metric 측정을 여러 샘플과 모바일 viewport로 확장한다.
-6. read-only source diff를 더 넓은 source window와 연결한다.
-7. fixture를 nested component, map render, conditional render, fragment로 확장한다.
+5. read-only source diff를 더 넓은 source window와 연결한다.
+6. fixture를 nested component, map render, conditional render, fragment로 확장한다.
+7. 실제 AI 생성 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
 
 ## 9. Agent Handoff와 Result
 
@@ -318,6 +318,12 @@ renderMs
 preview roundTripMs
 preview serverMs
 preview renderMs
+apply roundTripMs
+apply serverMs
+apply renderMs
+revert roundTripMs
+revert serverMs
+revert renderMs
 ```
 
 dev server endpoint:
@@ -328,5 +334,5 @@ GET /__intent/client-metrics
 DELETE /__intent/client-metrics
 ```
 
-첫 실제 브라우저 측정은 in-app browser로 `Pick element`를 누른 뒤 `Patch Preview` heading과 첫 `Preview` 버튼을 클릭해 수행했다.
+최신 실제 브라우저 측정은 in-app browser로 `Pick element`를 누른 뒤 `Patch Preview` heading을 선택하고, 첫 typography token을 `text-lg -> text-xl`로 preview/apply한 뒤 `Undo last`로 되돌려 수행했다.
 결과는 `reports/performance/browser-click-metric.json`에 저장한다.

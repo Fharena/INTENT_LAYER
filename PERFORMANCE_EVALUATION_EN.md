@@ -22,7 +22,7 @@ Measured inputs:
 - agent result artifact fixture
 - agent result source diff fixture
 - read-only binding handoff fixture
-- in-app browser click-to-panel measurement
+- in-app browser click-to-panel, preview, apply, and revert measurement
 
 Important caveat:
 
@@ -88,8 +88,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 3.133ms / p95 5.865ms / max 5.865ms |
-| `src/main.tsx` | 0 | avg 0.003ms / p95 0.009ms / max 0.009ms |
+| `src/App.tsx` | 13 | avg 2.683ms / p95 5.294ms / max 5.294ms |
+| `src/main.tsx` | 0 | avg 0.002ms / p95 0.008ms / max 0.008ms |
 
 Summary:
 
@@ -97,12 +97,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 1.568ms |
-| Overall p95 transform time | 5.865ms |
-| Overall max transform time | 5.865ms |
-| Warm average transform time | 1.225ms |
-| Warm p95 transform time | 2.883ms |
-| Warm max transform time | 2.883ms |
+| Overall average transform time | 1.343ms |
+| Overall p95 transform time | 5.294ms |
+| Overall max transform time | 5.294ms |
+| Warm average transform time | 1.015ms |
+| Warm p95 transform time | 2.994ms |
+| Warm max transform time | 2.994ms |
 | Target | <= 5ms per warm transform |
 | Result | warm pass / cold fail |
 
@@ -119,13 +119,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 0.769ms |
-| Preview round trip | 1.221ms |
+| Preview time | 1.223ms |
+| Preview round trip | 1.542ms |
 | Apply success | true |
-| Static apply time | 10.864ms |
-| Simple `cn()` apply time | 8.741ms |
+| Static apply time | 17.55ms |
+| Simple `cn()` apply time | 8.796ms |
 | Revert success | true |
-| Revert time | 16.625ms |
+| Revert time | 8.689ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -145,15 +145,15 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.474ms |
-| Average lookup | 0.000474ms |
+| Total time | 0.487ms |
+| Average lookup | 0.000487ms |
 
 Caveat:
 
 This remains an `intent id -> binding` Map lookup proxy.
 Real click-to-panel time is measured separately in the browser metric below.
 
-## 6. Browser Click-To-Panel
+## 6. Browser Interaction Metrics
 
 Raw report:
 
@@ -166,31 +166,46 @@ Method:
 ```text
 Opened the Vite dev server in the in-app browser,
 clicked the overlay Pick element button,
-then clicked the visible Patch Preview heading.
+clicked the visible Patch Preview heading,
+changed the first typography token from text-lg to text-xl,
+clicked Preview, clicked Apply, then clicked Undo last.
 The overlay posted performance.now measurements to /__intent/client-metric.
 ```
 
 | Metric | Value |
 | --- | ---: |
-| Test URL | `http://127.0.0.1:5180/` |
+| Test URL | `http://127.0.0.1:5181/` |
 | Binding selected | true |
-| Graph fetch time | 4.2ms |
-| Pick-to-panel time | 374.3ms |
-| Click-to-panel time | 1.8ms |
+| Graph fetch time | 4.4ms |
+| Pick-to-panel time | 343.3ms |
+| Click-to-panel time | 1.3ms |
 | Binding lookup time | 0ms |
-| Panel render time | 1.8ms |
-| Preview round trip | 6.1ms |
-| Preview server time | 0.473ms |
-| Preview render time | 2ms |
+| Panel render time | 1.3ms |
+| Preview token | `text-lg -> text-xl` |
+| Preview round trip | 3.3ms |
+| Preview server time | 0.466ms |
+| Preview render time | 0.2ms |
+| Apply token | `text-lg -> text-xl` |
+| Apply round trip | 11.7ms |
+| Apply server time | 8.475ms |
+| Apply render time | 0.2ms |
+| Revert token | `text-xl -> text-lg` |
+| Revert round trip | 12.5ms |
+| Revert server time | 9.257ms |
+| Revert render time | 1.4ms |
 | Click-to-panel target | <= 100ms |
 | Preview round trip target | <= 50ms |
+| Apply round trip target | <= 50ms |
+| Revert round trip target | <= 50ms |
 | Result | pass |
 
 Interpretation:
 
-- From the actual target-element click to the panel rendering the selected binding, latency was 1.6ms.
+- From the actual target-element click to the panel rendering the selected binding, latency was 1.3ms.
 - `pickToPanelMs` includes the time spent waiting for the user to click a target after entering pick mode, so it is not pure UI latency.
-- From the preview button click to preview-state rendering, real browser round trip was 6.1ms.
+- From the preview button click to preview-state rendering, real browser round trip was 3.3ms.
+- From the apply button click to source patch completion and status rendering, real browser round trip was 11.7ms.
+- From the Undo last click to source revert completion and status rendering, real browser round trip was 12.5ms.
 - This is currently a single desktop viewport sample.
 
 ## 7. Agent Task Generation
@@ -198,7 +213,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 5.182ms |
+| Task generation time | 3.786ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -220,7 +235,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 11.593ms |
+| Result generation time | 10.596ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -269,7 +284,7 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.638ms |
+| Agent task generation time | 2.091ms |
 
 Interpretation:
 
@@ -287,6 +302,8 @@ Interpretation:
 | cold transform target | max <= 5ms | fail |
 | browser click-to-panel | click-to-panel <= 100ms | pass |
 | browser preview round trip | preview round trip <= 50ms | pass |
+| browser apply round trip | apply round trip <= 50ms | pass |
+| browser revert round trip | revert round trip <= 50ms | pass |
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
@@ -310,7 +327,7 @@ What worked:
 - last-patch revert
 - agent handoff task markdown generation
 - agent result markdown and selected source-window diff generation
-- real browser click-to-panel and preview round-trip measurement
+- real browser click-to-panel, preview, apply, and revert round-trip measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
 - source hash stale rejection
@@ -330,5 +347,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is browser apply/revert round trip measurement, cold transform optimization, and a real corpus audit.
+The next priority is cold transform optimization, browser multi-sample/mobile measurement, and a real corpus audit.
 ```

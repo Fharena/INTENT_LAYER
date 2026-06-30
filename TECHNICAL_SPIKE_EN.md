@@ -37,7 +37,7 @@ Included:
 - structured agent handoff task generation
 - structured agent result artifact generation
 - agent handoff source snapshots and result source diffs
-- browser click-to-panel and preview round-trip latency measurement
+- browser click-to-panel, preview, apply, and revert round-trip latency measurement
 - minimal intent operation/diff output
 - corpus analysis script
 - performance and safety evaluation script
@@ -210,7 +210,7 @@ Support model:
 - Restarting the dev server clears the in-memory undo state.
 - Agent handoff records a selected source-window snapshot plus task/result markdown and intent diffs.
 - Agent results record a before/after line diff for the selected source window, but they do not yet infer a full-file semantic diff automatically.
-- Real browser click-to-panel time is measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
+- Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
 - Warm transform meets the 5ms target, but cold first transform can exceed 5ms.
 - Larger TSX files are not tested yet.
 
@@ -219,12 +219,12 @@ Support model:
 Priority order:
 
 1. Measure whether transform time stays under 5ms on larger TSX files.
-2. Measure real browser preview -> apply round trip time.
+2. Expand browser metric measurement to multiple samples and mobile viewport.
 3. Expand agent result source-window diffs into semantic intent diffs.
 4. Design an undo stack and operation-log-backed revert.
-5. Expand browser metric measurement to multiple samples and mobile viewport.
-6. Connect read-only source diffs to a wider source window.
-7. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
+5. Connect read-only source diffs to a wider source window.
+6. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
+7. Re-measure editable coverage on a real 50-100 sample AI-generated React/Tailwind corpus.
 
 ## 9. Agent Handoff And Result
 
@@ -319,6 +319,12 @@ renderMs
 preview roundTripMs
 preview serverMs
 preview renderMs
+apply roundTripMs
+apply serverMs
+apply renderMs
+revert roundTripMs
+revert serverMs
+revert renderMs
 ```
 
 Dev server endpoints:
@@ -329,5 +335,5 @@ GET /__intent/client-metrics
 DELETE /__intent/client-metrics
 ```
 
-The first real browser measurement used the in-app browser to click `Pick element`, the visible `Patch Preview` heading, and the first `Preview` button.
+The latest real browser measurement used the in-app browser to click `Pick element`, select the visible `Patch Preview` heading, preview/apply the first typography token from `text-lg -> text-xl`, and revert it through `Undo last`.
 The result is stored in `reports/performance/browser-click-metric.json`.
