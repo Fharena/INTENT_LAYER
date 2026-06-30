@@ -50,12 +50,15 @@ npm run eval
 npm run build
 ```
 
-Run the local CLI scan/check directly:
+Run the local CLI directly:
 
 ```bash
+npm run intent:init
 npm run intent:scan -- fixtures/corpus src/App.tsx
 npx tsx src/intent/cli.ts check fixtures/corpus src/App.tsx --min-supported-direct 0.5
 npx tsx src/intent/cli.ts scan fixtures/corpus src/App.tsx --write-graph
+npx tsx src/intent/cli.ts apply --op .intent/operations/example.intent-op.json
+npx tsx src/intent/cli.ts diff --diff .intent/diffs/example.intent-diff.yml
 npx tsx src/intent/cli.ts agent-task --id <intent-id> --change "Describe the desired change"
 npx tsx src/intent/cli.ts agent-result --id <intent-id> --task .intent/agent/task_x.md --summary "Describe the result"
 ```
@@ -78,7 +81,7 @@ The demo currently supports:
 - direct Tailwind token replacement for supported static tokens
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
 - read-only bindings for unsupported `className` expressions so agent handoff still works
-- minimal `intent-layer scan` / `intent-layer check` / `intent-layer agent-task` / `intent-layer agent-result` CLI surface through `src/intent/cli.ts`
+- minimal `intent-layer init` / `scan` / `check` / `apply` / `diff` / `agent-task` / `agent-result` CLI surface through `src/intent/cli.ts`
 - Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
 - operation-log-backed undo stack and pending undo history display for applied patches
 - non-destructive pending undo discard controls for minimal branch undo handling

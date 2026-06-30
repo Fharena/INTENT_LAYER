@@ -35,7 +35,7 @@ Measured inputs:
 - read-only composite variable related semantic diff fixture
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
-- CLI `scan`/`check`/`agent-task`/`agent-result` fixture
+- CLI `init`/`scan`/`check`/`apply`/`diff`/`agent-task`/`agent-result` fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -680,14 +680,20 @@ Interpretation:
 - Result recording creates related source and semantic token diffs even when only the imported definition changes.
 - Path aliases, barrel re-exports, package imports, and multi-hop import graphs are still out of scope.
 
-## 9.5 CLI Scan/Check
+## 9.5 CLI Init/Scan/Check/Apply/Diff/Handoff
 
 | Metric | Value |
 | --- | ---: |
+| Init exit code | 0 |
 | Scan exit code | 0 |
 | Check exit code | 0 |
+| Apply exit code | 0 |
+| Diff exit code | 0 |
+| Init command | `init` |
 | Scan command | `scan` |
 | Check command | `check` |
+| Apply command | `apply` |
+| Diff command | `diff` |
 | Files scanned | 8 |
 | Binding count | 40 |
 | Direct-edit binding count | 35 |
@@ -695,9 +701,19 @@ Interpretation:
 | Supported direct coverage | 87.5% |
 | Editable token coverage | 81.08% |
 | Syntax error count | 0 |
-| Max transform time | 0.282ms |
-| Scan stdout bytes | 3260 |
+| Max transform time | 0.531ms |
+| Init stdout bytes | 498 |
+| Scan stdout bytes | 3262 |
 | Check stdout bytes | 3658 |
+
+Init gate:
+
+| Metric | Value |
+| --- | ---: |
+| Init ok | true |
+| Created path count | 6 |
+| Existing path count | 4 |
+| Schema files present | true |
 
 Check gates:
 
@@ -706,7 +722,23 @@ Check gates:
 | files scanned | 8 | >= 1 | pass |
 | syntax errors | 0 | 0 | pass |
 | supported direct coverage | 87.5% | >= 50% | pass |
-| max file transform | 0.282ms | <= 20ms | pass |
+| max file transform | 0.531ms | <= 20ms | pass |
+
+Apply/diff gate:
+
+| Metric | Value |
+| --- | ---: |
+| Apply graph scan exit code | 0 |
+| Apply exit code | 0 |
+| Diff exit code | 0 |
+| Apply target file | `.intent/tmp/CliApplyFixture.tsx` |
+| Operation file | `.intent/operations/2026-06-30T10-16-33-272Z.intent-op.json` |
+| Diff file | `.intent/diffs/2026-06-30T10-16-33-272Z.intent-diff.yml` |
+| Operation log file | `.intent/operations/operation-log.json` |
+| Apply time | 3.382ms |
+| Syntax errors after apply | 0 |
+| Diff bytes | 229 |
+| Diff change count | 1 |
 
 Agent-task gate:
 
@@ -716,10 +748,10 @@ Agent-task gate:
 | Agent-task exit code | 0 |
 | Graph entry count | 40 |
 | Selected binding id | `il_aecb838907` |
-| Task file | `.intent/agent/task_2026-06-30T10-00-26-716Z.md` |
+| Task file | `.intent/agent/task_2026-06-30T10-16-33-240Z.md` |
 | Task target file | `fixtures/corpus/DynamicRuntime.tsx` |
 | Task markdown bytes | 3541 |
-| Task generation time | 1.121ms |
+| Task generation time | 1.101ms |
 | Required sections present | true |
 
 Agent-result gate:
@@ -727,11 +759,11 @@ Agent-result gate:
 | Metric | Value |
 | --- | ---: |
 | Agent-result exit code | 0 |
-| Result file | `.intent/agent/result_2026-06-30T10-05-14-117Z.md` |
-| Diff file | `.intent/diffs/2026-06-30T10-05-14-117Z_agent.intent-diff.yml` |
+| Result file | `.intent/agent/result_2026-06-30T10-16-33-250Z.md` |
+| Diff file | `.intent/diffs/2026-06-30T10-16-33-250Z_agent.intent-diff.yml` |
 | Result target file | `.intent/tmp/CliAgentResultFixture.tsx` |
 | Result markdown bytes | 2388 |
-| Result generation time | 3.448ms |
+| Result generation time | 5.801ms |
 | Source diff line count | 2 |
 | Semantic change count | 1 |
 | Required sections present | true |
@@ -740,11 +772,14 @@ Agent-result gate:
 Interpretation:
 
 - `src/intent/cli.ts` calls the current instrumentation engine directly without starting a server.
+- `init` creates the base `.intent` folders and lightweight schema files.
 - `scan` prints per-file binding counts, read-only counts, editable token coverage, transform time, and unsupported reasons as JSON.
 - `check` applies minimal gates to the same scan output and returns a non-zero exit code when they fail.
+- `apply` runs a single Tailwind token replace from `.intent-op.json` through the existing safe patch engine and records operation/diff/log artifacts.
+- `diff` summarizes `.intent-diff.yml` as JSON so CLI/CI can inspect the latest intent diff.
 - `agent-task` takes a binding id from `.intent/graph.intent.json` plus a desired change and creates structured handoff markdown.
 - `agent-result` takes a task file, result summary, changed files, and checks, then creates result markdown plus `.intent-diff.yml`.
-- The current CLI MVP implements only `scan`/`check`/`agent-task`/`agent-result`; commands such as `init`, `dev`, `diff`, and `apply` remain launch polish work.
+- The current CLI MVP implements `init`/`scan`/`check`/`apply`/`diff`/`agent-task`/`agent-result`. `dev` wrapping and `agent-context` remain launch polish work.
 
 ## 10. Gate Results
 
@@ -760,8 +795,10 @@ Interpretation:
 | warm transform target | max <= 5ms | pass |
 | cold transform target | max <= 10ms | pass |
 | large transform stress | 401 bindings max <= 20ms | pass |
+| CLI init | `.intent` folders/schema created or present + exit code 0 | pass |
 | CLI scan | command `scan` + files >= 8 + bindings > 0 + JSON output | pass |
 | CLI check | files/syntax/coverage/transform gates all pass + exit code 0 | pass |
+| CLI apply/diff | `.intent-op.json` apply success + operation/diff/log created + diff summary change > 0 + syntax error 0 | pass |
 | CLI agent task | graph entries >= 40 + read-only binding selected + task markdown required sections present | pass |
 | CLI agent result | task/result/diff created + source diff > 0 + semantic change > 0 + syntax error 0 | pass |
 | browser sample count | total >= 6, desktop >= 3, mobile >= 3 | pass |
@@ -789,7 +826,7 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `scan`/`check`/`agent-task`/`agent-result` CLI now lets the repo state be inspected numerically, creates agent handoff docs, and records result/diff artifacts without opening the browser.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `init`/`scan`/`check`/`apply`/`diff`/`agent-task`/`agent-result` CLI now lets the repo state be inspected numerically, applies deterministic patches, summarizes intent diffs, creates agent handoff docs, and records result/diff artifacts without opening the browser.
 
 What worked:
 
@@ -822,6 +859,9 @@ What worked:
 - low-level scanner cold transform gate pass
 - 401-binding large TSX transform stress gate pass
 - CLI `scan`/`check` JSON report and gate pass
+- CLI `init` workspace/schema creation and gate pass
+- CLI `apply` safe patch execution from `.intent-op.json` plus operation/diff/log output
+- CLI `diff` `.intent-diff.yml` JSON summary and gate pass
 - CLI `agent-task` handoff markdown generation and required-section gate pass
 - CLI `agent-result` result markdown/diff generation and source/semantic diff gate pass
 - minimal intent operation/diff output
@@ -832,7 +872,7 @@ What remains weak:
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - branch undo currently supports pending undo discard only; arbitrary non-top patches are not directly reverted from source
-- CLI currently implements only `scan`/`check`/`agent-task`/`agent-result`; `init/dev/diff/apply` remain launch polish work
+- CLI currently implements `init`/`scan`/`check`/`apply`/`diff`/`agent-task`/`agent-result`; `dev` wrapping and `agent-context` remain launch polish work
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
 - automatic semantic analysis across path aliases, barrel re-exports, package imports, and cross-variable data flow is still missing

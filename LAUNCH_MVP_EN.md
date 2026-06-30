@@ -392,14 +392,20 @@ intent-layer apply
 Currently implemented MVP CLI smoke surface:
 
 ```bash
+intent-layer init
 intent-layer scan
 intent-layer check
+intent-layer apply
+intent-layer diff
 intent-layer agent-task
 intent-layer agent-result
 ```
 
+`init` creates the base `.intent` folders and lightweight schema files.
 `scan` emits JSON for JSX/TSX bindings, read-only reasons, editable token coverage, and transform time.
 `check` applies minimal gates to the same result and returns a non-zero exit code when they fail.
+`apply` runs a single Tailwind token replace from `.intent-op.json` through the existing safe patch engine.
+`diff` summarizes `.intent-diff.yml` files as JSON for CLI/CI inspection.
 `agent-task` takes a binding id from `.intent/graph.intent.json` plus a desired change and creates `.intent/agent/task_*.md`.
 `agent-result` takes a task file, summary, changed files, and checks, then creates `.intent/agent/result_*.md` plus `.intent-diff.yml`.
 

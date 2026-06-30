@@ -518,7 +518,7 @@ packages/
     check
 ```
 
-The MVP implementation ships `scan`/`check`/`agent-task`/`agent-result` first; `init/dev/diff/apply` can expand during launch polish.
+The MVP implementation ships `init`/`scan`/`check`/`apply`/`diff`/`agent-task`/`agent-result` first; `dev` can expand during launch polish.
 
 ### 10.2 Dependency Principles
 
