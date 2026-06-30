@@ -35,7 +35,7 @@ Measured inputs:
 - read-only composite variable related semantic diff fixture
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
-- CLI `scan`/`check`/`agent-task` fixture
+- CLI `scan`/`check`/`agent-task`/`agent-result` fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -695,8 +695,8 @@ Interpretation:
 | Supported direct coverage | 87.5% |
 | Editable token coverage | 81.08% |
 | Syntax error count | 0 |
-| Max transform time | 0.196ms |
-| Scan stdout bytes | 3261 |
+| Max transform time | 0.282ms |
+| Scan stdout bytes | 3260 |
 | Check stdout bytes | 3658 |
 
 Check gates:
@@ -706,7 +706,7 @@ Check gates:
 | files scanned | 8 | >= 1 | pass |
 | syntax errors | 0 | 0 | pass |
 | supported direct coverage | 87.5% | >= 50% | pass |
-| max file transform | 0.196ms | <= 20ms | pass |
+| max file transform | 0.282ms | <= 20ms | pass |
 
 Agent-task gate:
 
@@ -719,8 +719,23 @@ Agent-task gate:
 | Task file | `.intent/agent/task_2026-06-30T10-00-26-716Z.md` |
 | Task target file | `fixtures/corpus/DynamicRuntime.tsx` |
 | Task markdown bytes | 3541 |
-| Task generation time | 0.864ms |
+| Task generation time | 1.121ms |
 | Required sections present | true |
+
+Agent-result gate:
+
+| Metric | Value |
+| --- | ---: |
+| Agent-result exit code | 0 |
+| Result file | `.intent/agent/result_2026-06-30T10-05-14-117Z.md` |
+| Diff file | `.intent/diffs/2026-06-30T10-05-14-117Z_agent.intent-diff.yml` |
+| Result target file | `.intent/tmp/CliAgentResultFixture.tsx` |
+| Result markdown bytes | 2388 |
+| Result generation time | 3.448ms |
+| Source diff line count | 2 |
+| Semantic change count | 1 |
+| Required sections present | true |
+| Syntax errors after result | 0 |
 
 Interpretation:
 
@@ -728,7 +743,8 @@ Interpretation:
 - `scan` prints per-file binding counts, read-only counts, editable token coverage, transform time, and unsupported reasons as JSON.
 - `check` applies minimal gates to the same scan output and returns a non-zero exit code when they fail.
 - `agent-task` takes a binding id from `.intent/graph.intent.json` plus a desired change and creates structured handoff markdown.
-- The current CLI MVP implements only `scan`/`check`/`agent-task`; commands such as `init`, `dev`, `diff`, and `apply` remain launch polish work.
+- `agent-result` takes a task file, result summary, changed files, and checks, then creates result markdown plus `.intent-diff.yml`.
+- The current CLI MVP implements only `scan`/`check`/`agent-task`/`agent-result`; commands such as `init`, `dev`, `diff`, and `apply` remain launch polish work.
 
 ## 10. Gate Results
 
@@ -747,6 +763,7 @@ Interpretation:
 | CLI scan | command `scan` + files >= 8 + bindings > 0 + JSON output | pass |
 | CLI check | files/syntax/coverage/transform gates all pass + exit code 0 | pass |
 | CLI agent task | graph entries >= 40 + read-only binding selected + task markdown required sections present | pass |
+| CLI agent result | task/result/diff created + source diff > 0 + semantic change > 0 + syntax error 0 | pass |
 | browser sample count | total >= 6, desktop >= 3, mobile >= 3 | pass |
 | browser click-to-panel | click-to-panel <= 100ms | pass |
 | browser preview round trip | preview round trip <= 50ms | pass |
@@ -772,7 +789,7 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `scan`/`check`/`agent-task` CLI now lets the repo state be inspected numerically and creates agent handoff docs without opening the browser.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `scan`/`check`/`agent-task`/`agent-result` CLI now lets the repo state be inspected numerically, creates agent handoff docs, and records result/diff artifacts without opening the browser.
 
 What worked:
 
@@ -806,6 +823,7 @@ What worked:
 - 401-binding large TSX transform stress gate pass
 - CLI `scan`/`check` JSON report and gate pass
 - CLI `agent-task` handoff markdown generation and required-section gate pass
+- CLI `agent-result` result markdown/diff generation and source/semantic diff gate pass
 - minimal intent operation/diff output
 - numeric report generation
 
@@ -814,7 +832,7 @@ What remains weak:
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - branch undo currently supports pending undo discard only; arbitrary non-top patches are not directly reverted from source
-- CLI currently implements only `scan`/`check`/`agent-task`; `init/dev/diff/apply` remain launch polish work
+- CLI currently implements only `scan`/`check`/`agent-task`/`agent-result`; `init/dev/diff/apply` remain launch polish work
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
 - automatic semantic analysis across path aliases, barrel re-exports, package imports, and cross-variable data flow is still missing
