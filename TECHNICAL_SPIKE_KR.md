@@ -264,6 +264,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - package smoke는 tarball install 뒤 `vite.cjs` wrapper 기반 `/vite` export로 외부 temp fixture를 transform하고 `data-intent-id`/`.intent/graph.intent.json` 생성까지 확인한다.
 - 같은 설치 폴더에서 실제 Vite dev server를 띄워 `/src/App.tsx` transform 결과, `/__intent/graph`, `/__intent/preview`, `/__intent/apply` endpoint 응답까지 HTTP로 확인한다.
 - 설치된 Vite dev server smoke는 `gap-4 -> gap-6` patch를 실제 source에 적용하고, operation/diff/log artifact 생성과 apply 후 module/graph 갱신까지 확인한다.
+- 설치된 Vite dev server smoke는 App/Header/Card 3개 TSX 파일을 graph에 올린 뒤 Card만 `gap-4 -> gap-8`로 바꾸고, graph entry 3개 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경까지 확인한다.
 - agent result는 선택 source window와 선택 component 범위에서 `className` semantic token diff를 기록한다.
 - component snapshot fixture는 function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens, memo, forwardRef, HOC, namespace object export 8개 case를 검증한다.
 - 아직 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 추론하지는 않는다.
@@ -273,7 +274,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - 현재 fixture에서는 warm transform 5ms 목표와 cold transform 10ms 목표를 만족했다.
 - 100개 카드/401개 binding을 가진 대형 TSX stress fixture는 20ms 목표를 만족했다.
 - 100개 카드/401개 binding 반복 transform fixture에서는 semantic graph fingerprint 기반 write throttling이 통과했다.
-- 실제 multi-file HMR 세션에서는 cache, changed-file filtering, graph write throttling을 추가 재측정해야 한다.
+- 제품급 multi-file HMR 세션에서는 cache, changed-file filtering, graph write throttling을 더 큰 파일 수와 실제 import graph로 추가 재측정해야 한다.
 
 ## 8. 다음 작업
 

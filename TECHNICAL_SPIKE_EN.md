@@ -265,6 +265,7 @@ Support model:
 - The package smoke now transforms an external temp fixture through the installed `vite.cjs` wrapper-backed `/vite` export after tarball install and verifies `data-intent-id` plus `.intent/graph.intent.json` output.
 - In the same install folder, it starts a real Vite dev server and verifies the `/src/App.tsx` transform response plus the `/__intent/graph`, `/__intent/preview`, and `/__intent/apply` endpoints over HTTP.
 - The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts plus post-apply module and graph updates.
+- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4 -> gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, and graph `generatedAt` changes.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
 - Component snapshot fixtures cover 8 cases: function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens, memo, forwardRef, HOC, and namespace object export.
 - They still do not infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
@@ -274,7 +275,7 @@ Support model:
 - Current fixtures now meet the 5ms warm transform target and the 10ms cold transform target.
 - The large TSX stress fixture with 100 cards and 401 bindings meets the 20ms stress target.
 - The repeated-transform fixture with 100 cards and 401 bindings now passes semantic graph fingerprint based write throttling.
-- Real multi-file HMR sessions still need cache, changed-file filtering, and graph write throttling re-measurement.
+- Product-sized multi-file HMR sessions still need cache, changed-file filtering, and graph write throttling re-measurement across more files and real import graphs.
 
 ## 8. Next Work
 
