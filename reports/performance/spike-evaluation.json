@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-30T06:15:44.912Z",
+  "generatedAt": "2026-06-30T06:22:15.810Z",
   "contextPackUsed": true,
   "corpus": {
-    "generatedAt": "2026-06-30T06:15:44.531Z",
+    "generatedAt": "2026-06-30T06:22:15.371Z",
     "filesScanned": 8,
     "classNameOccurrences": 40,
     "classification": {
@@ -480,7 +480,7 @@
     ]
   },
   "aiGeneratedCorpus": {
-    "generatedAt": "2026-06-30T06:15:44.589Z",
+    "generatedAt": "2026-06-30T06:22:15.430Z",
     "filesScanned": 50,
     "classNameOccurrences": 390,
     "classification": {
@@ -536,37 +536,37 @@
         "file": "src/App.tsx",
         "entries": 13,
         "samples": [
-          4.517,
-          1.239,
-          1.214,
-          0.931,
-          1.181
+          2.812,
+          0.725,
+          0.726,
+          0.576,
+          0.639
         ],
-        "averageMs": 1.816,
-        "p95Ms": 4.517,
-        "maxMs": 4.517
+        "averageMs": 1.096,
+        "p95Ms": 2.812,
+        "maxMs": 2.812
       },
       {
         "file": "src/main.tsx",
         "entries": 0,
         "samples": [
-          0.01,
           0.006,
-          0.005,
-          0.005,
-          0.005
+          0.003,
+          0.002,
+          0.002,
+          0.002
         ],
-        "averageMs": 0.006,
-        "p95Ms": 0.01,
-        "maxMs": 0.01
+        "averageMs": 0.003,
+        "p95Ms": 0.006,
+        "maxMs": 0.006
       }
     ],
-    "averageMs": 0.911,
-    "p95Ms": 4.517,
-    "maxMs": 4.517,
-    "warmAverageMs": 0.573,
-    "warmP95Ms": 1.239,
-    "warmMaxMs": 1.239,
+    "averageMs": 0.549,
+    "p95Ms": 2.812,
+    "maxMs": 2.812,
+    "warmAverageMs": 0.334,
+    "warmP95Ms": 0.726,
+    "warmMaxMs": 0.726,
     "warmTargetMs": 5,
     "coldTargetMs": 10
   },
@@ -577,39 +577,39 @@
     "bytes": 45352,
     "iterations": 5,
     "samples": [
-      15.749,
-      8.232,
-      6.168,
-      5.282,
-      3.269
+      19.545,
+      9.876,
+      8.23,
+      7.195,
+      5.932
     ],
-    "averageMs": 7.74,
-    "p95Ms": 15.749,
-    "maxMs": 15.749,
+    "averageMs": 10.156,
+    "p95Ms": 19.545,
+    "maxMs": 19.545,
     "targetMs": 20,
     "pass": true
   },
   "graphLookupProxy": {
     "iterations": 1000,
-    "totalMs": 0.089,
-    "averageMs": 0.000089,
+    "totalMs": 0.101,
+    "averageMs": 0.000101,
     "note": "This measures id-to-binding graph lookup only, not a real browser click event."
   },
   "patch": {
     "previewOk": true,
-    "previewMs": 1.163,
-    "previewRoundTripMs": 1.633,
+    "previewMs": 1.401,
+    "previewRoundTripMs": 1.835,
     "applyOk": true,
-    "applyMs": 25.313,
+    "applyMs": 30.089,
     "syntaxErrorsAfterPatch": 0,
     "revertOk": true,
-    "revertMs": 11.385,
+    "revertMs": 22.531,
     "syntaxErrorsAfterRevert": 0,
     "staleRejectionOk": true,
     "staleRejectionReason": "source-hash-mismatch",
     "simpleCnClsx": {
       "applyOk": true,
-      "applyMs": 7.679,
+      "applyMs": 15.486,
       "syntaxErrorsAfterPatch": 0,
       "bindingKind": "call-literals",
       "callee": "cn",
@@ -629,17 +629,17 @@
   },
   "agentTask": {
     "ok": true,
-    "taskMs": 11.1,
+    "taskMs": 10.722,
     "sectionsPresent": true,
-    "taskFile": ".intent/agent/task_2026-06-30T06-15-44-760Z.md"
+    "taskFile": ".intent/agent/task_2026-06-30T06-22-15-631Z.md"
   },
   "agentResult": {
     "ok": true,
-    "resultMs": 17.432,
+    "resultMs": 10.793,
     "sectionsPresent": true,
     "filesExist": true,
-    "resultFile": ".intent/agent/result_2026-06-30T06-15-44-770Z.md",
-    "diffFile": ".intent/diffs/2026-06-30T06-15-44-770Z_agent.intent-diff.yml",
+    "resultFile": ".intent/agent/result_2026-06-30T06-22-15-642Z.md",
+    "diffFile": ".intent/diffs/2026-06-30T06-22-15-642Z_agent.intent-diff.yml",
     "sourceHashChanged": true,
     "snapshotAvailable": true,
     "diffLineCount": 2,
@@ -667,7 +667,7 @@
         "entryCreated": true,
         "entryCount": 3,
         "taskOk": true,
-        "taskMs": 11.18,
+        "taskMs": 2.25,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotFunction",
         "markersPresent": true,
@@ -679,7 +679,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 3.034,
+        "taskMs": 2.334,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowBlock",
         "markersPresent": true,
@@ -691,7 +691,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 2.31,
+        "taskMs": 1.994,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowParen",
         "markersPresent": true,
@@ -703,7 +703,7 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 2.583,
+        "taskMs": 2.982,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowJsx",
         "markersPresent": true,
@@ -717,9 +717,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 2.467,
+    "taskMs": 3.114,
     "resultOk": true,
-    "resultMs": 8.882,
+    "resultMs": 9.987,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -732,6 +732,28 @@
     "relatedSemanticDiffPresent": true,
     "relatedSemanticTokenAddedCount": 3,
     "relatedSemanticTokenRemovedCount": 3
+  },
+  "readOnlyCnVariableBinding": {
+    "entryCreated": true,
+    "kind": "read-only",
+    "unsupportedReason": "variable-reference",
+    "tokenCount": 0,
+    "taskOk": true,
+    "taskMs": 3.031,
+    "resultOk": true,
+    "resultMs": 10.826,
+    "syntaxErrorsAfterResult": 0,
+    "sourceDiffLineCount": 2,
+    "sourceDiffPresent": true,
+    "componentDiffLineCount": 2,
+    "componentSourceDiffPresent": true,
+    "relatedSnapshotAvailable": true,
+    "relatedDiffLineCount": 2,
+    "relatedSourceDiffPresent": true,
+    "relatedSemanticChangeCount": 2,
+    "relatedSemanticDiffPresent": true,
+    "relatedSemanticTokenAddedCount": 4,
+    "relatedSemanticTokenRemovedCount": 4
   },
   "gates": {
     "staticEditableTokenCoveragePass": true,
@@ -752,6 +774,7 @@
     "componentSnapshotFixturePass": true,
     "readOnlyHandoffPass": true,
     "readOnlyRelatedSourceDiffPass": true,
+    "readOnlyCnVariableRelatedSemanticDiffPass": true,
     "simpleCnClsxPatchPass": true,
     "staleRejectionPass": true,
     "operationLogUndoStackPass": true

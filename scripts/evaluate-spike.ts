@@ -390,6 +390,49 @@ const readOnlyResult = recordAgentResult(rootDir, readOnlyEntry, {
   notes: "Evaluation fixture for related source diff; no LLM call is made."
 });
 
+const readOnlyCnVariableFixture = path.join(tmpDir, "ReadOnlyCnVariableFixture.tsx");
+fs.writeFileSync(
+  readOnlyCnVariableFixture,
+  [
+    "declare function cn(...value: Array<string | false>): string;",
+    "export function ReadOnlyCnVariableFixture({ active }: { active: boolean }) {",
+    "  const cardClass = cn(\"grid grid-cols-3 gap-4 rounded-lg p-6\", active && \"bg-teal-50\");",
+    "  return <div className={cardClass}>Read-only cn variable target</div>;",
+    "}",
+    ""
+  ].join("\n")
+);
+
+const readOnlyCnVariableInstrument = instrumentSource({
+  code: fs.readFileSync(readOnlyCnVariableFixture, "utf8"),
+  file: readOnlyCnVariableFixture,
+  rootDir
+});
+const readOnlyCnVariableEntry = readOnlyCnVariableInstrument.entries[0];
+const readOnlyCnVariableTask = createAgentTask(rootDir, readOnlyCnVariableEntry, {
+  id: readOnlyCnVariableEntry?.id ?? "missing-read-only-cn-variable-binding",
+  desiredChange: "Change this cn-backed variable className through an agent handoff."
+});
+if (readOnlyCnVariableTask.ok) {
+  fs.writeFileSync(
+    readOnlyCnVariableFixture,
+    fs
+      .readFileSync(readOnlyCnVariableFixture, "utf8")
+      .replace("grid grid-cols-3 gap-4 rounded-lg p-6", "grid grid-cols-3 gap-6 rounded-xl p-8")
+      .replace("bg-teal-50", "bg-cyan-50")
+  );
+}
+const readOnlyCnVariableSyntaxErrorsAfterResult = parseSyntaxErrorCount(readOnlyCnVariableFixture);
+const readOnlyCnVariableResult = recordAgentResult(rootDir, readOnlyCnVariableEntry, {
+  id: readOnlyCnVariableEntry?.id ?? "missing-read-only-cn-variable-binding",
+  taskFile: readOnlyCnVariableTask.ok ? readOnlyCnVariableTask.taskFile : undefined,
+  summary:
+    "Read-only cn variable fixture: updated literal segments through an agent handoff result.",
+  changedFiles: [path.relative(rootDir, readOnlyCnVariableFixture).replace(/\\/g, "/")],
+  checks: ["npm run typecheck", "npm run eval", "npm run build"],
+  notes: "Evaluation fixture for related source semantic diff across cn literal segments; no LLM call is made."
+});
+
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
 fs.writeFileSync(
   cnPatchFixture,
@@ -681,6 +724,50 @@ const report = {
       ? readOnlyResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  readOnlyCnVariableBinding: {
+    entryCreated: Boolean(readOnlyCnVariableEntry),
+    kind: readOnlyCnVariableEntry?.className.kind ?? null,
+    unsupportedReason: readOnlyCnVariableEntry?.className.unsupportedReason ?? null,
+    tokenCount: readOnlyCnVariableEntry?.tokens.length ?? 0,
+    taskOk: readOnlyCnVariableTask.ok,
+    taskMs: readOnlyCnVariableTask.ok
+      ? readOnlyCnVariableTask.metrics.taskMs
+      : readOnlyCnVariableTask.metrics?.taskMs,
+    resultOk: readOnlyCnVariableResult.ok,
+    resultMs: readOnlyCnVariableResult.ok
+      ? readOnlyCnVariableResult.metrics.resultMs
+      : readOnlyCnVariableResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: readOnlyCnVariableSyntaxErrorsAfterResult,
+    sourceDiffLineCount: readOnlyCnVariableResult.ok ? readOnlyCnVariableResult.source.diffLineCount : 0,
+    sourceDiffPresent: readOnlyCnVariableResult.ok ? Boolean(readOnlyCnVariableResult.sourceDiff) : false,
+    componentDiffLineCount: readOnlyCnVariableResult.ok
+      ? readOnlyCnVariableResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: readOnlyCnVariableResult.ok
+      ? Boolean(readOnlyCnVariableResult.componentSourceDiff)
+      : false,
+    relatedSnapshotAvailable: readOnlyCnVariableResult.ok
+      ? readOnlyCnVariableResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: readOnlyCnVariableResult.ok
+      ? readOnlyCnVariableResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: readOnlyCnVariableResult.ok
+      ? Boolean(readOnlyCnVariableResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: readOnlyCnVariableResult.ok
+      ? readOnlyCnVariableResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedSemanticDiffPresent: readOnlyCnVariableResult.ok
+      ? Boolean(readOnlyCnVariableResult.relatedSemanticDiff)
+      : false,
+    relatedSemanticTokenAddedCount: readOnlyCnVariableResult.ok
+      ? readOnlyCnVariableResult.relatedSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedSemanticTokenRemovedCount: readOnlyCnVariableResult.ok
+      ? readOnlyCnVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
@@ -730,6 +817,15 @@ const report = {
       readOnlyResult.source.relatedSemanticChangeCount > 0 &&
       Boolean(readOnlyResult.relatedSemanticDiff) &&
       readOnlySyntaxErrorsAfterResult === 0,
+    readOnlyCnVariableRelatedSemanticDiffPass:
+      readOnlyCnVariableResult.ok &&
+      readOnlyCnVariableResult.source.relatedSnapshotAvailable &&
+      readOnlyCnVariableResult.source.relatedDiffLineCount > 0 &&
+      Boolean(readOnlyCnVariableResult.relatedSourceDiff) &&
+      readOnlyCnVariableResult.source.relatedSemanticChangeCount >= 2 &&
+      (readOnlyCnVariableResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 4 &&
+      (readOnlyCnVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 4 &&
+      readOnlyCnVariableSyntaxErrorsAfterResult === 0,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch",
     operationLogUndoStackPass:
