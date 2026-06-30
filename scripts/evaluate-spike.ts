@@ -46,6 +46,7 @@ interface PackageSmokeResult {
   installExitCode: number | null;
   helpExitCode: number | null;
   viteImportExitCode: number | null;
+  installedViteTransformExitCode: number | null;
   packageFileCount: number;
   packageSize: number;
   packageUnpackedSize: number;
@@ -63,11 +64,20 @@ interface PackageSmokeResult {
   vitePluginName: string | null;
   vitePluginEnforce: string | null;
   viteLegacyPluginName: string | null;
+  installedViteTransformOk: boolean;
+  installedViteTransformIncludesIntentId: boolean;
+  installedViteTransformGraphExists: boolean;
+  installedViteTransformGraphEntryCount: number;
+  installedViteTransformGraphBytes: number;
+  installedViteTransformFirstRelativeFile: string | null;
+  installedViteTransformFirstToken: string | null;
+  installedViteTransformHookMs: number;
   dryRunMs: number;
   packMs: number;
   installMs: number;
   helpMs: number;
   viteImportMs: number;
+  installedViteTransformMs: number;
   stdoutBytes: number;
   stderrBytes: number;
 }
@@ -193,6 +203,84 @@ function packageSmoke(): PackageSmokeResult {
   } catch {
     viteImportReport = {};
   }
+  const installedTransformSmokeFile = path.join(installDir, "vite-transform-smoke.ts");
+  fs.writeFileSync(
+    installedTransformSmokeFile,
+    [
+      "import fs from \"node:fs\";",
+      "import path from \"node:path\";",
+      `import { intentLayer } from "${packageName}/vite";`,
+      "",
+      "function callableHook(hook: unknown): ((...args: unknown[]) => unknown) | null {",
+      "  if (typeof hook === \"function\") return hook as (...args: unknown[]) => unknown;",
+      "  if (hook && typeof hook === \"object\" && \"handler\" in hook) {",
+      "    const handler = (hook as { handler?: unknown }).handler;",
+      "    return typeof handler === \"function\" ? (handler as (...args: unknown[]) => unknown) : null;",
+      "  }",
+      "  return null;",
+      "}",
+      "",
+      "const root = process.cwd();",
+      "const fixture = path.join(root, \"src\", \"App.tsx\");",
+      "fs.mkdirSync(path.dirname(fixture), { recursive: true });",
+      "const source = [",
+      "  \"export function App() {\",",
+      "  \"  return <main className=\\\"flex gap-4 rounded-lg p-4 text-sm\\\">Installed package transform</main>;\",",
+      "  \"}\",",
+      "  \"\"",
+      "].join(\"\\n\");",
+      "fs.writeFileSync(fixture, source);",
+      "const plugin = intentLayer();",
+      "callableHook(plugin.configResolved)?.({ root });",
+      "const transform = callableHook(plugin.transform);",
+      "const started = performance.now();",
+      "const transformed = transform ? transform(source, fixture) : null;",
+      "if (transformed && typeof (transformed as PromiseLike<unknown>).then === \"function\") {",
+      "  throw new Error(\"installed Vite transform smoke expected a synchronous transform\");",
+      "}",
+      "const transformMs = Number((performance.now() - started).toFixed(3));",
+      "const code = typeof transformed === \"object\" && transformed && \"code\" in transformed",
+      "  ? String((transformed as { code: unknown }).code)",
+      "  : typeof transformed === \"string\"",
+      "    ? transformed",
+      "    : \"\";",
+      "const graphFile = path.join(root, \".intent\", \"graph.intent.json\");",
+      "const graphExists = fs.existsSync(graphFile);",
+      "const graph = graphExists ? JSON.parse(fs.readFileSync(graphFile, \"utf8\")) : null;",
+      "const entries = graph ? Object.values(graph.entries ?? {}) as Array<{ relativeFile?: string; tokens?: Array<{ token?: string; editable?: boolean }> }> : [];",
+      "const first = entries[0] ?? null;",
+      "console.log(JSON.stringify({",
+      "  ok: Boolean(transform) && code.includes(\"data-intent-id\") && graphExists && entries.length === 1 && first?.relativeFile === \"src/App.tsx\",",
+      "  includesIntentId: code.includes(\"data-intent-id\"),",
+      "  graphExists,",
+      "  graphEntryCount: entries.length,",
+      "  graphBytes: graphExists ? fs.statSync(graphFile).size : 0,",
+      "  firstRelativeFile: first?.relativeFile ?? null,",
+      "  firstToken: first?.tokens?.find((token) => token.editable)?.token ?? null,",
+      "  transformMs",
+      "}));",
+      ""
+    ].join("\n")
+  );
+  const installedViteTransform =
+    fs.existsSync(tsxBinFile) && install.exitCode === 0
+      ? runCommand(tsxBinFile, [installedTransformSmokeFile], installDir)
+      : { exitCode: null, stdout: "", stderr: "missing installed tsx bin", ms: 0 };
+  let installedViteTransformReport: {
+    ok?: boolean;
+    includesIntentId?: boolean;
+    graphExists?: boolean;
+    graphEntryCount?: number;
+    graphBytes?: number;
+    firstRelativeFile?: string | null;
+    firstToken?: string | null;
+    transformMs?: number;
+  } = {};
+  try {
+    installedViteTransformReport = JSON.parse(installedViteTransform.stdout) as typeof installedViteTransformReport;
+  } catch {
+    installedViteTransformReport = {};
+  }
 
   return {
     packageName: dryRunPackage?.name ?? null,
@@ -204,6 +292,7 @@ function packageSmoke(): PackageSmokeResult {
     installExitCode: install.exitCode,
     helpExitCode: help.exitCode,
     viteImportExitCode: viteImport.exitCode,
+    installedViteTransformExitCode: installedViteTransform.exitCode,
     packageFileCount: files.length,
     packageSize: dryRunPackage?.size ?? 0,
     packageUnpackedSize: dryRunPackage?.unpackedSize ?? 0,
@@ -221,15 +310,34 @@ function packageSmoke(): PackageSmokeResult {
     vitePluginName: viteImportReport.pluginName ?? null,
     vitePluginEnforce: viteImportReport.enforce ?? null,
     viteLegacyPluginName: viteImportReport.legacyPluginName ?? null,
+    installedViteTransformOk: installedViteTransformReport.ok === true,
+    installedViteTransformIncludesIntentId: installedViteTransformReport.includesIntentId === true,
+    installedViteTransformGraphExists: installedViteTransformReport.graphExists === true,
+    installedViteTransformGraphEntryCount: installedViteTransformReport.graphEntryCount ?? 0,
+    installedViteTransformGraphBytes: installedViteTransformReport.graphBytes ?? 0,
+    installedViteTransformFirstRelativeFile: installedViteTransformReport.firstRelativeFile ?? null,
+    installedViteTransformFirstToken: installedViteTransformReport.firstToken ?? null,
+    installedViteTransformHookMs: installedViteTransformReport.transformMs ?? 0,
     dryRunMs: dryRun.ms,
     packMs: pack.ms,
     installMs: install.ms,
     helpMs: help.ms,
     viteImportMs: viteImport.ms,
+    installedViteTransformMs: installedViteTransform.ms,
     stdoutBytes:
-      dryRun.stdout.length + pack.stdout.length + install.stdout.length + help.stdout.length + viteImport.stdout.length,
+      dryRun.stdout.length +
+      pack.stdout.length +
+      install.stdout.length +
+      help.stdout.length +
+      viteImport.stdout.length +
+      installedViteTransform.stdout.length,
     stderrBytes:
-      dryRun.stderr.length + pack.stderr.length + install.stderr.length + help.stderr.length + viteImport.stderr.length
+      dryRun.stderr.length +
+      pack.stderr.length +
+      install.stderr.length +
+      help.stderr.length +
+      viteImport.stderr.length +
+      installedViteTransform.stderr.length
   };
 }
 
@@ -2247,6 +2355,7 @@ const report = {
       packageInstallSmoke.installExitCode === 0 &&
       packageInstallSmoke.helpExitCode === 0 &&
       packageInstallSmoke.viteImportExitCode === 0 &&
+      packageInstallSmoke.installedViteTransformExitCode === 0 &&
       packageInstallSmoke.binTarget === "bin/intent-layer.cjs" &&
       packageInstallSmoke.viteExportTarget === "./src/intent/vitePlugin.ts" &&
       packageInstallSmoke.hasBinWrapper &&
@@ -2258,7 +2367,13 @@ const report = {
       packageInstallSmoke.viteImportOk &&
       packageInstallSmoke.vitePluginName === "intent-layer-spike" &&
       packageInstallSmoke.vitePluginEnforce === "pre" &&
-      packageInstallSmoke.viteLegacyPluginName === "intent-layer-spike",
+      packageInstallSmoke.viteLegacyPluginName === "intent-layer-spike" &&
+      packageInstallSmoke.installedViteTransformOk &&
+      packageInstallSmoke.installedViteTransformIncludesIntentId &&
+      packageInstallSmoke.installedViteTransformGraphExists &&
+      packageInstallSmoke.installedViteTransformGraphEntryCount === 1 &&
+      packageInstallSmoke.installedViteTransformFirstRelativeFile === "src/App.tsx" &&
+      packageInstallSmoke.installedViteTransformFirstToken === "gap-4",
     cliScanPass:
       cliScan.exitCode === 0 &&
       cliScanReport?.command === "scan" &&
