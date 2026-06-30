@@ -4,10 +4,10 @@
 - Repo root: D:\SJWORK\INTENT_LAYER
 - Git repo: yes
 - Branch: main
-- HEAD: 3bd55aa11c39
+- HEAD: 0eb180e938ff
 - Dirty files: none
 - Dirty diff hash: clean
-- Updated at: 2026-06-30T13:53:03+09:00
+- Updated at: 2026-06-30T14:02:00+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
 - Keep this short. Move details into `.context-pack/AREAS/*.md`.
