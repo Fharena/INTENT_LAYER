@@ -295,9 +295,10 @@ Support model:
 - Undo conflicts where the stored `nextToken` changed reject direct revert and write `.intent/conflicts/*.intent-conflict.json`.
 - The overlay displays unresolved undo conflicts and can discard a reviewed pending undo entry.
 - Branch undo can revert a non-top patch from source when the expected token is still present at the stored range, and rejects mismatches as conflict artifacts.
-- Agent handoff records a selected source-window snapshot, component snapshot, related source snapshot, task/result markdown, and intent diffs.
+- Agent handoff records a selected source-window snapshot, component snapshot, related source snapshot, related dependency snapshots, task/result markdown, and intent diffs.
 - Agent results record before/after line diffs for both the selected source window and the selected component snapshot.
 - Agent results record related source diffs and related semantic token diffs for same-file and imported variable-reference read-only bindings.
+- Agent results record one-hop dependency source diffs and dependency semantic token diffs when a variable declaration references sibling variable declarations in the same file.
 - Related semantic token diffing is covered by fixtures for simple quoted variable declarations, imported variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal declaration segments.
 - Variant-function read-only bindings store same-file local `function` / `const` variant declarations, one-hop relative named imports, and variant declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports as related source snapshots, then record related source and semantic diffs on result.
 - The package smoke now transforms an external temp fixture through the installed `vite.cjs` wrapper-backed `/vite` export after tarball install and verifies `data-intent-id` plus `.intent/graph.intent.json` output.
@@ -321,7 +322,7 @@ Support model:
 Priority order:
 
 1. Run `npm run import:external-corpus -- <path>` against an independently collected external 50-100 sample React/Tailwind corpus and re-measure editable coverage.
-2. Improve agent handoff context for package imports and cross-variable data flow.
+2. Improve agent handoff context for package imports and cross-file/transitive variable data flow.
 3. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
 4. Validate caching and graph write throttling on product-sized TSX files.
 
@@ -344,6 +345,7 @@ Selected Component
 Current Intent Document
 Component Snapshot
 Related Source Snapshot
+Related Dependency Snapshots
 Source Snapshot
 Desired Change
 Constraints
@@ -376,6 +378,8 @@ Source Diff
 Semantic Intent Diff
 Related Source Diff
 Related Semantic Intent Diff
+Related Dependency Source Diff
+Related Dependency Semantic Intent Diff
 Component Source Diff
 Component Semantic Intent Diff
 Intent Diff
@@ -384,13 +388,14 @@ Intent Diff
 At this stage, result recording is a deterministic audit log.
 Task creation stores both a selected source-window snapshot and a selected component snapshot, and result recording compares both with the current source to write line diffs.
 Simple variable-reference read-only bindings store the related variable declaration as a related source snapshot, and result recording writes both a related source diff and a related semantic token diff.
+When that related declaration references sibling variable declarations in the same file, task creation stores one-hop related dependency snapshots and result recording writes dependency source and semantic token diffs separately.
 Variable declarations can be found in the same file or behind imported tsconfig path aliases plus multi-hop barrel re-exports.
 `className` values inside the selected source window and selected component range are also re-analyzed into before/after tokens so the intent diff records added/removed tokens and categories.
 It also rereads the source file to record `sourceHashChanged`.
 Component-level semantic diffing is currently limited to `className` tokens.
-Related source semantic diffing re-analyzes simple quoted variable declarations, imported variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal literal segments as tokens.
+Related source/dependency semantic diffing re-analyzes simple quoted variable declarations, imported variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal literal segments as tokens.
 Variant-function read-only bindings store same-file local variant function/variable declarations, one-hop relative named imports, and variant declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports as related source, producing source diffs and literal-token semantic diffs.
-It does not yet analyze package imports, variant-function meaning, or cross-variable data flow automatically.
+It does not yet analyze package imports, variant-function meaning, or cross-file/transitive variable data flow automatically.
 It does not yet infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 
 ### 9.1 Read-only Handoff

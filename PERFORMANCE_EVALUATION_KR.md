@@ -33,6 +33,7 @@ npm run build
 - read-only related source/semantic diff fixture
 - read-only `cn()` variable related semantic diff fixture
 - read-only composite variable related semantic diff fixture
+- read-only same-file cross-variable dependency handoff fixture
 - imported variable related source handoff fixture
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
@@ -719,7 +720,46 @@ dev server endpoint smoke test:
 - result 기록은 배열 기본 literal, 조건부 literal, object-map literal, template literal 내부 조건부 literal을 각각 semantic change로 분리했다.
 - 이 fixture는 read-only related semantic diff가 단순 변수와 simple `cn()`을 넘어 composite 변수 선언까지 감사 로그로 남긴다는 증거다.
 
-## 9.3 Imported Variable Handoff
+## 9.3 Cross-variable Dependency Handoff
+
+| 항목 | 값 |
+| --- | ---: |
+| read-only entry 생성 | true |
+| binding kind | `read-only` |
+| unsupported reason | `variable-reference` |
+| className value | `cardClass` |
+| editable token 수 | 0 |
+| agent task 생성 | true |
+| agent task 생성 시간 | 2.058ms |
+| dependency snapshot 수 | 2 |
+| dependency snapshot identifiers | `baseCardClass`, `toneClass` |
+| dependency snapshots referencedBy | `cardClass` |
+| dependency snapshots class token 포함 | true |
+| agent result 생성 | true |
+| agent result 생성 시간 | 8.568ms |
+| result 후 syntax error | 0 |
+| source diff line 수 | 2 |
+| source diff 포함 | true |
+| related source diff line 수 | 2 |
+| related source diff 포함 | true |
+| related semantic className change 수 | 1 |
+| related dependency snapshot 수 | 2 |
+| related dependency source diff line 수 | 8 |
+| related dependency source diff 포함 | true |
+| related dependency semantic className change 수 | 4 |
+| related dependency semantic diff 포함 | true |
+| related dependency semantic token added 수 | 10 |
+| related dependency semantic token removed 수 | 10 |
+
+해석:
+
+- `const cardClass = cn(baseCardClass, toneClass)`처럼 handoff 대상 변수 선언이 같은 파일의 다른 변수 선언을 참조해도 dependency snapshot을 별도로 기록한다.
+- task에는 `baseCardClass`, `toneClass` 두 dependency가 `referencedBy: "cardClass"`로 저장된다.
+- result 기록 시 `cardClass` 선언 자체의 diff와 별도로 dependency source diff와 dependency semantic token diff가 생성된다.
+- 이 fixture는 cross-variable 전체 의미 분석이 아니라, MVP 범위의 same-file one-hop dependency handoff context를 검증한다.
+- package import, variant 함수 의미 분석, cross-file/transitive variable data flow는 아직 지원하지 않는다.
+
+## 9.4 Imported Variable Handoff
 
 | 항목 | 값 |
 | --- | ---: |
@@ -755,7 +795,7 @@ dev server endpoint smoke test:
 - selected JSX 파일이 바뀌지 않고 imported variable 선언만 바뀌어도 related source diff와 semantic token diff가 생성된다.
 - 이 fixture는 tsconfig paths alias, import alias, 다단계 barrel re-export 뒤의 변수 선언까지 handoff 감사 문맥으로 잡는다는 증거다.
 
-## 9.4 Variant Function Handoff
+## 9.5 Variant Function Handoff
 
 | 항목 | 값 |
 | --- | ---: |
@@ -788,7 +828,7 @@ dev server endpoint smoke test:
 - 같은 파일 안의 local `const buttonVariants = cva(...)` 선언을 related source snapshot으로 저장한다.
 - agent result 기록 시 selected JSX 자체가 바뀌지 않아도 variant 선언 변경을 related source diff와 literal token semantic diff로 감사 로그에 남긴다.
 
-## 9.5 Imported Variant Function Handoff
+## 9.6 Imported Variant Function Handoff
 
 | 항목 | 값 |
 | --- | ---: |
@@ -822,9 +862,9 @@ dev server endpoint smoke test:
 - agent task의 편집 가능 파일 목록에는 선택 JSX 파일과 imported variant 정의 파일이 함께 들어간다.
 - agent result 기록 시 선택 JSX가 바뀌지 않고 imported definition만 바뀌어도 related source diff와 semantic token diff가 생성된다.
 - tsconfig paths alias와 one-hop named barrel re-export는 아래 fixture에서 별도 검증한다.
-- imported 변수 선언의 alias/barrel chain은 지원하지만, package import, variant 함수 의미 분석, cross-variable data flow는 아직 지원하지 않는다.
+- imported 변수 선언의 alias/barrel chain은 지원하지만, package import, variant 함수 의미 분석, cross-file/transitive variable data flow는 아직 지원하지 않는다.
 
-## 9.6 Path Alias + Barrel Variant Function Handoff
+## 9.7 Path Alias + Barrel Variant Function Handoff
 
 | 항목 | 값 |
 | --- | ---: |
@@ -858,9 +898,9 @@ dev server endpoint smoke test:
 - `import { buttonVariants } from "@/ui"` 형태의 tsconfig paths alias를 `tsconfig.json`의 `baseUrl`/`paths` 기준으로 해석한다.
 - `@/ui`가 `src/ui/index.ts` barrel 파일로 해석되고, `export { buttonVariants } from "./buttonVariants"` 한 단계를 따라간다.
 - agent task/result는 최종 선언 파일인 `src/ui/buttonVariants.ts`를 related source snapshot/diff 대상으로 기록한다.
-- imported 변수 선언의 다단계 barrel chain은 지원하지만, package import, variant 함수 의미 분석, cross-variable data flow는 아직 지원하지 않는다.
+- imported 변수 선언의 다단계 barrel chain은 지원하지만, package import, variant 함수 의미 분석, cross-file/transitive variable data flow는 아직 지원하지 않는다.
 
-## 9.7 Path Alias + Multi-hop Barrel Variant Function Handoff
+## 9.8 Path Alias + Multi-hop Barrel Variant Function Handoff
 
 | 항목 | 값 |
 | --- | ---: |
@@ -895,9 +935,9 @@ dev server endpoint smoke test:
 - `@/theme -> src/theme/index.ts -> ../ui -> src/ui/index.ts -> ../tokens/buttonVariants` 경로를 따라 최종 선언 파일 `src/tokens/buttonVariants.ts`를 related source snapshot으로 기록한다.
 - agent task/result는 선택 JSX가 바뀌지 않아도 multi-hop barrel 뒤의 cva-like 선언 변경을 related source diff와 semantic token diff로 남긴다.
 - 이 fixture는 variant/cva handoff 문맥이 one-hop barrel을 넘어 다단계 local barrel re-export까지 동작한다는 증거다.
-- package import, variant 함수 의미 분석, cross-variable data flow는 아직 지원하지 않는다.
+- package import, variant 함수 의미 분석, cross-file/transitive variable data flow는 아직 지원하지 않는다.
 
-## 9.8 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
+## 9.9 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
 
 | 항목 | 값 |
 | --- | ---: |
@@ -1053,8 +1093,8 @@ package install smoke gate:
 | installed plugin transform exit code | 0 |
 | installed Vite dev server exit code | 0 |
 | package file 수 | 15 |
-| package size | 41638 bytes |
-| unpacked size | 205162 bytes |
+| package size | 43385 bytes |
+| unpacked size | 213643 bytes |
 | bin wrapper 포함 | true |
 | CLI source 포함 | true |
 | Vite plugin source 포함 | true |
@@ -1161,12 +1201,13 @@ package install smoke gate:
 | operation conflict artifact | `revert-token-mismatch` 거부 + conflict artifact 생성 + expected/actual/restore token 기록 + syntax error 0 | 통과 |
 | operation conflict resolution | active conflict 1 + `discard-pending-undo` resolve + pending stack 0 + active conflict 0 + syntax error 0 | 통과 |
 | agent task generation | task 생성 + 필수 섹션 포함 | 통과 |
-| agent result generation | result/diff 생성 + source diff + selected/component/related semantic diff section 포함 | 통과 |
+| agent result generation | result/diff 생성 + source diff + selected/component/related/dependency semantic diff section 포함 | 통과 |
 | component snapshot discovery | 8 fixture case 모두 통과 | 통과 |
 | read-only handoff | read-only binding 생성 + agent task 생성 | 통과 |
 | read-only related source/semantic diff | related snapshot + related source diff + related semantic diff + syntax error 0 | 통과 |
 | read-only `cn()` variable related semantic diff | related source diff + related semantic change >= 2 + token added/removed >= 4 + syntax error 0 | 통과 |
 | read-only composite variable related semantic diff | array/object/template related semantic change >= 4 + token added/removed >= 6 + syntax error 0 | 통과 |
+| read-only cross-variable dependency handoff | same-file dependency snapshots 2 + dependency source diff + dependency semantic token added/removed >= 5 + syntax error 0 | 통과 |
 | imported variable related source handoff | tsconfig paths alias + import alias + multi-hop barrel snapshot + related semantic token added/removed >= 5 + syntax error 0 | 통과 |
 | variant/cva related source handoff | local variant declaration snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | 통과 |
 | imported variant/cva related source handoff | one-hop relative named import snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | 통과 |
@@ -1177,7 +1218,7 @@ package install smoke gate:
 
 ## 11. 결론
 
-이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, imported 변수 선언도 tsconfig paths alias/import alias/다단계 barrel re-export 뒤에서 related source handoff 문맥으로 잡는다. local/one-hop relative import/tsconfig paths alias + one-hop/multi-hop named barrel 뒤의 variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 package smoke도 tarball install, 설치된 bin 실행, `/vite` wrapper export import, 외부 temp fixture transform/graph 생성, 실제 Vite dev server HTTP graph/preview/apply, source patch artifact, 3-file graph refresh 검증까지 통과했다. 이번 갱신에서는 401-binding TSX 반복 transform에서 semantic fingerprint가 같으면 sidecar graph write를 건너뛰는 gate와 외부 corpus import/report/gate harness smoke도 통과했다.
+이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, 같은 파일 one-hop dependency 선언도 related dependency handoff 문맥으로 잡는다. imported 변수 선언도 tsconfig paths alias/import alias/다단계 barrel re-export 뒤에서 related source handoff 문맥으로 잡는다. local/one-hop relative import/tsconfig paths alias + one-hop/multi-hop named barrel 뒤의 variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 package smoke도 tarball install, 설치된 bin 실행, `/vite` wrapper export import, 외부 temp fixture transform/graph 생성, 실제 Vite dev server HTTP graph/preview/apply, source patch artifact, 3-file graph refresh 검증까지 통과했다. 이번 갱신에서는 401-binding TSX 반복 transform에서 semantic fingerprint가 같으면 sidecar graph write를 건너뛰는 gate와 외부 corpus import/report/gate harness smoke도 통과했다.
 
 성공한 것:
 
@@ -1203,6 +1244,7 @@ package install smoke gate:
 - read-only variable reference의 related source diff와 semantic token diff 생성
 - read-only `cn()` variable reference의 related source diff와 semantic token diff 생성
 - read-only composite variable의 배열/object map/template literal related semantic token diff 생성
+- read-only variable reference의 same-file one-hop dependency source diff와 semantic token diff 생성
 - tsconfig paths alias + import alias + 다단계 barrel re-export 뒤 imported variable declaration의 related source diff와 semantic token diff 생성
 - variant/cva read-only binding의 local variant declaration related source diff와 semantic token diff 생성
 - variant/cva read-only binding의 one-hop relative named import declaration related source diff와 semantic token diff 생성
@@ -1234,12 +1276,12 @@ package install smoke gate:
 - CLI tarball install, package `/vite` wrapper export smoke, 설치된 plugin transform/graph smoke, 설치된 Vite dev server HTTP preview/apply 및 3-file graph refresh smoke는 통과했지만, public npm package 이름과 외부 사용자용 install guide copy는 출시 polish로 남아 있다.
 - 외부 corpus import harness는 준비됐지만, 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 실제 검증은 아직 남아 있다.
 - 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
-- package import, variant 함수 의미 분석, cross-variable data flow를 포함한 imported variant 함수 자동 분석
+- package import, variant 함수 의미 분석, cross-file/transitive variable data flow를 포함한 imported variant 함수 자동 분석
 - variant 함수와 runtime template literal 직접 patch 지원
 
 다음 판단:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 준비된 external corpus harness로 독립 외부 샘플 50-100개를 실제 측정하고, package import/cross-variable handoff 문맥 보강과 외부 제품급 TSX 파일에서 component snapshot 및 product-sized graph throttle 재측정을 진행하는 것이다.
+다음 우선순위는 준비된 external corpus harness로 독립 외부 샘플 50-100개를 실제 측정하고, package import 및 cross-file/transitive variable handoff 문맥 보강과 외부 제품급 TSX 파일에서 component snapshot 및 product-sized graph throttle 재측정을 진행하는 것이다.
 ```

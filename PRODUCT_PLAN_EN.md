@@ -174,6 +174,7 @@ Limited support:
 shadcn/ui
 CSS variables
 simple CSS modules
+same-file one-hop variable dependency handoff context
 local and one-hop relative-import variant/cva handoff context
 tsconfig paths alias plus one-hop/multi-hop named barrel re-export variant/cva handoff context
 tsconfig paths alias plus multi-hop barrel re-export imported variable handoff context
@@ -188,7 +189,7 @@ Emotion
 complete CSS cascade editing
 full Tailwind arbitrary value support
 complete dynamic className analysis
-package-import, variant-function meaning, and cross-variable data-flow variant graph analysis
+package-import, variant-function meaning, and cross-file/transitive variable data-flow variant graph analysis
 Figma import
 AI automatic refactoring
 ```

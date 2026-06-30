@@ -109,6 +109,7 @@ The demo currently supports:
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply
 - source snapshot diff, component snapshot diff, selected `className` semantic token diff, and component-level `className` semantic token diff output for agent result review handoff
 - related source snapshot/diff and semantic token diff output for variable-reference read-only handoff, including same-file declarations, imported variable declarations behind path aliases/barrels, simple `cn()` / `clsx()`, array, object-map, and template-literal declarations
+- related dependency snapshot/diff and semantic token diff output for one-hop same-file variables referenced by a variable-backed `className`
 - local and one-hop relative imported variant/cva function declaration snapshot/diff output for variant-function read-only handoff
 - tsconfig path alias plus one-hop and multi-hop named barrel re-export snapshot/diff output for variant-function read-only handoff
 - component snapshot discovery fixture reporting for function, nested/map/conditional/fragment, arrow, memo, forwardRef, HOC, and namespace-object component patterns
