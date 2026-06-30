@@ -36,7 +36,7 @@ Included:
 - undo for the last patch
 - structured agent handoff task generation
 - structured agent result artifact generation
-- agent handoff source snapshots and result source diffs
+- agent handoff source snapshots, result source diffs, and selected `className` semantic token diffs
 - browser click-to-panel, preview, apply, and revert round-trip latency measurement
 - minimal intent operation/diff output
 - corpus analysis script
@@ -245,7 +245,7 @@ Support model:
 - Undo supports only the last patch.
 - Restarting the dev server clears the in-memory undo state.
 - Agent handoff records a selected source-window snapshot plus task/result markdown and intent diffs.
-- Agent results record a before/after line diff for the selected source window, but they do not yet infer a full-file semantic diff automatically.
+- Agent results record a before/after line diff and a `className` semantic token diff for the selected source window, but they do not yet infer a full-file or component-level semantic diff automatically.
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
 - The latest browser measurement repeats 3 desktop samples and 3 mobile 390x844 viewport samples.
 - The Codex-generated 50-file React/Tailwind corpus records 78.76% supported direct editable coverage.
@@ -257,8 +257,8 @@ Support model:
 
 Priority order:
 
-1. Expand agent result source-window diffs into semantic intent diffs.
-2. Design an undo stack and operation-log-backed revert.
+1. Design an undo stack and operation-log-backed revert.
+2. Expand selected source-window semantic diffs into component-level semantic diffs.
 3. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
 4. Connect read-only source diffs to a wider source window.
 5. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
@@ -310,11 +310,13 @@ Changed Files
 Checks
 Notes
 Source Diff
+Semantic Intent Diff
 Intent Diff
 ```
 
 At this stage, result recording is a deterministic audit log.
 Task creation stores a selected source-window snapshot, and result recording compares it with the current source window to write a line diff.
+`className` values inside the selected source window are also re-analyzed into before/after tokens so the intent diff records added/removed tokens and categories.
 It also rereads the source file to record `sourceHashChanged`.
 It does not yet infer full-file semantic or component-level intent changes automatically.
 

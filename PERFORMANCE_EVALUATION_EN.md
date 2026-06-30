@@ -22,6 +22,7 @@ Measured inputs:
 - agent handoff task fixture
 - agent result artifact fixture
 - agent result source diff fixture
+- agent result selected `className` semantic diff fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -148,8 +149,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.396ms / p95 3.44ms / max 3.44ms |
-| `src/main.tsx` | 0 | avg 0.004ms / p95 0.006ms / max 0.006ms |
+| `src/App.tsx` | 13 | avg 1.442ms / p95 3.293ms / max 3.293ms |
+| `src/main.tsx` | 0 | avg 0.005ms / p95 0.009ms / max 0.009ms |
 
 Summary:
 
@@ -157,12 +158,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.7ms |
-| Overall p95 transform time | 3.44ms |
-| Overall max transform time | 3.44ms |
-| Warm average transform time | 0.444ms |
-| Warm p95 transform time | 1.198ms |
-| Warm max transform time | 1.198ms |
+| Overall average transform time | 0.724ms |
+| Overall p95 transform time | 3.293ms |
+| Overall max transform time | 3.293ms |
+| Warm average transform time | 0.492ms |
+| Warm p95 transform time | 1.361ms |
+| Warm max transform time | 1.361ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -186,9 +187,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 9.295ms |
-| p95 transform time | 13.662ms |
-| Max transform time | 13.662ms |
+| Average transform time | 9.898ms |
+| p95 transform time | 14.48ms |
+| Max transform time | 14.48ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -203,13 +204,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.083ms |
-| Preview round trip | 1.482ms |
+| Preview time | 1.095ms |
+| Preview round trip | 1.524ms |
 | Apply success | true |
-| Static apply time | 32.702ms |
-| Simple `cn()` apply time | 11.054ms |
+| Static apply time | 22.628ms |
+| Simple `cn()` apply time | 15.573ms |
 | Revert success | true |
-| Revert time | 37.294ms |
+| Revert time | 16.472ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -229,8 +230,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.687ms |
-| Average lookup | 0.000687ms |
+| Total time | 0.604ms |
+| Average lookup | 0.000604ms |
 
 Caveat:
 
@@ -312,7 +313,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 6.251ms |
+| Task generation time | 6.605ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -334,13 +335,17 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 10.291ms |
+| Result generation time | 7.183ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
 | Source snapshot available | true |
 | Source diff line count | 2 |
 | Source diff present | true |
+| Semantic className change count | 1 |
+| Semantic token added count | 2 |
+| Semantic token removed count | 2 |
+| Semantic diff present | true |
 
 Required sections checked:
 
@@ -351,6 +356,7 @@ Task
 Changed Files
 Checks
 Source Diff
+Semantic Intent Diff
 Intent Diff
 ```
 
@@ -372,7 +378,8 @@ Interpretation:
 - Agent result recording is still well below the 50ms target.
 - This step structures the user's result summary into `.intent/agent/result_*.md` and `.intent/diffs/*_agent.intent-diff.yml`.
 - Task creation stores a selected source-window snapshot, and result recording compares it with the current source window to write a line diff.
-- It does not yet infer full-file semantic changes automatically.
+- `className` values inside the selected source window are also analyzed into before/after tokens; this fixture records 2 added tokens (`rounded-xl`, `p-8`) and 2 removed tokens (`rounded-lg`, `p-6`).
+- It does not yet infer full-file or component-level semantic changes automatically.
 
 ## 9. Read-only Binding Handoff
 
@@ -383,7 +390,7 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.707ms |
+| Agent task generation time | 1.489ms |
 
 Interpretation:
 
@@ -412,7 +419,7 @@ Interpretation:
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
-| agent result generation | result/diff created + source diff present | pass |
+| agent result generation | result/diff created + source diff + semantic diff present | pass |
 | read-only handoff | read-only binding created + agent task created | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
@@ -432,7 +439,7 @@ What worked:
 - patch preview before apply
 - last-patch revert
 - agent handoff task markdown generation
-- agent result markdown and selected source-window diff generation
+- agent result markdown, selected source-window diff, and selected `className` semantic diff generation
 - real browser click-to-panel, preview, apply, and revert round-trip measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
@@ -447,12 +454,12 @@ What remains weak:
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
-- source-window diffs still need to become component-level semantic diffs
+- selected source-window semantic diffs still need to become component-level semantic diffs
 - variant functions and runtime template literals remain unsupported
 
 Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is semantic intent diff expansion, undo stack design, and independent external corpus validation.
+The next priority is undo stack design, component-level semantic diff expansion, and independent external corpus validation.
 ```
