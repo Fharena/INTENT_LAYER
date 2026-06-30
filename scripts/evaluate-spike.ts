@@ -175,6 +175,7 @@ const agentTaskRequiredSections = [
   "## Goal",
   "## Selected Component",
   "## Current Intent Document",
+  "## Component Snapshot",
   "## Source Snapshot",
   "## Desired Change",
   "## Constraints",
@@ -212,6 +213,8 @@ const agentResultRequiredSections = [
   "## Checks",
   "## Source Diff",
   "## Semantic Intent Diff",
+  "## Component Source Diff",
+  "## Component Semantic Intent Diff",
   "## Intent Diff"
 ];
 const agentResultSectionsPresent = agentResultRequiredSections.every((section) =>
@@ -479,7 +482,24 @@ const report = {
     semanticChangeCount: agentResult.ok ? agentResult.source.semanticChangeCount : 0,
     semanticDiffPresent: agentResult.ok ? Boolean(agentResult.semanticDiff) : false,
     semanticTokenAddedCount: agentResult.ok ? agentResult.semanticDiff?.tokenAddedCount ?? 0 : 0,
-    semanticTokenRemovedCount: agentResult.ok ? agentResult.semanticDiff?.tokenRemovedCount ?? 0 : 0
+    semanticTokenRemovedCount: agentResult.ok ? agentResult.semanticDiff?.tokenRemovedCount ?? 0 : 0,
+    componentSnapshotAvailable: agentResult.ok
+      ? agentResult.source.componentSnapshotAvailable
+      : false,
+    componentDiffLineCount: agentResult.ok ? agentResult.source.componentDiffLineCount : 0,
+    componentSourceDiffPresent: agentResult.ok ? Boolean(agentResult.componentSourceDiff) : false,
+    componentSemanticChangeCount: agentResult.ok
+      ? agentResult.source.componentSemanticChangeCount
+      : 0,
+    componentSemanticDiffPresent: agentResult.ok
+      ? Boolean(agentResult.componentSemanticDiff)
+      : false,
+    componentSemanticTokenAddedCount: agentResult.ok
+      ? agentResult.componentSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    componentSemanticTokenRemovedCount: agentResult.ok
+      ? agentResult.componentSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
   },
   readOnlyBinding: {
     entryCreated: Boolean(readOnlyEntry),
@@ -517,7 +537,11 @@ const report = {
       agentResult.source.snapshotAvailable &&
       agentResult.source.diffLineCount > 0 &&
       agentResult.source.semanticChangeCount > 0 &&
-      Boolean(agentResult.semanticDiff),
+      Boolean(agentResult.semanticDiff) &&
+      agentResult.source.componentSnapshotAvailable &&
+      agentResult.source.componentDiffLineCount > 0 &&
+      agentResult.source.componentSemanticChangeCount > 0 &&
+      Boolean(agentResult.componentSemanticDiff),
     readOnlyHandoffPass:
       Boolean(readOnlyEntry) &&
       readOnlyEntry?.className.kind === "read-only" &&

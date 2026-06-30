@@ -189,6 +189,21 @@ export interface AgentResultRequest {
   notes?: string;
 }
 
+export interface AgentSemanticClassNameDiff {
+  classNameChangeCount: number;
+  tokenAddedCount: number;
+  tokenRemovedCount: number;
+  classNameChanges: Array<{
+    index: number;
+    beforeKind: string | null;
+    afterKind: string | null;
+    beforeValue: string | null;
+    afterValue: string | null;
+    addedTokens: Array<{ token: string; category: IntentTokenCategory | null }>;
+    removedTokens: Array<{ token: string; category: IntentTokenCategory | null }>;
+  }>;
+}
+
 export interface AgentResultArtifact {
   ok: true;
   id: string;
@@ -204,22 +219,14 @@ export interface AgentResultArtifact {
     snapshotAvailable: boolean;
     diffLineCount: number;
     semanticChangeCount: number;
+    componentSnapshotAvailable: boolean;
+    componentDiffLineCount: number;
+    componentSemanticChangeCount: number;
   };
   sourceDiff: string | null;
-  semanticDiff: {
-    classNameChangeCount: number;
-    tokenAddedCount: number;
-    tokenRemovedCount: number;
-    classNameChanges: Array<{
-      index: number;
-      beforeKind: string | null;
-      afterKind: string | null;
-      beforeValue: string | null;
-      afterValue: string | null;
-      addedTokens: Array<{ token: string; category: IntentTokenCategory | null }>;
-      removedTokens: Array<{ token: string; category: IntentTokenCategory | null }>;
-    }>;
-  } | null;
+  semanticDiff: AgentSemanticClassNameDiff | null;
+  componentSourceDiff: string | null;
+  componentSemanticDiff: AgentSemanticClassNameDiff | null;
   metrics: {
     resultMs: number;
   };

@@ -5,6 +5,7 @@ import { tokenizeClassName } from "./tailwind";
 import type {
   AgentResultArtifact,
   AgentResultRequest,
+  AgentSemanticClassNameDiff,
   IntentBinding,
   IntentTokenCategory,
   PatchFailure
@@ -68,31 +69,49 @@ interface SourceSnapshot {
   excerpt: string;
 }
 
+interface ComponentSnapshot extends SourceSnapshot {
+  componentName: string | null;
+}
+
 interface ClassNameIntent {
   kind: "static" | "call-literals" | "read-only";
   value: string;
   tokens: Array<{ token: string; category: IntentTokenCategory | null }>;
 }
 
-type SemanticClassNameChange = NonNullable<AgentResultArtifact["semanticDiff"]>["classNameChanges"][number];
+type SemanticClassNameChange = AgentSemanticClassNameDiff["classNameChanges"][number];
 
-function parseSourceSnapshot(rootDir: string, taskFile: string | null): SourceSnapshot | null {
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function parseJsonSection<T>(rootDir: string, taskFile: string | null, heading: string): T | null {
   if (!taskFile) return null;
 
   const fullPath = path.isAbsolute(taskFile) ? taskFile : path.join(rootDir, taskFile);
   if (!fs.existsSync(fullPath)) return null;
 
   const markdown = fs.readFileSync(fullPath, "utf8");
-  const match = markdown.match(/## Source Snapshot\s+```json\s+([\s\S]*?)\s+```/);
+  const match = markdown.match(new RegExp(`## ${escapeRegExp(heading)}\\s+\`\`\`json\\s+([\\s\\S]*?)\\s+\`\`\``));
   if (!match) return null;
 
   try {
-    const parsed = JSON.parse(match[1]) as SourceSnapshot;
-    if (!parsed.file || typeof parsed.excerpt !== "string") return null;
-    return parsed;
+    return JSON.parse(match[1]) as T;
   } catch {
     return null;
   }
+}
+
+function parseSourceSnapshot(rootDir: string, taskFile: string | null): SourceSnapshot | null {
+  const parsed = parseJsonSection<SourceSnapshot | null>(rootDir, taskFile, "Source Snapshot");
+  if (!parsed || !parsed.file || typeof parsed.excerpt !== "string") return null;
+  return parsed;
+}
+
+function parseComponentSnapshot(rootDir: string, taskFile: string | null): ComponentSnapshot | null {
+  const parsed = parseJsonSection<ComponentSnapshot | null>(rootDir, taskFile, "Component Snapshot");
+  if (!parsed || !parsed.file || typeof parsed.excerpt !== "string") return null;
+  return parsed;
 }
 
 function excerptBySnapshot(source: string, snapshot: SourceSnapshot): string {
@@ -102,7 +121,7 @@ function excerptBySnapshot(source: string, snapshot: SourceSnapshot): string {
   return lines.slice(start - 1, end).join("\n");
 }
 
-function unifiedLineDiff(before: string, after: string): string {
+function unifiedLineDiff(before: string, after: string, label = "selected-source-window"): string {
   const beforeLines = before.split(/\r?\n/);
   const afterLines = after.split(/\r?\n/);
 
@@ -131,7 +150,7 @@ function unifiedLineDiff(before: string, after: string): string {
   const contextBefore = beforeLines.slice(Math.max(0, prefix - 2), prefix);
   const contextAfter = beforeLines.slice(beforeLines.length - suffix, beforeLines.length - suffix + 2);
   return [
-    "@@ selected-source-window @@",
+    `@@ ${label} @@`,
     ...contextBefore.map((line) => ` ${line}`),
     ...removed.map((line) => `-${line}`),
     ...added.map((line) => `+${line}`),
@@ -328,7 +347,7 @@ function diffTokens(
 function semanticClassNameDiff(
   beforeSource: string,
   afterSource: string
-): NonNullable<AgentResultArtifact["semanticDiff"]> {
+): AgentSemanticClassNameDiff {
   const beforeIntents = extractClassNameIntents(beforeSource);
   const afterIntents = extractClassNameIntents(afterSource);
   const classNameChanges: SemanticClassNameChange[] = [];
@@ -370,9 +389,9 @@ function tokenDiffMarkdown(tokens: Array<{ token: string; category: IntentTokenC
   return tokens.map((token) => `\`${token.token}\` (${token.category ?? "unknown"})`).join(", ");
 }
 
-function semanticDiffMarkdown(diff: NonNullable<AgentResultArtifact["semanticDiff"]> | null): string {
+function semanticDiffMarkdown(diff: AgentSemanticClassNameDiff | null, scope = "selected source window"): string {
   if (!diff || diff.classNameChanges.length === 0) {
-    return "- No className semantic token changes detected in the selected source window.";
+    return `- No className semantic token changes detected in the ${scope}.`;
   }
 
   return [
@@ -392,13 +411,19 @@ function semanticDiffMarkdown(diff: NonNullable<AgentResultArtifact["semanticDif
   ].join("\n");
 }
 
-function semanticDiffYaml(diff: NonNullable<AgentResultArtifact["semanticDiff"]> | null): string[] {
+function semanticDiffYaml(
+  diff: AgentSemanticClassNameDiff | null,
+  key = "semanticDiff",
+  metadata: string[] = []
+): string[] {
+  const header = [`${key}:`, ...metadata.map((line) => `  ${line}`)];
+
   if (!diff) {
-    return ["semanticDiff:", "  available: false"];
+    return [...header, "  available: false"];
   }
 
   return [
-    "semanticDiff:",
+    ...header,
     "  available: true",
     `  classNameChangeCount: ${diff.classNameChangeCount}`,
     `  tokenAddedCount: ${diff.tokenAddedCount}`,
@@ -478,6 +503,7 @@ export function recordAgentResult(
   const checks = uniqueNonEmpty(request.checks ?? []);
   const notes = request.notes?.trim() ?? "";
   const snapshot = parseSourceSnapshot(rootDir, taskFile);
+  const componentSnapshot = parseComponentSnapshot(rootDir, taskFile);
 
   let sourceHashAfter: string | null = null;
   let currentSource: string | null = null;
@@ -495,6 +521,18 @@ export function recordAgentResult(
   const changedLineCount = diffLineCount(sourceDiff);
   const semanticDiff = snapshot && currentSource ? semanticClassNameDiff(snapshot.excerpt, currentSnapshotExcerpt) : null;
   const semanticChangeCount = semanticDiff?.classNameChangeCount ?? 0;
+  const currentComponentExcerpt =
+    componentSnapshot && currentSource ? excerptBySnapshot(currentSource, componentSnapshot) : "";
+  const componentSourceDiff =
+    componentSnapshot && currentSource
+      ? unifiedLineDiff(componentSnapshot.excerpt, currentComponentExcerpt, "component-source-snapshot")
+      : "";
+  const componentChangedLineCount = diffLineCount(componentSourceDiff);
+  const componentSemanticDiff =
+    componentSnapshot && currentSource
+      ? semanticClassNameDiff(componentSnapshot.excerpt, currentComponentExcerpt)
+      : null;
+  const componentSemanticChangeCount = componentSemanticDiff?.classNameChangeCount ?? 0;
   const markdown = [
     "# Intent Agent Result",
     "",
@@ -540,6 +578,29 @@ export function recordAgentResult(
     "",
     semanticDiffMarkdown(semanticDiff),
     "",
+    "## Component Source Diff",
+    "",
+    componentSnapshot
+      ? componentSourceDiff
+        ? [
+            `- Component: \`${componentSnapshot.componentName ?? "Unknown"}\``,
+            `- Snapshot file: \`${componentSnapshot.file}\``,
+            "",
+            codeFence(componentSourceDiff, "diff")
+          ].join("\n")
+        : "- Component snapshot matched current source. No line diff recorded."
+      : "- No component snapshot was available from the task file.",
+    "",
+    "## Component Semantic Intent Diff",
+    "",
+    componentSnapshot
+      ? [
+          `- Component: \`${componentSnapshot.componentName ?? "Unknown"}\``,
+          "",
+          semanticDiffMarkdown(componentSemanticDiff, "component source snapshot")
+        ].join("\n")
+      : "- No component snapshot was available from the task file.",
+    "",
     "## Intent Diff",
     "",
     `- Diff file: \`${path.relative(rootDir, diffFile).replace(/\\/g, "/")}\``,
@@ -566,13 +627,23 @@ export function recordAgentResult(
     `  diffLineCount: ${changedLineCount}`,
     sourceDiff ? "  patch: |-" : "  patch: null",
     ...(sourceDiff ? sourceDiff.split(/\r?\n/).map((line) => `    ${line}`) : []),
+    "componentSourceDiff:",
+    `  snapshotAvailable: ${Boolean(componentSnapshot)}`,
+    `  componentName: ${yamlString(componentSnapshot?.componentName ?? binding.componentName ?? "Unknown")}`,
+    `  diffLineCount: ${componentChangedLineCount}`,
+    componentSourceDiff ? "  patch: |-" : "  patch: null",
+    ...(componentSourceDiff ? componentSourceDiff.split(/\r?\n/).map((line) => `    ${line}`) : []),
     ...semanticDiffYaml(semanticDiff),
+    ...semanticDiffYaml(componentSemanticDiff, "componentSemanticDiff", [
+      `componentName: ${yamlString(componentSnapshot?.componentName ?? binding.componentName ?? "Unknown")}`
+    ]),
     "changes:",
     "  - type: agent-handoff-result",
     `    file: ${yamlString(binding.relativeFile)}`,
     "    summary: |-",
     blockScalar(summary),
     `    semanticChangeCount: ${semanticChangeCount}`,
+    `    componentSemanticChangeCount: ${componentSemanticChangeCount}`,
     "    changedFiles:",
     ...changedFiles.map((file) => `      - ${yamlString(file)}`),
     "    checks:",
@@ -597,10 +668,15 @@ export function recordAgentResult(
       sourceHashChanged,
       snapshotAvailable: Boolean(snapshot),
       diffLineCount: changedLineCount,
-      semanticChangeCount
+      semanticChangeCount,
+      componentSnapshotAvailable: Boolean(componentSnapshot),
+      componentDiffLineCount: componentChangedLineCount,
+      componentSemanticChangeCount
     },
     sourceDiff: sourceDiff || null,
     semanticDiff,
+    componentSourceDiff: componentSourceDiff || null,
+    componentSemanticDiff,
     metrics: {
       resultMs: Number((performance.now() - started).toFixed(3))
     }

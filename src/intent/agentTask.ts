@@ -17,6 +17,10 @@ function codeFence(value: unknown, language = "json"): string {
   );
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function lineWindow(source: string, start: number, end: number, contextLines = 4) {
   const lines = source.split(/\r?\n/);
   let offset = 0;
@@ -45,6 +49,84 @@ function lineWindow(source: string, start: number, end: number, contextLines = 4
     windowEndLine,
     excerpt: lines.slice(windowStartLine - 1, windowEndLine).join("\n")
   };
+}
+
+function scanBalanced(source: string, start: number, open: string, close: string): number {
+  let depth = 0;
+  let quote: string | null = null;
+
+  for (let index = start; index < source.length; index += 1) {
+    const character = source[index];
+    const previous = source[index - 1];
+
+    if (quote) {
+      if (character === quote && previous !== "\\") quote = null;
+      continue;
+    }
+
+    if (character === "\"" || character === "'" || character === "`") {
+      quote = character;
+      continue;
+    }
+
+    if (character === open) depth += 1;
+    if (character === close) {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+  }
+
+  return -1;
+}
+
+function findComponentRange(source: string, componentName: string | null): { start: number; end: number } | null {
+  if (!componentName) return null;
+
+  const escapedName = escapeRegExp(componentName);
+  const functionMatch = new RegExp(`\\bfunction\\s+${escapedName}\\s*\\(`).exec(source);
+  if (functionMatch) {
+    const bodyStart = source.indexOf("{", functionMatch.index);
+    const bodyEnd = bodyStart >= 0 ? scanBalanced(source, bodyStart, "{", "}") : -1;
+    if (bodyEnd > bodyStart) {
+      return {
+        start: functionMatch.index,
+        end: bodyEnd
+      };
+    }
+  }
+
+  const variableMatch = new RegExp(`\\b(?:const|let|var)\\s+${escapedName}\\b`).exec(source);
+  if (!variableMatch) return null;
+
+  const arrowIndex = source.indexOf("=>", variableMatch.index);
+  if (arrowIndex < 0) return null;
+
+  const blockStart = source.indexOf("{", arrowIndex);
+  const expressionStart = source.indexOf("(", arrowIndex);
+  const usesExpressionBody = expressionStart >= 0 && (blockStart < 0 || expressionStart < blockStart);
+
+  if (usesExpressionBody) {
+    const expressionEnd = scanBalanced(source, expressionStart, "(", ")");
+    if (expressionEnd > expressionStart) {
+      const semicolonEnd = source[expressionEnd] === ";" ? expressionEnd + 1 : expressionEnd;
+      return {
+        start: variableMatch.index,
+        end: semicolonEnd
+      };
+    }
+  }
+
+  if (blockStart >= 0) {
+    const blockEnd = scanBalanced(source, blockStart, "{", "}");
+    if (blockEnd > blockStart) {
+      return {
+        start: variableMatch.index,
+        end: source[blockEnd] === ";" ? blockEnd + 1 : blockEnd
+      };
+    }
+  }
+
+  return null;
 }
 
 function sourceRange(binding: IntentBinding) {
@@ -92,6 +174,16 @@ export function createAgentTask(
     range,
     ...lineWindow(currentSource, range.start, range.end)
   };
+  const componentRange = findComponentRange(currentSource, binding.componentName);
+  const componentSnapshot = componentRange
+    ? {
+        file: binding.relativeFile,
+        sourceHash: binding.sourceHash,
+        componentName: binding.componentName,
+        range: componentRange,
+        ...lineWindow(currentSource, componentRange.start, componentRange.end, 0)
+      }
+    : null;
   const taskDir = path.join(rootDir, ".intent", "agent");
   fs.mkdirSync(taskDir, { recursive: true });
   const taskFile = path.join(taskDir, `task_${timestampSlug()}.md`);
@@ -123,6 +215,10 @@ export function createAgentTask(
     "## Current Intent Document",
     "",
     codeFence(source),
+    "",
+    "## Component Snapshot",
+    "",
+    codeFence(componentSnapshot),
     "",
     "## Source Snapshot",
     "",
