@@ -301,6 +301,7 @@ Support model:
 - Agent results follow object-property read-only bindings such as `styles.title` to local/imported object literal properties and record related source plus semantic token diffs.
 - Agent results record one-hop dependency source diffs and dependency semantic token diffs when a variable declaration references sibling variable declarations in the same file or imported source file.
 - Workspace package imports follow root `package.json` `workspaces` plus package `exports` and store the local package source as a related source snapshot.
+- External npm package imports do not chase package source or patch `node_modules`; tasks record package/import/usage/guidance details in an `External Import Reference` section.
 - Related semantic token diffing is covered by fixtures for simple quoted variable declarations, imported variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal declaration segments.
 - Variant-function read-only bindings store same-file local `function` / `const` variant declarations, one-hop relative named imports, and variant declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports as related source snapshots, then record related source and semantic diffs on result.
 - The package smoke now transforms an external temp fixture through the installed `vite.cjs` wrapper-backed `/vite` export after tarball install and verifies `data-intent-id` plus `.intent/graph.intent.json` output.
@@ -324,7 +325,7 @@ Support model:
 Priority order:
 
 1. Run `npm run import:external-corpus -- <path>` against an independently collected external 50-100 sample React/Tailwind corpus and re-measure editable coverage.
-2. Improve agent handoff context for external npm package imports and deeper cross-file/transitive variable data flow.
+2. Improve external npm package source-analysis boundaries and deeper cross-file/transitive variable data-flow handoff context.
 3. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
 4. Validate caching and graph write throttling on product-sized TSX files.
 
@@ -394,12 +395,13 @@ Object-property read-only bindings such as `styles.title` store the matching top
 When that related declaration references sibling variable declarations in the same file or imported source file, task creation stores one-hop related dependency snapshots and result recording writes dependency source and semantic token diffs separately.
 Variable declarations can be found in the same file or behind imported tsconfig path aliases plus multi-hop barrel re-exports.
 Workspace package imports can be resolved through root `package.json` `workspaces` and package `exports` into local package source declarations.
+External npm package imports are not source-analyzed directly; they are recorded as `External Import Reference` context that guides local wrapper/override work.
 `className` values inside the selected source window and selected component range are also re-analyzed into before/after tokens so the intent diff records added/removed tokens and categories.
 It also rereads the source file to record `sourceHashChanged`.
 Component-level semantic diffing is currently limited to `className` tokens.
 Related source/dependency semantic diffing re-analyzes simple quoted variable declarations, imported variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal literal segments as tokens.
 Variant-function read-only bindings store same-file local variant function/variable declarations, one-hop relative named imports, and variant declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports as related source, producing source diffs and literal-token semantic diffs.
-It does not yet analyze external npm package imports, variant-function meaning, or deeper cross-file/transitive variable data flow automatically.
+It does not yet analyze external npm package source, patch external package code directly, infer variant-function meaning, or follow deeper cross-file/transitive variable data flow automatically.
 It does not yet infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 
 ### 9.1 Read-only Handoff
@@ -428,6 +430,7 @@ No direct token patch buttons are shown, but the agent handoff task/result flow 
 For simple variable references, the task includes a related source snapshot for the variable declaration, and the result records both a line diff and a semantic token diff for that declaration.
 For object property references, the task includes a related source snapshot for the top-level object property, and the result records both a line diff and a semantic token diff for that property.
 Imported variable declarations can also resolve through tsconfig paths aliases and barrel re-exports to the final declaration file.
+For external npm package imports, the task includes an `External Import Reference` instead of a source snapshot, plus `node_modules` edit guards and local wrapper/override guidance.
 
 ## 10. Browser Metrics
 

@@ -447,6 +447,7 @@ selected element
 source file/range
 related source snapshot for variable/variant handoff
 related dependency snapshots for one-hop same-file and imported-source variable handoff
+external import reference for external package handoff
 current intent
 desired change
 constraints
@@ -455,7 +456,8 @@ patch style
 ```
 
 For the MVP, related source snapshots cover same-file variable declarations, object-property className declarations, one-hop same-file and imported-source variable dependency snapshots, variable declarations behind workspace package imports, imported variable declarations behind tsconfig paths aliases plus multi-hop barrel re-exports, one-hop relative named imports, and `variant/cva` declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports.
-External npm package imports, variant-function meaning analysis, and deeper cross-file/transitive variable data flow remain explicit non-goals for handoff context.
+External npm package imports use `External Import Reference` context instead of a source snapshot; tasks record package/import/usage/guidance details and forbid direct `node_modules` edits.
+External npm package source analysis/direct patching, variant-function meaning analysis, and deeper cross-file/transitive variable data flow remain explicit non-goals for handoff context.
 
 This turns unsupported features into graceful agent-assisted workflows.
 

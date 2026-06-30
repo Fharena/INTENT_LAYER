@@ -111,6 +111,7 @@ The demo currently supports:
 - related source snapshot/diff and semantic token diff output for variable-reference and object-property read-only handoff, including same-file declarations, imported variable declarations behind path aliases/barrels, simple `cn()` / `clsx()`, array, object-map, and template-literal declarations
 - related dependency snapshot/diff and semantic token diff output for one-hop same-file and imported-source variables referenced by a variable-backed `className`
 - workspace package import snapshot/diff output for variable-reference read-only handoff through local `package.json` workspaces and package `exports`
+- external npm package import reference output for read-only handoff without patching `node_modules`
 - local and one-hop relative imported variant/cva function declaration snapshot/diff output for variant-function read-only handoff
 - tsconfig path alias plus one-hop and multi-hop named barrel re-export snapshot/diff output for variant-function read-only handoff
 - component snapshot discovery fixture reporting for function, nested/map/conditional/fragment, arrow, memo, forwardRef, HOC, and namespace-object component patterns

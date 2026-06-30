@@ -178,6 +178,7 @@ same-file one-hop variable dependency handoff context
 one-hop dependency handoff context inside imported variable declarations
 object-property className handoff context
 workspace package import variable handoff context
+external npm package import reference handoff context
 local and one-hop relative-import variant/cva handoff context
 tsconfig paths alias plus one-hop/multi-hop named barrel re-export variant/cva handoff context
 tsconfig paths alias plus multi-hop barrel re-export imported variable handoff context
@@ -192,7 +193,7 @@ Emotion
 complete CSS cascade editing
 full Tailwind arbitrary value support
 complete dynamic className analysis
-external npm package import, variant-function meaning, and deeper cross-file/transitive variable data-flow variant graph analysis
+external npm package source analysis/direct patching, variant-function meaning, and deeper cross-file/transitive variable data-flow variant graph analysis
 Figma import
 AI automatic refactoring
 ```
