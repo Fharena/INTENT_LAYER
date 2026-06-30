@@ -47,6 +47,7 @@ interface PackageSmokeResult {
   helpExitCode: number | null;
   viteImportExitCode: number | null;
   installedViteTransformExitCode: number | null;
+  installedViteDevServerExitCode: number | null;
   packageFileCount: number;
   packageSize: number;
   packageUnpackedSize: number;
@@ -72,6 +73,17 @@ interface PackageSmokeResult {
   installedViteTransformFirstRelativeFile: string | null;
   installedViteTransformFirstToken: string | null;
   installedViteTransformHookMs: number;
+  installedViteDevServerOk: boolean;
+  installedViteDevServerPort: number | null;
+  installedViteDevServerHomeStatus: number | null;
+  installedViteDevServerModuleStatus: number | null;
+  installedViteDevServerGraphStatus: number | null;
+  installedViteDevServerModuleIncludesIntentId: boolean;
+  installedViteDevServerGraphEntryCount: number;
+  installedViteDevServerGraphBytes: number;
+  installedViteDevServerFirstRelativeFile: string | null;
+  installedViteDevServerFirstToken: string | null;
+  installedViteDevServerMs: number;
   dryRunMs: number;
   packMs: number;
   installMs: number;
@@ -86,13 +98,20 @@ function npmCommand(): string {
   return process.platform === "win32" ? "npm.cmd" : "npm";
 }
 
-function runCommand(command: string, args: string[], cwd: string): CommandResult {
+function runCommand(
+  command: string,
+  args: string[],
+  cwd: string,
+  timeoutMs = 60000,
+  shell = process.platform === "win32"
+): CommandResult {
   const started = performance.now();
   const result = spawnSync(command, args, {
     cwd,
     encoding: "utf8",
-    shell: process.platform === "win32",
-    windowsHide: true
+    shell,
+    windowsHide: true,
+    timeout: timeoutMs
   });
   return {
     exitCode: result.status,
@@ -281,6 +300,184 @@ function packageSmoke(): PackageSmokeResult {
   } catch {
     installedViteTransformReport = {};
   }
+  const installedDevServerSmokeFile = path.join(installDir, "vite-dev-server-smoke.mjs");
+  fs.writeFileSync(
+    installedDevServerSmokeFile,
+    [
+      "import { spawn } from \"node:child_process\";",
+      "import fs from \"node:fs\";",
+      "import net from \"node:net\";",
+      "import path from \"node:path\";",
+      "",
+      `const packageName = ${JSON.stringify(packageName)};`,
+      `const viteBin = ${JSON.stringify(path.join(rootDir, "node_modules", "vite", "bin", "vite.js"))};`,
+      "",
+      "function truncate(value) {",
+      "  return value.length > 1200 ? `${value.slice(0, 1200)}...` : value;",
+      "}",
+      "",
+      "function freePort() {",
+      "  return new Promise((resolve, reject) => {",
+      "    const server = net.createServer();",
+      "    server.listen(0, \"127.0.0.1\", () => {",
+      "      const address = server.address();",
+      "      const port = typeof address === \"object\" && address ? address.port : 0;",
+      "      server.close(() => resolve(port));",
+      "    });",
+      "    server.on(\"error\", reject);",
+      "  });",
+      "}",
+      "",
+      "async function waitFetch(url, timeoutMs) {",
+      "  const deadline = Date.now() + timeoutMs;",
+      "  let lastError = null;",
+      "  while (Date.now() < deadline) {",
+      "    try {",
+      "      const response = await fetch(url);",
+      "      const body = await response.text();",
+      "      return { status: response.status, body };",
+      "    } catch (error) {",
+      "      lastError = error;",
+      "      await new Promise((resolve) => setTimeout(resolve, 100));",
+      "    }",
+      "  }",
+      "  throw lastError ?? new Error(`Timed out fetching ${url}`);",
+      "}",
+      "",
+      "async function stop(child) {",
+      "  if (!child || child.exitCode !== null) return;",
+      "  child.kill();",
+      "  await new Promise((resolve) => {",
+      "    const timer = setTimeout(resolve, 2000);",
+      "    child.once(\"exit\", () => {",
+      "      clearTimeout(timer);",
+      "      resolve();",
+      "    });",
+      "  });",
+      "}",
+      "",
+      "const root = process.cwd();",
+      "const started = performance.now();",
+      "let child = null;",
+      "let stdout = \"\";",
+      "let stderr = \"\";",
+      "let port = null;",
+      "",
+      "try {",
+      "  if (!fs.existsSync(viteBin)) throw new Error(`Missing Vite bin: ${viteBin}`);",
+      "  port = await freePort();",
+      "  fs.mkdirSync(path.join(root, \"src\"), { recursive: true });",
+      "  fs.writeFileSync(",
+      "    path.join(root, \"index.html\"),",
+      "    [",
+      "      \"<div id=\\\"root\\\"></div>\",",
+      "      \"<script type=\\\"module\\\" src=\\\"/src/App.tsx\\\"></script>\",",
+      "      \"\"",
+      "    ].join(\"\\n\")",
+      "  );",
+      "  fs.writeFileSync(",
+      "    path.join(root, \"src\", \"App.tsx\"),",
+      "    [",
+      "      \"export function App() {\",",
+      "      \"  return <main className=\\\"flex gap-4 rounded-lg p-4 text-sm\\\">Installed Vite server smoke</main>;\",",
+      "      \"}\",",
+      "      \"\"",
+      "    ].join(\"\\n\")",
+      "  );",
+      "  fs.writeFileSync(",
+      "    path.join(root, \"vite.config.mjs\"),",
+      "    [",
+      "      `import { intentLayer } from ${JSON.stringify(packageName + \"/vite\")};`,",
+      "      \"export default {\",",
+      "      \"  plugins: [intentLayer()]\",",
+      "      \"};\",",
+      "      \"\"",
+      "    ].join(\"\\n\")",
+      "  );",
+      "",
+      "  child = spawn(process.execPath, [viteBin, \"--host\", \"127.0.0.1\", \"--port\", String(port), \"--strictPort\"], {",
+      "    cwd: root,",
+      "    env: { ...process.env, FORCE_COLOR: \"0\", NO_COLOR: \"1\" },",
+      "    stdio: [\"ignore\", \"pipe\", \"pipe\"],",
+      "    windowsHide: true",
+      "  });",
+      "  child.stdout.on(\"data\", (chunk) => { stdout += chunk; });",
+      "  child.stderr.on(\"data\", (chunk) => { stderr += chunk; });",
+      "",
+      "  const baseUrl = `http://127.0.0.1:${port}`;",
+      "  const home = await waitFetch(`${baseUrl}/`, 10000);",
+      "  const module = await waitFetch(`${baseUrl}/src/App.tsx`, 10000);",
+      "  const graph = await waitFetch(`${baseUrl}/__intent/graph`, 10000);",
+      "  const parsedGraph = graph.status === 200 ? JSON.parse(graph.body) : null;",
+      "  const entries = parsedGraph ? Object.values(parsedGraph.entries ?? {}) : [];",
+      "  const first = entries[0] ?? null;",
+      "  const firstToken = first?.tokens?.find((token) => token.editable)?.token ?? null;",
+      "  const elapsedMs = Number((performance.now() - started).toFixed(3));",
+      "  const ok = home.status === 200 && module.status === 200 && graph.status === 200 &&",
+      "    module.body.includes(\"data-intent-id\") && entries.length === 1 &&",
+      "    first?.relativeFile === \"src/App.tsx\" && firstToken === \"gap-4\";",
+      "  console.log(JSON.stringify({",
+      "    ok,",
+      "    port,",
+      "    homeStatus: home.status,",
+      "    moduleStatus: module.status,",
+      "    graphStatus: graph.status,",
+      "    moduleIncludesIntentId: module.body.includes(\"data-intent-id\"),",
+      "    graphEntryCount: entries.length,",
+      "    graphBytes: Buffer.byteLength(graph.body),",
+      "    firstRelativeFile: first?.relativeFile ?? null,",
+      "    firstToken,",
+      "    ms: elapsedMs,",
+      "    stdoutBytes: stdout.length,",
+      "    stderrBytes: stderr.length",
+      "  }));",
+      "  process.exitCode = ok ? 0 : 1;",
+      "} catch (error) {",
+      "  console.log(JSON.stringify({",
+      "    ok: false,",
+      "    port,",
+      "    homeStatus: null,",
+      "    moduleStatus: null,",
+      "    graphStatus: null,",
+      "    moduleIncludesIntentId: false,",
+      "    graphEntryCount: 0,",
+      "    graphBytes: 0,",
+      "    firstRelativeFile: null,",
+      "    firstToken: null,",
+      "    ms: Number((performance.now() - started).toFixed(3)),",
+      "    error: error instanceof Error ? error.message : String(error),",
+      "    stdout: truncate(stdout),",
+      "    stderr: truncate(stderr)",
+      "  }));",
+      "  process.exitCode = 1;",
+      "} finally {",
+      "  await stop(child);",
+      "}",
+      ""
+    ].join("\n")
+  );
+  const installedViteDevServer =
+    fs.existsSync(tsxBinFile) && install.exitCode === 0
+      ? runCommand(process.execPath, [installedDevServerSmokeFile], installDir, 30000, false)
+      : { exitCode: null, stdout: "", stderr: "missing installed tsx bin", ms: 0 };
+  let installedViteDevServerReport: {
+    ok?: boolean;
+    port?: number | null;
+    homeStatus?: number | null;
+    moduleStatus?: number | null;
+    graphStatus?: number | null;
+    moduleIncludesIntentId?: boolean;
+    graphEntryCount?: number;
+    graphBytes?: number;
+    firstRelativeFile?: string | null;
+    firstToken?: string | null;
+    ms?: number;
+  } = {};
+  try {
+    installedViteDevServerReport = JSON.parse(installedViteDevServer.stdout) as typeof installedViteDevServerReport;
+  } catch {
+    installedViteDevServerReport = {};
+  }
 
   return {
     packageName: dryRunPackage?.name ?? null,
@@ -293,6 +490,7 @@ function packageSmoke(): PackageSmokeResult {
     helpExitCode: help.exitCode,
     viteImportExitCode: viteImport.exitCode,
     installedViteTransformExitCode: installedViteTransform.exitCode,
+    installedViteDevServerExitCode: installedViteDevServer.exitCode,
     packageFileCount: files.length,
     packageSize: dryRunPackage?.size ?? 0,
     packageUnpackedSize: dryRunPackage?.unpackedSize ?? 0,
@@ -318,6 +516,18 @@ function packageSmoke(): PackageSmokeResult {
     installedViteTransformFirstRelativeFile: installedViteTransformReport.firstRelativeFile ?? null,
     installedViteTransformFirstToken: installedViteTransformReport.firstToken ?? null,
     installedViteTransformHookMs: installedViteTransformReport.transformMs ?? 0,
+    installedViteDevServerOk: installedViteDevServerReport.ok === true,
+    installedViteDevServerPort: installedViteDevServerReport.port ?? null,
+    installedViteDevServerHomeStatus: installedViteDevServerReport.homeStatus ?? null,
+    installedViteDevServerModuleStatus: installedViteDevServerReport.moduleStatus ?? null,
+    installedViteDevServerGraphStatus: installedViteDevServerReport.graphStatus ?? null,
+    installedViteDevServerModuleIncludesIntentId:
+      installedViteDevServerReport.moduleIncludesIntentId === true,
+    installedViteDevServerGraphEntryCount: installedViteDevServerReport.graphEntryCount ?? 0,
+    installedViteDevServerGraphBytes: installedViteDevServerReport.graphBytes ?? 0,
+    installedViteDevServerFirstRelativeFile: installedViteDevServerReport.firstRelativeFile ?? null,
+    installedViteDevServerFirstToken: installedViteDevServerReport.firstToken ?? null,
+    installedViteDevServerMs: installedViteDevServerReport.ms ?? 0,
     dryRunMs: dryRun.ms,
     packMs: pack.ms,
     installMs: install.ms,
@@ -330,14 +540,16 @@ function packageSmoke(): PackageSmokeResult {
       install.stdout.length +
       help.stdout.length +
       viteImport.stdout.length +
-      installedViteTransform.stdout.length,
+      installedViteTransform.stdout.length +
+      installedViteDevServer.stdout.length,
     stderrBytes:
       dryRun.stderr.length +
       pack.stderr.length +
       install.stderr.length +
       help.stderr.length +
       viteImport.stderr.length +
-      installedViteTransform.stderr.length
+      installedViteTransform.stderr.length +
+      installedViteDevServer.stderr.length
   };
 }
 
@@ -2356,8 +2568,9 @@ const report = {
       packageInstallSmoke.helpExitCode === 0 &&
       packageInstallSmoke.viteImportExitCode === 0 &&
       packageInstallSmoke.installedViteTransformExitCode === 0 &&
+      packageInstallSmoke.installedViteDevServerExitCode === 0 &&
       packageInstallSmoke.binTarget === "bin/intent-layer.cjs" &&
-      packageInstallSmoke.viteExportTarget === "./src/intent/vitePlugin.ts" &&
+      packageInstallSmoke.viteExportTarget === "./vite.cjs" &&
       packageInstallSmoke.hasBinWrapper &&
       packageInstallSmoke.hasCliSource &&
       packageInstallSmoke.hasVitePluginSource &&
@@ -2373,7 +2586,15 @@ const report = {
       packageInstallSmoke.installedViteTransformGraphExists &&
       packageInstallSmoke.installedViteTransformGraphEntryCount === 1 &&
       packageInstallSmoke.installedViteTransformFirstRelativeFile === "src/App.tsx" &&
-      packageInstallSmoke.installedViteTransformFirstToken === "gap-4",
+      packageInstallSmoke.installedViteTransformFirstToken === "gap-4" &&
+      packageInstallSmoke.installedViteDevServerOk &&
+      packageInstallSmoke.installedViteDevServerHomeStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerModuleStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerGraphStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerModuleIncludesIntentId &&
+      packageInstallSmoke.installedViteDevServerGraphEntryCount === 1 &&
+      packageInstallSmoke.installedViteDevServerFirstRelativeFile === "src/App.tsx" &&
+      packageInstallSmoke.installedViteDevServerFirstToken === "gap-4",
     cliScanPass:
       cliScan.exitCode === 0 &&
       cliScanReport?.command === "scan" &&

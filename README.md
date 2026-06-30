@@ -74,7 +74,7 @@ npm run generate:ai-corpus
 npm run analyze:ai-corpus
 ```
 
-`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer-spike/vite` import, and installed plugin transform/graph output against an external temp fixture.
+`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer-spike/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx` plus `/__intent/graph`.
 
 The demo currently supports:
 
@@ -88,7 +88,7 @@ The demo currently supports:
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
 - read-only bindings for unsupported `className` expressions so agent handoff still works
 - minimal `intent-layer init` / `dev` / `scan` / `check` / `apply` / `diff` / `agent-context` / `agent-task` / `agent-result` CLI surface through `src/intent/cli.ts`
-- installable `intent-layer` bin wrapper through `bin/intent-layer.cjs`, plus package `/vite` export and installed plugin transform smoke metrics in `reports/performance/spike-evaluation.json`
+- installable `intent-layer` bin wrapper through `bin/intent-layer.cjs`, plus package `/vite` wrapper export, installed plugin transform smoke, and installed Vite dev server smoke metrics in `reports/performance/spike-evaluation.json`
 - Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
 - operation-log-backed undo stack and pending undo history display for applied patches
 - non-destructive pending undo discard controls for minimal branch undo handling
