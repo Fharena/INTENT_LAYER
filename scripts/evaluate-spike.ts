@@ -226,7 +226,7 @@ function packageSmoke(): PackageSmokeResult {
     exports?: Record<string, string>;
   };
   const files = dryRunPackage?.files ?? [];
-  const packageName = dryRunPackage?.name ?? "intent-layer-spike";
+  const packageName = dryRunPackage?.name ?? "intent-layer";
   const viteSmokeFile = path.join(installDir, "vite-export-smoke.ts");
   fs.writeFileSync(
     viteSmokeFile,
@@ -235,7 +235,7 @@ function packageSmoke(): PackageSmokeResult {
       "const plugin = intentLayer();",
       "const legacyPlugin = intentLayerSpike();",
       "console.log(JSON.stringify({",
-      "  ok: plugin.name === 'intent-layer-spike' && legacyPlugin.name === plugin.name,",
+      "  ok: plugin.name === 'intent-layer' && legacyPlugin.name === plugin.name,",
       "  pluginName: plugin.name,",
       "  enforce: plugin.enforce ?? null,",
       "  legacyPluginName: legacyPlugin.name",
@@ -4788,9 +4788,10 @@ const report = {
       packageInstallSmoke.helpIncludesUsage &&
       packageInstallSmoke.helpIncludesDev &&
       packageInstallSmoke.viteImportOk &&
-      packageInstallSmoke.vitePluginName === "intent-layer-spike" &&
+      packageInstallSmoke.packageName === "intent-layer" &&
+      packageInstallSmoke.vitePluginName === "intent-layer" &&
       packageInstallSmoke.vitePluginEnforce === "pre" &&
-      packageInstallSmoke.viteLegacyPluginName === "intent-layer-spike" &&
+      packageInstallSmoke.viteLegacyPluginName === "intent-layer" &&
       packageInstallSmoke.installedViteTransformOk &&
       packageInstallSmoke.installedViteTransformIncludesIntentId &&
       packageInstallSmoke.installedViteTransformGraphExists &&

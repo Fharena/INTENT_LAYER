@@ -154,7 +154,7 @@ export function intentLayerSpike(): Plugin {
   };
 
   return {
-    name: "intent-layer-spike",
+    name: "intent-layer",
     enforce: "pre",
 
     configResolved(config) {
