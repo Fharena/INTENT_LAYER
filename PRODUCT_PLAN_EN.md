@@ -272,7 +272,7 @@ npm run dev
 npx intent-layer
 ```
 
-The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper and package `/vite` export. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph, real Vite dev server graph/preview/apply, 81.952ms apply refresh, 130.789ms 3-file graph refresh, and a generated 24-file/624-binding product-sized graph refresh as package/performance smoke gates. The public package name is now aligned to `intent-layer`; external install-guide wording remains launch-polish work.
+The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper and package `/vite` export. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph, real Vite dev server graph/preview/apply, 51.556ms apply refresh, 118.416ms 3-file graph refresh, missing-plugin doctor guidance, and a generated 24-file/624-binding product-sized graph refresh as package/performance smoke gates. The public package name is now aligned to `intent-layer`; external-facing `INSTALL_*` / `FAILURE_MODES_*` docs are included in the package tarball.
 
 ### 8.2 Basic Flow
 
@@ -528,7 +528,7 @@ packages/
     check
 ```
 
-The MVP implementation ships `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` first.
+The MVP implementation ships `init`/`doctor`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` first.
 
 ### 10.2 Dependency Principles
 
@@ -613,7 +613,7 @@ Vite transform overhead: under 5ms per file
 element select -> panel display: under 100ms
 simple patch write: under 50ms
 HMR update: preserve existing Vite speed
-installed Vite smoke HMR refresh: apply 81.952ms, 3-file change 130.789ms, smoke target <= 500ms
+installed Vite smoke HMR refresh: apply 51.556ms, 3-file change 118.416ms, smoke target <= 500ms
 DOM id overhead: roughly under 20 bytes per node
 sidecar graph write: only when the semantic fingerprint changes
 external corpus validation: measure external source only through local `.intent/external-corpus/` copies and manifests, with `sample.sourceKind` and `mvpEvidence` separating smoke fixtures from independent external evidence

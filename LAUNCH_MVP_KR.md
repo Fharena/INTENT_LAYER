@@ -557,8 +557,8 @@ product-sized graph refresh: generated 24-file/624-binding fixture 통과, 실�
 1. demo project
 2. docs
 3. landing README
-4. install guide: local tarball install, `intent-layer/vite` wrapper export smoke, 설치된 plugin transform/graph smoke, 실제 Vite dev server HTTP preview/apply, apply refresh, 3-file graph refresh smoke는 구현됨, 외부 사용자용 문구는 남음
-5. failure mode guide
+4. install guide: local tarball install, `intent-layer/vite` wrapper export smoke, 설치된 plugin transform/graph smoke, 실제 Vite dev server HTTP preview/apply, apply refresh, 3-file graph refresh smoke, 외부 사용자용 `INSTALL_KR/EN.md` 구현
+5. failure mode guide: `FAILURE_MODES_KR/EN.md` 구현, missing-plugin doctor guidance gate 통과
 6. examples for Codex/Cursor
 
 ## 11. 출시 기준

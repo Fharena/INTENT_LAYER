@@ -274,7 +274,7 @@ npm run dev
 npx intent-layer
 ```
 
-현재 MVP package surface는 `bin/intent-layer.cjs` wrapper와 package `/vite` export로 검증한다. `npm run eval`은 `npm pack --dry-run`, 실제 tarball 생성, 임시 폴더 설치, 설치된 `intent-layer --help`, 설치된 `intent-layer/vite` import, 설치된 plugin transform/graph, 실제 Vite dev server의 graph/preview/apply, apply refresh 81.952ms, 3-file graph refresh 130.789ms, generated 24-file/624-binding product-sized graph refresh를 package/performance smoke gate로 측정한다. 공개 package 이름은 `intent-layer`로 맞췄고, 외부 사용자용 install guide 문구는 launch polish에서 확정한다.
+현재 MVP package surface는 `bin/intent-layer.cjs` wrapper와 package `/vite` export로 검증한다. `npm run eval`은 `npm pack --dry-run`, 실제 tarball 생성, 임시 폴더 설치, 설치된 `intent-layer --help`, 설치된 `intent-layer/vite` import, 설치된 plugin transform/graph, 실제 Vite dev server의 graph/preview/apply, apply refresh 51.556ms, 3-file graph refresh 118.416ms, missing-plugin doctor guidance, generated 24-file/624-binding product-sized graph refresh를 package/performance smoke gate로 측정한다. 공개 package 이름은 `intent-layer`로 맞췄고, 외부 사용자용 `INSTALL_*` / `FAILURE_MODES_*` 문서는 package tarball에 포함한다.
 
 ### 8.2 기본 흐름
 
@@ -530,7 +530,7 @@ packages/
     check
 ```
 
-MVP 구현 순서는 `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`를 먼저 제공한다.
+MVP 구현 순서는 `init`/`doctor`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`를 먼저 제공한다.
 
 ### 10.2 의존성 원칙
 
@@ -615,7 +615,7 @@ Vite transform 추가 비용: 파일당 5ms 이하 목표
 요소 선택 -> 패널 표시: 100ms 이하
 단순 patch 저장: 50ms 이하
 HMR 반영: 기존 Vite 속도 유지
-installed Vite smoke HMR refresh: apply 81.952ms, 3-file change 130.789ms, smoke target 500ms 이하
+installed Vite smoke HMR refresh: apply 51.556ms, 3-file change 118.416ms, smoke target 500ms 이하
 DOM id 추가 오버헤드: node당 20 bytes 내외 목표
 sidecar graph write: 의미 fingerprint 변경 시에만 수행
 external corpus 검증: 외부 source는 `.intent/external-corpus/` 로컬 복사본과 manifest로만 측정, report는 `sample.sourceKind`와 `mvpEvidence`로 smoke fixture와 독립 외부 evidence를 구분

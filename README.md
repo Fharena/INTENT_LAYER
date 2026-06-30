@@ -16,6 +16,10 @@ Documents:
 - `TECHNICAL_SPIKE_EN.md` - English technical spike notes
 - `PERFORMANCE_EVALUATION_KR.md` - Korean numeric evaluation
 - `PERFORMANCE_EVALUATION_EN.md` - English numeric evaluation
+- `INSTALL_KR.md` - Korean install guide
+- `INSTALL_EN.md` - English install guide
+- `FAILURE_MODES_KR.md` - Korean failure mode guide
+- `FAILURE_MODES_EN.md` - English failure mode guide
 - `AGENTS.md` - instructions for AI coding agents working on this product
 - `codex.md` - Codex-specific working notes and user preferences
 
@@ -85,7 +89,7 @@ npm run analyze:external-corpus
 
 External corpus copies are written under `.intent/external-corpus/`, and the numeric report is written to `reports/performance/external-corpus-audit.json`. The report records `sample.sourceKind`, `gateFailures`, read-only ratio, top unsupported reasons, and `mvpEvidence.usableAsMvpEvidence` so local smoke fixtures are not mistaken for independent external validation.
 
-`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, apply refresh, and a 3-file graph refresh after one TSX file changes. It also runs generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture, a 24-file/624-binding multi-file fixture, and an external corpus import/report smoke marked as `local-smoke-fixture`.
+`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, apply refresh, and a 3-file graph refresh after one TSX file changes. It also verifies a missing-plugin `doctor` failure guidance fixture, generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture, a 24-file/624-binding multi-file fixture, and an external corpus import/report smoke marked as `local-smoke-fixture`.
 
 The demo currently supports:
 
@@ -100,6 +104,7 @@ The demo currently supports:
 - read-only bindings for unsupported `className` expressions so agent handoff still works
 - minimal `intent-layer init` / `doctor` / `dev` / `scan` / `check` / `apply` / `diff` / `agent-context` / `agent-task` / `agent-result` CLI surface through `src/intent/cli.ts`
 - installable `intent-layer` bin wrapper through `bin/intent-layer.cjs`, plus package `/vite` wrapper export, installed plugin transform smoke, installed Vite dev server preview/apply smoke, apply refresh timing, and installed multi-file graph refresh metrics in `reports/performance/spike-evaluation.json`
+- packaged Korean/English install guides and failure mode guides for local tarball setup, `intent-layer/vite` registration, `doctor`, safe patch rejection, read-only handoff, and external corpus evidence boundaries
 - Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
 - operation-log-backed undo stack and pending undo history display for applied patches
 - pending undo discard and safe non-top revert controls for branch undo handling

@@ -14,7 +14,11 @@
     "bin/",
     "src/intent/",
     "vite.cjs",
-    "README.md"
+    "README.md",
+    "INSTALL_EN.md",
+    "INSTALL_KR.md",
+    "FAILURE_MODES_EN.md",
+    "FAILURE_MODES_KR.md"
   ],
   "engines": {
     "node": ">=18"

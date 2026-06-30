@@ -527,8 +527,8 @@ product-sized graph refresh: generated 24-file/624-binding fixture passes, real 
 1. demo project
 2. docs
 3. landing README
-4. install guide: local tarball install, `intent-layer/vite` wrapper export smoke, installed plugin transform/graph smoke, and real Vite dev server HTTP preview/apply, apply refresh, plus 3-file graph refresh smoke are implemented; external user-facing copy remains
-5. failure mode guide
+4. install guide: local tarball install, `intent-layer/vite` wrapper export smoke, installed plugin transform/graph smoke, real Vite dev server HTTP preview/apply, apply refresh, 3-file graph refresh smoke, and external-facing `INSTALL_KR/EN.md` are implemented
+5. failure mode guide: `FAILURE_MODES_KR/EN.md` implemented, missing-plugin doctor guidance gate passes
 6. examples for Codex/Cursor
 
 ## 11. Launch Criteria

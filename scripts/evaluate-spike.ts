@@ -62,6 +62,8 @@ interface PackageSmokeResult {
   hasCliSource: boolean;
   hasVitePluginSource: boolean;
   hasContextPackFiles: boolean;
+  hasInstallGuideDocs: boolean;
+  hasFailureModeDocs: boolean;
   helpIncludesUsage: boolean;
   helpIncludesDev: boolean;
   helpIncludesDoctor: boolean;
@@ -809,6 +811,12 @@ function packageSmoke(): PackageSmokeResult {
     hasCliSource: files.some((file) => file.path === "src/intent/cli.ts"),
     hasVitePluginSource: files.some((file) => file.path === "src/intent/vitePlugin.ts"),
     hasContextPackFiles: files.some((file) => file.path.startsWith(".context-pack/")),
+    hasInstallGuideDocs:
+      files.some((file) => file.path === "INSTALL_EN.md") &&
+      files.some((file) => file.path === "INSTALL_KR.md"),
+    hasFailureModeDocs:
+      files.some((file) => file.path === "FAILURE_MODES_EN.md") &&
+      files.some((file) => file.path === "FAILURE_MODES_KR.md"),
     helpIncludesUsage: help.stdout.includes("Usage:"),
     helpIncludesDev: help.stdout.includes("intent-layer dev"),
     helpIncludesDoctor: help.stdout.includes("intent-layer doctor"),
@@ -3446,6 +3454,59 @@ const cliGraph = fs.existsSync(cliGraphFile)
   : null;
 const cliDoctor = runCli(["doctor"], rootDir);
 const cliDoctorReport = cliDoctor.report?.command === "doctor" ? cliDoctor.report : null;
+const cliDoctorMissingPluginRoot = resetTmpSubdir("doctor-missing-plugin");
+fs.mkdirSync(path.join(cliDoctorMissingPluginRoot, "src"), { recursive: true });
+fs.writeFileSync(
+  path.join(cliDoctorMissingPluginRoot, "package.json"),
+  `${JSON.stringify(
+    {
+      private: true,
+      type: "module",
+      dependencies: {
+        "intent-layer": "0.0.1",
+        vite: "^6.0.5",
+        react: "^18.3.1"
+      }
+    },
+    null,
+    2
+  )}\n`
+);
+fs.writeFileSync(
+  path.join(cliDoctorMissingPluginRoot, "tailwind.config.cjs"),
+  "module.exports = { content: ['./src/**/*.{ts,tsx}'], theme: { extend: {} }, plugins: [] };\n"
+);
+fs.writeFileSync(
+  path.join(cliDoctorMissingPluginRoot, "vite.config.ts"),
+  [
+    "import { defineConfig } from 'vite';",
+    "",
+    "export default defineConfig({",
+    "  plugins: []",
+    "});",
+    ""
+  ].join("\n")
+);
+fs.writeFileSync(
+  path.join(cliDoctorMissingPluginRoot, "src", "App.tsx"),
+  [
+    "export function App() {",
+    "  return <main className=\"flex gap-4 rounded-lg p-4\">Missing plugin fixture</main>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const cliDoctorMissingPlugin = runCli(["doctor"], cliDoctorMissingPluginRoot);
+const cliDoctorMissingPluginReport =
+  cliDoctorMissingPlugin.report?.command === "doctor" ? cliDoctorMissingPlugin.report : null;
+const cliDoctorMissingPluginHasVitePluginFailure =
+  cliDoctorMissingPluginReport?.checks.some((check) => check.name === "vite-plugin" && check.status === "fail") ??
+  false;
+const cliDoctorMissingPluginSourceFilesPass =
+  cliDoctorMissingPluginReport?.checks.some((check) => check.name === "source-files" && check.status === "pass") ??
+  false;
+const cliDoctorMissingPluginGuidanceIncludesVite =
+  cliDoctorMissingPluginReport?.guidance.some((item) => item.includes("intent-layer/vite")) ?? false;
 const cliAgentTaskBinding =
   cliGraph &&
   Object.values(cliGraph.entries).find(
@@ -3750,6 +3811,17 @@ const report = {
     doctorCheckCount: cliDoctorReport?.checks.length ?? 0,
     doctorGuidanceCount: cliDoctorReport?.guidance.length ?? 0,
     doctorMs: cliDoctorReport?.doctorMs ?? null,
+    doctorMissingPluginExitCode: cliDoctorMissingPlugin.exitCode,
+    doctorMissingPluginOk: cliDoctorMissingPluginReport?.ok ?? true,
+    doctorMissingPluginPassCount: cliDoctorMissingPluginReport?.summary.passCount ?? 0,
+    doctorMissingPluginWarnCount: cliDoctorMissingPluginReport?.summary.warnCount ?? 0,
+    doctorMissingPluginFailCount: cliDoctorMissingPluginReport?.summary.failCount ?? 0,
+    doctorMissingPluginCheckCount: cliDoctorMissingPluginReport?.checks.length ?? 0,
+    doctorMissingPluginGuidanceCount: cliDoctorMissingPluginReport?.guidance.length ?? 0,
+    doctorMissingPluginHasVitePluginFailure: cliDoctorMissingPluginHasVitePluginFailure,
+    doctorMissingPluginSourceFilesPass: cliDoctorMissingPluginSourceFilesPass,
+    doctorMissingPluginGuidanceIncludesVite: cliDoctorMissingPluginGuidanceIncludesVite,
+    doctorMissingPluginMs: cliDoctorMissingPluginReport?.doctorMs ?? null,
     devOk: cliDevReport?.ok ?? false,
     devDryRun: cliDevReport?.dryRun ?? false,
     devHost: cliDevReport?.host ?? null,
@@ -3820,6 +3892,7 @@ const report = {
     applyStdoutBytes: cliApply.stdout.length,
     diffStdoutBytes: cliDiff.stdout.length,
     doctorStdoutBytes: cliDoctor.stdout.length,
+    doctorMissingPluginStdoutBytes: cliDoctorMissingPlugin.stdout.length,
     agentContextStdoutBytes: cliAgentContext.stdout.length,
     agentTaskStdoutBytes: cliAgentTask.stdout.length,
     agentResultStdoutBytes: cliAgentResult.stdout.length
@@ -4831,6 +4904,14 @@ const report = {
       cliDoctorReport.summary.passCount >= 8 &&
       cliDoctorReport.checks.some((check) => check.name === "vite-plugin" && check.status === "pass") &&
       cliDoctorReport.checks.some((check) => check.name === "source-files" && check.status === "pass"),
+    cliDoctorMissingPluginGuidancePass:
+      cliDoctorMissingPlugin.exitCode === 1 &&
+      cliDoctorMissingPluginReport?.command === "doctor" &&
+      !cliDoctorMissingPluginReport.ok &&
+      cliDoctorMissingPluginReport.summary.failCount === 1 &&
+      cliDoctorMissingPluginHasVitePluginFailure &&
+      cliDoctorMissingPluginSourceFilesPass &&
+      cliDoctorMissingPluginGuidanceIncludesVite,
     packageInstallSmokePass:
       packageInstallSmoke.dryRunExitCode === 0 &&
       packageInstallSmoke.packExitCode === 0 &&
@@ -4845,6 +4926,8 @@ const report = {
       packageInstallSmoke.hasCliSource &&
       packageInstallSmoke.hasVitePluginSource &&
       !packageInstallSmoke.hasContextPackFiles &&
+      packageInstallSmoke.hasInstallGuideDocs &&
+      packageInstallSmoke.hasFailureModeDocs &&
       packageInstallSmoke.helpIncludesUsage &&
       packageInstallSmoke.helpIncludesDev &&
       packageInstallSmoke.helpIncludesDoctor &&
