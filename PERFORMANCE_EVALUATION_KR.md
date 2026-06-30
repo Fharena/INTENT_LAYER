@@ -20,7 +20,7 @@ npm run build
 - simple `cn()` patch fixture
 - last-patch revert fixture
 - operation-log undo stack fixture
-- operation branch undo discard fixture
+- operation branch undo discard/revert fixture
 - operation conflict artifact fixture
 - operation conflict resolution fixture
 - pending undo history fixture
@@ -305,7 +305,7 @@ reports/performance/spike-evaluation.json
 | apply 후 pending undo 수 | 2 |
 | apply 후 history pending 수 | 2 |
 | discard 성공 | true |
-| discard time | 3.483ms |
+| discard time | 7.019ms |
 | discarded token | `gap-6` |
 | discard 후 pending undo 수 | 1 |
 | discard 후 history pending 수 | 1 |
@@ -319,9 +319,37 @@ reports/performance/spike-evaluation.json
 
 - 사용자는 overlay의 undo history에서 특정 pending undo를 소스 변경 없이 폐기할 수 있다.
 - 이 fixture는 오래된 `gap-6` undo를 폐기한 뒤 최신 `p-8` undo를 계속 되돌릴 수 있음을 검증한다.
-- 현재 branch undo는 비파괴 discard까지만 지원하며, 임의 non-top patch를 소스에서 직접 되돌리지는 않는다.
+- 폐기는 source를 바꾸지 않고 operation log에서 pending undo만 제거한다.
 
-## 4.3 Operation Conflict Artifact And Resolution
+## 4.3 Branch Undo Revert
+
+| 항목 | 값 |
+| --- | ---: |
+| 첫 번째 apply 성공 | true |
+| 두 번째 apply 성공 | true |
+| apply 후 pending undo 수 | 2 |
+| apply 후 history pending 수 | 2 |
+| non-top revert 성공 | true |
+| non-top revert time | 5.336ms |
+| non-top restored token | `gap-4` |
+| non-top revert 후 pending undo 수 | 1 |
+| non-top revert 후 history pending 수 | 1 |
+| non-top revert 후 다음 undo token | `p-8` |
+| source에 non-top token 복원 | true |
+| source에 top patch token 유지 | true |
+| top revert 성공 | true |
+| top revert 후 pending undo 수 | 0 |
+| top revert 후 history pending 수 | 0 |
+| top revert 후 source 복원 | true |
+| branch revert 후 syntax error | 0 |
+
+해석:
+
+- `/__intent/revert-undo`는 선택한 pending undo가 stack top이 아니어도 stored range의 `nextToken`이 그대로 있으면 직접 되돌린다.
+- 이 fixture는 오래된 `gap-6` patch만 `gap-4`로 되돌리고 최신 `p-8` patch는 유지한 뒤, 남은 top patch를 정상 revert한다.
+- stored range가 바뀐 경우에는 기존 conflict artifact 경로로 거부한다.
+
+## 4.4 Operation Conflict Artifact And Resolution
 
 | 항목 | 값 |
 | --- | ---: |
@@ -904,8 +932,8 @@ package install smoke gate:
 | installed plugin transform exit code | 0 |
 | installed Vite dev server exit code | 0 |
 | package file 수 | 15 |
-| package size | 40926 bytes |
-| unpacked size | 198973 bytes |
+| package size | 41211 bytes |
+| unpacked size | 202343 bytes |
 | bin wrapper 포함 | true |
 | CLI source 포함 | true |
 | Vite plugin source 포함 | true |
@@ -923,7 +951,7 @@ package install smoke gate:
 | installed transform graph size | 1663 bytes |
 | installed transform 첫 relative file | `src/App.tsx` |
 | installed transform 첫 editable token | `gap-4` |
-| installed transform hook 시간 | 5.332ms |
+| installed transform hook 시간 | 7.574ms |
 | installed Vite dev server 성공 | true |
 | installed Vite dev server home status | 200 |
 | installed Vite dev server module status | 200 |
@@ -954,14 +982,14 @@ package install smoke gate:
 | installed Vite dev server multi-file 미변경 파일 유지 | true |
 | installed Vite dev server multi-file graph generatedAt 변경 | true |
 | installed Vite dev server multi-file 변경 module `gap-8` 포함 | true |
-| installed Vite dev server multi-file 시간 | 308.267ms |
-| installed Vite dev server smoke 시간 | 2063.602ms |
-| dry-run 시간 | 2585.47ms |
-| pack 시간 | 2621.71ms |
-| install 시간 | 3804.329ms |
-| installed help 시간 | 2642.611ms |
-| `/vite` import 시간 | 1304.672ms |
-| installed transform smoke 시간 | 1170.58ms |
+| installed Vite dev server multi-file 시간 | 292.774ms |
+| installed Vite dev server smoke 시간 | 1930.772ms |
+| dry-run 시간 | 3414.767ms |
+| pack 시간 | 3022.469ms |
+| install 시간 | 4026.227ms |
+| installed help 시간 | 3214.408ms |
+| `/vite` import 시간 | 1353.488ms |
+| installed transform smoke 시간 | 1146.906ms |
 
 해석:
 
@@ -1007,6 +1035,7 @@ package install smoke gate:
 | last patch revert | revert 성공 + syntax error 0 | 통과 |
 | operation log undo stack/history | 2 apply + history next token `p-8` + 2 revert + pending stack 0 + syntax error 0 | 통과 |
 | operation branch undo discard | non-top pending undo 폐기 + 다음 undo token `p-8` 유지 + revert 후 pending stack 0 + syntax error 0 | 통과 |
+| operation branch undo revert | non-top pending undo revert + top patch 유지 + 다음 undo token `p-8` 유지 + 최종 pending stack 0 + syntax error 0 | 통과 |
 | operation conflict artifact | `revert-token-mismatch` 거부 + conflict artifact 생성 + expected/actual/restore token 기록 + syntax error 0 | 통과 |
 | operation conflict resolution | active conflict 1 + `discard-pending-undo` resolve + pending stack 0 + active conflict 0 + syntax error 0 | 통과 |
 | agent task generation | task 생성 + 필수 섹션 포함 | 통과 |
@@ -1038,7 +1067,7 @@ package install smoke gate:
 - operation-log 기반 undo stack
 - pending undo history endpoint와 overlay 표시
 - last-patch revert endpoint의 LIFO stack 동작
-- pending undo 항목 비파괴 폐기와 최소 branch undo 처리
+- pending undo 항목 비파괴 폐기와 안전한 non-top revert 처리
 - undo conflict artifact 생성과 expected/actual/restore token 기록
 - undo conflict 목록 조회와 `discard-pending-undo` 해결 처리
 - 반복 transform을 위한 source hash/className tokenization 캐시
@@ -1075,7 +1104,6 @@ package install smoke gate:
 
 - 제품급 multi-file HMR 세션에서 graph write throttle과 changed-file filtering 재측정
 - 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
-- branch undo는 현재 pending undo 폐기까지만 지원하며, 임의 non-top patch를 소스에서 직접 되돌리지는 않는다.
 - CLI tarball install, package `/vite` wrapper export smoke, 설치된 plugin transform/graph smoke, 설치된 Vite dev server HTTP preview/apply 및 3-file graph refresh smoke는 통과했지만, public npm package 이름과 외부 사용자용 install guide copy는 출시 polish로 남아 있다.
 - 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
 - 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
@@ -1086,5 +1114,5 @@ package install smoke gate:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 외부 독립 corpus 검증, branch undo를 임의 non-top revert로 확장할지 판단, package import/multi-hop/cross-variable handoff 문맥 보강, 외부 제품급 TSX 파일에서 component snapshot 및 product-sized graph throttle 재측정이다.
+다음 우선순위는 외부 독립 corpus 검증, package import/multi-hop/cross-variable handoff 문맥 보강, 외부 제품급 TSX 파일에서 component snapshot 및 product-sized graph throttle 재측정이다.
 ```

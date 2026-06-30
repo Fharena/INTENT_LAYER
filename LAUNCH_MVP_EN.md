@@ -369,7 +369,7 @@ A structured task document for edits that deterministic engine cannot perform.
 - component/source panel
 - intent inspector
 - direct edit controls
-- pending undo history
+- pending undo history and branch undo controls
 - confidence badge
 - stale badge
 - agent handoff button

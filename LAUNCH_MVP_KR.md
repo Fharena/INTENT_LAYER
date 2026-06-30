@@ -393,7 +393,7 @@ deterministic engine이 직접 처리하지 못한 작업을 AI agent에게 넘�
 - component/source panel
 - intent inspector
 - direct edit controls
-- pending undo history
+- pending undo history와 branch undo controls
 - confidence badge
 - stale badge
 - agent handoff button

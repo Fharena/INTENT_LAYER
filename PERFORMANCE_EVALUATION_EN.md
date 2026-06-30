@@ -20,7 +20,7 @@ Measured inputs:
 - simple `cn()` patch fixture
 - last-patch revert fixture
 - operation-log undo stack fixture
-- operation branch undo discard fixture
+- operation branch undo discard/revert fixture
 - operation conflict artifact fixture
 - operation conflict resolution fixture
 - pending undo history fixture
@@ -305,7 +305,7 @@ Interpretation:
 | Pending undo count after apply | 2 |
 | History pending count after apply | 2 |
 | Discard success | true |
-| Discard time | 3.483ms |
+| Discard time | 7.019ms |
 | Discarded token | `gap-6` |
 | Pending undo count after discard | 1 |
 | History pending count after discard | 1 |
@@ -319,9 +319,37 @@ Interpretation:
 
 - The overlay can discard a selected pending undo entry without changing source.
 - This fixture discards the older `gap-6` undo, then still reverts the newer `p-8` undo.
-- Branch undo currently supports non-destructive discard only; it does not directly revert arbitrary non-top patches from source.
+- Discard does not change source; it only removes the selected pending undo from the operation log.
 
-## 4.3 Operation Conflict Artifact And Resolution
+## 4.3 Branch Undo Revert
+
+| Metric | Value |
+| --- | ---: |
+| First apply success | true |
+| Second apply success | true |
+| Pending undo count after apply | 2 |
+| History pending count after apply | 2 |
+| Non-top revert success | true |
+| Non-top revert time | 5.336ms |
+| Non-top restored token | `gap-4` |
+| Pending undo count after non-top revert | 1 |
+| History pending count after non-top revert | 1 |
+| Next undo token after non-top revert | `p-8` |
+| Source restored non-top token | true |
+| Source kept top patch token | true |
+| Top revert success | true |
+| Pending undo count after top revert | 0 |
+| History pending count after top revert | 0 |
+| Source restored after top revert | true |
+| Syntax errors after branch revert | 0 |
+
+Interpretation:
+
+- `/__intent/revert-undo` directly reverts a selected pending undo even when it is not the stack top, as long as the stored range still contains `nextToken`.
+- This fixture restores the older `gap-6` patch back to `gap-4`, keeps the newer `p-8` patch in source, then successfully reverts the remaining top patch.
+- If the stored range has drifted, the existing conflict artifact path rejects the direct revert.
+
+## 4.4 Operation Conflict Artifact And Resolution
 
 | Metric | Value |
 | --- | ---: |
@@ -905,8 +933,8 @@ Package install smoke gate:
 | Installed plugin transform exit code | 0 |
 | Installed Vite dev server exit code | 0 |
 | Package file count | 15 |
-| Package size | 40926 bytes |
-| Unpacked size | 198973 bytes |
+| Package size | 41211 bytes |
+| Unpacked size | 202343 bytes |
 | Includes bin wrapper | true |
 | Includes CLI source | true |
 | Includes Vite plugin source | true |
@@ -924,7 +952,7 @@ Package install smoke gate:
 | Installed transform graph size | 1663 bytes |
 | Installed transform first relative file | `src/App.tsx` |
 | Installed transform first editable token | `gap-4` |
-| Installed transform hook time | 5.332ms |
+| Installed transform hook time | 7.574ms |
 | Installed Vite dev server ok | true |
 | Installed Vite dev server home status | 200 |
 | Installed Vite dev server module status | 200 |
@@ -955,14 +983,14 @@ Package install smoke gate:
 | Installed Vite dev server multi-file unchanged files retained | true |
 | Installed Vite dev server multi-file graph generatedAt changed | true |
 | Installed Vite dev server multi-file changed module includes `gap-8` | true |
-| Installed Vite dev server multi-file time | 308.267ms |
-| Installed Vite dev server smoke time | 2063.602ms |
-| Dry-run time | 2585.47ms |
-| Pack time | 2621.71ms |
-| Install time | 3804.329ms |
-| Installed help time | 2642.611ms |
-| `/vite` import time | 1304.672ms |
-| Installed transform smoke time | 1170.58ms |
+| Installed Vite dev server multi-file time | 292.774ms |
+| Installed Vite dev server smoke time | 1930.772ms |
+| Dry-run time | 3414.767ms |
+| Pack time | 3022.469ms |
+| Install time | 4026.227ms |
+| Installed help time | 3214.408ms |
+| `/vite` import time | 1353.488ms |
+| Installed transform smoke time | 1146.906ms |
 
 Interpretation:
 
@@ -1008,6 +1036,7 @@ Interpretation:
 | last patch revert | revert success + syntax error 0 | pass |
 | operation log undo stack/history | 2 applies + history next token `p-8` + 2 reverts + pending stack 0 + syntax error 0 | pass |
 | operation branch undo discard | non-top pending undo discarded + next undo token `p-8` preserved + pending stack 0 after revert + syntax error 0 | pass |
+| operation branch undo revert | non-top pending undo reverted + top patch preserved + next undo token `p-8` preserved + final pending stack 0 + syntax error 0 | pass |
 | operation conflict artifact | `revert-token-mismatch` rejection + conflict artifact created + expected/actual/restore tokens recorded + syntax error 0 | pass |
 | operation conflict resolution | active conflict 1 + `discard-pending-undo` resolve + pending stack 0 + active conflict 0 + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
@@ -1039,7 +1068,7 @@ What worked:
 - operation-log-backed undo stack
 - pending undo history endpoint and overlay display
 - LIFO stack behavior through the last-patch revert endpoint
-- non-destructive pending undo discard for minimal branch undo handling
+- non-destructive pending undo discard and safe non-top revert handling
 - undo conflict artifact generation with expected/actual/restore token records
 - undo conflict listing and `discard-pending-undo` resolution
 - source hash/className tokenization caches for repeated transforms
@@ -1076,7 +1105,6 @@ What remains weak:
 
 - graph write throttling and changed-file filtering still need re-measurement in product-sized multi-file HMR sessions
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
-- branch undo currently supports pending undo discard only; arbitrary non-top patches are not directly reverted from source
 - CLI tarball install, package `/vite` wrapper export smoke, installed plugin transform/graph smoke, and installed Vite dev server HTTP preview/apply plus 3-file graph refresh smoke pass, but public npm package naming and external install-guide copy remain launch-polish work
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
@@ -1087,5 +1115,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, deciding whether to expand branch undo into arbitrary non-top revert, package-import/multi-hop/cross-variable handoff context, and component snapshot plus product-sized graph throttle re-measurement on external product-sized TSX files.
+The next priority is independent external corpus validation, package-import/multi-hop/cross-variable handoff context, and component snapshot plus product-sized graph throttle re-measurement on external product-sized TSX files.
 ```

@@ -511,7 +511,7 @@ packages/
     element picker
     knobs panel
     patch preview
-    pending undo history
+    pending undo history and branch undo controls
 
   cli/
     init
