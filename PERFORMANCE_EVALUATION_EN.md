@@ -34,6 +34,7 @@ Measured inputs:
 - read-only `cn()` variable related semantic diff fixture
 - read-only composite variable related semantic diff fixture
 - variant/cva related source handoff fixture
+- imported variant/cva related source handoff fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -620,13 +621,13 @@ Interpretation:
 | ClassName value | `buttonVariants({ variant: "primary" })` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.193ms |
+| Agent task generation time | 1.463ms |
 | Related snapshot available | true |
 | Related snapshot kind | `variant-function` |
 | Related snapshot identifier | `buttonVariants` |
 | Related snapshot includes cva | true |
 | Agent result created | true |
-| Agent result generation time | 3.991ms |
+| Agent result generation time | 4.561ms |
 | Syntax errors after result | 0 |
 | Selected source diff line count | 0 |
 | Component source diff line count | 0 |
@@ -642,6 +643,41 @@ Interpretation:
 - `className={buttonVariants(...)}` remains read-only and degrades to agent handoff rather than direct patching.
 - The same-file local `const buttonVariants = cva(...)` declaration is stored as the related source snapshot.
 - Result recording preserves changes to the variant declaration as related source diff and literal-token semantic diff even when the selected JSX call does not change.
+
+## 9.4 Imported Variant Function Handoff
+
+| Metric | Value |
+| --- | ---: |
+| Read-only entry created | true |
+| Binding kind | `read-only` |
+| Unsupported reason | `variant-function` |
+| ClassName value | `buttonVariants({ variant: "primary" })` |
+| Editable token count | 0 |
+| Agent task created | true |
+| Agent task generation time | 2.316ms |
+| Related snapshot available | true |
+| Related snapshot file | `.intent/tmp/ImportedVariantDefinition.ts` |
+| Related snapshot kind | `variant-function` |
+| Related snapshot identifier | `buttonVariants` |
+| Related snapshot includes cva | true |
+| Agent result created | true |
+| Agent result generation time | 4.224ms |
+| Syntax errors after result | 0 |
+| Selected source diff line count | 0 |
+| Component source diff line count | 0 |
+| Related source diff line count | 8 |
+| Related source diff present | true |
+| Related semantic className change count | 2 |
+| Related semantic diff present | true |
+| Related semantic token added count | 5 |
+| Related semantic token removed count | 5 |
+
+Interpretation:
+
+- When the selected JSX file calls `className={buttonVariants(...)}` and `buttonVariants` is defined in another file, one-hop relative named imports are followed into the related source snapshot.
+- The agent task editable file list includes both the selected JSX file and the imported variant definition file.
+- Result recording creates related source and semantic token diffs even when only the imported definition changes.
+- Path aliases, barrel re-exports, package imports, and multi-hop import graphs are still out of scope.
 
 ## 10. Gate Results
 
@@ -676,12 +712,13 @@ Interpretation:
 | read-only `cn()` variable related semantic diff | related source diff + related semantic change >= 2 + token added/removed >= 4 + syntax error 0 | pass |
 | read-only composite variable related semantic diff | array/object/template related semantic change >= 4 + token added/removed >= 6 + syntax error 0 | pass |
 | variant/cva related source handoff | local variant declaration snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
+| imported variant/cva related source handoff | one-hop relative named import snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local variant/cva declarations as related source handoff context.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context.
 
 What worked:
 
@@ -706,6 +743,7 @@ What worked:
 - related source diff and semantic token diff generation for read-only `cn()` variable references
 - related semantic token diff generation for read-only composite variables using array/object-map/template-literal declarations
 - related source diff and semantic token diff generation for local variant/cva read-only bindings
+- related source diff and semantic token diff generation for one-hop relative named-import variant/cva read-only bindings
 - real browser click-to-panel, preview, apply, and revert round-trip measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
@@ -722,12 +760,12 @@ What remains weak:
 - branch undo currently supports pending undo discard only; arbitrary non-top patches are not directly reverted from source
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
-- automatic semantic analysis for imported variant functions and cross-variable data flow is still missing
+- automatic semantic analysis across path aliases, barrel re-exports, package imports, and cross-variable data flow is still missing
 - variant functions and runtime template literals remain unsupported for direct patching
 
 Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, deciding whether to expand branch undo into arbitrary non-top revert, imported variant/cross-variable handoff context, and component snapshot false-positive/false-negative measurement on product-sized TSX files.
+The next priority is independent external corpus validation, deciding whether to expand branch undo into arbitrary non-top revert, path-alias/barrel/cross-variable handoff context, and component snapshot false-positive/false-negative measurement on product-sized TSX files.
 ```

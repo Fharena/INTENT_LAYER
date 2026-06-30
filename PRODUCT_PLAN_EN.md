@@ -174,6 +174,7 @@ Limited support:
 shadcn/ui
 CSS variables
 simple CSS modules
+local and one-hop relative-import variant/cva handoff context
 ```
 
 Not supported in v1.0:
@@ -185,6 +186,7 @@ Emotion
 complete CSS cascade editing
 full Tailwind arbitrary value support
 complete dynamic className analysis
+path-alias/barrel/package-import variant graph analysis
 Figma import
 AI automatic refactoring
 ```

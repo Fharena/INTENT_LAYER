@@ -34,6 +34,7 @@ npm run build
 - read-only `cn()` variable related semantic diff fixture
 - read-only composite variable related semantic diff fixture
 - variant/cva related source handoff fixture
+- imported variant/cva related source handoff fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, revert 측정
 
@@ -619,13 +620,13 @@ dev server endpoint smoke test:
 | className value | `buttonVariants({ variant: "primary" })` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 1.193ms |
+| agent task 생성 시간 | 1.463ms |
 | related snapshot 사용 가능 | true |
 | related snapshot kind | `variant-function` |
 | related snapshot identifier | `buttonVariants` |
 | related snapshot cva 포함 | true |
 | agent result 생성 | true |
-| agent result 생성 시간 | 3.991ms |
+| agent result 생성 시간 | 4.561ms |
 | result 후 syntax error | 0 |
 | selected source diff line 수 | 0 |
 | component source diff line 수 | 0 |
@@ -641,6 +642,41 @@ dev server endpoint smoke test:
 - `className={buttonVariants(...)}`는 직접 patch하지 않고 read-only/agent handoff로 남긴다.
 - 같은 파일 안의 local `const buttonVariants = cva(...)` 선언을 related source snapshot으로 저장한다.
 - agent result 기록 시 selected JSX 자체가 바뀌지 않아도 variant 선언 변경을 related source diff와 literal token semantic diff로 감사 로그에 남긴다.
+
+## 9.4 Imported Variant Function Handoff
+
+| 항목 | 값 |
+| --- | ---: |
+| read-only entry 생성 | true |
+| binding kind | `read-only` |
+| unsupported reason | `variant-function` |
+| className value | `buttonVariants({ variant: "primary" })` |
+| editable token 수 | 0 |
+| agent task 생성 | true |
+| agent task 생성 시간 | 2.316ms |
+| related snapshot 사용 가능 | true |
+| related snapshot file | `.intent/tmp/ImportedVariantDefinition.ts` |
+| related snapshot kind | `variant-function` |
+| related snapshot identifier | `buttonVariants` |
+| related snapshot cva 포함 | true |
+| agent result 생성 | true |
+| agent result 생성 시간 | 4.224ms |
+| result 후 syntax error | 0 |
+| selected source diff line 수 | 0 |
+| component source diff line 수 | 0 |
+| related source diff line 수 | 8 |
+| related source diff 포함 | true |
+| related semantic className change 수 | 2 |
+| related semantic diff 포함 | true |
+| related semantic token added 수 | 5 |
+| related semantic token removed 수 | 5 |
+
+해석:
+
+- `className={buttonVariants(...)}` 호출 파일과 `buttonVariants` 정의 파일이 분리되어 있어도, 상대경로 named import 한 단계는 related source snapshot으로 따라간다.
+- agent task의 편집 가능 파일 목록에는 선택 JSX 파일과 imported variant 정의 파일이 함께 들어간다.
+- agent result 기록 시 선택 JSX가 바뀌지 않고 imported definition만 바뀌어도 related source diff와 semantic token diff가 생성된다.
+- 아직 path alias, barrel re-export, package import, 다단계 import graph는 지원하지 않는다.
 
 ## 10. Gate 결과
 
@@ -675,12 +711,13 @@ dev server endpoint smoke test:
 | read-only `cn()` variable related semantic diff | related source diff + related semantic change >= 2 + token added/removed >= 4 + syntax error 0 | 통과 |
 | read-only composite variable related semantic diff | array/object/template related semantic change >= 4 + token added/removed >= 6 + syntax error 0 | 통과 |
 | variant/cva related source handoff | local variant declaration snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | 통과 |
+| imported variant/cva related source handoff | one-hop relative named import snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | 통과 |
 | simple `cn()` / `clsx()` patch | apply 성공 + syntax error 0 | 통과 |
 | stale rejection | source mismatch 거부 | 통과 |
 
 ## 11. 결론
 
-이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local variant/cva 선언도 related source handoff 문맥으로 잡는다.
+이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local 및 one-hop relative imported variant/cva 선언도 related source handoff 문맥으로 잡는다.
 
 성공한 것:
 
@@ -705,6 +742,7 @@ dev server endpoint smoke test:
 - read-only `cn()` variable reference의 related source diff와 semantic token diff 생성
 - read-only composite variable의 배열/object map/template literal related semantic token diff 생성
 - variant/cva read-only binding의 local variant declaration related source diff와 semantic token diff 생성
+- variant/cva read-only binding의 one-hop relative named import declaration related source diff와 semantic token diff 생성
 - 실제 브라우저 click-to-panel, preview, apply, revert round-trip 측정
 - unsupported className의 agent handoff degrade
 - simple `cn()` literal segment patch
@@ -721,12 +759,12 @@ dev server endpoint smoke test:
 - branch undo는 현재 pending undo 폐기까지만 지원하며, 임의 non-top patch를 소스에서 직접 되돌리지는 않는다.
 - 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
 - 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
-- imported variant 함수와 cross-variable data flow 자동 분석
+- path alias, barrel re-export, package import를 포함한 imported variant 함수와 cross-variable data flow 자동 분석
 - variant 함수와 runtime template literal 직접 patch 지원
 
 다음 판단:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 외부 독립 corpus 검증, branch undo를 임의 non-top revert로 확장할지 판단, imported variant 함수/cross-variable handoff 문맥 보강, 제품급 TSX 파일에서 component snapshot 오탐/미탐 재측정이다.
+다음 우선순위는 외부 독립 corpus 검증, branch undo를 임의 non-top revert로 확장할지 판단, path alias/barrel/cross-variable handoff 문맥 보강, 제품급 TSX 파일에서 component snapshot 오탐/미탐 재측정이다.
 ```

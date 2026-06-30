@@ -418,12 +418,16 @@ The task includes:
 ```text
 selected element
 source file/range
+related source snapshot for variable/variant handoff
 current intent
 desired change
 constraints
 required checks
 patch style
 ```
+
+For the MVP, related source snapshots cover same-file variable declarations and one-hop relative named imports for `variant/cva` declarations.
+Path aliases, barrel re-exports, package imports, and multi-hop import graphs remain explicit non-goals for handoff context.
 
 This turns unsupported features into graceful agent-assisted workflows.
 
