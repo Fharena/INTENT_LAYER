@@ -176,6 +176,7 @@ CSS variables
 simple CSS modules
 same-file one-hop variable dependency handoff context
 one-hop dependency handoff context inside imported variable declarations
+named-import dependency handoff context inside related declarations
 object-property className handoff context
 workspace package import variable handoff context
 external npm package import reference handoff context
@@ -193,7 +194,7 @@ Emotion
 complete CSS cascade editing
 full Tailwind arbitrary value support
 complete dynamic className analysis
-external npm package source analysis/direct patching, variant-function meaning, and deeper cross-file/transitive variable data-flow variant graph analysis
+external npm package source analysis/direct patching, variant-function meaning, and arbitrary-depth cross-file/transitive variable data-flow variant graph analysis
 Figma import
 AI automatic refactoring
 ```

@@ -178,6 +178,7 @@ CSS variables
 simple CSS modules
 same-file one-hop variable dependency handoff context
 imported variable 선언 내부 one-hop dependency handoff context
+related 선언 내부 named import dependency handoff context
 object property 기반 className handoff context
 workspace package import 기반 variable handoff context
 external npm package import reference 기반 handoff context
@@ -195,7 +196,7 @@ Emotion
 복잡한 CSS cascade 편집
 Tailwind arbitrary value 전범위
 동적 className 완전 해석
-external npm package source 분석/직접 patch, variant 함수 의미, deeper cross-file/transitive variable data flow 기반 variant graph 해석
+external npm package source 분석/직접 patch, variant 함수 의미, 임의 깊이 cross-file/transitive variable data flow 기반 variant graph 해석
 Figma import
 AI 자동 리팩터링
 ```

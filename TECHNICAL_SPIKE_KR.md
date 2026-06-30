@@ -298,7 +298,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - agent result는 선택 source window와 선택 component snapshot의 before/after line diff를 기록한다.
 - agent result는 단순 변수 참조 read-only binding의 same-file/imported related source diff와 related semantic token diff를 기록한다.
 - agent result는 `styles.title` 같은 object property read-only binding을 local/imported object literal property까지 따라가 related source diff와 semantic token diff로 기록한다.
-- agent result는 변수 선언이 같은 파일 또는 imported source 파일의 다른 변수 선언을 참조하는 경우 one-hop dependency source diff와 dependency semantic token diff를 기록한다.
+- agent result는 변수 선언이 같은 파일, imported source 파일, 또는 related 선언 내부 named import의 다른 변수 선언을 참조하는 경우 bounded one-hop dependency source diff와 dependency semantic token diff를 기록한다.
 - workspace package import는 root `package.json`의 `workspaces`와 package `exports`를 따라 local package source를 related source snapshot으로 기록한다.
 - external npm package import는 package source를 추적하거나 `node_modules`를 patch하지 않고, task의 `External Import Reference` 섹션에 package/import/usage/guidance를 기록한다.
 - related semantic token diff는 단순 quoted 변수 선언, imported 변수 선언, simple `cn()` / `clsx()` 변수 선언, 배열/object map/template literal literal segment를 fixture로 검증한다.
@@ -324,7 +324,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 우선순위:
 
 1. `npm run import:external-corpus -- <path>`로 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개를 넣고 editable coverage를 다시 측정한다.
-2. external npm package source 분석 경계와 deeper cross-file/transitive variable data flow에 대한 agent handoff 문맥을 보강한다.
+2. external npm package source 분석 경계와 임의 깊이 cross-file/transitive variable data flow에 대한 agent handoff 문맥을 어디까지 막을지 정한다.
 3. 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative를 재측정한다.
 4. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
 
@@ -392,6 +392,7 @@ task 생성 시 선택 source window snapshot과 선택 component snapshot을 �
 단순 변수 참조 read-only binding은 관련 변수 선언을 related source snapshot으로 저장하고, result 기록 시 related source diff와 related semantic token diff를 남긴다.
 `styles.title` 같은 object property read-only binding은 local 또는 imported object literal의 top-level property를 related source snapshot으로 저장하고, result 기록 시 해당 property의 source diff와 semantic token diff를 남긴다.
 관련 변수 선언이 같은 파일 또는 imported source 파일의 다른 변수 선언을 참조하면 task에 one-hop related dependency snapshots를 저장하고, result 기록 시 dependency source diff와 dependency semantic token diff를 별도로 남긴다.
+관련 변수 선언이 named import로 가져온 변수 선언을 참조하면, 해당 import를 한 단계 더 따라가 imported dependency snapshot으로 저장한다.
 변수 선언은 같은 파일뿐 아니라 tsconfig paths alias와 다단계 barrel re-export 뒤의 imported 선언까지 따라갈 수 있다.
 workspace package import는 root `package.json`의 `workspaces`와 package `exports`를 따라 local package source 선언까지 따라갈 수 있다.
 external npm package import는 source를 직접 분석하지 않고 `External Import Reference`로 남겨 local wrapper/override 작업을 안내한다.
@@ -400,7 +401,7 @@ external npm package import는 source를 직접 분석하지 않고 `External Im
 component-level semantic diff는 현재 `className` token 기준으로 제한한다.
 related source/dependency semantic diff는 단순 quoted 변수 선언 문자열, imported 변수 선언 문자열, simple `cn()` / `clsx()` 변수 선언, 배열/object map/template literal의 literal segment를 token 단위로 재분석한다.
 variant 함수 read-only binding은 같은 파일 안의 local variant 함수/변수 선언, one-hop relative named import, tsconfig paths alias + one-hop/multi-hop named barrel re-export 뒤의 variant 선언을 related source로 저장해 source diff와 literal token semantic diff를 남긴다.
-아직 external npm package source 분석/직접 patch, variant 함수 의미, deeper cross-file/transitive variable data flow까지 자동 분석하지는 않는다.
+아직 external npm package source 분석/직접 patch, variant 함수 의미, 임의 깊이 cross-file/transitive variable data flow까지 자동 분석하지는 않는다.
 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 분석하지는 않는다.
 
 ### 9.1 Read-only Handoff

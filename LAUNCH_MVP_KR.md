@@ -470,7 +470,7 @@ Agent Task에는 다음이 포함된다.
 selected element
 source file/range
 related source snapshot for variable/variant handoff
-related dependency snapshots for one-hop same-file and imported-source variable handoff
+related dependency snapshots for one-hop same-file, imported-source, and related-declaration named-import variable handoff
 external import reference for external package handoff
 current intent
 desired change
@@ -479,9 +479,9 @@ required checks
 patch style
 ```
 
-MVP의 related source snapshot은 같은 파일 변수 선언, object property className 선언, 같은 파일 및 imported source 내부 one-hop 변수 dependency snapshot, workspace package import 뒤의 변수 선언, tsconfig paths alias와 다단계 barrel re-export 뒤의 imported 변수 선언, one-hop relative named import, tsconfig paths alias와 one-hop/multi-hop named barrel re-export 뒤의 `variant/cva` 선언까지 지원한다.
+MVP의 related source snapshot은 같은 파일 변수 선언, object property className 선언, 같은 파일 및 imported source 내부 one-hop 변수 dependency snapshot, related 선언 내부 named import dependency snapshot, workspace package import 뒤의 변수 선언, tsconfig paths alias와 다단계 barrel re-export 뒤의 imported 변수 선언, one-hop relative named import, tsconfig paths alias와 one-hop/multi-hop named barrel re-export 뒤의 `variant/cva` 선언까지 지원한다.
 external npm package import는 source snapshot 대신 `External Import Reference`로 package/import/usage/guidance를 기록하고, `node_modules` 직접 편집은 금지한다.
-external npm package source 분석/직접 patch, variant 함수 의미 분석, deeper cross-file/transitive variable data flow는 agent handoff 문서에 명시된 미지원 범위로 남긴다.
+external npm package source 분석/직접 patch, variant 함수 의미 분석, 임의 깊이 cross-file/transitive variable data flow는 agent handoff 문서에 명시된 미지원 범위로 남긴다.
 
 이렇게 하면 제품은 아직 직접 편집하지 못하는 기능도 workflow를 제공한다.
 
