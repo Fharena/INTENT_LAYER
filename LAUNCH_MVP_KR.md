@@ -548,7 +548,7 @@ sidecar graph write: semantic fingerprint 변경 시에만 발생
 1. demo project
 2. docs
 3. landing README
-4. install guide: local tarball install, `/vite` wrapper export smoke, 설치된 plugin transform/graph smoke, 실제 Vite dev server HTTP smoke는 구현됨, public package 이름/문구는 남음
+4. install guide: local tarball install, `/vite` wrapper export smoke, 설치된 plugin transform/graph smoke, 실제 Vite dev server HTTP preview/apply smoke는 구현됨, public package 이름/문구는 남음
 5. failure mode guide
 6. examples for Codex/Cursor
 

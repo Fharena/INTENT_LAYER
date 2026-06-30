@@ -518,7 +518,7 @@ sidecar graph write: only when the semantic fingerprint changes
 1. demo project
 2. docs
 3. landing README
-4. install guide: local tarball install, `/vite` wrapper export smoke, installed plugin transform/graph smoke, and real Vite dev server HTTP smoke are implemented; public package name/copy remains
+4. install guide: local tarball install, `/vite` wrapper export smoke, installed plugin transform/graph smoke, and real Vite dev server HTTP preview/apply smoke are implemented; public package name/copy remains
 5. failure mode guide
 6. examples for Codex/Cursor
 
