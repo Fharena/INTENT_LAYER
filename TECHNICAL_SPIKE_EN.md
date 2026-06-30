@@ -252,7 +252,7 @@ Support model:
 - Agent handoff records a selected source-window snapshot, component snapshot, related source snapshot, task/result markdown, and intent diffs.
 - Agent results record before/after line diffs for both the selected source window and the selected component snapshot.
 - Agent results record related source diffs and related semantic token diffs for simple variable-reference read-only bindings.
-- Related semantic token diffing is covered by fixtures for simple quoted variable declarations and simple `cn()` / `clsx()` variable declaration literal segments.
+- Related semantic token diffing is covered by fixtures for simple quoted variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal declaration segments.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
 - Component snapshot fixtures cover 4 cases: function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, and arrow JSX no-parens.
 - They still do not infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
@@ -269,8 +269,8 @@ Priority order:
 
 1. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
 2. Design branch undo and conflict-resolution UX.
-3. Extend related source semantic diffs to arrays, object maps, and template literals.
-4. Add component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports.
+3. Add component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports.
+4. Improve agent handoff context for variant functions and cross-variable data flow.
 5. Validate caching and graph write throttling on product-sized TSX files.
 
 ## 9. Agent Handoff And Result
@@ -335,8 +335,8 @@ Simple variable-reference read-only bindings store the related variable declarat
 `className` values inside the selected source window and selected component range are also re-analyzed into before/after tokens so the intent diff records added/removed tokens and categories.
 It also rereads the source file to record `sourceHashChanged`.
 Component-level semantic diffing is currently limited to `className` tokens.
-Related source semantic diffing re-analyzes simple quoted variable declaration strings and simple `cn()` / `clsx()` variable declaration literal segments as tokens.
-It does not yet analyze related-source arrays, object maps, template literals, or variant-function meaning.
+Related source semantic diffing re-analyzes simple quoted variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal literal segments as tokens.
+It does not yet analyze variant-function meaning or cross-variable data flow automatically.
 It does not yet infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 
 ### 9.1 Read-only Handoff
