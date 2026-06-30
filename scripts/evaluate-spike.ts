@@ -307,6 +307,70 @@ const componentSnapshotFixtureCases = [
       "export const ComponentSnapshotArrowJsx = () => <section className=\"grid gap-4 rounded-lg p-6\">No parens</section>;",
       ""
     ].join("\n")
+  },
+  {
+    name: "memo-wrapped-function",
+    componentName: "ComponentSnapshotMemo",
+    expectedMarkers: ["export const ComponentSnapshotMemo", "memo(function", "<section", "Memo"],
+    source: [
+      "export const ComponentSnapshotMemo = memo(function ComponentSnapshotMemoInner({ active }: { active: boolean }) {",
+      "  return (",
+      "    <section className={active ? \"grid gap-4 rounded-lg p-6\" : \"grid gap-6 rounded-xl p-8\"}>",
+      "      Memo",
+      "    </section>",
+      "  );",
+      "});",
+      ""
+    ].join("\n")
+  },
+  {
+    name: "forward-ref-wrapped-function",
+    componentName: "ComponentSnapshotForwardRef",
+    expectedMarkers: ["export const ComponentSnapshotForwardRef", "forwardRef", "ref={ref}", "<section"],
+    source: [
+      "export const ComponentSnapshotForwardRef = forwardRef<HTMLDivElement, { active: boolean }>(function ComponentSnapshotForwardRefInner(",
+      "  { active },",
+      "  ref",
+      ") {",
+      "  return (",
+      "    <section ref={ref} className={active ? \"grid gap-4 rounded-lg p-6\" : \"grid gap-6 rounded-xl p-8\"}>",
+      "      Forward ref",
+      "    </section>",
+      "  );",
+      "});",
+      ""
+    ].join("\n")
+  },
+  {
+    name: "hoc-wrapped-function",
+    componentName: "ComponentSnapshotHoc",
+    expectedMarkers: ["export const ComponentSnapshotHoc", "withPanel(function", "items.map", "<section"],
+    source: [
+      "export const ComponentSnapshotHoc = withPanel(function ComponentSnapshotHocInner({ items }: { items: string[] }) {",
+      "  return (",
+      "    <section className=\"grid grid-cols-2 gap-4 rounded-lg p-6\">",
+      "      {items.map((item) => <article key={item} className=\"rounded-lg p-4\">{item}</article>)}",
+      "    </section>",
+      "  );",
+      "});",
+      ""
+    ].join("\n")
+  },
+  {
+    name: "namespace-object-export",
+    componentName: "ComponentSnapshotNamespace",
+    expectedMarkers: ["export const ComponentSnapshotNamespace", "Card:", "Empty:", "<section"],
+    source: [
+      "export const ComponentSnapshotNamespace = {",
+      "  Card: ({ active }: { active: boolean }) => (",
+      "    <section className={active ? \"grid gap-4 rounded-lg p-6\" : \"grid gap-6 rounded-xl p-8\"}>",
+      "      Namespace card",
+      "    </section>",
+      "  ),",
+      "  Empty: () => null",
+      "};",
+      ""
+    ].join("\n")
   }
 ];
 

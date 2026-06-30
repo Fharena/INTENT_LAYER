@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-30T06:42:23.271Z",
+  "generatedAt": "2026-06-30T06:48:52.775Z",
   "contextPackUsed": true,
   "corpus": {
-    "generatedAt": "2026-06-30T06:42:22.858Z",
+    "generatedAt": "2026-06-30T06:48:52.333Z",
     "filesScanned": 8,
     "classNameOccurrences": 40,
     "classification": {
@@ -480,7 +480,7 @@
     ]
   },
   "aiGeneratedCorpus": {
-    "generatedAt": "2026-06-30T06:42:22.908Z",
+    "generatedAt": "2026-06-30T06:48:52.391Z",
     "filesScanned": 50,
     "classNameOccurrences": 390,
     "classification": {
@@ -536,15 +536,15 @@
         "file": "src/App.tsx",
         "entries": 13,
         "samples": [
-          2.701,
-          0.75,
-          0.756,
-          0.892,
-          0.695
+          2.89,
+          0.723,
+          0.781,
+          0.522,
+          0.614
         ],
-        "averageMs": 1.159,
-        "p95Ms": 2.701,
-        "maxMs": 2.701
+        "averageMs": 1.106,
+        "p95Ms": 2.89,
+        "maxMs": 2.89
       },
       {
         "file": "src/main.tsx",
@@ -561,12 +561,12 @@
         "maxMs": 0.006
       }
     ],
-    "averageMs": 0.581,
-    "p95Ms": 2.701,
-    "maxMs": 2.701,
-    "warmAverageMs": 0.388,
-    "warmP95Ms": 0.892,
-    "warmMaxMs": 0.892,
+    "averageMs": 0.554,
+    "p95Ms": 2.89,
+    "maxMs": 2.89,
+    "warmAverageMs": 0.331,
+    "warmP95Ms": 0.781,
+    "warmMaxMs": 0.781,
     "warmTargetMs": 5,
     "coldTargetMs": 10
   },
@@ -577,39 +577,39 @@
     "bytes": 45352,
     "iterations": 5,
     "samples": [
-      12.502,
-      8.429,
-      4.966,
-      7.739,
-      3.121
+      18.88,
+      16.08,
+      7.007,
+      6.392,
+      3.69
     ],
-    "averageMs": 7.351,
-    "p95Ms": 12.502,
-    "maxMs": 12.502,
+    "averageMs": 10.41,
+    "p95Ms": 18.88,
+    "maxMs": 18.88,
     "targetMs": 20,
     "pass": true
   },
   "graphLookupProxy": {
     "iterations": 1000,
-    "totalMs": 0.088,
-    "averageMs": 0.000088,
+    "totalMs": 0.05,
+    "averageMs": 0.00005,
     "note": "This measures id-to-binding graph lookup only, not a real browser click event."
   },
   "patch": {
     "previewOk": true,
-    "previewMs": 0.676,
-    "previewRoundTripMs": 1.098,
+    "previewMs": 0.997,
+    "previewRoundTripMs": 1.774,
     "applyOk": true,
-    "applyMs": 33.355,
+    "applyMs": 35.589,
     "syntaxErrorsAfterPatch": 0,
     "revertOk": true,
-    "revertMs": 18.74,
+    "revertMs": 8.282,
     "syntaxErrorsAfterRevert": 0,
     "staleRejectionOk": true,
     "staleRejectionReason": "source-hash-mismatch",
     "simpleCnClsx": {
       "applyOk": true,
-      "applyMs": 11.684,
+      "applyMs": 12.665,
       "syntaxErrorsAfterPatch": 0,
       "bindingKind": "call-literals",
       "callee": "cn",
@@ -633,17 +633,17 @@
   },
   "agentTask": {
     "ok": true,
-    "taskMs": 11.125,
+    "taskMs": 12.109,
     "sectionsPresent": true,
-    "taskFile": ".intent/agent/task_2026-06-30T06-42-23-080Z.md"
+    "taskFile": ".intent/agent/task_2026-06-30T06-48-52-575Z.md"
   },
   "agentResult": {
     "ok": true,
-    "resultMs": 10.05,
+    "resultMs": 18.284,
     "sectionsPresent": true,
     "filesExist": true,
-    "resultFile": ".intent/agent/result_2026-06-30T06-42-23-091Z.md",
-    "diffFile": ".intent/diffs/2026-06-30T06-42-23-091Z_agent.intent-diff.yml",
+    "resultFile": ".intent/agent/result_2026-06-30T06-48-52-588Z.md",
+    "diffFile": ".intent/diffs/2026-06-30T06-48-52-588Z_agent.intent-diff.yml",
     "sourceHashChanged": true,
     "snapshotAvailable": true,
     "diffLineCount": 2,
@@ -661,8 +661,8 @@
     "componentSemanticTokenRemovedCount": 2
   },
   "componentSnapshotFixtures": {
-    "cases": 4,
-    "passCount": 4,
+    "cases": 8,
+    "passCount": 8,
     "passRate": 1,
     "results": [
       {
@@ -671,7 +671,7 @@
         "entryCreated": true,
         "entryCount": 3,
         "taskOk": true,
-        "taskMs": 3.543,
+        "taskMs": 2.405,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotFunction",
         "markersPresent": true,
@@ -683,7 +683,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 4.019,
+        "taskMs": 2.043,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowBlock",
         "markersPresent": true,
@@ -695,7 +695,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 2.796,
+        "taskMs": 1.643,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowParen",
         "markersPresent": true,
@@ -707,9 +707,57 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 3.042,
+        "taskMs": 2.068,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowJsx",
+        "markersPresent": true,
+        "pass": true
+      },
+      {
+        "name": "memo-wrapped-function",
+        "componentName": "ComponentSnapshotMemo",
+        "entryCreated": true,
+        "entryCount": 1,
+        "taskOk": true,
+        "taskMs": 1.942,
+        "snapshotAvailable": true,
+        "snapshotComponentName": "ComponentSnapshotMemo",
+        "markersPresent": true,
+        "pass": true
+      },
+      {
+        "name": "forward-ref-wrapped-function",
+        "componentName": "ComponentSnapshotForwardRef",
+        "entryCreated": true,
+        "entryCount": 1,
+        "taskOk": true,
+        "taskMs": 2.614,
+        "snapshotAvailable": true,
+        "snapshotComponentName": "ComponentSnapshotForwardRef",
+        "markersPresent": true,
+        "pass": true
+      },
+      {
+        "name": "hoc-wrapped-function",
+        "componentName": "ComponentSnapshotHoc",
+        "entryCreated": true,
+        "entryCount": 2,
+        "taskOk": true,
+        "taskMs": 2.108,
+        "snapshotAvailable": true,
+        "snapshotComponentName": "ComponentSnapshotHoc",
+        "markersPresent": true,
+        "pass": true
+      },
+      {
+        "name": "namespace-object-export",
+        "componentName": "ComponentSnapshotNamespace",
+        "entryCreated": true,
+        "entryCount": 1,
+        "taskOk": true,
+        "taskMs": 2.404,
+        "snapshotAvailable": true,
+        "snapshotComponentName": "ComponentSnapshotNamespace",
         "markersPresent": true,
         "pass": true
       }
@@ -721,9 +769,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 2.135,
+    "taskMs": 2.042,
     "resultOk": true,
-    "resultMs": 9.936,
+    "resultMs": 8.571,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -743,9 +791,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 1.933,
+    "taskMs": 2.56,
     "resultOk": true,
-    "resultMs": 7.823,
+    "resultMs": 7.597,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -765,9 +813,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 2.192,
+    "taskMs": 3.017,
     "resultOk": true,
-    "resultMs": 16.96,
+    "resultMs": 14.491,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,

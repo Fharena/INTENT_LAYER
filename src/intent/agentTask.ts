@@ -111,6 +111,26 @@ function scanExpressionStatementEnd(source: string, start: number): number {
   return source.length;
 }
 
+function variableComponentRange(
+  source: string,
+  start: number
+): { start: number; end: number } | null {
+  const statementEnd = scanExpressionStatementEnd(source, start);
+  const statement = source.slice(start, statementEnd);
+  const hasInlineComponent =
+    statement.includes("=>") ||
+    /\b(?:memo|forwardRef|with[A-Z][\w$]*|React\.memo|React\.forwardRef)\s*(?:<[^;]*?>)?\s*\(/.test(
+      statement
+    );
+
+  if (!hasInlineComponent) return null;
+
+  return {
+    start,
+    end: statementEnd
+  };
+}
+
 function findComponentRange(source: string, componentName: string | null): { start: number; end: number } | null {
   if (!componentName) return null;
 
@@ -131,6 +151,9 @@ function findComponentRange(source: string, componentName: string | null): { sta
 
   const variableMatch = new RegExp(`\\b(?:const|let|var)\\s+${escapedName}\\b`).exec(source);
   if (!variableMatch) return null;
+
+  const wrappedRange = variableComponentRange(source, variableMatch.index);
+  if (wrappedRange) return wrappedRange;
 
   const arrowIndex = source.indexOf("=>", variableMatch.index);
   if (arrowIndex < 0) return null;

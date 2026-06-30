@@ -32,6 +32,13 @@ interface AttributeMatch {
   valueEnd: number | null;
 }
 
+interface ComponentDeclaration {
+  position: number;
+  end: number | null;
+  name: string;
+  kind: "function" | "variable";
+}
+
 export interface InstrumentResult {
   code: string;
   entries: IntentBinding[];
@@ -607,32 +614,69 @@ function getFastClassNameBinding(
   };
 }
 
-function collectComponentDeclarations(code: string): Array<{ position: number; name: string }> {
-  const declarations: Array<{ position: number; name: string }> = [];
+function scanStatementEnd(code: string, start: number): number {
+  let quote: string | null = null;
+  let depth = 0;
+
+  for (let index = start; index < code.length; index += 1) {
+    const character = code[index];
+    const previous = code[index - 1];
+
+    if (quote) {
+      if (character === quote && previous !== "\\") quote = null;
+      continue;
+    }
+
+    if (character === "\"" || character === "'" || character === "`") {
+      quote = character;
+      continue;
+    }
+
+    if (character === "(" || character === "{" || character === "[") depth += 1;
+    if (character === ")" || character === "}" || character === "]") depth = Math.max(0, depth - 1);
+    if (character === ";" && depth === 0) return index + 1;
+  }
+
+  return code.length;
+}
+
+function collectComponentDeclarations(code: string): ComponentDeclaration[] {
+  const declarations: ComponentDeclaration[] = [];
   const pattern =
     /(?:export\s+)?function\s+([A-Z][\w$]*)\s*\(|(?:const|let|var)\s+([A-Z][\w$]*)\s*=/g;
   let match: RegExpExecArray | null;
 
   while ((match = pattern.exec(code)) !== null) {
+    const isFunction = Boolean(match[1]);
     declarations.push({
       position: match.index,
-      name: match[1] ?? match[2]
+      end: isFunction ? null : scanStatementEnd(code, match.index),
+      name: match[1] ?? match[2],
+      kind: isFunction ? "function" : "variable"
     });
   }
 
   return declarations;
 }
 
-function componentNameAt(
-  declarations: Array<{ position: number; name: string }>,
-  position: number
-): string | null {
-  let current: string | null = null;
+function componentNameAt(declarations: ComponentDeclaration[], position: number): string | null {
+  const containingVariables = declarations.filter(
+    (declaration) =>
+      declaration.kind === "variable" &&
+      declaration.end !== null &&
+      declaration.position <= position &&
+      position < declaration.end
+  );
+  if (containingVariables.length > 0) {
+    return containingVariables[containingVariables.length - 1].name;
+  }
+
+  let currentFunction: string | null = null;
   for (const declaration of declarations) {
     if (declaration.position > position) break;
-    current = declaration.name;
+    if (declaration.kind === "function") currentFunction = declaration.name;
   }
-  return current;
+  return currentFunction;
 }
 
 function instrumentSourceFast(params: {
