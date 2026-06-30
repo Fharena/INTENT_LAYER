@@ -35,6 +35,7 @@ Measured inputs:
 - read-only composite variable related semantic diff fixture
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
+- tsconfig paths alias + barrel variant/cva related source handoff fixture
 - CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
 - package install smoke fixture
 - product-sized Vite graph write throttle fixture
@@ -164,8 +165,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.419ms / p95 2.918ms / max 2.918ms |
-| `src/main.tsx` | 0 | avg 0.007ms / p95 0.013ms / max 0.013ms |
+| `src/App.tsx` | 13 | avg 1.286ms / p95 3.229ms / max 3.229ms |
+| `src/main.tsx` | 0 | avg 0.005ms / p95 0.008ms / max 0.008ms |
 
 Summary:
 
@@ -173,12 +174,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.713ms |
-| Overall p95 transform time | 2.918ms |
-| Overall max transform time | 2.918ms |
-| Warm average transform time | 0.525ms |
-| Warm p95 transform time | 1.936ms |
-| Warm max transform time | 1.936ms |
+| Overall average transform time | 0.646ms |
+| Overall p95 transform time | 3.229ms |
+| Overall max transform time | 3.229ms |
+| Warm average transform time | 0.402ms |
+| Warm p95 transform time | 0.948ms |
+| Warm max transform time | 0.948ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -203,9 +204,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 12.635ms |
-| p95 transform time | 17.019ms |
-| Max transform time | 17.019ms |
+| Average transform time | 10.42ms |
+| p95 transform time | 14.031ms |
+| Max transform time | 14.031ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -226,10 +227,10 @@ Interpretation:
 | Bindings | 401 |
 | Input size | 45,352 bytes |
 | Same-input repeats | 4 |
-| Initial transform | 28.229ms |
-| Same-input repeat transforms | 12.475ms / 12.02ms / 20.171ms / 12.397ms |
-| Changed-token transform | 19.753ms |
-| Changed-token repeat transform | 9.388ms |
+| Initial transform | 24.465ms |
+| Same-input repeat transforms | 12.909ms / 12.644ms / 8.385ms / 12.224ms |
+| Changed-token transform | 14.061ms |
+| Changed-token repeat transform | 15.118ms |
 | Inferred write count | 2 |
 | Inferred skipped write count | 5 |
 | Same-code generatedAt stable | true |
@@ -709,9 +710,46 @@ Interpretation:
 - When the selected JSX file calls `className={buttonVariants(...)}` and `buttonVariants` is defined in another file, one-hop relative named imports are followed into the related source snapshot.
 - The agent task editable file list includes both the selected JSX file and the imported variant definition file.
 - Result recording creates related source and semantic token diffs even when only the imported definition changes.
-- Path aliases, barrel re-exports, package imports, and multi-hop import graphs are still out of scope.
+- tsconfig paths aliases and one-hop named barrel re-exports are verified in the fixture below.
+- Package imports, multi-hop import graphs, and cross-variable data flow are still out of scope.
 
-## 9.5 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
+## 9.5 Path Alias + Barrel Variant Function Handoff
+
+| Metric | Value |
+| --- | ---: |
+| Fixture root | `.intent/tmp/alias-barrel-variant-handoff` |
+| Read-only entry created | true |
+| Binding kind | `read-only` |
+| Unsupported reason | `variant-function` |
+| ClassName value | `buttonVariants({ variant: "primary" })` |
+| Editable token count | 0 |
+| Agent task created | true |
+| Agent task generation time | 7.831ms |
+| Related snapshot available | true |
+| Related snapshot file | `src/ui/buttonVariants.ts` |
+| Related snapshot kind | `variant-function` |
+| Related snapshot identifier | `buttonVariants` |
+| Related snapshot includes cva | true |
+| Agent result created | true |
+| Agent result generation time | 5.314ms |
+| Syntax errors after result | 0 |
+| Selected source diff line count | 0 |
+| Component source diff line count | 0 |
+| Related source diff line count | 8 |
+| Related source diff present | true |
+| Related semantic className change count | 2 |
+| Related semantic diff present | true |
+| Related semantic token added count | 5 |
+| Related semantic token removed count | 5 |
+
+Interpretation:
+
+- `import { buttonVariants } from "@/ui"` is resolved through `tsconfig.json` `baseUrl`/`paths`.
+- `@/ui` resolves to the `src/ui/index.ts` barrel file, then follows one `export { buttonVariants } from "./buttonVariants"` hop.
+- Agent task/result artifacts record the final declaration file, `src/ui/buttonVariants.ts`, as the related source snapshot/diff target.
+- Package imports, multi-hop barrel/import graphs, and cross-variable data flow are still out of scope.
+
+## 9.6 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
 
 | Metric | Value |
 | --- | ---: |
@@ -736,7 +774,7 @@ Interpretation:
 | Supported direct coverage | 87.5% |
 | Editable token coverage | 81.08% |
 | Syntax error count | 0 |
-| Max transform time | 0.209ms |
+| Max transform time | 0.397ms |
 | Init stdout bytes | 496 |
 | Dev stdout bytes | 499 |
 | Scan stdout bytes | 3261 |
@@ -865,8 +903,8 @@ Package install smoke gate:
 | Installed help exit code | 0 |
 | Installed `/vite` import exit code | 0 |
 | Package file count | 14 |
-| Package size | 39979 bytes |
-| Unpacked size | 194403 bytes |
+| Package size | 40724 bytes |
+| Unpacked size | 198369 bytes |
 | Includes bin wrapper | true |
 | Includes CLI source | true |
 | Includes Vite plugin source | true |
@@ -877,11 +915,11 @@ Package install smoke gate:
 | `/vite` plugin name | `intent-layer-spike` |
 | `/vite` plugin enforce | `pre` |
 | Legacy plugin name | `intent-layer-spike` |
-| Dry-run time | 2741.303ms |
-| Pack time | 2743.63ms |
-| Install time | 4135.405ms |
-| Installed help time | 2735.207ms |
-| `/vite` import time | 1633.83ms |
+| Dry-run time | 2594.328ms |
+| Pack time | 2511.376ms |
+| Install time | 5149.566ms |
+| Installed help time | 3222.773ms |
+| `/vite` import time | 1666.694ms |
 
 Interpretation:
 
@@ -933,12 +971,13 @@ Interpretation:
 | read-only composite variable related semantic diff | array/object/template related semantic change >= 4 + token added/removed >= 6 + syntax error 0 | pass |
 | variant/cva related source handoff | local variant declaration snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
 | imported variant/cva related source handoff | one-hop relative named import snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
+| alias/barrel variant/cva related source handoff | tsconfig paths alias + one-hop named barrel snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, and `/vite` export import. This update also adds and passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, and `/vite` export import. This update also adds and passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged.
 
 What worked:
 
@@ -965,6 +1004,7 @@ What worked:
 - related semantic token diff generation for read-only composite variables using array/object-map/template-literal declarations
 - related source diff and semantic token diff generation for local variant/cva read-only bindings
 - related source diff and semantic token diff generation for one-hop relative named-import variant/cva read-only bindings
+- related source diff and semantic token diff generation for tsconfig paths alias plus one-hop named barrel variant/cva read-only bindings
 - real browser click-to-panel, preview, apply, and revert round-trip measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
@@ -992,12 +1032,12 @@ What remains weak:
 - CLI tarball install and package `/vite` export smoke pass, but public npm package naming and external install-guide copy remain launch-polish work
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
-- automatic semantic analysis across path aliases, barrel re-exports, package imports, and cross-variable data flow is still missing
+- automatic semantic analysis across package imports, multi-hop import graphs, and cross-variable data flow is still missing
 - variant functions and runtime template literals remain unsupported for direct patching
 
 Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, deciding whether to expand branch undo into arbitrary non-top revert, path-alias/barrel/cross-variable handoff context, and component snapshot plus graph throttle re-measurement on real multi-file HMR sessions and external product-sized TSX files.
+The next priority is independent external corpus validation, deciding whether to expand branch undo into arbitrary non-top revert, package-import/multi-hop/cross-variable handoff context, and component snapshot plus graph throttle re-measurement on real multi-file HMR sessions and external product-sized TSX files.
 ```

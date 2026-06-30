@@ -475,8 +475,8 @@ required checks
 patch style
 ```
 
-MVP의 related source snapshot은 같은 파일 변수 선언과 one-hop relative named import의 `variant/cva` 선언까지 지원한다.
-path alias, barrel re-export, package import, 다단계 import graph는 agent handoff 문서에 명시된 미지원 범위로 남긴다.
+MVP의 related source snapshot은 같은 파일 변수 선언, one-hop relative named import, tsconfig paths alias와 one-hop named barrel re-export 뒤의 `variant/cva` 선언까지 지원한다.
+package import, 다단계 import graph, cross-variable data flow는 agent handoff 문서에 명시된 미지원 범위로 남긴다.
 
 이렇게 하면 제품은 아직 직접 편집하지 못하는 기능도 workflow를 제공한다.
 

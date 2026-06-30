@@ -35,6 +35,7 @@ npm run build
 - read-only composite variable related semantic diff fixture
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
+- tsconfig paths alias + barrel variant/cva related source handoff fixture
 - CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
 - package install smoke fixture
 - product-sized Vite graph write throttle fixture
@@ -164,8 +165,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.419ms / p95 2.918ms / max 2.918ms |
-| `src/main.tsx` | 0 | avg 0.007ms / p95 0.013ms / max 0.013ms |
+| `src/App.tsx` | 13 | avg 1.286ms / p95 3.229ms / max 3.229ms |
+| `src/main.tsx` | 0 | avg 0.005ms / p95 0.008ms / max 0.008ms |
 
 요약:
 
@@ -173,12 +174,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 0.713ms |
-| 전체 p95 transform time | 2.918ms |
-| 전체 최대 transform time | 2.918ms |
-| warm 평균 transform time | 0.525ms |
-| warm p95 transform time | 1.936ms |
-| warm 최대 transform time | 1.936ms |
+| 전체 평균 transform time | 0.646ms |
+| 전체 p95 transform time | 3.229ms |
+| 전체 최대 transform time | 3.229ms |
+| warm 평균 transform time | 0.402ms |
+| warm p95 transform time | 0.948ms |
+| warm 최대 transform time | 0.948ms |
 | warm 목표 | 5ms 이하 |
 | cold 목표 | 10ms 이하 |
 | 결과 | warm 통과 / cold 통과 |
@@ -203,9 +204,9 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 파일 크기 | 45,352 bytes |
 | 반복 측정 | 5 |
-| average transform time | 12.635ms |
-| p95 transform time | 17.019ms |
-| max transform time | 17.019ms |
+| average transform time | 10.42ms |
+| p95 transform time | 14.031ms |
+| max transform time | 14.031ms |
 | stress 목표 | 20ms 이하 |
 | 결과 | 통과 |
 
@@ -226,10 +227,10 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 입력 크기 | 45,352 bytes |
 | 동일 입력 반복 수 | 4 |
-| initial transform | 28.229ms |
-| 동일 입력 반복 transform | 12.475ms / 12.02ms / 20.171ms / 12.397ms |
-| changed-token transform | 19.753ms |
-| changed-token repeat transform | 9.388ms |
+| initial transform | 24.465ms |
+| 동일 입력 반복 transform | 12.909ms / 12.644ms / 8.385ms / 12.224ms |
+| changed-token transform | 14.061ms |
+| changed-token repeat transform | 15.118ms |
 | inferred write count | 2 |
 | inferred skipped write count | 5 |
 | same-code generatedAt stable | true |
@@ -708,9 +709,46 @@ dev server endpoint smoke test:
 - `className={buttonVariants(...)}` 호출 파일과 `buttonVariants` 정의 파일이 분리되어 있어도, 상대경로 named import 한 단계는 related source snapshot으로 따라간다.
 - agent task의 편집 가능 파일 목록에는 선택 JSX 파일과 imported variant 정의 파일이 함께 들어간다.
 - agent result 기록 시 선택 JSX가 바뀌지 않고 imported definition만 바뀌어도 related source diff와 semantic token diff가 생성된다.
-- 아직 path alias, barrel re-export, package import, 다단계 import graph는 지원하지 않는다.
+- tsconfig paths alias와 one-hop named barrel re-export는 아래 fixture에서 별도 검증한다.
+- 아직 package import, 다단계 import graph, cross-variable data flow는 지원하지 않는다.
 
-## 9.5 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
+## 9.5 Path Alias + Barrel Variant Function Handoff
+
+| 항목 | 값 |
+| --- | ---: |
+| fixture root | `.intent/tmp/alias-barrel-variant-handoff` |
+| read-only entry 생성 | true |
+| binding kind | `read-only` |
+| unsupported reason | `variant-function` |
+| className value | `buttonVariants({ variant: "primary" })` |
+| editable token 수 | 0 |
+| agent task 생성 | true |
+| agent task 생성 시간 | 7.831ms |
+| related snapshot 사용 가능 | true |
+| related snapshot file | `src/ui/buttonVariants.ts` |
+| related snapshot kind | `variant-function` |
+| related snapshot identifier | `buttonVariants` |
+| related snapshot cva 포함 | true |
+| agent result 생성 | true |
+| agent result 생성 시간 | 5.314ms |
+| result 후 syntax error | 0 |
+| selected source diff line 수 | 0 |
+| component source diff line 수 | 0 |
+| related source diff line 수 | 8 |
+| related source diff 포함 | true |
+| related semantic className change 수 | 2 |
+| related semantic diff 포함 | true |
+| related semantic token added 수 | 5 |
+| related semantic token removed 수 | 5 |
+
+해석:
+
+- `import { buttonVariants } from "@/ui"` 형태의 tsconfig paths alias를 `tsconfig.json`의 `baseUrl`/`paths` 기준으로 해석한다.
+- `@/ui`가 `src/ui/index.ts` barrel 파일로 해석되고, `export { buttonVariants } from "./buttonVariants"` 한 단계를 따라간다.
+- agent task/result는 최종 선언 파일인 `src/ui/buttonVariants.ts`를 related source snapshot/diff 대상으로 기록한다.
+- 아직 package import, 다단계 barrel/import graph, cross-variable data flow는 지원하지 않는다.
+
+## 9.6 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
 
 | 항목 | 값 |
 | --- | ---: |
@@ -735,7 +773,7 @@ dev server endpoint smoke test:
 | supported direct coverage | 87.5% |
 | editable token coverage | 81.08% |
 | syntax error 수 | 0 |
-| max transform time | 0.209ms |
+| max transform time | 0.397ms |
 | init stdout bytes | 496 |
 | dev stdout bytes | 499 |
 | scan stdout bytes | 3261 |
@@ -864,8 +902,8 @@ package install smoke gate:
 | installed help exit code | 0 |
 | installed `/vite` import exit code | 0 |
 | package file 수 | 14 |
-| package size | 39979 bytes |
-| unpacked size | 194403 bytes |
+| package size | 40724 bytes |
+| unpacked size | 198369 bytes |
 | bin wrapper 포함 | true |
 | CLI source 포함 | true |
 | Vite plugin source 포함 | true |
@@ -876,11 +914,11 @@ package install smoke gate:
 | `/vite` plugin name | `intent-layer-spike` |
 | `/vite` plugin enforce | `pre` |
 | legacy plugin name | `intent-layer-spike` |
-| dry-run 시간 | 2741.303ms |
-| pack 시간 | 2743.63ms |
-| install 시간 | 4135.405ms |
-| installed help 시간 | 2735.207ms |
-| `/vite` import 시간 | 1633.83ms |
+| dry-run 시간 | 2594.328ms |
+| pack 시간 | 2511.376ms |
+| install 시간 | 5149.566ms |
+| installed help 시간 | 3222.773ms |
+| `/vite` import 시간 | 1666.694ms |
 
 해석:
 
@@ -932,12 +970,13 @@ package install smoke gate:
 | read-only composite variable related semantic diff | array/object/template related semantic change >= 4 + token added/removed >= 6 + syntax error 0 | 통과 |
 | variant/cva related source handoff | local variant declaration snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | 통과 |
 | imported variant/cva related source handoff | one-hop relative named import snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | 통과 |
+| alias/barrel variant/cva related source handoff | tsconfig paths alias + one-hop named barrel snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | 통과 |
 | simple `cn()` / `clsx()` patch | apply 성공 + syntax error 0 | 통과 |
 | stale rejection | source mismatch 거부 | 통과 |
 
 ## 11. 결론
 
-이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local 및 one-hop relative imported variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 package smoke도 tarball install, 설치된 bin 실행, `/vite` export import까지 통과했다. 이번 갱신에서는 401-binding TSX 반복 transform에서 semantic fingerprint가 같으면 sidecar graph write를 건너뛰는 gate도 추가로 통과했다.
+이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local/one-hop relative import/tsconfig paths alias + one-hop named barrel 뒤의 variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 package smoke도 tarball install, 설치된 bin 실행, `/vite` export import까지 통과했다. 이번 갱신에서는 401-binding TSX 반복 transform에서 semantic fingerprint가 같으면 sidecar graph write를 건너뛰는 gate도 추가로 통과했다.
 
 성공한 것:
 
@@ -964,6 +1003,7 @@ package install smoke gate:
 - read-only composite variable의 배열/object map/template literal related semantic token diff 생성
 - variant/cva read-only binding의 local variant declaration related source diff와 semantic token diff 생성
 - variant/cva read-only binding의 one-hop relative named import declaration related source diff와 semantic token diff 생성
+- variant/cva read-only binding의 tsconfig paths alias + one-hop named barrel declaration related source diff와 semantic token diff 생성
 - 실제 브라우저 click-to-panel, preview, apply, revert round-trip 측정
 - unsupported className의 agent handoff degrade
 - simple `cn()` literal segment patch
@@ -991,12 +1031,12 @@ package install smoke gate:
 - CLI tarball install과 package `/vite` export smoke는 통과했지만, public npm package 이름과 외부 사용자용 install guide copy는 출시 polish로 남아 있다.
 - 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
 - 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
-- path alias, barrel re-export, package import를 포함한 imported variant 함수와 cross-variable data flow 자동 분석
+- package import, 다단계 import graph, cross-variable data flow를 포함한 imported variant 함수 자동 분석
 - variant 함수와 runtime template literal 직접 patch 지원
 
 다음 판단:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 외부 독립 corpus 검증, branch undo를 임의 non-top revert로 확장할지 판단, path alias/barrel/cross-variable handoff 문맥 보강, 실제 multi-file HMR과 외부 제품급 TSX 파일에서 component snapshot 및 graph throttle 재측정이다.
+다음 우선순위는 외부 독립 corpus 검증, branch undo를 임의 non-top revert로 확장할지 판단, package import/multi-hop/cross-variable handoff 문맥 보강, 실제 multi-file HMR과 외부 제품급 TSX 파일에서 component snapshot 및 graph throttle 재측정이다.
 ```
