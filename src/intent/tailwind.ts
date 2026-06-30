@@ -13,6 +13,9 @@ const spacingValues = ["0", "1", "2", "3", "4", "5", "6", "8", "10", "12", "16"]
 const radiusValues = ["none", "sm", "md", "lg", "xl", "2xl", "3xl", "full"];
 const gridColumnValues = ["1", "2", "3", "4", "5", "6"];
 const textSizeValues = ["xs", "sm", "base", "lg", "xl", "2xl", "3xl", "4xl"];
+const tokenCategoryCache = new Map<string, IntentTokenCategory | null>();
+const classNameTokenCache = new Map<string, IntentToken[]>();
+const maxClassNameTokenCacheSize = 1000;
 
 function splitVariant(token: string): { variantPrefix: string; base: string } {
   const parts = token.split(":");
@@ -31,18 +34,29 @@ function withVariant(originalToken: string, nextBase: string): string {
 }
 
 export function categorizeTailwindToken(token: string): IntentTokenCategory | null {
+  if (tokenCategoryCache.has(token)) {
+    return tokenCategoryCache.get(token) ?? null;
+  }
+
   const { base } = splitVariant(token);
 
-  if (spacingPattern.test(base)) return "spacing";
-  if (radiusPattern.test(base)) return "radius";
-  if (layoutPattern.test(base)) return "layout";
-  if (typographyPattern.test(base)) return "typography";
-  if (colorPattern.test(base)) return "color";
+  let category: IntentTokenCategory | null = null;
+  if (spacingPattern.test(base)) category = "spacing";
+  else if (radiusPattern.test(base)) category = "radius";
+  else if (layoutPattern.test(base)) category = "layout";
+  else if (typographyPattern.test(base)) category = "typography";
+  else if (colorPattern.test(base)) category = "color";
 
-  return null;
+  tokenCategoryCache.set(token, category);
+  return category;
 }
 
 export function tokenizeClassName(className: string): IntentToken[] {
+  const cached = classNameTokenCache.get(className);
+  if (cached) {
+    return cached.map((token) => ({ ...token }));
+  }
+
   const tokens: IntentToken[] = [];
   const tokenPattern = /\S+/g;
   let match: RegExpExecArray | null;
@@ -61,6 +75,10 @@ export function tokenizeClassName(className: string): IntentToken[] {
     });
   }
 
+  if (classNameTokenCache.size >= maxClassNameTokenCacheSize) {
+    classNameTokenCache.clear();
+  }
+  classNameTokenCache.set(className, tokens.map((token) => ({ ...token })));
   return tokens;
 }
 

@@ -1,4 +1,10 @@
+const hashCache = new Map<string, string>();
+const maxHashCacheSize = 1000;
+
 export function sourceHash(input: string): string {
+  const cached = hashCache.get(input);
+  if (cached) return cached;
+
   let left = 0x811c9dc5;
   let right = 0x9e3779b9 ^ input.length;
 
@@ -8,9 +14,14 @@ export function sourceHash(input: string): string {
     right = Math.imul(right ^ (code + index), 0x85ebca6b);
   }
 
-  return `${(left >>> 0).toString(16).padStart(8, "0")}${(right >>> 0)
+  const result = `${(left >>> 0).toString(16).padStart(8, "0")}${(right >>> 0)
     .toString(16)
     .padStart(8, "0")}`;
+  if (hashCache.size >= maxHashCacheSize) {
+    hashCache.clear();
+  }
+  hashCache.set(input, result);
+  return result;
 }
 
 export function shortHash(input: string): string {

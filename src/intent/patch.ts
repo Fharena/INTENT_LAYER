@@ -6,11 +6,16 @@ import type {
   IntentToken,
   PatchApplyResult,
   PatchConflictArtifact,
+  PatchConflictReport,
+  PatchConflictResolveRequest,
+  PatchConflictResolveResult,
+  PatchConflictSummary,
   PatchFailure,
   PatchOperationLog,
   PatchPreview,
   PatchRequest,
   PatchRevertResult,
+  PatchUndoDiscardReference,
   UndoHistoryReport
 } from "./types";
 
@@ -126,6 +131,28 @@ function operationLogPath(rootDir: string): string {
   return path.join(rootDir, ".intent", "operations", "operation-log.json");
 }
 
+function conflictsDirPath(rootDir: string): string {
+  return path.join(rootDir, ".intent", "conflicts");
+}
+
+function toSlashPath(input: string): string {
+  return input.replace(/\\/g, "/");
+}
+
+function relativeFromRoot(rootDir: string, file: string): string {
+  return toSlashPath(path.relative(rootDir, file));
+}
+
+function patchMatchesDiscard(patch: PatchApplyResult, discard: PatchUndoDiscardReference): boolean {
+  return (
+    patch.id === discard.id &&
+    patch.file === discard.file &&
+    patch.oldToken === discard.oldToken &&
+    patch.nextToken === discard.nextToken &&
+    patch.range.start === discard.range.start
+  );
+}
+
 function readOperationLog(rootDir: string): PatchOperationLog {
   const file = operationLogPath(rootDir);
   if (!fs.existsSync(file)) {
@@ -191,15 +218,18 @@ export function pendingUndoStackFromOperationLog(rootDir: string): PatchApplyRes
       continue;
     }
 
-    const index = [...stack]
-      .reverse()
-      .findIndex(
-        (patch) =>
-          patch.id === entry.patch.id &&
-          patch.nextToken === entry.patch.oldToken &&
-          patch.oldToken === entry.patch.restoredToken &&
-          patch.range.start === entry.patch.range.start
-      );
+    const index =
+      entry.action === "revert"
+        ? [...stack]
+            .reverse()
+            .findIndex(
+              (patch) =>
+                patch.id === entry.patch.id &&
+                patch.nextToken === entry.patch.oldToken &&
+                patch.oldToken === entry.patch.restoredToken &&
+                patch.range.start === entry.patch.range.start
+            )
+        : [...stack].reverse().findIndex((patch) => patchMatchesDiscard(patch, entry.patch));
     if (index >= 0) {
       stack.splice(stack.length - 1 - index, 1);
     }
@@ -300,7 +330,7 @@ function writeRevertConflictArtifact(params: {
 }): { conflictFile: string; conflictArtifact: PatchConflictArtifact } {
   const { rootDir, lastPatch, source, actualToken, reason } = params;
   const timestamp = timestampSlug();
-  const conflictsDir = path.join(rootDir, ".intent", "conflicts");
+  const conflictsDir = conflictsDirPath(rootDir);
   fs.mkdirSync(conflictsDir, { recursive: true });
 
   const conflictFile = path.join(conflictsDir, `${timestamp}.intent-conflict.json`);
@@ -331,6 +361,184 @@ function writeRevertConflictArtifact(params: {
 
   fs.writeFileSync(conflictFile, `${JSON.stringify(conflictArtifact, null, 2)}\n`);
   return { conflictFile, conflictArtifact };
+}
+
+function resolveConflictFilePath(rootDir: string, requestedFile: string): string {
+  const conflictsDir = path.resolve(conflictsDirPath(rootDir));
+  const candidate = path.isAbsolute(requestedFile)
+    ? path.resolve(requestedFile)
+    : path.resolve(rootDir, requestedFile);
+
+  if (!candidate.startsWith(`${conflictsDir}${path.sep}`)) {
+    throw new Error("Conflict file must be inside .intent/conflicts.");
+  }
+
+  if (!candidate.endsWith(".intent-conflict.json")) {
+    throw new Error("Unsupported conflict file extension.");
+  }
+
+  return candidate;
+}
+
+function readConflictArtifactFile(file: string): PatchConflictArtifact | null {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as PatchConflictArtifact;
+    if (parsed.version !== 1 || parsed.kind !== "revert-conflict") {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function readPatchConflictReport(rootDir: string): PatchConflictReport {
+  const conflictsDir = conflictsDirPath(rootDir);
+  const files = fs.existsSync(conflictsDir)
+    ? fs
+        .readdirSync(conflictsDir)
+        .filter((name) => name.endsWith(".intent-conflict.json"))
+        .map((name) => path.join(conflictsDir, name))
+    : [];
+
+  const conflicts: PatchConflictSummary[] = files
+    .map((file) => {
+      const artifact = readConflictArtifactFile(file);
+      if (!artifact || artifact.resolvedAt) {
+        return null;
+      }
+
+      return {
+        ...artifact,
+        conflictFile: file,
+        relativeConflictFile: relativeFromRoot(rootDir, file),
+        resolved: false
+      };
+    })
+    .filter((conflict): conflict is PatchConflictSummary => Boolean(conflict))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+
+  return {
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    conflictCount: conflicts.length,
+    conflicts
+  };
+}
+
+function recordPatchDiscardInOperationLog(
+  rootDir: string,
+  conflictFile: string,
+  patch: PatchUndoDiscardReference
+): string {
+  const log = readOperationLog(rootDir);
+  const now = new Date().toISOString();
+  log.updatedAt = now;
+  log.entries.push({
+    action: "discard",
+    createdAt: now,
+    conflictFile,
+    patch
+  });
+  return writeOperationLog(rootDir, log);
+}
+
+export function resolvePatchConflict(
+  rootDir: string,
+  request: PatchConflictResolveRequest
+): PatchConflictResolveResult | PatchFailure {
+  const started = performance.now();
+
+  if (request.action !== "discard-pending-undo") {
+    return {
+      ok: false,
+      reason: "unsupported-conflict-action",
+      detail: `Unsupported conflict action: ${request.action}`,
+      metrics: { resolveMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
+  let conflictFile: string;
+  try {
+    conflictFile = resolveConflictFilePath(rootDir, request.conflictFile);
+  } catch (error) {
+    return {
+      ok: false,
+      reason: "invalid-conflict-file",
+      detail: error instanceof Error ? error.message : String(error),
+      metrics: { resolveMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
+  const artifact = readConflictArtifactFile(conflictFile);
+  if (!artifact) {
+    return {
+      ok: false,
+      reason: "missing-conflict-artifact",
+      detail: "No readable conflict artifact exists for the requested file.",
+      metrics: { resolveMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
+  if (artifact.resolvedAt) {
+    return {
+      ok: false,
+      id: artifact.id,
+      reason: "conflict-already-resolved",
+      detail: "This conflict artifact already has a resolution.",
+      metrics: { resolveMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
+  const discardPatch: PatchUndoDiscardReference = {
+    id: artifact.id,
+    file: artifact.file,
+    relativeFile: artifact.relativeFile,
+    oldToken: artifact.restoreToken,
+    nextToken: artifact.expectedToken,
+    range: artifact.range
+  };
+  const operationLogFile = recordPatchDiscardInOperationLog(rootDir, conflictFile, discardPatch);
+  const resolvedArtifact: PatchConflictArtifact = {
+    ...artifact,
+    resolvedAt: new Date().toISOString(),
+    resolution: {
+      action: "discard-pending-undo",
+      note: request.note
+    }
+  };
+  fs.writeFileSync(conflictFile, `${JSON.stringify(resolvedArtifact, null, 2)}\n`);
+
+  const pendingCount = pendingUndoStackFromOperationLog(rootDir).length;
+
+  return {
+    ok: true,
+    resolved: true,
+    conflictFile,
+    relativeConflictFile: relativeFromRoot(rootDir, conflictFile),
+    action: "discard-pending-undo",
+    discardedPatch: discardPatch,
+    pendingCount,
+    conflictArtifact: resolvedArtifact,
+    operationLogFile,
+    metrics: {
+      resolveMs: Number((performance.now() - started).toFixed(3))
+    }
+  };
+}
+
+export function removeDiscardedPatchFromStack(
+  stack: PatchApplyResult[],
+  discard: PatchUndoDiscardReference
+): PatchApplyResult[] {
+  const index = [...stack].reverse().findIndex((patch) => patchMatchesDiscard(patch, discard));
+  if (index < 0) {
+    return stack;
+  }
+
+  const nextStack = [...stack];
+  nextStack.splice(nextStack.length - 1 - index, 1);
+  return nextStack;
 }
 
 export function applyTokenPatch(

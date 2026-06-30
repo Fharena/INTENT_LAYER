@@ -10,9 +10,11 @@ import {
   pendingUndoHistoryFromOperationLog,
   pendingUndoStackFromOperationLog,
   planTokenPatch,
+  readPatchConflictReport,
   recordPatchApplyInOperationLog,
   recordPatchRevertInOperationLog,
-  revertTokenPatch
+  revertTokenPatch,
+  resolvePatchConflict
 } from "../src/intent/patch";
 
 const rootDir = process.cwd();
@@ -680,6 +682,10 @@ const operationLogFile = path.join(rootDir, ".intent", "operations", "operation-
 if (fs.existsSync(operationLogFile)) {
   fs.unlinkSync(operationLogFile);
 }
+const conflictsDir = path.join(rootDir, ".intent", "conflicts");
+if (fs.existsSync(conflictsDir)) {
+  fs.rmSync(conflictsDir, { recursive: true, force: true });
+}
 const operationStackFixture = path.join(tmpDir, "OperationStackFixture.tsx");
 fs.writeFileSync(
   operationStackFixture,
@@ -772,6 +778,7 @@ const operationConflictApply = applyTokenPatch(rootDir, operationConflictEntry, 
   sourceEnd: operationConflictEntry.tokens.find((token) => token.token === "gap-4")?.sourceEnd
 });
 if (operationConflictApply.ok) {
+  recordPatchApplyInOperationLog(rootDir, operationConflictApply);
   fs.writeFileSync(
     operationConflictFixture,
     fs.readFileSync(operationConflictFixture, "utf8").replace("gap-6", "gap-8")
@@ -789,6 +796,26 @@ const operationConflictArtifact =
   operationConflictFile && fs.existsSync(operationConflictFile)
     ? JSON.parse(fs.readFileSync(operationConflictFile, "utf8"))
     : null;
+const pendingAfterOperationConflict = pendingUndoStackFromOperationLog(rootDir);
+const operationConflictReport = readPatchConflictReport(rootDir);
+const operationConflictResolve =
+  operationConflictFile !== undefined
+    ? resolvePatchConflict(rootDir, {
+        conflictFile: operationConflictFile,
+        action: "discard-pending-undo",
+        note: "Evaluation fixture discarded the pending undo after inspecting the conflict artifact."
+      })
+    : {
+        ok: false as const,
+        reason: "missing-conflict-file",
+        detail: "No conflict file was generated."
+      };
+const operationConflictResolvedArtifact =
+  operationConflictFile && fs.existsSync(operationConflictFile)
+    ? JSON.parse(fs.readFileSync(operationConflictFile, "utf8"))
+    : null;
+const pendingAfterOperationConflictResolve = pendingUndoStackFromOperationLog(rootDir);
+const operationConflictReportAfterResolve = readPatchConflictReport(rootDir);
 const syntaxErrorsAfterOperationConflict = parseSyntaxErrorCount(operationConflictFixture);
 
 const graphLookupIterations = 1000;
@@ -905,6 +932,15 @@ const report = {
     conflictGuidanceCount: Array.isArray(operationConflictArtifact?.guidance)
       ? operationConflictArtifact.guidance.length
       : 0,
+    pendingAfterConflict: pendingAfterOperationConflict.length,
+    activeConflictCountBeforeResolve: operationConflictReport.conflictCount,
+    resolveOk: operationConflictResolve.ok,
+    resolveAction: operationConflictResolve.ok ? operationConflictResolve.action : null,
+    resolveMs: operationConflictResolve.ok ? operationConflictResolve.metrics.resolveMs : null,
+    resolvedAtPresent: Boolean(operationConflictResolvedArtifact?.resolvedAt),
+    resolutionAction: operationConflictResolvedArtifact?.resolution?.action ?? null,
+    pendingAfterResolve: pendingAfterOperationConflictResolve.length,
+    activeConflictCountAfterResolve: operationConflictReportAfterResolve.conflictCount,
     syntaxErrorsAfterConflict: syntaxErrorsAfterOperationConflict
   },
   agentTask: {
@@ -1234,6 +1270,15 @@ const report = {
       operationConflictArtifact.restoreToken === "gap-4" &&
       Array.isArray(operationConflictArtifact.guidance) &&
       operationConflictArtifact.guidance.length >= 3 &&
+      pendingAfterOperationConflict.length === 1 &&
+      syntaxErrorsAfterOperationConflict === 0,
+    operationConflictResolutionPass:
+      operationConflictResolve.ok &&
+      operationConflictReport.conflictCount === 1 &&
+      Boolean(operationConflictResolvedArtifact?.resolvedAt) &&
+      operationConflictResolvedArtifact?.resolution?.action === "discard-pending-undo" &&
+      pendingAfterOperationConflictResolve.length === 0 &&
+      operationConflictReportAfterResolve.conflictCount === 0 &&
       syntaxErrorsAfterOperationConflict === 0
   }
 };

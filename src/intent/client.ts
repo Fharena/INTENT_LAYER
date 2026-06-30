@@ -8,6 +8,8 @@ import type {
   PatchRequest,
   IntentToken,
   PatchApplyResult,
+  PatchConflictReport,
+  PatchConflictResolveResult,
   PatchFailure,
   PatchPreview,
   PatchRevertResult,
@@ -20,6 +22,8 @@ type RevertResponse = PatchRevertResult | PatchFailure;
 type AgentTaskResponse = AgentTaskResult | PatchFailure;
 type AgentResultResponse = AgentResultArtifact | PatchFailure;
 type UndoHistoryResponse = UndoHistoryReport;
+type ConflictReportResponse = PatchConflictReport;
+type ConflictResolveResponse = PatchConflictResolveResult | PatchFailure;
 
 const lastAgentTaskFileByIntentId = new Map<string, string>();
 
@@ -343,6 +347,93 @@ function renderUndoHistory(root: HTMLElement) {
     });
 }
 
+function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => void) {
+  const wrapper = document.createElement("div");
+  wrapper.style.marginTop = "12px";
+  wrapper.style.paddingTop = "10px";
+  wrapper.style.borderTop = "1px solid #e2e8f0";
+
+  const header = document.createElement("div");
+  header.textContent = "Undo conflicts";
+  header.style.fontSize = "12px";
+  header.style.fontWeight = "800";
+
+  const body = document.createElement("div");
+  body.textContent = "Loading...";
+  body.style.marginTop = "6px";
+  body.style.fontSize = "11px";
+  body.style.color = "#475569";
+
+  wrapper.append(header, body);
+  root.appendChild(wrapper);
+
+  void fetch("/__intent/conflicts")
+    .then((response) => response.json() as Promise<ConflictReportResponse>)
+    .then((report) => {
+      body.innerHTML = "";
+      if (report.conflictCount === 0) {
+        body.textContent = "No unresolved undo conflicts.";
+        return;
+      }
+
+      const list = document.createElement("div");
+      list.style.display = "grid";
+      list.style.gap = "8px";
+
+      for (const conflict of report.conflicts.slice(0, 3)) {
+        const item = document.createElement("div");
+        item.style.border = "1px solid #e2e8f0";
+        item.style.borderRadius = "6px";
+        item.style.padding = "8px";
+        item.style.background = "#f8fafc";
+
+        const summary = document.createElement("div");
+        summary.textContent = `${conflict.expectedToken} -> ${conflict.actualToken} (${conflict.relativeFile})`;
+        summary.style.fontWeight = "800";
+        summary.style.lineHeight = "1.35";
+
+        const pathLine = document.createElement("div");
+        pathLine.textContent = conflict.relativeConflictFile;
+        pathLine.style.marginTop = "4px";
+        pathLine.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+        pathLine.style.fontSize = "10px";
+        pathLine.style.wordBreak = "break-all";
+
+        const action = createButton("Discard undo");
+        action.style.marginTop = "8px";
+        action.addEventListener("click", async () => {
+          action.disabled = true;
+          action.style.cursor = "default";
+          const response = await fetch("/__intent/resolve-conflict", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              conflictFile: conflict.relativeConflictFile,
+              action: "discard-pending-undo",
+              note: "Discarded from overlay conflict panel."
+            })
+          });
+          const result = (await response.json()) as ConflictResolveResponse;
+          if (result.ok) {
+            setStatus(`Conflict resolved: discarded pending undo, ${result.pendingCount} pending`);
+          } else {
+            action.disabled = false;
+            action.style.cursor = "pointer";
+            setStatus(`Conflict resolve rejected: ${result.reason}`);
+          }
+        });
+
+        item.append(summary, pathLine, action);
+        list.appendChild(item);
+      }
+
+      body.appendChild(list);
+    })
+    .catch(() => {
+      body.textContent = "Undo conflicts unavailable.";
+    });
+}
+
 function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status: string) {
   panel.innerHTML = "";
 
@@ -400,6 +491,9 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   });
   panel.appendChild(undo);
   renderUndoHistory(panel);
+  renderConflictPanel(panel, (message) => {
+    renderBinding(panel, binding, message);
+  });
 
   if (!binding) {
     const hint = document.createElement("p");

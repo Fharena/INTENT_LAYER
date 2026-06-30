@@ -10,9 +10,12 @@ import {
   pendingUndoHistoryFromOperationLog,
   pendingUndoStackFromOperationLog,
   planTokenPatch,
+  readPatchConflictReport,
   recordPatchApplyInOperationLog,
   recordPatchRevertInOperationLog,
+  removeDiscardedPatchFromStack,
   revertTokenPatch,
+  resolvePatchConflict,
   undoHistoryFromStack
 } from "./patch";
 import type {
@@ -22,6 +25,7 @@ import type {
   IntentBinding,
   IntentGraph,
   PatchApplyResult,
+  PatchConflictResolveRequest,
   PatchRequest
 } from "./types";
 
@@ -181,6 +185,11 @@ export function intentLayerSpike(): Plugin {
           return;
         }
 
+        if (url.pathname === "/__intent/conflicts" && request.method === "GET") {
+          writeJson(response, 200, readPatchConflictReport(state.rootDir));
+          return;
+        }
+
         if (
           (url.pathname === "/__intent/preview" || url.pathname === "/__intent/apply") &&
           request.method === "POST"
@@ -220,6 +229,24 @@ export function intentLayerSpike(): Plugin {
             if (result.ok) {
               state.undoStack.pop();
               recordPatchRevertInOperationLog(state.rootDir, result);
+            }
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/resolve-conflict" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as PatchConflictResolveRequest;
+            const result = resolvePatchConflict(state.rootDir, body);
+            if (result.ok) {
+              state.undoStack = removeDiscardedPatchFromStack(state.undoStack, result.discardedPatch);
             }
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {

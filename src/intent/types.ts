@@ -111,6 +111,7 @@ export interface PatchFailure {
     previewMs?: number;
     applyMs?: number;
     revertMs?: number;
+    resolveMs?: number;
     taskMs?: number;
     resultMs?: number;
   };
@@ -120,6 +121,7 @@ export interface PatchConflictArtifact {
   version: 1;
   kind: "revert-conflict";
   createdAt: string;
+  resolvedAt?: string;
   reason: string;
   id: string;
   file: string;
@@ -135,6 +137,23 @@ export interface PatchConflictArtifact {
   operationFile: string;
   diffFile: string;
   guidance: string[];
+  resolution?: {
+    action: "discard-pending-undo";
+    note?: string;
+  };
+}
+
+export interface PatchConflictSummary extends PatchConflictArtifact {
+  conflictFile: string;
+  relativeConflictFile: string;
+  resolved: boolean;
+}
+
+export interface PatchConflictReport {
+  version: 1;
+  generatedAt: string;
+  conflictCount: number;
+  conflicts: PatchConflictSummary[];
 }
 
 export interface PatchApplyResult extends PatchPreview {
@@ -157,6 +176,12 @@ export type PatchOperationLogEntry =
       action: "revert";
       createdAt: string;
       patch: PatchRevertResult;
+    }
+  | {
+      action: "discard";
+      createdAt: string;
+      conflictFile: string;
+      patch: PatchUndoDiscardReference;
     };
 
 export interface PatchOperationLog {
@@ -206,6 +231,39 @@ export interface PatchRevertResult {
   diffFile: string;
   metrics: {
     revertMs: number;
+  };
+}
+
+export interface PatchUndoDiscardReference {
+  id: string;
+  file: string;
+  relativeFile: string;
+  oldToken: string;
+  nextToken: string;
+  range: {
+    start: number;
+    end: number;
+  };
+}
+
+export interface PatchConflictResolveRequest {
+  conflictFile: string;
+  action: "discard-pending-undo";
+  note?: string;
+}
+
+export interface PatchConflictResolveResult {
+  ok: true;
+  resolved: true;
+  conflictFile: string;
+  relativeConflictFile: string;
+  action: "discard-pending-undo";
+  discardedPatch: PatchUndoDiscardReference;
+  pendingCount: number;
+  conflictArtifact: PatchConflictArtifact;
+  operationLogFile: string;
+  metrics: {
+    resolveMs: number;
   };
 }
 
