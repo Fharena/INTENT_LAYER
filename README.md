@@ -45,6 +45,7 @@ Run checks:
 
 ```bash
 npm run typecheck
+npm run intent:doctor
 npm run intent:check -- fixtures/corpus src/App.tsx
 npm run eval
 npm run build
@@ -54,6 +55,7 @@ Run the local CLI directly:
 
 ```bash
 npm run intent:init
+npm run intent:doctor
 npm run intent:dev -- --dry-run
 npx tsx src/intent/cli.ts --help
 node bin/intent-layer.cjs --help
@@ -96,7 +98,7 @@ The demo currently supports:
 - direct Tailwind token replacement for supported static tokens
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
 - read-only bindings for unsupported `className` expressions so agent handoff still works
-- minimal `intent-layer init` / `dev` / `scan` / `check` / `apply` / `diff` / `agent-context` / `agent-task` / `agent-result` CLI surface through `src/intent/cli.ts`
+- minimal `intent-layer init` / `doctor` / `dev` / `scan` / `check` / `apply` / `diff` / `agent-context` / `agent-task` / `agent-result` CLI surface through `src/intent/cli.ts`
 - installable `intent-layer` bin wrapper through `bin/intent-layer.cjs`, plus package `/vite` wrapper export, installed plugin transform smoke, installed Vite dev server preview/apply smoke, apply refresh timing, and installed multi-file graph refresh metrics in `reports/performance/spike-evaluation.json`
 - Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
 - operation-log-backed undo stack and pending undo history display for applied patches

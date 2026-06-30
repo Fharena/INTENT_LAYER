@@ -25,6 +25,7 @@
     "typecheck": "tsc --noEmit",
     "intent": "tsx src/intent/cli.ts",
     "intent:init": "tsx src/intent/cli.ts init",
+    "intent:doctor": "tsx src/intent/cli.ts doctor",
     "intent:dev": "tsx src/intent/cli.ts dev",
     "intent:scan": "tsx src/intent/cli.ts scan",
     "intent:check": "tsx src/intent/cli.ts check",

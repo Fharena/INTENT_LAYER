@@ -64,6 +64,7 @@ interface PackageSmokeResult {
   hasContextPackFiles: boolean;
   helpIncludesUsage: boolean;
   helpIncludesDev: boolean;
+  helpIncludesDoctor: boolean;
   viteImportOk: boolean;
   vitePluginName: string | null;
   vitePluginEnforce: string | null;
@@ -810,6 +811,7 @@ function packageSmoke(): PackageSmokeResult {
     hasContextPackFiles: files.some((file) => file.path.startsWith(".context-pack/")),
     helpIncludesUsage: help.stdout.includes("Usage:"),
     helpIncludesDev: help.stdout.includes("intent-layer dev"),
+    helpIncludesDoctor: help.stdout.includes("intent-layer doctor"),
     viteImportOk: viteImportReport.ok === true,
     vitePluginName: viteImportReport.pluginName ?? null,
     vitePluginEnforce: viteImportReport.enforce ?? null,
@@ -3442,6 +3444,8 @@ const cliGraphFile = path.join(rootDir, ".intent", "graph.intent.json");
 const cliGraph = fs.existsSync(cliGraphFile)
   ? (JSON.parse(fs.readFileSync(cliGraphFile, "utf8")) as IntentGraph)
   : null;
+const cliDoctor = runCli(["doctor"], rootDir);
+const cliDoctorReport = cliDoctor.report?.command === "doctor" ? cliDoctor.report : null;
 const cliAgentTaskBinding =
   cliGraph &&
   Object.values(cliGraph.entries).find(
@@ -3714,6 +3718,7 @@ const report = {
   },
   cli: {
     initExitCode: cliInit.exitCode,
+    doctorExitCode: cliDoctor.exitCode,
     devExitCode: cliDev.exitCode,
     scanExitCode: cliScan.exitCode,
     checkExitCode: cliCheck.exitCode,
@@ -3725,6 +3730,7 @@ const report = {
     agentTaskExitCode: cliAgentTask.exitCode,
     agentResultExitCode: cliAgentResult.exitCode,
     initCommand: cliInitReport?.command ?? null,
+    doctorCommand: cliDoctorReport?.command ?? null,
     devCommand: cliDevReport?.command ?? null,
     scanCommand: cliScanReport?.command ?? null,
     checkCommand: cliCheckReport?.command ?? null,
@@ -3737,6 +3743,13 @@ const report = {
     initCreatedPathCount: cliInitReport?.createdPaths.length ?? 0,
     initExistingPathCount: cliInitReport?.existingPaths.length ?? 0,
     initSchemaExists: cliInitSchemaExists,
+    doctorOk: cliDoctorReport?.ok ?? false,
+    doctorPassCount: cliDoctorReport?.summary.passCount ?? 0,
+    doctorWarnCount: cliDoctorReport?.summary.warnCount ?? 0,
+    doctorFailCount: cliDoctorReport?.summary.failCount ?? 0,
+    doctorCheckCount: cliDoctorReport?.checks.length ?? 0,
+    doctorGuidanceCount: cliDoctorReport?.guidance.length ?? 0,
+    doctorMs: cliDoctorReport?.doctorMs ?? null,
     devOk: cliDevReport?.ok ?? false,
     devDryRun: cliDevReport?.dryRun ?? false,
     devHost: cliDevReport?.host ?? null,
@@ -3806,6 +3819,7 @@ const report = {
     checkStdoutBytes: cliCheck.stdout.length,
     applyStdoutBytes: cliApply.stdout.length,
     diffStdoutBytes: cliDiff.stdout.length,
+    doctorStdoutBytes: cliDoctor.stdout.length,
     agentContextStdoutBytes: cliAgentContext.stdout.length,
     agentTaskStdoutBytes: cliAgentTask.stdout.length,
     agentResultStdoutBytes: cliAgentResult.stdout.length
@@ -4809,6 +4823,14 @@ const report = {
       cliDevReport.host === "127.0.0.1" &&
       cliDevReport.port === 5173 &&
       cliDevReport.args.some((arg) => arg.endsWith("vite.js")),
+    cliDoctorPass:
+      cliDoctor.exitCode === 0 &&
+      cliDoctorReport?.command === "doctor" &&
+      cliDoctorReport.ok &&
+      cliDoctorReport.summary.failCount === 0 &&
+      cliDoctorReport.summary.passCount >= 8 &&
+      cliDoctorReport.checks.some((check) => check.name === "vite-plugin" && check.status === "pass") &&
+      cliDoctorReport.checks.some((check) => check.name === "source-files" && check.status === "pass"),
     packageInstallSmokePass:
       packageInstallSmoke.dryRunExitCode === 0 &&
       packageInstallSmoke.packExitCode === 0 &&
@@ -4825,6 +4847,7 @@ const report = {
       !packageInstallSmoke.hasContextPackFiles &&
       packageInstallSmoke.helpIncludesUsage &&
       packageInstallSmoke.helpIncludesDev &&
+      packageInstallSmoke.helpIncludesDoctor &&
       packageInstallSmoke.viteImportOk &&
       packageInstallSmoke.packageName === "intent-layer" &&
       packageInstallSmoke.vitePluginName === "intent-layer" &&

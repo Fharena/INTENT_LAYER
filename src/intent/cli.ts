@@ -13,6 +13,7 @@ import type { IntentBinding, IntentGraph } from "./types";
 
 type CliCommand =
   | "init"
+  | "doctor"
   | "dev"
   | "scan"
   | "check"
@@ -54,6 +55,32 @@ interface CliInitReport {
   createdPaths: string[];
   existingPaths: string[];
   initMs: number;
+}
+
+type CliDoctorStatus = "pass" | "warn" | "fail";
+
+interface CliDoctorCheck {
+  name: string;
+  status: CliDoctorStatus;
+  detail: string;
+  file: string | null;
+}
+
+interface CliDoctorReport {
+  version: 1;
+  command: "doctor";
+  generatedAt: string;
+  ok: boolean;
+  root: string;
+  inputs: string[];
+  checks: CliDoctorCheck[];
+  summary: {
+    passCount: number;
+    warnCount: number;
+    failCount: number;
+  };
+  guidance: string[];
+  doctorMs: number;
 }
 
 interface CliDevReport {
@@ -231,6 +258,7 @@ export interface CliRunResult {
   stderr: string;
   report:
     | CliInitReport
+    | CliDoctorReport
     | CliDevReport
     | CliScanReport
     | CliCheckReport
@@ -440,6 +468,203 @@ function createDirIfMissing(rootDir: string, dir: string, createdPaths: string[]
 
   fs.mkdirSync(dir, { recursive: true });
   createdPaths.push(relativeFromRoot(rootDir, dir));
+}
+
+function firstExistingFile(rootDir: string, candidates: string[]): string | null {
+  for (const candidate of candidates) {
+    const file = path.join(rootDir, candidate);
+    if (fs.existsSync(file) && fs.statSync(file).isFile()) return file;
+  }
+  return null;
+}
+
+function firstExistingDir(rootDir: string, candidates: string[]): string | null {
+  for (const candidate of candidates) {
+    const dir = path.join(rootDir, candidate);
+    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) return dir;
+  }
+  return null;
+}
+
+function readPackageJson(rootDir: string): { file: string; data: Record<string, unknown> } | null {
+  const file = path.join(rootDir, "package.json");
+  if (!fs.existsSync(file)) return null;
+
+  try {
+    return {
+      file,
+      data: JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>
+    };
+  } catch {
+    return null;
+  }
+}
+
+function hasPackageDependency(packageJson: Record<string, unknown>, dependency: string): boolean {
+  for (const field of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
+    const dependencies = packageJson[field];
+    if (dependencies && typeof dependencies === "object" && dependency in dependencies) return true;
+  }
+  return false;
+}
+
+function pushDoctorCheck(
+  rootDir: string,
+  checks: CliDoctorCheck[],
+  name: string,
+  status: CliDoctorStatus,
+  detail: string,
+  file: string | null
+) {
+  checks.push({
+    name,
+    status,
+    detail,
+    file: file ? relativeFromRoot(rootDir, file) : null
+  });
+}
+
+function doctorReport(rootDir: string, options: CliOptions): CliDoctorReport {
+  const started = performance.now();
+  const checks: CliDoctorCheck[] = [];
+  const guidance: string[] = [];
+  const packageJson = readPackageJson(rootDir);
+  const packageName =
+    packageJson?.data.name && typeof packageJson.data.name === "string" ? packageJson.data.name : null;
+  const viteConfig = firstExistingFile(rootDir, [
+    "vite.config.ts",
+    "vite.config.mts",
+    "vite.config.js",
+    "vite.config.mjs",
+    "vite.config.cts",
+    "vite.config.cjs"
+  ]);
+  const tailwindConfig = firstExistingFile(rootDir, [
+    "tailwind.config.ts",
+    "tailwind.config.js",
+    "tailwind.config.mjs",
+    "tailwind.config.cjs"
+  ]);
+  const sourceFileCount = sourceFiles(rootDir, options.inputs).length;
+  const intentDir = firstExistingDir(rootDir, [".intent"]);
+  const graphFile = firstExistingFile(rootDir, [path.join(".intent", "graph.intent.json")]);
+
+  if (packageJson) {
+    pushDoctorCheck(rootDir, checks, "package-json", "pass", `Found package.json${packageName ? ` for ${packageName}` : ""}.`, packageJson.file);
+  } else {
+    pushDoctorCheck(rootDir, checks, "package-json", "fail", "Missing package.json at the project root.", null);
+    guidance.push("Run doctor from a React/Vite project root that contains package.json.");
+  }
+
+  if (packageJson?.data && (hasPackageDependency(packageJson.data, "intent-layer") || packageName === "intent-layer")) {
+    pushDoctorCheck(
+      rootDir,
+      checks,
+      "intent-layer-package",
+      "pass",
+      packageName === "intent-layer"
+        ? "Current package is intent-layer."
+        : "intent-layer is listed in package dependencies.",
+      packageJson.file
+    );
+  } else {
+    pushDoctorCheck(
+      rootDir,
+      checks,
+      "intent-layer-package",
+      "warn",
+      "intent-layer is not listed in package dependencies.",
+      packageJson?.file ?? null
+    );
+    guidance.push("Install the package in the target project before using the Vite plugin: npm install intent-layer.");
+  }
+
+  if (packageJson?.data && hasPackageDependency(packageJson.data, "vite")) {
+    pushDoctorCheck(rootDir, checks, "vite-dependency", "pass", "Vite dependency found.", packageJson.file);
+  } else {
+    pushDoctorCheck(rootDir, checks, "vite-dependency", "fail", "Vite dependency was not found.", packageJson?.file ?? null);
+    guidance.push("Add Vite to the target project before running intent-layer dev.");
+  }
+
+  if (packageJson?.data && hasPackageDependency(packageJson.data, "react")) {
+    pushDoctorCheck(rootDir, checks, "react-dependency", "pass", "React dependency found.", packageJson.file);
+  } else {
+    pushDoctorCheck(rootDir, checks, "react-dependency", "warn", "React dependency was not found.", packageJson?.file ?? null);
+    guidance.push("MVP support is optimized for React projects.");
+  }
+
+  if (tailwindConfig) {
+    pushDoctorCheck(rootDir, checks, "tailwind-config", "pass", "Tailwind config found.", tailwindConfig);
+  } else {
+    pushDoctorCheck(rootDir, checks, "tailwind-config", "warn", "Tailwind config was not found.", null);
+    guidance.push("MVP direct edits target Tailwind class tokens; add Tailwind config if this project uses Tailwind.");
+  }
+
+  if (viteConfig) {
+    pushDoctorCheck(rootDir, checks, "vite-config", "pass", "Vite config found.", viteConfig);
+    const configSource = fs.readFileSync(viteConfig, "utf8");
+    const hasIntentImport =
+      configSource.includes("intent-layer/vite") ||
+      configSource.includes("src/intent/vitePlugin") ||
+      configSource.includes("intent/vitePlugin");
+    const hasIntentCall = /\bintentLayer\s*\(/.test(configSource);
+    if (hasIntentImport && hasIntentCall) {
+      pushDoctorCheck(rootDir, checks, "vite-plugin", "pass", "intentLayer() appears to be registered in Vite config.", viteConfig);
+    } else {
+      pushDoctorCheck(
+        rootDir,
+        checks,
+        "vite-plugin",
+        "fail",
+        "intentLayer() was not found in the Vite config.",
+        viteConfig
+      );
+      guidance.push("Add `import { intentLayer } from \"intent-layer/vite\"` and include `intentLayer()` in the Vite plugins array.");
+    }
+  } else {
+    pushDoctorCheck(rootDir, checks, "vite-config", "fail", "No vite.config file was found.", null);
+    guidance.push("Create a Vite config and register the intent-layer Vite plugin.");
+  }
+
+  if (sourceFileCount > 0) {
+    pushDoctorCheck(rootDir, checks, "source-files", "pass", `${sourceFileCount} JSX/TSX source files found for inputs: ${options.inputs.join(", ")}.`, null);
+  } else {
+    pushDoctorCheck(rootDir, checks, "source-files", "fail", `No JSX/TSX source files found for inputs: ${options.inputs.join(", ")}.`, null);
+    guidance.push("Pass source roots explicitly, for example: intent-layer doctor src app components.");
+  }
+
+  if (intentDir) {
+    pushDoctorCheck(rootDir, checks, "intent-workspace", "pass", ".intent workspace directory exists.", intentDir);
+  } else {
+    pushDoctorCheck(rootDir, checks, "intent-workspace", "warn", ".intent workspace directory does not exist yet.", null);
+    guidance.push("Run `intent-layer init` to create the local intent workspace folders and schemas.");
+  }
+
+  if (graphFile) {
+    pushDoctorCheck(rootDir, checks, "intent-graph", "pass", "Intent graph file exists.", graphFile);
+  } else {
+    pushDoctorCheck(rootDir, checks, "intent-graph", "warn", "Intent graph file does not exist yet.", null);
+    guidance.push("Run `intent-layer scan src --write-graph` or start the Vite dev server to generate `.intent/graph.intent.json`.");
+  }
+
+  const summary = {
+    passCount: checks.filter((check) => check.status === "pass").length,
+    warnCount: checks.filter((check) => check.status === "warn").length,
+    failCount: checks.filter((check) => check.status === "fail").length
+  };
+
+  return {
+    version: 1,
+    command: "doctor",
+    generatedAt: new Date().toISOString(),
+    ok: summary.failCount === 0,
+    root: rootDir,
+    inputs: options.inputs,
+    checks,
+    summary,
+    guidance: [...new Set(guidance)],
+    doctorMs: Number((performance.now() - started).toFixed(3))
+  };
 }
 
 function initIntentWorkspace(rootDir: string): CliInitReport {
@@ -693,6 +918,7 @@ function usage(): string {
   return [
     "Usage:",
     "  intent-layer init",
+    "  intent-layer doctor [inputs...] [--out file]",
     "  intent-layer dev [--host 127.0.0.1] [--port 5173] [--dry-run]",
     "  intent-layer scan [inputs...] [--out file] [--write-graph]",
     "  intent-layer check [inputs...] [--min-supported-direct n] [--max-file-transform-ms n] [--out file]",
@@ -835,6 +1061,7 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
 
   if (
     command !== "init" &&
+    command !== "doctor" &&
     command !== "dev" &&
     command !== "scan" &&
     command !== "check" &&
@@ -858,6 +1085,13 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
     const json = `${JSON.stringify(report, null, 2)}\n`;
     writeOut(rootDir, options.out, json);
     return { exitCode: 0, stdout: json, stderr: "", report };
+  }
+
+  if (command === "doctor") {
+    const report = doctorReport(rootDir, options);
+    const json = `${JSON.stringify(report, null, 2)}\n`;
+    writeOut(rootDir, options.out, json);
+    return { exitCode: report.ok ? 0 : 1, stdout: json, stderr: "", report };
   }
 
   if (command === "dev") {
