@@ -506,6 +506,7 @@ packages/
     element picker
     knobs panel
     patch preview
+    pending undo history
 
   cli/
     init
@@ -743,7 +744,7 @@ Required:
 - [ ] Tailwind spacing/layout/color/radius parser
 - [ ] knob panel
 - [ ] range patch
-- [ ] undo/revert
+- [ ] undo/revert + pending history
 - [ ] intent diff
 - [ ] `.intent` folder creation
 - [ ] confidence display

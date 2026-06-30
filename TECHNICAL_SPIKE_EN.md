@@ -116,6 +116,7 @@ Revert flow:
 4. If it matches, the range is replaced with `oldToken`.
 5. Revert operation/diff artifacts are written and a revert entry is appended to the operation log.
 6. If the in-memory stack is empty, pending apply entries are restored from the operation log.
+7. `/__intent/undo-history` returns the pending undo stack as JSON, and the overlay displays recent pending undo entries.
 
 This is a LIFO undo stack for the MVP.
 Branching history and conflict-resolution UI are not implemented yet.
@@ -246,7 +247,8 @@ Support model:
 - Variant functions and props forwarding degrade to read-only bindings and agent handoff.
 - Undo uses an operation-log-backed LIFO stack and can revert multiple direct patches in order.
 - After a dev server restart, the pending undo stack can be restored from the operation log once graph bindings are available again.
-- Undo history UI, branch undo, and conflict-resolution UI are not implemented yet.
+- The overlay displays up to 5 pending undo entries and highlights the next revert target.
+- Branch undo and conflict-resolution UI are not implemented yet.
 - Agent handoff records a selected source-window snapshot, component snapshot, related source snapshot, task/result markdown, and intent diffs.
 - Agent results record before/after line diffs for both the selected source window and the selected component snapshot.
 - Agent results record related source diffs and related semantic token diffs for simple variable-reference read-only bindings.
@@ -266,7 +268,7 @@ Support model:
 Priority order:
 
 1. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
-2. Design undo history UI and conflict-resolution UX.
+2. Design branch undo and conflict-resolution UX.
 3. Extend related source semantic diffs to arrays, object maps, and template literals.
 4. Add component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports.
 5. Validate caching and graph write throttling on product-sized TSX files.

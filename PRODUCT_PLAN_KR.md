@@ -508,6 +508,7 @@ packages/
     element picker
     knobs panel
     patch preview
+    pending undo history
 
   cli/
     init
@@ -745,7 +746,7 @@ Next.js adapter
 - [ ] Tailwind spacing/layout/color/radius token parser
 - [ ] knob panel
 - [ ] range patch
-- [ ] undo/revert
+- [ ] undo/revert + pending history
 - [ ] intent diff
 - [ ] `.intent` 폴더 생성
 - [ ] confidence 표시

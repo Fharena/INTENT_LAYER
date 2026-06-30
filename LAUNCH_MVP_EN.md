@@ -369,6 +369,7 @@ A structured task document for edits that deterministic engine cannot perform.
 - component/source panel
 - intent inspector
 - direct edit controls
+- pending undo history
 - confidence badge
 - stale badge
 - agent handoff button
@@ -545,4 +546,3 @@ Small edits are direct.
 Large edits are structured for AI.
 Results are reviewed semantically.
 ```
-

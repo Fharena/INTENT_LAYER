@@ -68,7 +68,7 @@ The demo currently supports:
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
 - read-only bindings for unsupported `className` expressions so agent handoff still works
 - Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
-- operation-log-backed undo stack for applied patches
+- operation-log-backed undo stack and pending undo history display for applied patches
 - structured agent handoff task generation at `.intent/agent/task_*.md`
 - structured agent result artifact generation at `.intent/agent/result_*.md`
 - source hash validation before patching

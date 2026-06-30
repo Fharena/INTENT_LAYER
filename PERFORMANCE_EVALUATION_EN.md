@@ -20,6 +20,7 @@ Measured inputs:
 - simple `cn()` patch fixture
 - last-patch revert fixture
 - operation-log undo stack fixture
+- pending undo history fixture
 - agent handoff task fixture
 - agent result artifact fixture
 - agent result source diff fixture
@@ -154,8 +155,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.096ms / p95 2.812ms / max 2.812ms |
-| `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
+| `src/App.tsx` | 13 | avg 1.263ms / p95 3.384ms / max 3.384ms |
+| `src/main.tsx` | 0 | avg 0.004ms / p95 0.01ms / max 0.01ms |
 
 Summary:
 
@@ -163,12 +164,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.549ms |
-| Overall p95 transform time | 2.812ms |
-| Overall max transform time | 2.812ms |
-| Warm average transform time | 0.334ms |
-| Warm p95 transform time | 0.726ms |
-| Warm max transform time | 0.726ms |
+| Overall average transform time | 0.633ms |
+| Overall p95 transform time | 3.384ms |
+| Overall max transform time | 3.384ms |
+| Warm average transform time | 0.367ms |
+| Warm p95 transform time | 0.939ms |
+| Warm max transform time | 0.939ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -192,9 +193,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 10.156ms |
-| p95 transform time | 19.545ms |
-| Max transform time | 19.545ms |
+| Average transform time | 8.734ms |
+| p95 transform time | 13.652ms |
+| Max transform time | 13.652ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -209,13 +210,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.401ms |
-| Preview round trip | 1.835ms |
+| Preview time | 1.054ms |
+| Preview round trip | 1.665ms |
 | Apply success | true |
-| Static apply time | 30.089ms |
-| Simple `cn()` apply time | 15.486ms |
+| Static apply time | 36.693ms |
+| Simple `cn()` apply time | 19.789ms |
 | Revert success | true |
-| Revert time | 22.531ms |
+| Revert time | 34.157ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -238,15 +239,20 @@ Interpretation:
 | First apply success | true |
 | Second apply success | true |
 | Pending undo count after apply | 2 |
+| History pending count after apply | 2 |
+| Next undo token after apply | `p-8` |
 | First revert success | true |
 | Pending undo count after first revert | 1 |
+| History pending count after first revert | 1 |
 | Second revert success | true |
 | Pending undo count after second revert | 0 |
+| History pending count after second revert | 0 |
 | Syntax errors after stack revert | 0 |
 
 Interpretation:
 
 - The fixture applies two direct patches, restores the pending undo stack from the operation log, then reverts both patches in order.
+- Pending undo history exposes the same stack as JSON and records `p-8` as the next revert target after apply.
 - This verifies the same LIFO flow used by `/__intent/revert-last`.
 - The operation log is an append-only JSON file for apply/revert entries and does not require a database or external service.
 
@@ -255,8 +261,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.101ms |
-| Average lookup | 0.000101ms |
+| Total time | 0.11ms |
+| Average lookup | 0.00011ms |
 
 Caveat:
 
@@ -338,7 +344,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 10.722ms |
+| Task generation time | 25.907ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -362,7 +368,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 10.793ms |
+| Result generation time | 15.532ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -435,10 +441,10 @@ Cases checked:
 
 | Case | Component | Bindings | Task time | Result |
 | --- | --- | ---: | ---: | --- |
-| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 2.25ms | pass |
-| arrow block | `ComponentSnapshotArrowBlock` | 2 | 2.334ms | pass |
-| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 1.994ms | pass |
-| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.982ms | pass |
+| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 3.246ms | pass |
+| arrow block | `ComponentSnapshotArrowBlock` | 2 | 3.026ms | pass |
+| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 2.751ms | pass |
+| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.964ms | pass |
 
 Interpretation:
 
@@ -456,9 +462,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 3.114ms |
+| Agent task generation time | 2.907ms |
 | Agent result created | true |
-| Agent result generation time | 9.987ms |
+| Agent result generation time | 31.701ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 0 |
@@ -486,9 +492,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 3.031ms |
+| Agent task generation time | 8.35ms |
 | Agent result created | true |
-| Agent result generation time | 10.826ms |
+| Agent result generation time | 11.794ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 2 |
@@ -528,7 +534,7 @@ Interpretation:
 | browser revert round trip | revert round trip <= 50ms | pass |
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
-| operation log undo stack | 2 applies + 2 reverts + pending stack 0 + syntax error 0 | pass |
+| operation log undo stack/history | 2 applies + history next token `p-8` + 2 reverts + pending stack 0 + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
 | agent result generation | result/diff created + source diff + selected/component/related semantic diff section present | pass |
 | component snapshot discovery | all 4 fixture cases pass | pass |
@@ -552,6 +558,7 @@ What worked:
 - source token range patching
 - patch preview before apply
 - operation-log-backed undo stack
+- pending undo history endpoint and overlay display
 - LIFO stack behavior through the last-patch revert endpoint
 - agent handoff task markdown generation
 - agent result markdown, selected source-window diff, component source diff, and selected/component/related `className` semantic diff generation
@@ -571,7 +578,7 @@ What remains weak:
 
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
-- undo history UI and conflict-resolution UX are still missing
+- branch undo and conflict-resolution UX are still missing
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports are still missing
 - related source semantic token diffs still focus on simple quoted declarations and simple `cn()` / `clsx()` variable declaration literal segments, and need expansion to arrays, object maps, and template literals
@@ -581,5 +588,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, undo history UI design, and related source semantic diff expansion for arrays, object maps, and template literals.
+The next priority is independent external corpus validation, branch undo/conflict-resolution UX design, and related source semantic diff expansion for arrays, object maps, and template literals.
 ```

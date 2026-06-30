@@ -393,6 +393,7 @@ deterministic engine이 직접 처리하지 못한 작업을 AI agent에게 넘�
 - component/source panel
 - intent inspector
 - direct edit controls
+- pending undo history
 - confidence badge
 - stale badge
 - agent handoff button
@@ -575,4 +576,3 @@ AI가 만든 코드를 내가 이해하고 통제할 수 있게 해주는 레이
 큰 건 AI에게 구조화해서 맡기고,
 결과는 의미 단위로 검수한다.
 ```
-

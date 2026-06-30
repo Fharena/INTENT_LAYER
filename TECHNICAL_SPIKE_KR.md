@@ -115,6 +115,7 @@ AST code generation으로 파일을 다시 출력하지 않는다.
 4. 정확히 일치하면 `oldToken`으로 다시 교체한다.
 5. revert operation/diff 파일을 생성하고 operation log에 revert entry를 append한다.
 6. dev server 메모리 stack이 비어 있으면 operation log에서 아직 revert되지 않은 apply stack을 복원한다.
+7. `/__intent/undo-history`가 pending undo stack을 JSON으로 반환하고 overlay가 최근 pending undo 항목을 표시한다.
 
 이 방식은 MVP용 LIFO undo stack이다.
 브랜치 히스토리 UI나 충돌 해결 UI는 아직 만들지 않았다.
@@ -245,7 +246,8 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - variant 함수와 props forwarding은 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
 - undo는 operation log 기반 LIFO stack으로 여러 direct patch를 순서대로 되돌릴 수 있다.
 - dev server 재시작 후에도 graph binding이 다시 준비되면 operation log에서 pending undo stack을 복원할 수 있다.
-- undo history UI, branch undo, 충돌 해결 UI는 아직 없다.
+- overlay는 pending undo history를 최근 5개까지 표시하고 다음 revert 대상을 강조한다.
+- branch undo, 충돌 해결 UI는 아직 없다.
 - agent handoff는 선택 source window snapshot, component snapshot, related source snapshot, task/result markdown, intent diff 기록을 지원한다.
 - agent result는 선택 source window와 선택 component snapshot의 before/after line diff를 기록한다.
 - agent result는 단순 변수 참조 read-only binding의 related source diff와 related semantic token diff를 기록한다.
@@ -265,7 +267,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 우선순위:
 
 1. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
-2. undo history UI와 충돌 해결 UX를 설계한다.
+2. branch undo와 충돌 해결 UX를 설계한다.
 3. related source semantic diff를 배열, object map, template literal까지 확장한다.
 4. HOC-wrapped component, memo/forwardRef, namespace export에 대한 component snapshot fixture를 추가한다.
 5. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
