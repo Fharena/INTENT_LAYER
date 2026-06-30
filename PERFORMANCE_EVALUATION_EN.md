@@ -30,6 +30,7 @@ Measured inputs:
 - read-only related source/semantic diff fixture
 - read-only `cn()` variable related semantic diff fixture
 - read-only composite variable related semantic diff fixture
+- variant/cva related source handoff fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -156,8 +157,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.106ms / p95 2.89ms / max 2.89ms |
-| `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
+| `src/App.tsx` | 13 | avg 1.717ms / p95 3.769ms / max 3.769ms |
+| `src/main.tsx` | 0 | avg 0.005ms / p95 0.008ms / max 0.008ms |
 
 Summary:
 
@@ -165,12 +166,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.554ms |
-| Overall p95 transform time | 2.89ms |
-| Overall max transform time | 2.89ms |
-| Warm average transform time | 0.331ms |
-| Warm p95 transform time | 0.781ms |
-| Warm max transform time | 0.781ms |
+| Overall average transform time | 0.861ms |
+| Overall p95 transform time | 3.769ms |
+| Overall max transform time | 3.769ms |
+| Warm average transform time | 0.604ms |
+| Warm p95 transform time | 1.429ms |
+| Warm max transform time | 1.429ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -194,9 +195,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 10.41ms |
-| p95 transform time | 18.88ms |
-| Max transform time | 18.88ms |
+| Average transform time | 8.48ms |
+| p95 transform time | 16.695ms |
+| Max transform time | 16.695ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -211,13 +212,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 0.997ms |
-| Preview round trip | 1.774ms |
+| Preview time | 0.85ms |
+| Preview round trip | 1.284ms |
 | Apply success | true |
-| Static apply time | 35.589ms |
-| Simple `cn()` apply time | 12.665ms |
+| Static apply time | 37.731ms |
+| Simple `cn()` apply time | 16.805ms |
 | Revert success | true |
-| Revert time | 8.282ms |
+| Revert time | 18.87ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -262,8 +263,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.05ms |
-| Average lookup | 0.00005ms |
+| Total time | 0.098ms |
+| Average lookup | 0.000098ms |
 
 Caveat:
 
@@ -345,7 +346,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 12.109ms |
+| Task generation time | 16.203ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -369,7 +370,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 18.284ms |
+| Result generation time | 7.904ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -442,14 +443,14 @@ Cases checked:
 
 | Case | Component | Bindings | Task time | Result |
 | --- | --- | ---: | ---: | --- |
-| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 2.405ms | pass |
-| arrow block | `ComponentSnapshotArrowBlock` | 2 | 2.043ms | pass |
-| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 1.643ms | pass |
-| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.068ms | pass |
-| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 1.942ms | pass |
-| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 2.614ms | pass |
-| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 2.108ms | pass |
-| namespace object export | `ComponentSnapshotNamespace` | 1 | 2.404ms | pass |
+| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 2.326ms | pass |
+| arrow block | `ComponentSnapshotArrowBlock` | 2 | 2.58ms | pass |
+| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 2.296ms | pass |
+| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.941ms | pass |
+| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 2.484ms | pass |
+| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 3.125ms | pass |
+| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 2.581ms | pass |
+| namespace object export | `ComponentSnapshotNamespace` | 1 | 2.269ms | pass |
 
 Interpretation:
 
@@ -468,9 +469,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.042ms |
+| Agent task generation time | 2.375ms |
 | Agent result created | true |
-| Agent result generation time | 8.571ms |
+| Agent result generation time | 6.445ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 0 |
@@ -498,9 +499,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.56ms |
+| Agent task generation time | 2.413ms |
 | Agent result created | true |
-| Agent result generation time | 7.597ms |
+| Agent result generation time | 7.073ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 2 |
@@ -528,9 +529,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 3.017ms |
+| Agent task generation time | 3.234ms |
 | Agent result created | true |
-| Agent result generation time | 14.491ms |
+| Agent result generation time | 11.486ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 14 |
@@ -548,6 +549,39 @@ Interpretation:
 - A `cardClass` variable mixing array join, object-map lookup, and runtime template literal segments is captured as related source.
 - Result recording splits the base array literal, conditional literal, object-map literal, and template-literal conditional literal into separate semantic changes.
 - This fixture proves read-only related semantic diffs now cover composite variable declarations beyond simple variables and simple `cn()`.
+
+## 9.3 Variant Function Handoff
+
+| Metric | Value |
+| --- | ---: |
+| Read-only entry created | true |
+| Binding kind | `read-only` |
+| Unsupported reason | `variant-function` |
+| ClassName value | `buttonVariants({ variant: "primary" })` |
+| Editable token count | 0 |
+| Agent task created | true |
+| Agent task generation time | 2.83ms |
+| Related snapshot available | true |
+| Related snapshot kind | `variant-function` |
+| Related snapshot identifier | `buttonVariants` |
+| Related snapshot includes cva | true |
+| Agent result created | true |
+| Agent result generation time | 10.09ms |
+| Syntax errors after result | 0 |
+| Selected source diff line count | 0 |
+| Component source diff line count | 0 |
+| Related source diff line count | 8 |
+| Related source diff present | true |
+| Related semantic className change count | 2 |
+| Related semantic diff present | true |
+| Related semantic token added count | 5 |
+| Related semantic token removed count | 5 |
+
+Interpretation:
+
+- `className={buttonVariants(...)}` remains read-only and degrades to agent handoff rather than direct patching.
+- The same-file local `const buttonVariants = cva(...)` declaration is stored as the related source snapshot.
+- Result recording preserves changes to the variant declaration as related source diff and literal-token semantic diff even when the selected JSX call does not change.
 
 ## 10. Gate Results
 
@@ -578,12 +612,13 @@ Interpretation:
 | read-only related source/semantic diff | related snapshot + related source diff + related semantic diff + syntax error 0 | pass |
 | read-only `cn()` variable related semantic diff | related source diff + related semantic change >= 2 + token added/removed >= 4 + syntax error 0 | pass |
 | read-only composite variable related semantic diff | array/object/template related semantic change >= 4 + token added/removed >= 6 + syntax error 0 | pass |
+| variant/cva related source handoff | local variant declaration snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local variant/cva declarations as related source handoff context.
 
 What worked:
 
@@ -603,6 +638,7 @@ What worked:
 - related source diff and semantic token diff generation for read-only variable references
 - related source diff and semantic token diff generation for read-only `cn()` variable references
 - related semantic token diff generation for read-only composite variables using array/object-map/template-literal declarations
+- related source diff and semantic token diff generation for local variant/cva read-only bindings
 - real browser click-to-panel, preview, apply, and revert round-trip measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
@@ -619,12 +655,12 @@ What remains weak:
 - branch undo and conflict-resolution UX are still missing
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
-- automatic semantic analysis for variant-function meaning and cross-variable data flow is still missing
+- automatic semantic analysis for imported variant functions and cross-variable data flow is still missing
 - variant functions and runtime template literals remain unsupported for direct patching
 
 Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, branch undo/conflict-resolution UX design, stronger variant-function handoff context, and component snapshot false-positive/false-negative measurement on product-sized TSX files.
+The next priority is independent external corpus validation, branch undo/conflict-resolution UX design, imported variant/cross-variable handoff context, and component snapshot false-positive/false-negative measurement on product-sized TSX files.
 ```

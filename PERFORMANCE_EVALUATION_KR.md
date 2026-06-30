@@ -30,6 +30,7 @@ npm run build
 - read-only related source/semantic diff fixture
 - read-only `cn()` variable related semantic diff fixture
 - read-only composite variable related semantic diff fixture
+- variant/cva related source handoff fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, revert 측정
 
@@ -156,8 +157,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.106ms / p95 2.89ms / max 2.89ms |
-| `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
+| `src/App.tsx` | 13 | avg 1.717ms / p95 3.769ms / max 3.769ms |
+| `src/main.tsx` | 0 | avg 0.005ms / p95 0.008ms / max 0.008ms |
 
 요약:
 
@@ -165,12 +166,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 0.554ms |
-| 전체 p95 transform time | 2.89ms |
-| 전체 최대 transform time | 2.89ms |
-| warm 평균 transform time | 0.331ms |
-| warm p95 transform time | 0.781ms |
-| warm 최대 transform time | 0.781ms |
+| 전체 평균 transform time | 0.861ms |
+| 전체 p95 transform time | 3.769ms |
+| 전체 최대 transform time | 3.769ms |
+| warm 평균 transform time | 0.604ms |
+| warm p95 transform time | 1.429ms |
+| warm 최대 transform time | 1.429ms |
 | warm 목표 | 5ms 이하 |
 | cold 목표 | 10ms 이하 |
 | 결과 | warm 통과 / cold 통과 |
@@ -194,9 +195,9 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 파일 크기 | 45,352 bytes |
 | 반복 측정 | 5 |
-| average transform time | 10.41ms |
-| p95 transform time | 18.88ms |
-| max transform time | 18.88ms |
+| average transform time | 8.48ms |
+| p95 transform time | 16.695ms |
+| max transform time | 16.695ms |
 | stress 목표 | 20ms 이하 |
 | 결과 | 통과 |
 
@@ -211,13 +212,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 0.997ms |
-| preview round trip | 1.774ms |
+| preview time | 0.85ms |
+| preview round trip | 1.284ms |
 | apply 성공 | true |
-| static apply time | 35.589ms |
-| simple `cn()` apply time | 12.665ms |
+| static apply time | 37.731ms |
+| simple `cn()` apply time | 16.805ms |
 | revert 성공 | true |
-| revert time | 8.282ms |
+| revert time | 18.87ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -262,8 +263,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.05ms |
-| 평균 lookup | 0.00005ms |
+| 총 시간 | 0.098ms |
+| 평균 lookup | 0.000098ms |
 
 주의:
 
@@ -344,7 +345,7 @@ Viewport별 최대값:
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 12.109ms |
+| task 생성 시간 | 16.203ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -368,7 +369,7 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 18.284ms |
+| result 생성 시간 | 7.904ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
 | source hash changed | true |
@@ -441,14 +442,14 @@ dev server endpoint smoke test:
 
 | case | component | binding 수 | task time | 결과 |
 | --- | --- | ---: | ---: | --- |
-| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 2.405ms | 통과 |
-| arrow block | `ComponentSnapshotArrowBlock` | 2 | 2.043ms | 통과 |
-| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 1.643ms | 통과 |
-| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.068ms | 통과 |
-| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 1.942ms | 통과 |
-| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 2.614ms | 통과 |
-| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 2.108ms | 통과 |
-| namespace object export | `ComponentSnapshotNamespace` | 1 | 2.404ms | 통과 |
+| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 2.326ms | 통과 |
+| arrow block | `ComponentSnapshotArrowBlock` | 2 | 2.58ms | 통과 |
+| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 2.296ms | 통과 |
+| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.941ms | 통과 |
+| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 2.484ms | 통과 |
+| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 3.125ms | 통과 |
+| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 2.581ms | 통과 |
+| namespace object export | `ComponentSnapshotNamespace` | 1 | 2.269ms | 통과 |
 
 해석:
 
@@ -467,9 +468,9 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 2.042ms |
+| agent task 생성 시간 | 2.375ms |
 | agent result 생성 | true |
-| agent result 생성 시간 | 8.571ms |
+| agent result 생성 시간 | 6.445ms |
 | result 후 syntax error | 0 |
 | source diff line 수 | 2 |
 | component source diff line 수 | 0 |
@@ -497,9 +498,9 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 2.56ms |
+| agent task 생성 시간 | 2.413ms |
 | agent result 생성 | true |
-| agent result 생성 시간 | 7.597ms |
+| agent result 생성 시간 | 7.073ms |
 | result 후 syntax error | 0 |
 | source diff line 수 | 2 |
 | component source diff line 수 | 2 |
@@ -527,9 +528,9 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 3.017ms |
+| agent task 생성 시간 | 3.234ms |
 | agent result 생성 | true |
-| agent result 생성 시간 | 14.491ms |
+| agent result 생성 시간 | 11.486ms |
 | result 후 syntax error | 0 |
 | source diff line 수 | 2 |
 | component source diff line 수 | 14 |
@@ -547,6 +548,39 @@ dev server endpoint smoke test:
 - 배열 join, object map lookup, runtime template literal을 섞은 `cardClass` 변수도 related source snapshot으로 잡힌다.
 - result 기록은 배열 기본 literal, 조건부 literal, object-map literal, template literal 내부 조건부 literal을 각각 semantic change로 분리했다.
 - 이 fixture는 read-only related semantic diff가 단순 변수와 simple `cn()`을 넘어 composite 변수 선언까지 감사 로그로 남긴다는 증거다.
+
+## 9.3 Variant Function Handoff
+
+| 항목 | 값 |
+| --- | ---: |
+| read-only entry 생성 | true |
+| binding kind | `read-only` |
+| unsupported reason | `variant-function` |
+| className value | `buttonVariants({ variant: "primary" })` |
+| editable token 수 | 0 |
+| agent task 생성 | true |
+| agent task 생성 시간 | 2.83ms |
+| related snapshot 사용 가능 | true |
+| related snapshot kind | `variant-function` |
+| related snapshot identifier | `buttonVariants` |
+| related snapshot cva 포함 | true |
+| agent result 생성 | true |
+| agent result 생성 시간 | 10.09ms |
+| result 후 syntax error | 0 |
+| selected source diff line 수 | 0 |
+| component source diff line 수 | 0 |
+| related source diff line 수 | 8 |
+| related source diff 포함 | true |
+| related semantic className change 수 | 2 |
+| related semantic diff 포함 | true |
+| related semantic token added 수 | 5 |
+| related semantic token removed 수 | 5 |
+
+해석:
+
+- `className={buttonVariants(...)}`는 직접 patch하지 않고 read-only/agent handoff로 남긴다.
+- 같은 파일 안의 local `const buttonVariants = cva(...)` 선언을 related source snapshot으로 저장한다.
+- agent result 기록 시 selected JSX 자체가 바뀌지 않아도 variant 선언 변경을 related source diff와 literal token semantic diff로 감사 로그에 남긴다.
 
 ## 10. Gate 결과
 
@@ -577,12 +611,13 @@ dev server endpoint smoke test:
 | read-only related source/semantic diff | related snapshot + related source diff + related semantic diff + syntax error 0 | 통과 |
 | read-only `cn()` variable related semantic diff | related source diff + related semantic change >= 2 + token added/removed >= 4 + syntax error 0 | 통과 |
 | read-only composite variable related semantic diff | array/object/template related semantic change >= 4 + token added/removed >= 6 + syntax error 0 | 통과 |
+| variant/cva related source handoff | local variant declaration snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | 통과 |
 | simple `cn()` / `clsx()` patch | apply 성공 + syntax error 0 | 통과 |
 | stale rejection | source mismatch 거부 | 통과 |
 
 ## 11. 결론
 
-이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓혔다.
+이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local variant/cva 선언도 related source handoff 문맥으로 잡는다.
 
 성공한 것:
 
@@ -602,6 +637,7 @@ dev server endpoint smoke test:
 - read-only variable reference의 related source diff와 semantic token diff 생성
 - read-only `cn()` variable reference의 related source diff와 semantic token diff 생성
 - read-only composite variable의 배열/object map/template literal related semantic token diff 생성
+- variant/cva read-only binding의 local variant declaration related source diff와 semantic token diff 생성
 - 실제 브라우저 click-to-panel, preview, apply, revert round-trip 측정
 - unsupported className의 agent handoff degrade
 - simple `cn()` literal segment patch
@@ -618,12 +654,12 @@ dev server endpoint smoke test:
 - branch undo와 충돌 해결 UX는 아직 없다.
 - 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
 - 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
-- variant 함수 의미와 cross-variable data flow 자동 분석
+- imported variant 함수와 cross-variable data flow 자동 분석
 - variant 함수와 runtime template literal 직접 patch 지원
 
 다음 판단:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 외부 독립 corpus 검증, branch undo/충돌 해결 UX 설계, variant 함수 handoff 문맥 보강, 제품급 TSX 파일에서 component snapshot 오탐/미탐 재측정이다.
+다음 우선순위는 외부 독립 corpus 검증, branch undo/충돌 해결 UX 설계, imported variant 함수/cross-variable handoff 문맥 보강, 제품급 TSX 파일에서 component snapshot 오탐/미탐 재측정이다.
 ```

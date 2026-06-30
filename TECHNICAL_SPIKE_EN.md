@@ -253,6 +253,7 @@ Support model:
 - Agent results record before/after line diffs for both the selected source window and the selected component snapshot.
 - Agent results record related source diffs and related semantic token diffs for simple variable-reference read-only bindings.
 - Related semantic token diffing is covered by fixtures for simple quoted variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal declaration segments.
+- Variant-function read-only bindings store same-file local `function` / `const` variant declarations as related source snapshots, then record related source and semantic diffs on result.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
 - Component snapshot fixtures cover 8 cases: function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens, memo, forwardRef, HOC, and namespace object export.
 - They still do not infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
@@ -269,7 +270,7 @@ Priority order:
 
 1. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
 2. Design branch undo and conflict-resolution UX.
-3. Improve agent handoff context for variant functions and cross-variable data flow.
+3. Improve agent handoff context for imported variant functions and cross-variable data flow.
 4. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
 5. Validate caching and graph write throttling on product-sized TSX files.
 
@@ -336,7 +337,8 @@ Simple variable-reference read-only bindings store the related variable declarat
 It also rereads the source file to record `sourceHashChanged`.
 Component-level semantic diffing is currently limited to `className` tokens.
 Related source semantic diffing re-analyzes simple quoted variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal literal segments as tokens.
-It does not yet analyze variant-function meaning or cross-variable data flow automatically.
+Variant-function read-only bindings store same-file local variant function/variable declarations as related source, producing source diffs and literal-token semantic diffs.
+It does not yet analyze imported variant functions, variant-function meaning, or cross-variable data flow automatically.
 It does not yet infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 
 ### 9.1 Read-only Handoff
