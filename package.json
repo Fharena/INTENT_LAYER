@@ -36,6 +36,8 @@
     "generate:ai-corpus": "tsx scripts/generate-ai-corpus.ts",
     "analyze:classnames": "tsx scripts/analyze-classnames.ts fixtures/corpus src --out reports/performance/corpus-audit.json",
     "analyze:ai-corpus": "tsx scripts/analyze-classnames.ts fixtures/ai-generated --out reports/performance/ai-corpus-audit.json",
+    "import:external-corpus": "tsx scripts/import-external-corpus.ts",
+    "analyze:external-corpus": "tsx scripts/import-external-corpus.ts --analyze-only",
     "eval": "tsx scripts/evaluate-spike.ts"
   },
   "dependencies": {

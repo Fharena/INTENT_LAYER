@@ -20,3 +20,4 @@ dist/
 .intent/agent/task_*.md
 .intent/agent/result_*.md
 .intent/tmp/
+.intent/external-corpus/

@@ -29,6 +29,8 @@ const reportsDir = path.join(rootDir, "reports", "performance");
 const tmpDir = path.join(rootDir, ".intent", "tmp");
 const aiCorpusMinFiles = 50;
 const aiCorpusCoverageTarget = 0.5;
+const externalCorpusHarnessMinFiles = 3;
+const externalCorpusHarnessCoverageTarget = 0.5;
 
 interface CommandResult {
   exitCode: number | null;
@@ -119,6 +121,11 @@ interface PackageSmokeResult {
 
 function npmCommand(): string {
   return process.platform === "win32" ? "npm.cmd" : "npm";
+}
+
+function localTsxCommand(): string {
+  const file = path.join(rootDir, "node_modules", ".bin", process.platform === "win32" ? "tsx.cmd" : "tsx");
+  return fs.existsSync(file) ? file : "tsx";
 }
 
 function runCommand(
@@ -1102,6 +1109,103 @@ fs.mkdirSync(tmpDir, { recursive: true });
 const corpus = analyzeClassNames(["fixtures/corpus", "src/App.tsx"], rootDir);
 const aiGeneratedCorpus = analyzeClassNames(["fixtures/ai-generated"], rootDir);
 const { records: _aiGeneratedCorpusRecords, ...aiGeneratedCorpusSummary } = aiGeneratedCorpus;
+const externalCorpusHarnessSourceDir = path.join(tmpDir, "external-corpus-source");
+const externalCorpusHarnessOutDir = path.join(tmpDir, "external-corpus-import");
+const externalCorpusHarnessReportFile = path.join(tmpDir, "external-corpus-audit.json");
+fs.rmSync(externalCorpusHarnessSourceDir, { recursive: true, force: true });
+fs.mkdirSync(externalCorpusHarnessSourceDir, { recursive: true });
+fs.writeFileSync(
+  path.join(externalCorpusHarnessSourceDir, "ExternalDashboard.tsx"),
+  [
+    "export function ExternalDashboard() {",
+    "  return (",
+    "    <section className=\"grid grid-cols-3 gap-4 rounded-xl bg-white p-6 shadow-sm\">",
+    "      <article className=\"flex flex-col gap-2 rounded-lg border border-slate-200 p-4\">One</article>",
+    "      <article className=\"flex flex-col gap-2 rounded-lg border border-slate-200 p-4\">Two</article>",
+    "    </section>",
+    "  );",
+    "}",
+    ""
+  ].join("\n")
+);
+fs.writeFileSync(
+  path.join(externalCorpusHarnessSourceDir, "ExternalCn.tsx"),
+  [
+    "declare function cn(...value: Array<string | false | undefined>): string;",
+    "",
+    "export function ExternalCn({ active = false }: { active?: boolean }) {",
+    "  return <button className={cn(\"rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white\", active && \"ring-2 ring-teal-300\")}>Run</button>;",
+    "}",
+    ""
+  ].join("\n")
+);
+fs.writeFileSync(
+  path.join(externalCorpusHarnessSourceDir, "ExternalReadonly.tsx"),
+  [
+    "const shellClass = \"rounded-xl border border-slate-200 bg-white p-5\";",
+    "",
+    "export function ExternalReadonly() {",
+    "  return (",
+    "    <section className={shellClass}>",
+    "      <p className=\"text-sm leading-6 text-slate-600\">Static fallback still counts.</p>",
+    "    </section>",
+    "  );",
+    "}",
+    ""
+  ].join("\n")
+);
+fs.writeFileSync(
+  path.join(externalCorpusHarnessSourceDir, "ExternalExample.stories.tsx"),
+  [
+    "export function ExternalExampleStory() {",
+    "  return <div className=\"p-4\">Story files are skipped by default.</div>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const externalCorpusHarnessImport = runCommand(
+  localTsxCommand(),
+  [
+    "scripts/import-external-corpus.ts",
+    path.relative(rootDir, externalCorpusHarnessSourceDir),
+    "--out",
+    path.relative(rootDir, externalCorpusHarnessOutDir),
+    "--report",
+    path.relative(rootDir, externalCorpusHarnessReportFile),
+    "--limit",
+    String(externalCorpusHarnessMinFiles),
+    "--min-files",
+    String(externalCorpusHarnessMinFiles),
+    "--min-supported-direct",
+    String(externalCorpusHarnessCoverageTarget),
+    "--fail-on-gate"
+  ],
+  rootDir
+);
+const externalCorpusHarnessReport = fs.existsSync(externalCorpusHarnessReportFile)
+  ? JSON.parse(fs.readFileSync(externalCorpusHarnessReportFile, "utf8")) as {
+      available?: boolean;
+      selectedFileCount?: number;
+      skipped?: Record<string, number>;
+      gates?: {
+        minFilesPass?: boolean;
+        staticAndSimpleCoveragePass?: boolean;
+        supportedDirectCoveragePass?: boolean;
+        allObservedCoveragePass?: boolean;
+      };
+      analysis?: {
+        filesScanned?: number;
+        classNameOccurrences?: number;
+        editableCoverage?: {
+          staticAndSimpleCnClsx?: number;
+          supportedDirect?: number;
+          allObservedTokens?: number;
+        };
+      };
+      filesDir?: string;
+      manifestFile?: string;
+    }
+  : null;
 
 const transformIterations = 5;
 const warmTransformTargetMs = 5;
@@ -2367,6 +2471,30 @@ const report = {
     caveat:
       "This is a committed Codex-generated React/Tailwind corpus for reproducible MVP coverage auditing, not an independently sourced external benchmark."
   },
+  externalCorpusHarness: {
+    importExitCode: externalCorpusHarnessImport.exitCode,
+    importMs: externalCorpusHarnessImport.ms,
+    stdoutBytes: externalCorpusHarnessImport.stdout.length,
+    stderrBytes: externalCorpusHarnessImport.stderr.length,
+    available: externalCorpusHarnessReport?.available ?? false,
+    filesDir: externalCorpusHarnessReport?.filesDir ?? null,
+    manifestFile: externalCorpusHarnessReport?.manifestFile ?? null,
+    selectedFileCount: externalCorpusHarnessReport?.selectedFileCount ?? 0,
+    filesScanned: externalCorpusHarnessReport?.analysis?.filesScanned ?? 0,
+    classNameOccurrences: externalCorpusHarnessReport?.analysis?.classNameOccurrences ?? 0,
+    skippedStoryFiles: externalCorpusHarnessReport?.skipped?.["test-story-file"] ?? 0,
+    staticAndSimpleCoverage:
+      externalCorpusHarnessReport?.analysis?.editableCoverage?.staticAndSimpleCnClsx ?? 0,
+    supportedDirectCoverage:
+      externalCorpusHarnessReport?.analysis?.editableCoverage?.supportedDirect ?? 0,
+    allObservedCoverage:
+      externalCorpusHarnessReport?.analysis?.editableCoverage?.allObservedTokens ?? 0,
+    gates: externalCorpusHarnessReport?.gates ?? null,
+    targets: {
+      minFiles: externalCorpusHarnessMinFiles,
+      editableCoverage: externalCorpusHarnessCoverageTarget
+    }
+  },
   transform: {
     filesMeasured: transformMeasurements.length,
     iterationsPerFile: transformIterations,
@@ -2937,6 +3065,16 @@ const report = {
       aiGeneratedCorpus.editableCoverage.supportedDirect >= aiCorpusCoverageTarget,
     aiGeneratedAllObservedCoveragePass:
       aiGeneratedCorpus.editableCoverage.allObservedTokens >= aiCorpusCoverageTarget,
+    externalCorpusHarnessPass:
+      externalCorpusHarnessImport.exitCode === 0 &&
+      externalCorpusHarnessReport?.available === true &&
+      externalCorpusHarnessReport.selectedFileCount === externalCorpusHarnessMinFiles &&
+      externalCorpusHarnessReport.analysis?.filesScanned === externalCorpusHarnessMinFiles &&
+      externalCorpusHarnessReport.skipped?.["test-story-file"] === 1 &&
+      externalCorpusHarnessReport.gates?.minFilesPass === true &&
+      externalCorpusHarnessReport.gates.staticAndSimpleCoveragePass === true &&
+      externalCorpusHarnessReport.gates.supportedDirectCoveragePass === true &&
+      externalCorpusHarnessReport.gates.allObservedCoveragePass === true,
     transformTargetPass:
       warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
     coldTransformTargetPass:
