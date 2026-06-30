@@ -18,6 +18,7 @@ import {
   revertTokenPatch,
   resolvePatchConflict
 } from "../src/intent/patch";
+import type { IntentGraph } from "../src/intent/types";
 
 const rootDir = process.cwd();
 const reportsDir = path.join(rootDir, "reports", "performance");
@@ -983,6 +984,38 @@ const cliCheck = runCli(
   rootDir
 );
 const cliCheckReport = cliCheck.report?.command === "check" ? cliCheck.report : null;
+const cliGraphScan = runCli(["scan", "fixtures/corpus", "src/App.tsx", "--write-graph"], rootDir);
+const cliGraphFile = path.join(rootDir, ".intent", "graph.intent.json");
+const cliGraph = fs.existsSync(cliGraphFile)
+  ? (JSON.parse(fs.readFileSync(cliGraphFile, "utf8")) as IntentGraph)
+  : null;
+const cliAgentTaskBinding =
+  cliGraph &&
+  Object.values(cliGraph.entries).find(
+    (entry) => entry.relativeFile === "fixtures/corpus/DynamicRuntime.tsx" && entry.className.kind === "read-only"
+  );
+const cliAgentTask = runCli(
+  [
+    "agent-task",
+    "--id",
+    cliAgentTaskBinding?.id ?? "missing-cli-agent-task-id",
+    "--change",
+    "CLI fixture: create structured handoff for a selected read-only className."
+  ],
+  rootDir
+);
+const cliAgentTaskReport = cliAgentTask.report?.command === "agent-task" ? cliAgentTask.report : null;
+const cliAgentTaskMarkdown =
+  cliAgentTaskReport?.taskFile && fs.existsSync(path.join(rootDir, cliAgentTaskReport.taskFile))
+    ? fs.readFileSync(path.join(rootDir, cliAgentTaskReport.taskFile), "utf8")
+    : "";
+const cliAgentTaskSectionsPresent = [
+  "## Goal",
+  "## Selected Component",
+  "## Current Intent Document",
+  "## Source Snapshot",
+  "## Required Checks"
+].every((section) => cliAgentTaskMarkdown.includes(section));
 
 const graphLookupIterations = 1000;
 const graphLookup = new Map(patchInstrument.entries.map((entry) => [entry.id, entry]));
@@ -1049,8 +1082,11 @@ const report = {
   cli: {
     scanExitCode: cliScan.exitCode,
     checkExitCode: cliCheck.exitCode,
+    graphScanExitCode: cliGraphScan.exitCode,
+    agentTaskExitCode: cliAgentTask.exitCode,
     scanCommand: cliScanReport?.command ?? null,
     checkCommand: cliCheckReport?.command ?? null,
+    agentTaskCommand: cliAgentTaskReport?.command ?? null,
     filesScanned: cliCheckReport?.summary.filesScanned ?? 0,
     bindingCount: cliCheckReport?.summary.bindingCount ?? 0,
     directEditBindingCount: cliCheckReport?.summary.directEditBindingCount ?? 0,
@@ -1060,8 +1096,18 @@ const report = {
     syntaxErrorCount: cliCheckReport?.summary.syntaxErrorCount ?? 0,
     maxTransformMs: cliCheckReport?.summary.maxTransformMs ?? 0,
     gates: cliCheckReport?.gates ?? null,
+    graphFileExists: fs.existsSync(cliGraphFile),
+    graphEntryCount: cliGraph ? Object.keys(cliGraph.entries).length : 0,
+    agentTaskBindingId: cliAgentTaskBinding?.id ?? null,
+    agentTaskOk: cliAgentTaskReport?.ok ?? false,
+    agentTaskFile: cliAgentTaskReport?.taskFile ?? null,
+    agentTaskRelativeFile: cliAgentTaskReport?.relativeFile ?? null,
+    agentTaskMarkdownBytes: cliAgentTaskReport?.markdownBytes ?? 0,
+    agentTaskMs: cliAgentTaskReport?.taskMs ?? null,
+    agentTaskSectionsPresent: cliAgentTaskSectionsPresent,
     scanStdoutBytes: cliScan.stdout.length,
-    checkStdoutBytes: cliCheck.stdout.length
+    checkStdoutBytes: cliCheck.stdout.length,
+    agentTaskStdoutBytes: cliAgentTask.stdout.length
   },
   patch: {
     previewOk: preview.ok,
@@ -1446,6 +1492,16 @@ const report = {
       cliCheckReport.gates.syntaxClean.pass &&
       cliCheckReport.gates.supportedDirectCoverage.pass &&
       cliCheckReport.gates.maxFileTransformMs.pass,
+    cliAgentTaskPass:
+      cliGraphScan.exitCode === 0 &&
+      fs.existsSync(cliGraphFile) &&
+      (cliGraph ? Object.keys(cliGraph.entries).length : 0) >= 40 &&
+      Boolean(cliAgentTaskBinding) &&
+      cliAgentTask.exitCode === 0 &&
+      cliAgentTaskReport?.command === "agent-task" &&
+      cliAgentTaskReport.ok &&
+      Boolean(cliAgentTaskReport.taskFile) &&
+      cliAgentTaskSectionsPresent,
     supportedPatchPass: apply.ok && syntaxErrorsAfterPatch === 0,
     revertPatchPass: revert.ok && syntaxErrorsAfterRevert === 0,
     agentTaskPass: agentTask.ok && agentTaskSectionsPresent,

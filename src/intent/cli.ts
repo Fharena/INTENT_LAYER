@@ -3,15 +3,19 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
+import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
 import type { IntentBinding, IntentGraph } from "./types";
 
-type CliCommand = "scan" | "check";
+type CliCommand = "scan" | "check" | "agent-task";
 
 interface CliOptions {
   inputs: string[];
   out: string | null;
   writeGraph: boolean;
+  graph: string;
+  id: string | null;
+  desiredChange: string | null;
   minSupportedDirectCoverage: number;
   maxFileTransformMs: number;
 }
@@ -71,11 +75,26 @@ interface CliCheckReport {
   graphFile: string | null;
 }
 
+interface CliAgentTaskReport {
+  version: 1;
+  command: "agent-task";
+  generatedAt: string;
+  ok: boolean;
+  id: string | null;
+  graphFile: string;
+  taskFile: string | null;
+  relativeFile: string | null;
+  markdownBytes: number;
+  taskMs: number | null;
+  reason: string | null;
+  detail: string | null;
+}
+
 export interface CliRunResult {
   exitCode: number;
   stdout: string;
   stderr: string;
-  report: CliScanReport | CliCheckReport | null;
+  report: CliScanReport | CliCheckReport | CliAgentTaskReport | null;
 }
 
 function isSourceFile(file: string): boolean {
@@ -232,14 +251,27 @@ function writeGraph(rootDir: string, entries: IntentBinding[]): string {
   return path.relative(rootDir, graphFile).replace(/\\/g, "/");
 }
 
+function readGraph(rootDir: string, graphFile: string): IntentGraph | null {
+  const fullPath = path.resolve(rootDir, graphFile);
+  if (!fs.existsSync(fullPath)) return null;
+
+  try {
+    return JSON.parse(fs.readFileSync(fullPath, "utf8")) as IntentGraph;
+  } catch {
+    return null;
+  }
+}
+
 function usage(): string {
   return [
     "Usage:",
     "  intent-layer scan [inputs...] [--out file] [--write-graph]",
     "  intent-layer check [inputs...] [--min-supported-direct n] [--max-file-transform-ms n] [--out file]",
+    "  intent-layer agent-task --id intent-id --change text [--graph .intent/graph.intent.json] [--out file]",
     "",
     "Defaults:",
     "  inputs: src",
+    "  graph: .intent/graph.intent.json",
     "  min-supported-direct: 0.5",
     "  max-file-transform-ms: 20"
   ].join("\n");
@@ -249,6 +281,9 @@ function parseOptions(args: string[]): CliOptions {
   const inputs: string[] = [];
   let out: string | null = null;
   let writeGraph = false;
+  let graph = ".intent/graph.intent.json";
+  let id: string | null = null;
+  let desiredChange: string | null = null;
   let minSupportedDirectCoverage = 0.5;
   let maxFileTransformMs = 20;
 
@@ -259,6 +294,15 @@ function parseOptions(args: string[]): CliOptions {
       index += 1;
     } else if (arg === "--write-graph") {
       writeGraph = true;
+    } else if (arg === "--graph") {
+      graph = args[index + 1] ?? graph;
+      index += 1;
+    } else if (arg === "--id") {
+      id = args[index + 1] ?? null;
+      index += 1;
+    } else if (arg === "--change") {
+      desiredChange = args[index + 1] ?? null;
+      index += 1;
     } else if (arg === "--min-supported-direct") {
       minSupportedDirectCoverage = Number(args[index + 1] ?? minSupportedDirectCoverage);
       index += 1;
@@ -274,6 +318,9 @@ function parseOptions(args: string[]): CliOptions {
     inputs: inputs.length > 0 ? inputs : ["src"],
     out,
     writeGraph,
+    graph,
+    id,
+    desiredChange,
     minSupportedDirectCoverage,
     maxFileTransformMs
   };
@@ -298,7 +345,7 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
     };
   }
 
-  if (command !== "scan" && command !== "check") {
+  if (command !== "scan" && command !== "check" && command !== "agent-task") {
     return {
       exitCode: 1,
       stdout: "",
@@ -308,6 +355,56 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
   }
 
   const options = parseOptions(argv.slice(1));
+  if (command === "agent-task") {
+    const graph = readGraph(rootDir, options.graph);
+    const binding = options.id && graph ? graph.entries[options.id] : undefined;
+    const result = !options.id
+      ? {
+          ok: false as const,
+          id: undefined,
+          reason: "missing-id",
+          detail: "Pass --id with an intent id.",
+          metrics: { taskMs: 0 }
+        }
+      : !options.desiredChange
+        ? {
+            ok: false as const,
+            id: options.id,
+            reason: "missing-desired-change",
+            detail: "Pass --change with the desired edit.",
+            metrics: { taskMs: 0 }
+          }
+        : !graph
+          ? {
+              ok: false as const,
+              id: options.id,
+              reason: "missing-graph",
+              detail: "Run scan --write-graph first or pass --graph with an existing graph file.",
+              metrics: { taskMs: 0 }
+            }
+          : createAgentTask(rootDir, binding, {
+              id: options.id,
+              desiredChange: options.desiredChange
+            });
+    const report: CliAgentTaskReport = {
+      version: 1,
+      command,
+      generatedAt: new Date().toISOString(),
+      ok: result.ok,
+      id: options.id,
+      graphFile: options.graph,
+      taskFile: result.ok ? path.relative(rootDir, result.taskFile).replace(/\\/g, "/") : null,
+      relativeFile: result.ok ? result.relativeFile : null,
+      markdownBytes: result.ok ? result.markdown.length : 0,
+      taskMs: result.ok ? result.metrics.taskMs : result.metrics?.taskMs ?? null,
+      reason: result.ok ? null : result.reason,
+      detail: result.ok ? null : result.detail ?? null
+    };
+    const json = `${JSON.stringify(report, null, 2)}\n`;
+    writeOut(rootDir, options.out, json);
+    return { exitCode: result.ok ? 0 : 1, stdout: json, stderr: "", report };
+  }
+
   const scanned = scan(rootDir, options.inputs);
   const graphFile = options.writeGraph ? writeGraph(rootDir, scanned.entries) : null;
 
