@@ -1492,6 +1492,10 @@ const externalCorpusHarnessImport = runCommand(
     path.relative(rootDir, externalCorpusHarnessOutDir),
     "--report",
     path.relative(rootDir, externalCorpusHarnessReportFile),
+    "--label",
+    "eval-external-corpus-harness",
+    "--sample-source",
+    "local-smoke-fixture",
     "--limit",
     String(externalCorpusHarnessMinFiles),
     "--min-files",
@@ -1505,6 +1509,13 @@ const externalCorpusHarnessImport = runCommand(
 const externalCorpusHarnessReport = fs.existsSync(externalCorpusHarnessReportFile)
   ? JSON.parse(fs.readFileSync(externalCorpusHarnessReportFile, "utf8")) as {
       available?: boolean;
+      sample?: {
+        label?: string;
+        sourceKind?: string;
+        independent?: boolean;
+        localSmokeFixture?: boolean;
+        generatedFixture?: boolean;
+      };
       selectedFileCount?: number;
       skipped?: Record<string, number>;
       gates?: {
@@ -1521,6 +1532,21 @@ const externalCorpusHarnessReport = fs.existsSync(externalCorpusHarnessReportFil
           supportedDirect?: number;
           allObservedTokens?: number;
         };
+      };
+      summary?: {
+        readOnlyClassNameRatio?: number;
+        editableTokenCoverage?: number;
+        topUnsupportedReasons?: Array<{ reason?: string; count?: number }>;
+      };
+      gateFailures?: Array<unknown>;
+      mvpEvidence?: {
+        usableAsMvpEvidence?: boolean;
+        decision?: string;
+      };
+      targets?: {
+        minFiles?: number;
+        editableCoverage?: number;
+        mvpIndependentFiles?: number;
       };
       filesDir?: string;
       manifestFile?: string;
@@ -3629,6 +3655,7 @@ const report = {
     stdoutBytes: externalCorpusHarnessImport.stdout.length,
     stderrBytes: externalCorpusHarnessImport.stderr.length,
     available: externalCorpusHarnessReport?.available ?? false,
+    sample: externalCorpusHarnessReport?.sample ?? null,
     filesDir: externalCorpusHarnessReport?.filesDir ?? null,
     manifestFile: externalCorpusHarnessReport?.manifestFile ?? null,
     selectedFileCount: externalCorpusHarnessReport?.selectedFileCount ?? 0,
@@ -3641,8 +3668,12 @@ const report = {
       externalCorpusHarnessReport?.analysis?.editableCoverage?.supportedDirect ?? 0,
     allObservedCoverage:
       externalCorpusHarnessReport?.analysis?.editableCoverage?.allObservedTokens ?? 0,
+    readOnlyClassNameRatio: externalCorpusHarnessReport?.summary?.readOnlyClassNameRatio ?? 0,
+    topUnsupportedReasons: externalCorpusHarnessReport?.summary?.topUnsupportedReasons ?? [],
+    gateFailureCount: externalCorpusHarnessReport?.gateFailures?.length ?? 0,
+    mvpEvidence: externalCorpusHarnessReport?.mvpEvidence ?? null,
     gates: externalCorpusHarnessReport?.gates ?? null,
-    targets: {
+    targets: externalCorpusHarnessReport?.targets ?? {
       minFiles: externalCorpusHarnessMinFiles,
       editableCoverage: externalCorpusHarnessCoverageTarget
     }
@@ -4743,11 +4774,18 @@ const report = {
       externalCorpusHarnessReport?.available === true &&
       externalCorpusHarnessReport.selectedFileCount === externalCorpusHarnessMinFiles &&
       externalCorpusHarnessReport.analysis?.filesScanned === externalCorpusHarnessMinFiles &&
+      externalCorpusHarnessReport.sample?.label === "eval-external-corpus-harness" &&
+      externalCorpusHarnessReport.sample?.sourceKind === "local-smoke-fixture" &&
+      externalCorpusHarnessReport.sample?.localSmokeFixture === true &&
+      externalCorpusHarnessReport.sample?.independent === false &&
       externalCorpusHarnessReport.skipped?.["test-story-file"] === 1 &&
       externalCorpusHarnessReport.gates?.minFilesPass === true &&
       externalCorpusHarnessReport.gates.staticAndSimpleCoveragePass === true &&
       externalCorpusHarnessReport.gates.supportedDirectCoveragePass === true &&
-      externalCorpusHarnessReport.gates.allObservedCoveragePass === true,
+      externalCorpusHarnessReport.gates.allObservedCoveragePass === true &&
+      externalCorpusHarnessReport.gateFailures?.length === 0 &&
+      externalCorpusHarnessReport.mvpEvidence?.usableAsMvpEvidence === false &&
+      externalCorpusHarnessReport.mvpEvidence?.decision === "measurement-smoke-only",
     transformTargetPass:
       warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
     coldTransformTargetPass:
