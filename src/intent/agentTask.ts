@@ -39,7 +39,7 @@ export function createAgentTask(
       id: request.id,
       reason: "missing-binding",
       detail: "No source binding exists for the selected intent id.",
-      metrics: { applyMs: Number((performance.now() - started).toFixed(3)) }
+      metrics: { taskMs: Number((performance.now() - started).toFixed(3)) }
     };
   }
 
@@ -50,7 +50,7 @@ export function createAgentTask(
       id: request.id,
       reason: "missing-desired-change",
       detail: "Describe the change before creating an agent task.",
-      metrics: { applyMs: Number((performance.now() - started).toFixed(3)) }
+      metrics: { taskMs: Number((performance.now() - started).toFixed(3)) }
     };
   }
 

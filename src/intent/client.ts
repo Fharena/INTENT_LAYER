@@ -1,5 +1,6 @@
 import { candidatesForToken } from "./tailwind";
 import type {
+  AgentResultArtifact,
   AgentTaskResult,
   IntentBinding,
   IntentGraph,
@@ -14,6 +15,9 @@ type PatchResponse = PatchApplyResult | PatchFailure;
 type PreviewResponse = PatchPreview | PatchFailure;
 type RevertResponse = PatchRevertResult | PatchFailure;
 type AgentTaskResponse = AgentTaskResult | PatchFailure;
+type AgentResultResponse = AgentResultArtifact | PatchFailure;
+
+const lastAgentTaskFileByIntentId = new Map<string, string>();
 
 function createButton(label: string): HTMLButtonElement {
   const button = document.createElement("button");
@@ -182,13 +186,55 @@ function renderAgentTaskForm(
     });
     const result = (await response.json()) as AgentTaskResponse;
     if (result.ok) {
+      lastAgentTaskFileByIntentId.set(binding.id, result.taskFile);
       setStatus(`Agent task created in ${result.metrics.taskMs}ms: ${result.taskFile}`);
     } else {
       setStatus(`Agent task rejected: ${result.reason}`);
     }
   });
 
-  wrapper.append(label, textarea, create);
+  const resultLabel = document.createElement("label");
+  resultLabel.textContent = "Result";
+  resultLabel.style.display = "block";
+  resultLabel.style.fontSize = "12px";
+  resultLabel.style.fontWeight = "800";
+  resultLabel.style.marginTop = "10px";
+  resultLabel.style.marginBottom = "6px";
+
+  const resultTextarea = document.createElement("textarea");
+  resultTextarea.placeholder = "Summarize the agent result";
+  resultTextarea.rows = 3;
+  resultTextarea.style.width = "100%";
+  resultTextarea.style.boxSizing = "border-box";
+  resultTextarea.style.border = "1px solid #cbd5e1";
+  resultTextarea.style.borderRadius = "6px";
+  resultTextarea.style.padding = "8px";
+  resultTextarea.style.fontSize = "12px";
+  resultTextarea.style.resize = "vertical";
+
+  const record = createButton("Record result");
+  record.style.marginTop = "8px";
+  record.addEventListener("click", async () => {
+    const response = await fetch("/__intent/agent-result", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        id: binding.id,
+        taskFile: lastAgentTaskFileByIntentId.get(binding.id),
+        summary: resultTextarea.value,
+        changedFiles: [binding.relativeFile],
+        checks: ["npm run typecheck", "npm run eval", "npm run build"]
+      })
+    });
+    const result = (await response.json()) as AgentResultResponse;
+    if (result.ok) {
+      setStatus(`Agent result recorded in ${result.metrics.resultMs}ms: ${result.resultFile}`);
+    } else {
+      setStatus(`Agent result rejected: ${result.reason}`);
+    }
+  });
+
+  wrapper.append(label, textarea, create, resultLabel, resultTextarea, record);
   root.appendChild(wrapper);
 }
 

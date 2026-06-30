@@ -2,10 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
+import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
 import { applyTokenPatch, planTokenPatch, revertTokenPatch } from "./patch";
 import type {
+  AgentResultRequest,
   AgentTaskRequest,
   IntentBinding,
   IntentGraph,
@@ -175,6 +177,22 @@ export function intentLayerSpike(): Plugin {
             const body = JSON.parse(await readBody(request)) as AgentTaskRequest;
             const entry = state.entriesById.get(body.id);
             const result = createAgentTask(state.rootDir, entry, body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/agent-result" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as AgentResultRequest;
+            const entry = state.entriesById.get(body.id);
+            const result = recordAgentResult(state.rootDir, entry, body);
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
             writeJson(response, 500, {

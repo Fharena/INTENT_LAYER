@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { analyzeClassNames } from "./analyze-classnames";
+import { recordAgentResult } from "../src/intent/agentResult";
 import { createAgentTask } from "../src/intent/agentTask";
 import { instrumentSource } from "../src/intent/instrument";
 import { applyTokenPatch, planTokenPatch, revertTokenPatch } from "../src/intent/patch";
@@ -135,6 +136,29 @@ const agentTaskRequiredSections = [
 const agentTaskSectionsPresent = agentTaskRequiredSections.every((section) =>
   agentTaskMarkdown.includes(section)
 );
+const agentResult = recordAgentResult(rootDir, patchEntry, {
+  id: patchEntry.id,
+  taskFile: agentTask.ok ? agentTask.taskFile : undefined,
+  summary:
+    "Agent result fixture: documented the requested empty state outcome without making an unrelated source rewrite.",
+  changedFiles: [path.relative(rootDir, patchFixture).replace(/\\/g, "/")],
+  checks: ["npm run typecheck", "npm run eval", "npm run build"],
+  notes: "Evaluation fixture only; no LLM call is made."
+});
+const agentResultMarkdown = agentResult.ok ? agentResult.markdown : "";
+const agentResultRequiredSections = [
+  "## Summary",
+  "## Source Binding",
+  "## Task",
+  "## Changed Files",
+  "## Checks",
+  "## Intent Diff"
+];
+const agentResultSectionsPresent = agentResultRequiredSections.every((section) =>
+  agentResultMarkdown.includes(section)
+);
+const agentResultFilesExist =
+  agentResult.ok && fs.existsSync(agentResult.resultFile) && fs.existsSync(agentResult.diffFile);
 
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
 fs.writeFileSync(
@@ -239,9 +263,20 @@ const report = {
   },
   agentTask: {
     ok: agentTask.ok,
-    taskMs: agentTask.ok ? agentTask.metrics.taskMs : agentTask.metrics?.applyMs,
+    taskMs: agentTask.ok ? agentTask.metrics.taskMs : agentTask.metrics?.taskMs,
     sectionsPresent: agentTaskSectionsPresent,
     taskFile: agentTask.ok ? path.relative(rootDir, agentTask.taskFile).replace(/\\/g, "/") : null
+  },
+  agentResult: {
+    ok: agentResult.ok,
+    resultMs: agentResult.ok ? agentResult.metrics.resultMs : agentResult.metrics?.resultMs,
+    sectionsPresent: agentResultSectionsPresent,
+    filesExist: agentResultFilesExist,
+    resultFile: agentResult.ok
+      ? path.relative(rootDir, agentResult.resultFile).replace(/\\/g, "/")
+      : null,
+    diffFile: agentResult.ok ? path.relative(rootDir, agentResult.diffFile).replace(/\\/g, "/") : null,
+    sourceHashChanged: agentResult.ok ? agentResult.source.sourceHashChanged : null
   },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
@@ -253,6 +288,7 @@ const report = {
     supportedPatchPass: apply.ok && syntaxErrorsAfterPatch === 0,
     revertPatchPass: revert.ok && syntaxErrorsAfterRevert === 0,
     agentTaskPass: agentTask.ok && agentTaskSectionsPresent,
+    agentResultPass: agentResult.ok && agentResultSectionsPresent && agentResultFilesExist,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch"
   }

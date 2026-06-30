@@ -75,6 +75,8 @@ export interface PatchFailure {
   metrics?: {
     previewMs?: number;
     applyMs?: number;
+    taskMs?: number;
+    resultMs?: number;
   };
 }
 
@@ -123,5 +125,32 @@ export interface AgentTaskResult {
   markdown: string;
   metrics: {
     taskMs: number;
+  };
+}
+
+export interface AgentResultRequest {
+  id: string;
+  taskFile?: string;
+  summary: string;
+  changedFiles?: string[];
+  checks?: string[];
+  notes?: string;
+}
+
+export interface AgentResultArtifact {
+  ok: true;
+  id: string;
+  file: string;
+  relativeFile: string;
+  resultFile: string;
+  diffFile: string;
+  markdown: string;
+  source: {
+    sourceHashBefore: string;
+    sourceHashAfter: string | null;
+    sourceHashChanged: boolean | null;
+  };
+  metrics: {
+    resultMs: number;
   };
 }
