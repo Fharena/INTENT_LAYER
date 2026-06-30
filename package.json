@@ -16,6 +16,7 @@
     "intent:check": "tsx src/intent/cli.ts check",
     "intent:diff": "tsx src/intent/cli.ts diff",
     "intent:apply": "tsx src/intent/cli.ts apply",
+    "intent:agent-context": "tsx src/intent/cli.ts agent-context",
     "intent:agent-task": "tsx src/intent/cli.ts agent-task",
     "intent:agent-result": "tsx src/intent/cli.ts agent-result",
     "generate:ai-corpus": "tsx scripts/generate-ai-corpus.ts",

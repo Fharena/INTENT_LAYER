@@ -3,22 +3,33 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
+import { createAgentContext } from "./agentContext";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
 import { applyTokenPatch, recordPatchApplyInOperationLog } from "./patch";
 import type { IntentBinding, IntentGraph } from "./types";
 
-type CliCommand = "init" | "scan" | "check" | "diff" | "apply" | "agent-task" | "agent-result";
+type CliCommand =
+  | "init"
+  | "scan"
+  | "check"
+  | "diff"
+  | "apply"
+  | "agent-context"
+  | "agent-task"
+  | "agent-result";
 
 interface CliOptions {
   inputs: string[];
+  positionals: string[];
   out: string | null;
   writeGraph: boolean;
   graph: string;
   op: string | null;
   diff: string | null;
   id: string | null;
+  component: string | null;
   desiredChange: string | null;
   taskFile: string | null;
   summary: string | null;
@@ -132,6 +143,27 @@ interface CliApplyReport {
   detail: string | null;
 }
 
+interface CliAgentContextReport {
+  version: 1;
+  command: "agent-context";
+  generatedAt: string;
+  ok: boolean;
+  id: string | null;
+  component: string | null;
+  graphFile: string;
+  contextFile: string | null;
+  selectedBindingId: string | null;
+  selectedRelativeFile: string | null;
+  graphEntryCount: number;
+  directEditBindingCount: number;
+  readOnlyBindingCount: number;
+  editableTokenCoverage: number;
+  markdownBytes: number;
+  contextMs: number | null;
+  reason: string | null;
+  detail: string | null;
+}
+
 interface CliAgentTaskReport {
   version: 1;
   command: "agent-task";
@@ -180,6 +212,7 @@ export interface CliRunResult {
     | CliCheckReport
     | CliDiffReport
     | CliApplyReport
+    | CliAgentContextReport
     | CliAgentTaskReport
     | CliAgentResultReport
     | null;
@@ -608,6 +641,7 @@ function usage(): string {
     "  intent-layer check [inputs...] [--min-supported-direct n] [--max-file-transform-ms n] [--out file]",
     "  intent-layer diff [--diff file] [--out file]",
     "  intent-layer apply --op file [--graph .intent/graph.intent.json] [--out file]",
+    "  intent-layer agent-context [component] [--id intent-id] [--graph .intent/graph.intent.json]",
     "  intent-layer agent-task --id intent-id --change text [--graph .intent/graph.intent.json] [--out file]",
     "  intent-layer agent-result --id intent-id --summary text [--task file] [--changed file] [--check command]",
     "",
@@ -627,6 +661,7 @@ function parseOptions(args: string[]): CliOptions {
   let op: string | null = null;
   let diff: string | null = null;
   let id: string | null = null;
+  let component: string | null = null;
   let desiredChange: string | null = null;
   let taskFile: string | null = null;
   let summary: string | null = null;
@@ -654,6 +689,9 @@ function parseOptions(args: string[]): CliOptions {
       index += 1;
     } else if (arg === "--id") {
       id = args[index + 1] ?? null;
+      index += 1;
+    } else if (arg === "--component") {
+      component = args[index + 1] ?? null;
       index += 1;
     } else if (arg === "--change") {
       desiredChange = args[index + 1] ?? null;
@@ -686,12 +724,14 @@ function parseOptions(args: string[]): CliOptions {
 
   return {
     inputs: inputs.length > 0 ? inputs : ["src"],
+    positionals: inputs,
     out,
     writeGraph,
     graph,
     op,
     diff,
     id,
+    component,
     desiredChange,
     taskFile,
     summary,
@@ -728,6 +768,7 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
     command !== "check" &&
     command !== "diff" &&
     command !== "apply" &&
+    command !== "agent-context" &&
     command !== "agent-task" &&
     command !== "agent-result"
   ) {
@@ -825,6 +866,38 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
       applyMs: result.ok ? result.metrics.applyMs : result.metrics?.applyMs ?? null,
       reason: result.ok ? null : result.reason,
       detail: result.ok ? null : result.detail ?? null
+    };
+    const json = `${JSON.stringify(report, null, 2)}\n`;
+    writeOut(rootDir, options.out, json);
+    return { exitCode: result.ok ? 0 : 1, stdout: json, stderr: "", report };
+  }
+
+  if (command === "agent-context") {
+    const graph = readGraph(rootDir, options.graph);
+    const component = options.component ?? options.positionals[0] ?? null;
+    const result = createAgentContext(rootDir, graph, {
+      id: options.id ?? undefined,
+      component: component ?? undefined
+    });
+    const report: CliAgentContextReport = {
+      version: 1,
+      command,
+      generatedAt: new Date().toISOString(),
+      ok: result.ok,
+      id: options.id,
+      component,
+      graphFile: options.graph,
+      contextFile: result.ok ? relativeFromRoot(rootDir, result.contextFile) : null,
+      selectedBindingId: result.ok ? result.selectedBinding?.id ?? null : null,
+      selectedRelativeFile: result.ok ? result.selectedBinding?.relativeFile ?? null : null,
+      graphEntryCount: result.ok ? result.summary.graphEntries : 0,
+      directEditBindingCount: result.ok ? result.summary.directEditBindings : 0,
+      readOnlyBindingCount: result.ok ? result.summary.readOnlyBindings : 0,
+      editableTokenCoverage: result.ok ? result.summary.editableTokenCoverage : 0,
+      markdownBytes: result.ok ? result.markdown.length : 0,
+      contextMs: result.metrics.contextMs,
+      reason: result.ok ? null : result.reason,
+      detail: result.ok ? null : result.detail
     };
     const json = `${JSON.stringify(report, null, 2)}\n`;
     writeOut(rootDir, options.out, json);

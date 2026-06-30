@@ -1000,6 +1000,28 @@ const cliAgentTaskBinding =
   Object.values(cliGraph.entries).find(
     (entry) => entry.relativeFile === "fixtures/corpus/DynamicRuntime.tsx" && entry.className.kind === "read-only"
   );
+const cliAgentContextSubject = cliAgentTaskBinding?.componentName ?? null;
+const cliAgentContext = runCli(
+  cliAgentContextSubject
+    ? ["agent-context", cliAgentContextSubject]
+    : ["agent-context", "--id", cliAgentTaskBinding?.id ?? "missing-cli-agent-context-id"],
+  rootDir
+);
+const cliAgentContextReport =
+  cliAgentContext.report?.command === "agent-context" ? cliAgentContext.report : null;
+const cliAgentContextMarkdown =
+  cliAgentContextReport?.contextFile && fs.existsSync(path.join(rootDir, cliAgentContextReport.contextFile))
+    ? fs.readFileSync(path.join(rootDir, cliAgentContextReport.contextFile), "utf8")
+    : "";
+const cliAgentContextSectionsPresent = [
+  "## Scope",
+  "## Graph Summary",
+  "## Selected Binding",
+  "## Editable Surface",
+  "## Read-only Surface",
+  "## Agent Rules",
+  "## Required Checks"
+].every((section) => cliAgentContextMarkdown.includes(section));
 const cliAgentTask = runCli(
   [
     "agent-task",
@@ -1218,6 +1240,7 @@ const report = {
     applyGraphScanExitCode: cliApplyGraphScan.exitCode,
     applyExitCode: cliApply.exitCode,
     diffExitCode: cliDiff.exitCode,
+    agentContextExitCode: cliAgentContext.exitCode,
     agentTaskExitCode: cliAgentTask.exitCode,
     agentResultExitCode: cliAgentResult.exitCode,
     initCommand: cliInitReport?.command ?? null,
@@ -1225,6 +1248,7 @@ const report = {
     checkCommand: cliCheckReport?.command ?? null,
     applyCommand: cliApplyReport?.command ?? null,
     diffCommand: cliDiffReport?.command ?? null,
+    agentContextCommand: cliAgentContextReport?.command ?? null,
     agentTaskCommand: cliAgentTaskReport?.command ?? null,
     agentResultCommand: cliAgentResultReport?.command ?? null,
     initOk: cliInitReport?.ok ?? false,
@@ -1242,6 +1266,18 @@ const report = {
     gates: cliCheckReport?.gates ?? null,
     graphFileExists: fs.existsSync(cliGraphFile),
     graphEntryCount: cliGraph ? Object.keys(cliGraph.entries).length : 0,
+    agentContextSubject: cliAgentContextSubject,
+    agentContextOk: cliAgentContextReport?.ok ?? false,
+    agentContextFile: cliAgentContextReport?.contextFile ?? null,
+    agentContextSelectedBindingId: cliAgentContextReport?.selectedBindingId ?? null,
+    agentContextSelectedRelativeFile: cliAgentContextReport?.selectedRelativeFile ?? null,
+    agentContextGraphEntryCount: cliAgentContextReport?.graphEntryCount ?? 0,
+    agentContextDirectEditBindingCount: cliAgentContextReport?.directEditBindingCount ?? 0,
+    agentContextReadOnlyBindingCount: cliAgentContextReport?.readOnlyBindingCount ?? 0,
+    agentContextEditableTokenCoverage: cliAgentContextReport?.editableTokenCoverage ?? 0,
+    agentContextMarkdownBytes: cliAgentContextReport?.markdownBytes ?? 0,
+    agentContextMs: cliAgentContextReport?.contextMs ?? null,
+    agentContextSectionsPresent: cliAgentContextSectionsPresent,
     agentTaskBindingId: cliAgentTaskBinding?.id ?? null,
     agentTaskOk: cliAgentTaskReport?.ok ?? false,
     agentTaskFile: cliAgentTaskReport?.taskFile ?? null,
@@ -1278,6 +1314,7 @@ const report = {
     checkStdoutBytes: cliCheck.stdout.length,
     applyStdoutBytes: cliApply.stdout.length,
     diffStdoutBytes: cliDiff.stdout.length,
+    agentContextStdoutBytes: cliAgentContext.stdout.length,
     agentTaskStdoutBytes: cliAgentTask.stdout.length,
     agentResultStdoutBytes: cliAgentResult.stdout.length
   },
@@ -1684,6 +1721,18 @@ const report = {
       cliDiffReport.ok &&
       cliDiffReport.changeCount > 0 &&
       cliDiffReport.bytes > 0,
+    cliAgentContextPass:
+      cliGraphScan.exitCode === 0 &&
+      Boolean(cliAgentTaskBinding) &&
+      cliAgentContext.exitCode === 0 &&
+      cliAgentContextReport?.command === "agent-context" &&
+      cliAgentContextReport.ok &&
+      Boolean(cliAgentContextReport.contextFile) &&
+      cliAgentContextReport.graphEntryCount >= 40 &&
+      cliAgentContextReport.directEditBindingCount > 0 &&
+      cliAgentContextReport.readOnlyBindingCount > 0 &&
+      cliAgentContextReport.markdownBytes > 1000 &&
+      cliAgentContextSectionsPresent,
     cliAgentTaskPass:
       cliGraphScan.exitCode === 0 &&
       fs.existsSync(cliGraphFile) &&
