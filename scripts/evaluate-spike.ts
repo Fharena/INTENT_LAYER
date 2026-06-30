@@ -160,6 +160,29 @@ const agentResultSectionsPresent = agentResultRequiredSections.every((section) =
 const agentResultFilesExist =
   agentResult.ok && fs.existsSync(agentResult.resultFile) && fs.existsSync(agentResult.diffFile);
 
+const readOnlyFixture = path.join(tmpDir, "ReadOnlyBindingFixture.tsx");
+fs.writeFileSync(
+  readOnlyFixture,
+  [
+    "const cardClass = \"grid grid-cols-3 gap-4 rounded-lg p-6\";",
+    "export function ReadOnlyBindingFixture() {",
+    "  return <div className={cardClass}>Read-only target</div>;",
+    "}",
+    ""
+  ].join("\n")
+);
+
+const readOnlyInstrument = instrumentSource({
+  code: fs.readFileSync(readOnlyFixture, "utf8"),
+  file: readOnlyFixture,
+  rootDir
+});
+const readOnlyEntry = readOnlyInstrument.entries[0];
+const readOnlyTask = createAgentTask(rootDir, readOnlyEntry, {
+  id: readOnlyEntry?.id ?? "missing-read-only-binding",
+  desiredChange: "Change this variable-backed className through an agent handoff."
+});
+
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
 fs.writeFileSync(
   cnPatchFixture,
@@ -278,6 +301,14 @@ const report = {
     diffFile: agentResult.ok ? path.relative(rootDir, agentResult.diffFile).replace(/\\/g, "/") : null,
     sourceHashChanged: agentResult.ok ? agentResult.source.sourceHashChanged : null
   },
+  readOnlyBinding: {
+    entryCreated: Boolean(readOnlyEntry),
+    kind: readOnlyEntry?.className.kind ?? null,
+    unsupportedReason: readOnlyEntry?.className.unsupportedReason ?? null,
+    tokenCount: readOnlyEntry?.tokens.length ?? 0,
+    taskOk: readOnlyTask.ok,
+    taskMs: readOnlyTask.ok ? readOnlyTask.metrics.taskMs : readOnlyTask.metrics?.taskMs
+  },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
@@ -289,6 +320,11 @@ const report = {
     revertPatchPass: revert.ok && syntaxErrorsAfterRevert === 0,
     agentTaskPass: agentTask.ok && agentTaskSectionsPresent,
     agentResultPass: agentResult.ok && agentResultSectionsPresent && agentResultFilesExist,
+    readOnlyHandoffPass:
+      Boolean(readOnlyEntry) &&
+      readOnlyEntry?.className.kind === "read-only" &&
+      readOnlyEntry.tokens.length === 0 &&
+      readOnlyTask.ok,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch"
   }

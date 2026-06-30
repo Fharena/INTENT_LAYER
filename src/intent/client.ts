@@ -295,7 +295,10 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
       }`,
       binding.className.dynamicSegments > 0
         ? `dynamic args read-only: ${binding.className.dynamicSegments}`
-        : "dynamic args read-only: 0"
+        : "dynamic args read-only: 0",
+      binding.className.unsupportedReason
+        ? `unsupported: ${binding.className.unsupportedReason}`
+        : "unsupported: none"
     ].join("\n");
     meta.style.marginTop = "10px";
     meta.style.padding = "8px";

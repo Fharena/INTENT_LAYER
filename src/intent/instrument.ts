@@ -12,7 +12,7 @@ interface SourceSegment {
 }
 
 interface ClassNameBinding {
-  kind: "static" | "call-literals";
+  kind: "static" | "call-literals" | "read-only";
   start: number;
   end: number;
   value: string;
@@ -89,6 +89,34 @@ function stringSegment(node: ts.Node, sourceFile: ts.SourceFile): SourceSegment 
   }
 
   return null;
+}
+
+function unsupportedReasonForExpression(node: ts.Expression): string {
+  if (ts.isIdentifier(node)) return "variable-reference";
+  if (ts.isTemplateExpression(node)) return "template-expression";
+  if (ts.isCallExpression(node)) {
+    const calleeText = node.expression.getText();
+    if (/variant|cva/i.test(calleeText)) return "variant-function";
+    return "unsupported-call-expression";
+  }
+  return "unsupported-expression";
+}
+
+function readOnlyBinding(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  reason = unsupportedReasonForExpression(expression),
+  dynamicSegments = 1
+): ClassNameBinding {
+  return {
+    kind: "read-only",
+    start: expression.getStart(sourceFile),
+    end: expression.getEnd(),
+    value: expression.getText(sourceFile),
+    dynamicSegments,
+    unsupportedReason: reason,
+    tokens: []
+  };
 }
 
 function collectLiteralSegments(
@@ -203,12 +231,12 @@ function getClassNameBinding(
   }
 
   if (!ts.isCallExpression(expression)) {
-    return null;
+    return readOnlyBinding(expression, sourceFile);
   }
 
   const callee = getCalleeName(expression.expression);
   if (!callee) {
-    return null;
+    return readOnlyBinding(expression, sourceFile);
   }
 
   const segments: SourceSegment[] = [];
@@ -223,7 +251,12 @@ function getClassNameBinding(
   }
 
   if (segments.length === 0) {
-    return null;
+    return readOnlyBinding(
+      expression,
+      sourceFile,
+      unsupportedReasons.join(", ") || "call-without-literal-segments",
+      dynamicSegments || 1
+    );
   }
 
   const { value, tokens } = tokensFromSegments(segments);
@@ -246,6 +279,14 @@ export function instrumentSource(params: {
   rootDir: string;
 }): InstrumentResult {
   const started = performance.now();
+  if (!params.code.includes("className")) {
+    return {
+      code: params.code,
+      entries: [],
+      transformMs: Number((performance.now() - started).toFixed(3))
+    };
+  }
+
   const sourceFile = ts.createSourceFile(
     params.file,
     params.code,

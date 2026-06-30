@@ -24,7 +24,7 @@ export interface IntentBinding {
   sourceHash: string;
   transformMs: number;
   className: {
-    kind: "static" | "call-literals";
+    kind: "static" | "call-literals" | "read-only";
     start: number;
     end: number;
     value: string;
