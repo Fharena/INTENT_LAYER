@@ -6,16 +6,14 @@
   "bin": {
     "intent-layer": "bin/intent-layer.cjs"
   },
+  "exports": {
+    "./vite": "./src/intent/vitePlugin.ts",
+    "./package.json": "./package.json"
+  },
   "files": [
     "bin/",
     "src/intent/",
-    "README.md",
-    "PRODUCT_PLAN_KR.md",
-    "PRODUCT_PLAN_EN.md",
-    "LAUNCH_MVP_KR.md",
-    "LAUNCH_MVP_EN.md",
-    "PERFORMANCE_EVALUATION_KR.md",
-    "PERFORMANCE_EVALUATION_EN.md"
+    "README.md"
   ],
   "engines": {
     "node": ">=18"

@@ -39,25 +39,34 @@ interface PackageSmokeResult {
   packageName: string | null;
   packageVersion: string | null;
   binTarget: string | null;
+  viteExportTarget: string | null;
   dryRunExitCode: number | null;
   packExitCode: number | null;
   installExitCode: number | null;
   helpExitCode: number | null;
+  viteImportExitCode: number | null;
   packageFileCount: number;
   packageSize: number;
   packageUnpackedSize: number;
   tarballFile: string | null;
   installDir: string;
   binFile: string;
+  tsxBinFile: string;
   hasBinWrapper: boolean;
   hasCliSource: boolean;
+  hasVitePluginSource: boolean;
   hasContextPackFiles: boolean;
   helpIncludesUsage: boolean;
   helpIncludesDev: boolean;
+  viteImportOk: boolean;
+  vitePluginName: string | null;
+  vitePluginEnforce: string | null;
+  viteLegacyPluginName: string | null;
   dryRunMs: number;
   packMs: number;
   installMs: number;
   helpMs: number;
+  viteImportMs: number;
   stdoutBytes: number;
   stderrBytes: number;
 }
@@ -136,40 +145,90 @@ function packageSmoke(): PackageSmokeResult {
     ".bin",
     process.platform === "win32" ? "intent-layer.cmd" : "intent-layer"
   );
+  const tsxBinFile = path.join(
+    installDir,
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "tsx.cmd" : "tsx"
+  );
   const help =
     fs.existsSync(binFile) && install.exitCode === 0
       ? runCommand(binFile, ["--help"], installDir)
       : { exitCode: null, stdout: "", stderr: "missing installed bin", ms: 0 };
   const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf8")) as {
     bin?: Record<string, string>;
+    exports?: Record<string, string>;
   };
   const files = dryRunPackage?.files ?? [];
+  const packageName = dryRunPackage?.name ?? "intent-layer-spike";
+  const viteSmokeFile = path.join(installDir, "vite-export-smoke.ts");
+  fs.writeFileSync(
+    viteSmokeFile,
+    [
+      `import { intentLayer, intentLayerSpike } from "${packageName}/vite";`,
+      "const plugin = intentLayer();",
+      "const legacyPlugin = intentLayerSpike();",
+      "console.log(JSON.stringify({",
+      "  ok: plugin.name === 'intent-layer-spike' && legacyPlugin.name === plugin.name,",
+      "  pluginName: plugin.name,",
+      "  enforce: plugin.enforce ?? null,",
+      "  legacyPluginName: legacyPlugin.name",
+      "}));",
+      ""
+    ].join("\n")
+  );
+  const viteImport =
+    fs.existsSync(tsxBinFile) && install.exitCode === 0
+      ? runCommand(tsxBinFile, [viteSmokeFile], installDir)
+      : { exitCode: null, stdout: "", stderr: "missing installed tsx bin", ms: 0 };
+  let viteImportReport: {
+    ok?: boolean;
+    pluginName?: string;
+    enforce?: string | null;
+    legacyPluginName?: string;
+  } = {};
+  try {
+    viteImportReport = JSON.parse(viteImport.stdout) as typeof viteImportReport;
+  } catch {
+    viteImportReport = {};
+  }
 
   return {
     packageName: dryRunPackage?.name ?? null,
     packageVersion: dryRunPackage?.version ?? null,
     binTarget: packageJson.bin?.["intent-layer"] ?? null,
+    viteExportTarget: packageJson.exports?.["./vite"] ?? null,
     dryRunExitCode: dryRun.exitCode,
     packExitCode: pack.exitCode,
     installExitCode: install.exitCode,
     helpExitCode: help.exitCode,
+    viteImportExitCode: viteImport.exitCode,
     packageFileCount: files.length,
     packageSize: dryRunPackage?.size ?? 0,
     packageUnpackedSize: dryRunPackage?.unpackedSize ?? 0,
     tarballFile: tarballFile ? reportPath(tarballFile) : null,
     installDir: reportPath(installDir),
     binFile: reportPath(binFile),
+    tsxBinFile: reportPath(tsxBinFile),
     hasBinWrapper: files.some((file) => file.path === "bin/intent-layer.cjs"),
     hasCliSource: files.some((file) => file.path === "src/intent/cli.ts"),
+    hasVitePluginSource: files.some((file) => file.path === "src/intent/vitePlugin.ts"),
     hasContextPackFiles: files.some((file) => file.path.startsWith(".context-pack/")),
     helpIncludesUsage: help.stdout.includes("Usage:"),
     helpIncludesDev: help.stdout.includes("intent-layer dev"),
+    viteImportOk: viteImportReport.ok === true,
+    vitePluginName: viteImportReport.pluginName ?? null,
+    vitePluginEnforce: viteImportReport.enforce ?? null,
+    viteLegacyPluginName: viteImportReport.legacyPluginName ?? null,
     dryRunMs: dryRun.ms,
     packMs: pack.ms,
     installMs: install.ms,
     helpMs: help.ms,
-    stdoutBytes: dryRun.stdout.length + pack.stdout.length + install.stdout.length + help.stdout.length,
-    stderrBytes: dryRun.stderr.length + pack.stderr.length + install.stderr.length + help.stderr.length
+    viteImportMs: viteImport.ms,
+    stdoutBytes:
+      dryRun.stdout.length + pack.stdout.length + install.stdout.length + help.stdout.length + viteImport.stdout.length,
+    stderrBytes:
+      dryRun.stderr.length + pack.stderr.length + install.stderr.length + help.stderr.length + viteImport.stderr.length
   };
 }
 
@@ -1870,12 +1929,19 @@ const report = {
       packageInstallSmoke.packExitCode === 0 &&
       packageInstallSmoke.installExitCode === 0 &&
       packageInstallSmoke.helpExitCode === 0 &&
+      packageInstallSmoke.viteImportExitCode === 0 &&
       packageInstallSmoke.binTarget === "bin/intent-layer.cjs" &&
+      packageInstallSmoke.viteExportTarget === "./src/intent/vitePlugin.ts" &&
       packageInstallSmoke.hasBinWrapper &&
       packageInstallSmoke.hasCliSource &&
+      packageInstallSmoke.hasVitePluginSource &&
       !packageInstallSmoke.hasContextPackFiles &&
       packageInstallSmoke.helpIncludesUsage &&
-      packageInstallSmoke.helpIncludesDev,
+      packageInstallSmoke.helpIncludesDev &&
+      packageInstallSmoke.viteImportOk &&
+      packageInstallSmoke.vitePluginName === "intent-layer-spike" &&
+      packageInstallSmoke.vitePluginEnforce === "pre" &&
+      packageInstallSmoke.viteLegacyPluginName === "intent-layer-spike",
     cliScanPass:
       cliScan.exitCode === 0 &&
       cliScanReport?.command === "scan" &&

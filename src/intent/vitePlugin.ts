@@ -316,3 +316,7 @@ export function intentLayerSpike(): Plugin {
     }
   };
 }
+
+export function intentLayer(): Plugin {
+  return intentLayerSpike();
+}
