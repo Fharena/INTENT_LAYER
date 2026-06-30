@@ -49,6 +49,13 @@ npm run eval
 npm run build
 ```
 
+Regenerate or inspect the committed AI corpus audit fixtures:
+
+```bash
+npm run generate:ai-corpus
+npm run analyze:ai-corpus
+```
+
 The demo currently supports:
 
 - React + Vite + Tailwind demo UI
@@ -60,6 +67,7 @@ The demo currently supports:
 - direct Tailwind token replacement for supported static tokens
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
 - read-only bindings for unsupported `className` expressions so agent handoff still works
+- Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
 - undo for the last applied patch
 - structured agent handoff task generation at `.intent/agent/task_*.md`
 - structured agent result artifact generation at `.intent/agent/result_*.md`
@@ -73,6 +81,7 @@ The first evaluation result is stored in:
 
 ```text
 reports/performance/corpus-audit.json
+reports/performance/ai-corpus-audit.json
 reports/performance/spike-evaluation.json
 reports/performance/browser-click-metric.json
 ```

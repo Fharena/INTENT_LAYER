@@ -13,6 +13,7 @@ npm run build
 평가 대상:
 
 - `fixtures/corpus/*.tsx`
+- `fixtures/ai-generated/*.tsx`
 - `src/App.tsx`
 - `src/**/*.tsx` instrumentation transform
 - static patch fixture
@@ -26,9 +27,13 @@ npm run build
 
 주의:
 
-이번 corpus는 외부 실제 AI 생성 코드 50-100개가 아니라, repo 안에 만든 초기 fixture corpus다.
-따라서 수치는 제품 가능성의 1차 신호로만 봐야 한다.
-다음 단계에서는 실제 AI 생성 샘플을 별도로 모아 다시 측정해야 한다.
+평가에는 두 종류의 corpus가 있다.
+
+1. 초기 fixture corpus: 작은 기능 검증용 샘플이다.
+2. Codex-generated AI corpus: repo에 커밋된 50개 React/Tailwind TSX 샘플이다.
+
+두 번째 corpus는 AI가 생성한 코드 표면을 더 넓게 재기 위한 재현 가능한 로컬 benchmark다.
+다만 외부 프로젝트나 실제 사용자 코드에서 독립 수집한 benchmark는 아직 아니다.
 
 ## 2. Corpus 분석 결과
 
@@ -76,6 +81,61 @@ Unsupported reason:
 - simple/partial `cn()` / `clsx()` literal segment를 직접 patch 대상으로 포함했다.
 - read-only 원인은 변수, template literal, variant 함수 계열로 줄었다.
 
+## 2.1 Codex-generated AI Corpus 분석 결과
+
+원본 리포트:
+
+```text
+reports/performance/ai-corpus-audit.json
+```
+
+요약:
+
+| 항목 | 값 |
+| --- | ---: |
+| 스캔 파일 수 | 50 |
+| `className` 발생 수 | 390 |
+| static `className` | 320 / 390 = 82.05% |
+| simple `cn()` / `clsx()` | 20 / 390 = 5.13% |
+| partial `cn()` / `clsx()` | 10 / 390 = 2.56% |
+| read-only | 40 / 390 = 10.26% |
+| static token 수 | 1,770 |
+| static editable token 수 | 1,430 |
+| static editable coverage | 80.79% |
+| static + simple token 수 | 1,890 |
+| static + simple editable token 수 | 1,500 |
+| static + simple editable coverage | 79.37% |
+| supported direct token 수 | 1,930 |
+| supported direct editable token 수 | 1,520 |
+| supported direct editable coverage | 78.76% |
+| 전체 관측 token 수 | 1,930 |
+| 전체 editable token 수 | 1,520 |
+| 전체 editable coverage | 78.76% |
+
+Unsupported reason:
+
+| 이유 | 수 |
+| --- | ---: |
+| variable-reference | 20 |
+| property-access-reference | 10 |
+| variant-function | 10 |
+
+Gate:
+
+| Gate | 기준 | 결과 |
+| --- | --- | --- |
+| sample count | files >= 50 | 통과 |
+| static + simple coverage | editable coverage >= 50% | 통과 |
+| supported direct coverage | editable coverage >= 50% | 통과 |
+| all observed coverage | editable coverage >= 50% | 통과 |
+
+해석:
+
+- Codex-generated 50개 corpus에서는 직접 편집 가능한 token coverage가 78.76%로 나왔다.
+- 이 수치는 "10% 케이스만 되는 장난감" 위험은 낮춘다.
+- read-only 10.26%는 변수 참조, property access, variant 함수 패턴에 집중되어 있다.
+- 아직 외부 프로젝트에서 독립 수집한 corpus가 아니므로, 시장 검증용 최종 수치로 쓰면 안 된다.
+
 ## 3. Transform 성능
 
 원본 리포트:
@@ -88,8 +148,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.084ms / p95 2.855ms / max 2.855ms |
-| `src/main.tsx` | 0 | avg 0.004ms / p95 0.007ms / max 0.007ms |
+| `src/App.tsx` | 13 | avg 1.396ms / p95 3.44ms / max 3.44ms |
+| `src/main.tsx` | 0 | avg 0.004ms / p95 0.006ms / max 0.006ms |
 
 요약:
 
@@ -97,12 +157,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 0.544ms |
-| 전체 p95 transform time | 2.855ms |
-| 전체 최대 transform time | 2.855ms |
-| warm 평균 transform time | 0.322ms |
-| warm p95 transform time | 0.765ms |
-| warm 최대 transform time | 0.765ms |
+| 전체 평균 transform time | 0.7ms |
+| 전체 p95 transform time | 3.44ms |
+| 전체 최대 transform time | 3.44ms |
+| warm 평균 transform time | 0.444ms |
+| warm p95 transform time | 1.198ms |
+| warm 최대 transform time | 1.198ms |
 | warm 목표 | 5ms 이하 |
 | cold 목표 | 10ms 이하 |
 | 결과 | warm 통과 / cold 통과 |
@@ -126,9 +186,9 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 파일 크기 | 45,352 bytes |
 | 반복 측정 | 5 |
-| average transform time | 7.29ms |
-| p95 transform time | 14.403ms |
-| max transform time | 14.403ms |
+| average transform time | 9.295ms |
+| p95 transform time | 13.662ms |
+| max transform time | 13.662ms |
 | stress 목표 | 20ms 이하 |
 | 결과 | 통과 |
 
@@ -143,13 +203,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 1.414ms |
-| preview round trip | 2.004ms |
+| preview time | 1.083ms |
+| preview round trip | 1.482ms |
 | apply 성공 | true |
-| static apply time | 20.186ms |
-| simple `cn()` apply time | 7.789ms |
+| static apply time | 32.702ms |
+| simple `cn()` apply time | 11.054ms |
 | revert 성공 | true |
-| revert time | 14.482ms |
+| revert time | 37.294ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -169,8 +229,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.623ms |
-| 평균 lookup | 0.000623ms |
+| 총 시간 | 0.687ms |
+| 평균 lookup | 0.000687ms |
 
 주의:
 
@@ -251,7 +311,7 @@ Viewport별 최대값:
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 13.391ms |
+| task 생성 시간 | 6.251ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -273,7 +333,7 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 5.016ms |
+| result 생성 시간 | 10.291ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
 | source hash changed | true |
@@ -322,7 +382,7 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 1.959ms |
+| agent task 생성 시간 | 1.707ms |
 
 해석:
 
@@ -336,6 +396,10 @@ dev server endpoint smoke test:
 | static editable token coverage | >= 30% | 통과 |
 | static + simple `cn()` / `clsx()` coverage | >= 50% | 통과 |
 | supported direct coverage | >= 50% | 통과 |
+| AI corpus sample count | files >= 50 | 통과 |
+| AI corpus static + simple coverage | editable coverage >= 50% | 통과 |
+| AI corpus supported direct coverage | editable coverage >= 50% | 통과 |
+| AI corpus all observed coverage | editable coverage >= 50% | 통과 |
 | warm transform target | max <= 5ms | 통과 |
 | cold transform target | max <= 10ms | 통과 |
 | large transform stress | 401 bindings max <= 20ms | 통과 |
@@ -360,6 +424,7 @@ dev server endpoint smoke test:
 
 - static `className` token 분석
 - simple/partial `cn()` / `clsx()` literal segment 분석
+- Codex-generated 50개 React/Tailwind corpus coverage 측정
 - compile-time source binding 생성
 - read-only source binding 생성
 - source token range 기반 patch
@@ -380,7 +445,7 @@ dev server endpoint smoke test:
 
 - 실제 제품급 대형 TSX 파일에서 cache/write throttling 검증
 - 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
-- 실제 AI 생성 코드 50-100개 corpus 검증
+- 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
 - agent source-window diff를 component-level semantic diff로 확장
 - variant 함수와 runtime template literal 지원
 
@@ -388,5 +453,5 @@ dev server endpoint smoke test:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 실제 corpus audit, semantic intent diff 확장, undo stack 설계다.
+다음 우선순위는 semantic intent diff 확장, undo stack 설계, 외부 독립 corpus 검증이다.
 ```

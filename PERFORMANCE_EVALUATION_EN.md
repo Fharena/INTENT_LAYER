@@ -13,6 +13,7 @@ npm run build
 Measured inputs:
 
 - `fixtures/corpus/*.tsx`
+- `fixtures/ai-generated/*.tsx`
 - `src/App.tsx`
 - `src/**/*.tsx` instrumentation transform
 - static patch fixture
@@ -26,9 +27,13 @@ Measured inputs:
 
 Important caveat:
 
-This corpus is an initial in-repo fixture corpus, not a real external set of 50-100 AI-generated examples.
-Treat these numbers as an early signal only.
-The next step should measure a real AI-generated React/Tailwind corpus.
+The evaluation now has two corpora.
+
+1. Initial fixture corpus: small samples for feature validation.
+2. Codex-generated AI corpus: 50 committed React/Tailwind TSX samples.
+
+The second corpus is a reproducible local benchmark for a wider AI-generated code surface.
+It is still not an independently collected benchmark from external projects or real user code.
 
 ## 2. Corpus Analysis Results
 
@@ -76,6 +81,61 @@ Interpretation:
 - Simple/partial `cn()` / `clsx()` literal segments are now included in the direct-patch surface.
 - Read-only cases now cluster around variables, template literals, and variant functions.
 
+## 2.1 Codex-generated AI Corpus Results
+
+Raw report:
+
+```text
+reports/performance/ai-corpus-audit.json
+```
+
+Summary:
+
+| Metric | Value |
+| --- | ---: |
+| Files scanned | 50 |
+| `className` occurrences | 390 |
+| static `className` | 320 / 390 = 82.05% |
+| simple `cn()` / `clsx()` | 20 / 390 = 5.13% |
+| partial `cn()` / `clsx()` | 10 / 390 = 2.56% |
+| read-only | 40 / 390 = 10.26% |
+| static token count | 1,770 |
+| static editable token count | 1,430 |
+| static editable coverage | 80.79% |
+| static + simple token count | 1,890 |
+| static + simple editable token count | 1,500 |
+| static + simple editable coverage | 79.37% |
+| supported direct token count | 1,930 |
+| supported direct editable token count | 1,520 |
+| supported direct editable coverage | 78.76% |
+| all observed token count | 1,930 |
+| all editable token count | 1,520 |
+| all editable coverage | 78.76% |
+
+Unsupported reasons:
+
+| Reason | Count |
+| --- | ---: |
+| variable-reference | 20 |
+| property-access-reference | 10 |
+| variant-function | 10 |
+
+Gate:
+
+| Gate | Threshold | Result |
+| --- | --- | --- |
+| sample count | files >= 50 | pass |
+| static + simple coverage | editable coverage >= 50% | pass |
+| supported direct coverage | editable coverage >= 50% | pass |
+| all observed coverage | editable coverage >= 50% | pass |
+
+Interpretation:
+
+- The 50-file Codex-generated corpus records 78.76% directly editable token coverage.
+- This reduces the risk that the product only works for a toy 10% slice.
+- The 10.26% read-only surface clusters around variable references, property access, and variant functions.
+- Because this is not an independently collected external corpus, it should not be treated as the final market-validation benchmark.
+
 ## 3. Transform Performance
 
 Raw report:
@@ -88,8 +148,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.084ms / p95 2.855ms / max 2.855ms |
-| `src/main.tsx` | 0 | avg 0.004ms / p95 0.007ms / max 0.007ms |
+| `src/App.tsx` | 13 | avg 1.396ms / p95 3.44ms / max 3.44ms |
+| `src/main.tsx` | 0 | avg 0.004ms / p95 0.006ms / max 0.006ms |
 
 Summary:
 
@@ -97,12 +157,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.544ms |
-| Overall p95 transform time | 2.855ms |
-| Overall max transform time | 2.855ms |
-| Warm average transform time | 0.322ms |
-| Warm p95 transform time | 0.765ms |
-| Warm max transform time | 0.765ms |
+| Overall average transform time | 0.7ms |
+| Overall p95 transform time | 3.44ms |
+| Overall max transform time | 3.44ms |
+| Warm average transform time | 0.444ms |
+| Warm p95 transform time | 1.198ms |
+| Warm max transform time | 1.198ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -126,9 +186,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 7.29ms |
-| p95 transform time | 14.403ms |
-| Max transform time | 14.403ms |
+| Average transform time | 9.295ms |
+| p95 transform time | 13.662ms |
+| Max transform time | 13.662ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -143,13 +203,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.414ms |
-| Preview round trip | 2.004ms |
+| Preview time | 1.083ms |
+| Preview round trip | 1.482ms |
 | Apply success | true |
-| Static apply time | 20.186ms |
-| Simple `cn()` apply time | 7.789ms |
+| Static apply time | 32.702ms |
+| Simple `cn()` apply time | 11.054ms |
 | Revert success | true |
-| Revert time | 14.482ms |
+| Revert time | 37.294ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -169,8 +229,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.623ms |
-| Average lookup | 0.000623ms |
+| Total time | 0.687ms |
+| Average lookup | 0.000687ms |
 
 Caveat:
 
@@ -252,7 +312,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 13.391ms |
+| Task generation time | 6.251ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -274,7 +334,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 5.016ms |
+| Result generation time | 10.291ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -323,7 +383,7 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.959ms |
+| Agent task generation time | 1.707ms |
 
 Interpretation:
 
@@ -337,6 +397,10 @@ Interpretation:
 | static editable token coverage | >= 30% | pass |
 | static + simple `cn()` / `clsx()` coverage | >= 50% | pass |
 | supported direct coverage | >= 50% | pass |
+| AI corpus sample count | files >= 50 | pass |
+| AI corpus static + simple coverage | editable coverage >= 50% | pass |
+| AI corpus supported direct coverage | editable coverage >= 50% | pass |
+| AI corpus all observed coverage | editable coverage >= 50% | pass |
 | warm transform target | max <= 5ms | pass |
 | cold transform target | max <= 10ms | pass |
 | large transform stress | 401 bindings max <= 20ms | pass |
@@ -361,6 +425,7 @@ What worked:
 
 - static `className` token analysis
 - simple/partial `cn()` / `clsx()` literal segment analysis
+- Codex-generated 50-file React/Tailwind corpus coverage measurement
 - compile-time source binding generation
 - read-only source binding generation
 - source token range patching
@@ -381,7 +446,7 @@ What remains weak:
 
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
-- real AI-generated 50-100 sample corpus audit is still missing
+- independently collected external 50-100 sample AI-generated corpus audit is still missing
 - source-window diffs still need to become component-level semantic diffs
 - variant functions and runtime template literals remain unsupported
 
@@ -389,5 +454,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is real corpus audit, semantic intent diff expansion, and undo stack design.
+The next priority is semantic intent diff expansion, undo stack design, and independent external corpus validation.
 ```

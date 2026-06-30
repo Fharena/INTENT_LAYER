@@ -40,6 +40,7 @@ Included:
 - browser click-to-panel, preview, apply, and revert round-trip latency measurement
 - minimal intent operation/diff output
 - corpus analysis script
+- Codex-generated 50-file React/Tailwind corpus fixture and coverage report
 - performance and safety evaluation script
 
 Excluded:
@@ -134,7 +135,9 @@ src/intent/tailwind.ts
 src/intent/client.ts
 scripts/analyze-classnames.ts
 scripts/evaluate-spike.ts
+scripts/generate-ai-corpus.ts
 fixtures/corpus/*.tsx
+fixtures/ai-generated/*.tsx
 reports/performance/*.json
 ```
 
@@ -160,10 +163,18 @@ npm run eval
 npm run build
 ```
 
+Regenerate or inspect the AI corpus fixtures:
+
+```bash
+npm run generate:ai-corpus
+npm run analyze:ai-corpus
+```
+
 `npm run eval` writes:
 
 ```text
 reports/performance/corpus-audit.json
+reports/performance/ai-corpus-audit.json
 reports/performance/spike-evaluation.json
 ```
 
@@ -184,6 +195,29 @@ Applied flow:
 
 For this task, context-pack routed the work toward the `docs` and `overview` areas instead of encouraging a broad repo scan.
 Generated `.context-pack/packs/CONTEXT_PACK.md` files are temporary and are not committed.
+
+## 6.1 AI-generated Corpus Audit
+
+To measure a wider MVP direct-edit surface, `fixtures/ai-generated` now contains 50 Codex-generated React/Tailwind TSX samples.
+The samples mix dashboards, landing sections, shadcn-like cards, workflow controls, and read-only variable/variant patterns.
+
+Measured result:
+
+```text
+files: 50
+className occurrences: 390
+static className: 320 / 390 = 82.05%
+simple cn/clsx: 20 / 390 = 5.13%
+partial cn/clsx: 10 / 390 = 2.56%
+read-only: 40 / 390 = 10.26%
+supported direct editable coverage: 78.76%
+```
+
+Interpretation:
+
+- In the 50-file Codex-generated corpus, directly editable token surface clears the 50% gate.
+- Read-only cases are mainly variable references (20), property access references (10), and variant functions (10).
+- This corpus is a reproducible local benchmark, not an independently collected external benchmark.
 
 ### 3.3 Simple cn/clsx literal segment support
 
@@ -214,6 +248,7 @@ Support model:
 - Agent results record a before/after line diff for the selected source window, but they do not yet infer a full-file semantic diff automatically.
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
 - The latest browser measurement repeats 3 desktop samples and 3 mobile 390x844 viewport samples.
+- The Codex-generated 50-file React/Tailwind corpus records 78.76% supported direct editable coverage.
 - Current fixtures now meet the 5ms warm transform target and the 10ms cold transform target.
 - The large TSX stress fixture with 100 cards and 401 bindings meets the 20ms stress target.
 - Product-sized TSX files still need cache and graph write throttling validation.
@@ -222,9 +257,9 @@ Support model:
 
 Priority order:
 
-1. Re-measure editable coverage on a real 50-100 sample AI-generated React/Tailwind corpus.
-2. Expand agent result source-window diffs into semantic intent diffs.
-3. Design an undo stack and operation-log-backed revert.
+1. Expand agent result source-window diffs into semantic intent diffs.
+2. Design an undo stack and operation-log-backed revert.
+3. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
 4. Connect read-only source diffs to a wider source window.
 5. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
 6. Validate caching and graph write throttling on product-sized TSX files.

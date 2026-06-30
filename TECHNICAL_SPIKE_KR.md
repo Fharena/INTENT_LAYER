@@ -39,6 +39,7 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 - 브라우저 click-to-panel, preview, apply, revert round-trip latency 측정
 - 최소 intent operation/diff 파일 생성
 - corpus 분석 스크립트
+- Codex-generated 50개 React/Tailwind corpus fixture와 coverage 리포트
 - 성능/안전성 평가 스크립트
 
 제외:
@@ -133,7 +134,9 @@ src/intent/tailwind.ts
 src/intent/client.ts
 scripts/analyze-classnames.ts
 scripts/evaluate-spike.ts
+scripts/generate-ai-corpus.ts
 fixtures/corpus/*.tsx
+fixtures/ai-generated/*.tsx
 reports/performance/*.json
 ```
 
@@ -159,10 +162,18 @@ npm run eval
 npm run build
 ```
 
+AI corpus fixture 재생성/분석:
+
+```bash
+npm run generate:ai-corpus
+npm run analyze:ai-corpus
+```
+
 `npm run eval`은 다음을 생성한다.
 
 ```text
 reports/performance/corpus-audit.json
+reports/performance/ai-corpus-audit.json
 reports/performance/spike-evaluation.json
 ```
 
@@ -183,6 +194,29 @@ https://github.com/Fharena/context-pack
 
 이번 작업에서 context-pack은 전체 repo를 무작정 읽지 않고 `docs`, `overview` 영역을 먼저 보도록 라우팅했다.
 생성된 `.context-pack/packs/CONTEXT_PACK.md`는 임시 파일이므로 커밋하지 않는다.
+
+## 6.1 AI-generated Corpus Audit
+
+MVP direct-edit 표면적을 더 넓게 보기 위해 `fixtures/ai-generated`에 Codex-generated React/Tailwind TSX 샘플 50개를 추가했다.
+샘플은 dashboard, landing, shadcn-like card, workflow controls, read-only 변수/variant 패턴을 섞어 만들었다.
+
+측정 결과:
+
+```text
+files: 50
+className occurrences: 390
+static className: 320 / 390 = 82.05%
+simple cn/clsx: 20 / 390 = 5.13%
+partial cn/clsx: 10 / 390 = 2.56%
+read-only: 40 / 390 = 10.26%
+supported direct editable coverage: 78.76%
+```
+
+해석:
+
+- 50개 Codex-generated corpus에서는 직접 편집 가능한 token 표면적이 50% gate를 넘었다.
+- read-only의 주요 원인은 variable reference 20건, property access 10건, variant function 10건이다.
+- 이 corpus는 재현 가능한 로컬 benchmark이지만, 외부 프로젝트에서 독립 수집한 corpus는 아니다.
 
 ### 3.3 Simple cn/clsx literal segment support
 
@@ -213,6 +247,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - agent result는 선택 source window의 before/after line diff를 기록하지만, 아직 전체 파일 semantic diff를 자동 추론하지 않는다.
 - 실제 브라우저 click-to-panel, preview, apply, revert 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
 - 최신 브라우저 측정은 desktop 3회, mobile 390x844 viewport 3회로 반복했다.
+- Codex-generated 50개 React/Tailwind corpus에서는 supported direct editable coverage 78.76%를 기록했다.
 - 현재 fixture에서는 warm transform 5ms 목표와 cold transform 10ms 목표를 만족했다.
 - 100개 카드/401개 binding을 가진 대형 TSX stress fixture는 20ms 목표를 만족했다.
 - 실제 제품급 대형 TSX 파일에서는 cache와 graph write throttling을 추가 검증해야 한다.
@@ -221,9 +256,9 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 우선순위:
 
-1. 실제 AI 생성 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
-2. agent result source window diff를 실제 semantic intent diff로 확장한다.
-3. undo stack과 operation log 기반 revert를 설계한다.
+1. agent result source window diff를 실제 semantic intent diff로 확장한다.
+2. undo stack과 operation log 기반 revert를 설계한다.
+3. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
 4. read-only source diff를 더 넓은 source window와 연결한다.
 5. fixture를 nested component, map render, conditional render, fragment로 확장한다.
 6. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
