@@ -445,7 +445,7 @@ function findImportedVariantDeclaration(
 ): RelatedSourceRange | null {
   const normalizedFile = path.resolve(file);
   const visitKey = `${normalizedFile}:${identifier}`;
-  if (visited.has(visitKey) || visited.size > 4) return null;
+  if (visited.has(visitKey) || visited.size > 6) return null;
   visited.add(visitKey);
 
   const source = fs.readFileSync(normalizedFile, "utf8");

@@ -1986,6 +1986,117 @@ const aliasBarrelVariantHandoffResult = recordAgentResult(
   }
 );
 
+const multiHopVariantRoot = resetTmpSubdir("multi-hop-variant-handoff");
+const multiHopVariantTokensDir = path.join(multiHopVariantRoot, "src", "tokens");
+const multiHopVariantUiDir = path.join(multiHopVariantRoot, "src", "ui");
+const multiHopVariantThemeDir = path.join(multiHopVariantRoot, "src", "theme");
+const multiHopVariantScreensDir = path.join(multiHopVariantRoot, "src", "screens");
+fs.mkdirSync(multiHopVariantTokensDir, { recursive: true });
+fs.mkdirSync(multiHopVariantUiDir, { recursive: true });
+fs.mkdirSync(multiHopVariantThemeDir, { recursive: true });
+fs.mkdirSync(multiHopVariantScreensDir, { recursive: true });
+fs.writeFileSync(
+  path.join(multiHopVariantRoot, "tsconfig.json"),
+  `${JSON.stringify(
+    {
+      compilerOptions: {
+        baseUrl: ".",
+        paths: {
+          "@/*": ["src/*"]
+        }
+      }
+    },
+    null,
+    2
+  )}\n`
+);
+const multiHopVariantDefinitionFixture = path.join(multiHopVariantTokensDir, "buttonVariants.ts");
+fs.writeFileSync(
+  multiHopVariantDefinitionFixture,
+  [
+    "declare function cva(base: string, options: unknown): (value: { variant: \"primary\" | \"ghost\" }) => string;",
+    "export const buttonVariants = cva(\"inline-flex items-center gap-4 rounded-lg px-4 py-2\", {",
+    "  variants: {",
+    "    variant: {",
+    "      primary: \"bg-teal-700 text-white\",",
+    "      ghost: \"bg-white text-slate-700\"",
+    "    }",
+    "  }",
+    "});",
+    ""
+  ].join("\n")
+);
+const multiHopVariantUiIndexFixture = path.join(multiHopVariantUiDir, "index.ts");
+fs.writeFileSync(multiHopVariantUiIndexFixture, "export { buttonVariants } from \"../tokens/buttonVariants\";\n");
+const multiHopVariantThemeIndexFixture = path.join(multiHopVariantThemeDir, "index.ts");
+fs.writeFileSync(multiHopVariantThemeIndexFixture, "export { buttonVariants } from \"../ui\";\n");
+const multiHopVariantHandoffFixture = path.join(
+  multiHopVariantScreensDir,
+  "MultiHopVariantHandoffFixture.tsx"
+);
+fs.writeFileSync(
+  multiHopVariantHandoffFixture,
+  [
+    "import { buttonVariants as actionVariants } from \"@/theme\";",
+    "",
+    "export function MultiHopVariantHandoffFixture() {",
+    "  return <button className={actionVariants({ variant: \"primary\" })}>Multi-hop variant handoff target</button>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const multiHopVariantHandoffInstrument = instrumentSource({
+  code: fs.readFileSync(multiHopVariantHandoffFixture, "utf8"),
+  file: multiHopVariantHandoffFixture,
+  rootDir: multiHopVariantRoot
+});
+const multiHopVariantHandoffEntry = multiHopVariantHandoffInstrument.entries[0];
+const multiHopVariantHandoffTask = createAgentTask(
+  multiHopVariantRoot,
+  multiHopVariantHandoffEntry,
+  {
+    id: multiHopVariantHandoffEntry?.id ?? "missing-multi-hop-variant-handoff-binding",
+    desiredChange: "Change this multi-hop barrel variant-backed className through an agent handoff."
+  }
+);
+const multiHopVariantHandoffRelatedSnapshot = multiHopVariantHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedSourceSnapshot | null>(
+      multiHopVariantHandoffTask.markdown,
+      "Related Source Snapshot"
+    )
+  : null;
+if (multiHopVariantHandoffTask.ok) {
+  fs.writeFileSync(
+    multiHopVariantDefinitionFixture,
+    fs
+      .readFileSync(multiHopVariantDefinitionFixture, "utf8")
+      .replace(
+        "inline-flex items-center gap-4 rounded-lg px-4 py-2",
+        "inline-flex items-center gap-6 rounded-xl px-5 py-3"
+      )
+      .replace("bg-teal-700", "bg-cyan-700")
+  );
+}
+const multiHopVariantHandoffSyntaxErrorsAfterResult =
+  parseSyntaxErrorCount(multiHopVariantDefinitionFixture) +
+  parseSyntaxErrorCount(multiHopVariantUiIndexFixture) +
+  parseSyntaxErrorCount(multiHopVariantThemeIndexFixture) +
+  parseSyntaxErrorCount(multiHopVariantHandoffFixture);
+const multiHopVariantHandoffResult = recordAgentResult(
+  multiHopVariantRoot,
+  multiHopVariantHandoffEntry,
+  {
+    id: multiHopVariantHandoffEntry?.id ?? "missing-multi-hop-variant-handoff-binding",
+    taskFile: multiHopVariantHandoffTask.ok ? multiHopVariantHandoffTask.taskFile : undefined,
+    summary:
+      "Multi-hop variant handoff fixture: updated the related cva-like declaration behind an alias and multi-hop barrel export.",
+    changedFiles: ["src/tokens/buttonVariants.ts"],
+    checks: ["npm run typecheck", "npm run eval", "npm run build"],
+    notes:
+      "Evaluation fixture for multi-hop variant-function handoff context; no LLM call is made."
+  }
+);
+
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
 fs.writeFileSync(
   cnPatchFixture,
@@ -3211,6 +3322,61 @@ const report = {
       ? aliasBarrelVariantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  multiHopVariantHandoffBinding: {
+    entryCreated: Boolean(multiHopVariantHandoffEntry),
+    root: reportPath(multiHopVariantRoot),
+    kind: multiHopVariantHandoffEntry?.className.kind ?? null,
+    unsupportedReason: multiHopVariantHandoffEntry?.className.unsupportedReason ?? null,
+    value: multiHopVariantHandoffEntry?.className.value ?? null,
+    tokenCount: multiHopVariantHandoffEntry?.tokens.length ?? 0,
+    taskOk: multiHopVariantHandoffTask.ok,
+    taskMs: multiHopVariantHandoffTask.ok
+      ? multiHopVariantHandoffTask.metrics.taskMs
+      : multiHopVariantHandoffTask.metrics?.taskMs,
+    relatedSnapshotAvailable: Boolean(multiHopVariantHandoffRelatedSnapshot),
+    relatedSnapshotFile: multiHopVariantHandoffRelatedSnapshot?.file ?? null,
+    relatedSnapshotKind: multiHopVariantHandoffRelatedSnapshot?.kind ?? null,
+    relatedSnapshotIdentifier: multiHopVariantHandoffRelatedSnapshot?.identifier ?? null,
+    relatedSnapshotIncludesCva: Boolean(multiHopVariantHandoffRelatedSnapshot?.excerpt.includes("cva(")),
+    resultOk: multiHopVariantHandoffResult.ok,
+    resultMs: multiHopVariantHandoffResult.ok
+      ? multiHopVariantHandoffResult.metrics.resultMs
+      : multiHopVariantHandoffResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: multiHopVariantHandoffSyntaxErrorsAfterResult,
+    sourceDiffLineCount: multiHopVariantHandoffResult.ok
+      ? multiHopVariantHandoffResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: multiHopVariantHandoffResult.ok
+      ? Boolean(multiHopVariantHandoffResult.sourceDiff)
+      : false,
+    componentDiffLineCount: multiHopVariantHandoffResult.ok
+      ? multiHopVariantHandoffResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: multiHopVariantHandoffResult.ok
+      ? Boolean(multiHopVariantHandoffResult.componentSourceDiff)
+      : false,
+    relatedResultSnapshotAvailable: multiHopVariantHandoffResult.ok
+      ? multiHopVariantHandoffResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: multiHopVariantHandoffResult.ok
+      ? multiHopVariantHandoffResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: multiHopVariantHandoffResult.ok
+      ? Boolean(multiHopVariantHandoffResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: multiHopVariantHandoffResult.ok
+      ? multiHopVariantHandoffResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedSemanticDiffPresent: multiHopVariantHandoffResult.ok
+      ? Boolean(multiHopVariantHandoffResult.relatedSemanticDiff)
+      : false,
+    relatedSemanticTokenAddedCount: multiHopVariantHandoffResult.ok
+      ? multiHopVariantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedSemanticTokenRemovedCount: multiHopVariantHandoffResult.ok
+      ? multiHopVariantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
@@ -3486,6 +3652,22 @@ const report = {
       (aliasBarrelVariantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
       (aliasBarrelVariantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
       aliasBarrelVariantHandoffSyntaxErrorsAfterResult === 0,
+    multiHopVariantHandoffRelatedSourcePass:
+      multiHopVariantHandoffEntry?.className.kind === "read-only" &&
+      multiHopVariantHandoffEntry.className.unsupportedReason === "variant-function" &&
+      multiHopVariantHandoffTask.ok &&
+      multiHopVariantHandoffRelatedSnapshot?.kind === "variant-function" &&
+      multiHopVariantHandoffRelatedSnapshot.identifier === "buttonVariants" &&
+      multiHopVariantHandoffRelatedSnapshot.file === "src/tokens/buttonVariants.ts" &&
+      multiHopVariantHandoffRelatedSnapshot.excerpt.includes("cva(") &&
+      multiHopVariantHandoffResult.ok &&
+      multiHopVariantHandoffResult.source.relatedSnapshotAvailable &&
+      multiHopVariantHandoffResult.source.relatedDiffLineCount > 0 &&
+      Boolean(multiHopVariantHandoffResult.relatedSourceDiff) &&
+      multiHopVariantHandoffResult.source.relatedSemanticChangeCount >= 2 &&
+      (multiHopVariantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
+      (multiHopVariantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
+      multiHopVariantHandoffSyntaxErrorsAfterResult === 0,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch",
     operationLogUndoStackPass:
