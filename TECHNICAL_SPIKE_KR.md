@@ -298,7 +298,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - agent result는 선택 source window와 선택 component snapshot의 before/after line diff를 기록한다.
 - agent result는 단순 변수 참조 read-only binding의 same-file/imported related source diff와 related semantic token diff를 기록한다.
 - related semantic token diff는 단순 quoted 변수 선언, imported 변수 선언, simple `cn()` / `clsx()` 변수 선언, 배열/object map/template literal literal segment를 fixture로 검증한다.
-- variant 함수 read-only binding은 같은 파일 안의 local `function` / `const` variant 선언, one-hop relative named import, tsconfig paths alias + one-hop named barrel re-export 뒤의 variant 선언을 related source snapshot으로 저장하고, result 기록 시 related source/semantic diff를 남긴다.
+- variant 함수 read-only binding은 같은 파일 안의 local `function` / `const` variant 선언, one-hop relative named import, tsconfig paths alias + one-hop/multi-hop named barrel re-export 뒤의 variant 선언을 related source snapshot으로 저장하고, result 기록 시 related source/semantic diff를 남긴다.
 - package smoke는 tarball install 뒤 `vite.cjs` wrapper 기반 `/vite` export로 외부 temp fixture를 transform하고 `data-intent-id`/`.intent/graph.intent.json` 생성까지 확인한다.
 - 같은 설치 폴더에서 실제 Vite dev server를 띄워 `/src/App.tsx` transform 결과, `/__intent/graph`, `/__intent/preview`, `/__intent/apply` endpoint 응답까지 HTTP로 확인한다.
 - 설치된 Vite dev server smoke는 `gap-4 -> gap-6` patch를 실제 source에 적용하고, operation/diff/log artifact 생성과 apply 후 module/graph 갱신까지 확인한다.
@@ -320,7 +320,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 우선순위:
 
 1. `npm run import:external-corpus -- <path>`로 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개를 넣고 editable coverage를 다시 측정한다.
-2. package import, variant 함수의 다단계 import graph, cross-variable data flow에 대한 agent handoff 문맥을 보강한다.
+2. package import와 cross-variable data flow에 대한 agent handoff 문맥을 보강한다.
 3. 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative를 재측정한다.
 4. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
 
@@ -388,8 +388,8 @@ task 생성 시 선택 source window snapshot과 선택 component snapshot을 �
 소스 파일의 현재 hash를 다시 읽어 `sourceHashChanged`도 기록한다.
 component-level semantic diff는 현재 `className` token 기준으로 제한한다.
 related source semantic diff는 단순 quoted 변수 선언 문자열, imported 변수 선언 문자열, simple `cn()` / `clsx()` 변수 선언, 배열/object map/template literal의 literal segment를 token 단위로 재분석한다.
-variant 함수 read-only binding은 같은 파일 안의 local variant 함수/변수 선언, one-hop relative named import, tsconfig paths alias + one-hop named barrel re-export 뒤의 variant 선언을 related source로 저장해 source diff와 literal token semantic diff를 남긴다.
-아직 package import, variant 함수의 복잡한 다단계 import graph, variant 함수 의미, cross-variable data flow까지 자동 분석하지는 않는다.
+variant 함수 read-only binding은 같은 파일 안의 local variant 함수/변수 선언, one-hop relative named import, tsconfig paths alias + one-hop/multi-hop named barrel re-export 뒤의 variant 선언을 related source로 저장해 source diff와 literal token semantic diff를 남긴다.
+아직 package import, variant 함수 의미, cross-variable data flow까지 자동 분석하지는 않는다.
 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 분석하지는 않는다.
 
 ### 9.1 Read-only Handoff

@@ -37,6 +37,7 @@ Measured inputs:
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
 - tsconfig paths alias + barrel variant/cva related source handoff fixture
+- tsconfig paths alias + multi-hop barrel variant/cva related source handoff fixture
 - CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
 - package install smoke fixture with installed plugin transform/graph, Vite dev server verification, and 3-file graph refresh verification
 - product-sized Vite graph write throttle fixture
@@ -822,7 +823,7 @@ Interpretation:
 - The agent task editable file list includes both the selected JSX file and the imported variant definition file.
 - Result recording creates related source and semantic token diffs even when only the imported definition changes.
 - tsconfig paths aliases and one-hop named barrel re-exports are verified in the fixture below.
-- Imported variable alias/barrel chains are supported, but package imports, complex multi-hop variant-function import graphs, and cross-variable data flow are still out of scope.
+- Imported variable alias/barrel chains are supported, but package imports, variant-function meaning analysis, and cross-variable data flow are still out of scope.
 
 ## 9.6 Path Alias + Barrel Variant Function Handoff
 
@@ -858,9 +859,46 @@ Interpretation:
 - `import { buttonVariants } from "@/ui"` is resolved through `tsconfig.json` `baseUrl`/`paths`.
 - `@/ui` resolves to the `src/ui/index.ts` barrel file, then follows one `export { buttonVariants } from "./buttonVariants"` hop.
 - Agent task/result artifacts record the final declaration file, `src/ui/buttonVariants.ts`, as the related source snapshot/diff target.
-- Imported variable multi-hop barrel chains are supported, but package imports, complex multi-hop variant-function barrel/import graphs, and cross-variable data flow are still out of scope.
+- Imported variable multi-hop barrel chains are supported, but package imports, variant-function meaning analysis, and cross-variable data flow are still out of scope.
 
-## 9.7 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
+## 9.7 Path Alias + Multi-hop Barrel Variant Function Handoff
+
+| Metric | Value |
+| --- | ---: |
+| Fixture root | `.intent/tmp/multi-hop-variant-handoff` |
+| Read-only entry created | true |
+| Binding kind | `read-only` |
+| Unsupported reason | `variant-function` |
+| ClassName value | `actionVariants({ variant: "primary" })` |
+| Editable token count | 0 |
+| Agent task created | true |
+| Agent task generation time | 7.553ms |
+| Related snapshot available | true |
+| Related snapshot file | `src/tokens/buttonVariants.ts` |
+| Related snapshot kind | `variant-function` |
+| Related snapshot identifier | `buttonVariants` |
+| Related snapshot includes cva | true |
+| Agent result created | true |
+| Agent result generation time | 6.002ms |
+| Syntax errors after result | 0 |
+| Selected source diff line count | 0 |
+| Component source diff line count | 0 |
+| Related source diff line count | 8 |
+| Related source diff present | true |
+| Related semantic className change count | 2 |
+| Related semantic diff present | true |
+| Related semantic token added count | 5 |
+| Related semantic token removed count | 5 |
+
+Interpretation:
+
+- `import { buttonVariants as actionVariants } from "@/theme"` is resolved back to the original exported name `buttonVariants`.
+- The resolver follows `@/theme -> src/theme/index.ts -> ../ui -> src/ui/index.ts -> ../tokens/buttonVariants` and records the final declaration file, `src/tokens/buttonVariants.ts`, as the related source snapshot.
+- Agent task/result artifacts record related source and semantic token diffs for a cva-like declaration behind a multi-hop barrel even when the selected JSX file does not change.
+- This fixture proves variant/cva handoff context works beyond one-hop barrels for local multi-hop barrel re-exports.
+- Package imports, variant-function meaning analysis, and cross-variable data flow are still out of scope.
+
+## 9.8 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
 
 | Metric | Value |
 | --- | ---: |
@@ -1016,8 +1054,8 @@ Package install smoke gate:
 | Installed plugin transform exit code | 0 |
 | Installed Vite dev server exit code | 0 |
 | Package file count | 15 |
-| Package size | 41614 bytes |
-| Unpacked size | 205078 bytes |
+| Package size | 41638 bytes |
+| Unpacked size | 205162 bytes |
 | Includes bin wrapper | true |
 | Includes CLI source | true |
 | Includes Vite plugin source | true |
@@ -1134,12 +1172,13 @@ Interpretation:
 | variant/cva related source handoff | local variant declaration snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
 | imported variant/cva related source handoff | one-hop relative named import snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
 | alias/barrel variant/cva related source handoff | tsconfig paths alias + one-hop named barrel snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
+| multi-hop variant/cva related source handoff | tsconfig paths alias + import alias + multi-hop named barrel snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures imported variable declarations behind tsconfig paths aliases, import aliases, and multi-hop barrel re-exports as related source handoff context. It also captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, and 3-file graph refresh verification. This update also adds and passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, plus an external corpus import/report/gate harness smoke.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures imported variable declarations behind tsconfig paths aliases, import aliases, and multi-hop barrel re-exports as related source handoff context. It also captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop/multi-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, and 3-file graph refresh verification. This update also adds and passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, plus an external corpus import/report/gate harness smoke.
 
 What worked:
 
@@ -1169,6 +1208,7 @@ What worked:
 - related source diff and semantic token diff generation for local variant/cva read-only bindings
 - related source diff and semantic token diff generation for one-hop relative named-import variant/cva read-only bindings
 - related source diff and semantic token diff generation for tsconfig paths alias plus one-hop named barrel variant/cva read-only bindings
+- related source diff and semantic token diff generation for tsconfig paths alias plus import alias plus multi-hop named barrel variant/cva read-only bindings
 - real browser click-to-panel, preview, apply, and revert round-trip measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
@@ -1195,12 +1235,12 @@ What remains weak:
 - CLI tarball install, package `/vite` wrapper export smoke, installed plugin transform/graph smoke, and installed Vite dev server HTTP preview/apply plus 3-file graph refresh smoke pass, but public npm package naming and external install-guide copy remain launch-polish work
 - the external corpus import harness is ready, but the real independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
-- automatic semantic analysis across package imports, complex multi-hop variant-function import graphs, and cross-variable data flow is still missing
+- automatic semantic analysis across package imports, variant-function meaning analysis, and cross-variable data flow is still missing
 - variant functions and runtime template literals remain unsupported for direct patching
 
 Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is running the prepared external corpus harness against an independently collected 50-100 sample set, then improving package-import/variant-function multi-hop/cross-variable handoff context and re-measuring component snapshots plus product-sized graph throttling on external product-sized TSX files.
+The next priority is running the prepared external corpus harness against an independently collected 50-100 sample set, then improving package-import/cross-variable handoff context and re-measuring component snapshots plus product-sized graph throttling on external product-sized TSX files.
 ```
