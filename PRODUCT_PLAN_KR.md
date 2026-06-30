@@ -520,6 +520,8 @@ packages/
     check
 ```
 
+MVP 구현 순서는 `scan`/`check`를 먼저 제공하고, `init/dev/diff/apply`는 출시 polish 단계에서 확장한다.
+
 ### 10.2 의존성 원칙
 
 `core`는 특정 프레임워크에 묶이면 안 된다.

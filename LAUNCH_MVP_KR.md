@@ -412,6 +412,16 @@ intent-layer agent-task
 intent-layer apply
 ```
 
+현재 구현된 MVP CLI smoke 범위:
+
+```bash
+intent-layer scan
+intent-layer check
+```
+
+`scan`은 repo의 JSX/TSX binding, read-only 원인, editable token coverage, transform time을 JSON으로 출력한다.
+`check`는 같은 결과에 최소 gate를 적용하고 실패 시 non-zero exit code를 반환한다.
+
 ### 7.5 Agent Integration
 
 v1.0에서 완전 자동 agent 내장은 필수 아님. 대신 다음을 지원한다.

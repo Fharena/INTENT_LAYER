@@ -35,6 +35,7 @@ Measured inputs:
 - read-only composite variable related semantic diff fixture
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
+- CLI `scan`/`check` fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -679,6 +680,41 @@ Interpretation:
 - Result recording creates related source and semantic token diffs even when only the imported definition changes.
 - Path aliases, barrel re-exports, package imports, and multi-hop import graphs are still out of scope.
 
+## 9.5 CLI Scan/Check
+
+| Metric | Value |
+| --- | ---: |
+| Scan exit code | 0 |
+| Check exit code | 0 |
+| Scan command | `scan` |
+| Check command | `check` |
+| Files scanned | 8 |
+| Binding count | 40 |
+| Direct-edit binding count | 35 |
+| Read-only binding count | 5 |
+| Supported direct coverage | 87.5% |
+| Editable token coverage | 81.08% |
+| Syntax error count | 0 |
+| Max transform time | 0.196ms |
+| Scan stdout bytes | 3261 |
+| Check stdout bytes | 3657 |
+
+Check gates:
+
+| Gate | Value | Threshold | Result |
+| --- | ---: | ---: | --- |
+| files scanned | 8 | >= 1 | pass |
+| syntax errors | 0 | 0 | pass |
+| supported direct coverage | 87.5% | >= 50% | pass |
+| max file transform | 0.196ms | <= 20ms | pass |
+
+Interpretation:
+
+- `src/intent/cli.ts` calls the current instrumentation engine directly without starting a server.
+- `scan` prints per-file binding counts, read-only counts, editable token coverage, transform time, and unsupported reasons as JSON.
+- `check` applies minimal gates to the same scan output and returns a non-zero exit code when they fail.
+- The current CLI MVP implements only `scan`/`check`; commands such as `init`, `dev`, `diff`, and `apply` remain launch polish work.
+
 ## 10. Gate Results
 
 | Gate | Threshold | Result |
@@ -693,6 +729,8 @@ Interpretation:
 | warm transform target | max <= 5ms | pass |
 | cold transform target | max <= 10ms | pass |
 | large transform stress | 401 bindings max <= 20ms | pass |
+| CLI scan | command `scan` + files >= 8 + bindings > 0 + JSON output | pass |
+| CLI check | files/syntax/coverage/transform gates all pass + exit code 0 | pass |
 | browser sample count | total >= 6, desktop >= 3, mobile >= 3 | pass |
 | browser click-to-panel | click-to-panel <= 100ms | pass |
 | browser preview round trip | preview round trip <= 50ms | pass |
@@ -718,7 +756,7 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `scan`/`check` CLI now lets the repo state be inspected numerically without opening the browser.
 
 What worked:
 
@@ -750,6 +788,7 @@ What worked:
 - source hash stale rejection
 - low-level scanner cold transform gate pass
 - 401-binding large TSX transform stress gate pass
+- CLI `scan`/`check` JSON report and gate pass
 - minimal intent operation/diff output
 - numeric report generation
 
@@ -758,6 +797,7 @@ What remains weak:
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - branch undo currently supports pending undo discard only; arbitrary non-top patches are not directly reverted from source
+- CLI currently implements only `scan`/`check`; `init/dev/diff/apply` remain launch polish work
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
 - automatic semantic analysis across path aliases, barrel re-exports, package imports, and cross-variable data flow is still missing

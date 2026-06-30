@@ -518,6 +518,8 @@ packages/
     check
 ```
 
+The MVP implementation ships `scan`/`check` first; `init/dev/diff/apply` can expand during launch polish.
+
 ### 10.2 Dependency Principles
 
 `core` must not be tied to a specific framework.

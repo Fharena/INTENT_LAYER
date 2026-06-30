@@ -388,6 +388,16 @@ intent-layer agent-task
 intent-layer apply
 ```
 
+Currently implemented MVP CLI smoke surface:
+
+```bash
+intent-layer scan
+intent-layer check
+```
+
+`scan` emits JSON for JSX/TSX bindings, read-only reasons, editable token coverage, and transform time.
+`check` applies minimal gates to the same result and returns a non-zero exit code when they fail.
+
 ### 7.5 Agent Integration
 
 Full built-in agent automation is not required for v1.0. The product should support:
