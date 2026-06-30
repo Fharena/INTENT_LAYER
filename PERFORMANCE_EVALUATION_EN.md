@@ -27,6 +27,7 @@ Measured inputs:
 - agent result component snapshot/source diff/semantic diff fixture
 - component snapshot discovery fixture set
 - read-only related source/semantic diff fixture
+- read-only `cn()` variable related semantic diff fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -153,8 +154,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.816ms / p95 4.517ms / max 4.517ms |
-| `src/main.tsx` | 0 | avg 0.006ms / p95 0.01ms / max 0.01ms |
+| `src/App.tsx` | 13 | avg 1.096ms / p95 2.812ms / max 2.812ms |
+| `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
 
 Summary:
 
@@ -162,12 +163,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.911ms |
-| Overall p95 transform time | 4.517ms |
-| Overall max transform time | 4.517ms |
-| Warm average transform time | 0.573ms |
-| Warm p95 transform time | 1.239ms |
-| Warm max transform time | 1.239ms |
+| Overall average transform time | 0.549ms |
+| Overall p95 transform time | 2.812ms |
+| Overall max transform time | 2.812ms |
+| Warm average transform time | 0.334ms |
+| Warm p95 transform time | 0.726ms |
+| Warm max transform time | 0.726ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -191,9 +192,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 7.74ms |
-| p95 transform time | 15.749ms |
-| Max transform time | 15.749ms |
+| Average transform time | 10.156ms |
+| p95 transform time | 19.545ms |
+| Max transform time | 19.545ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -208,13 +209,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.163ms |
-| Preview round trip | 1.633ms |
+| Preview time | 1.401ms |
+| Preview round trip | 1.835ms |
 | Apply success | true |
-| Static apply time | 25.313ms |
-| Simple `cn()` apply time | 7.679ms |
+| Static apply time | 30.089ms |
+| Simple `cn()` apply time | 15.486ms |
 | Revert success | true |
-| Revert time | 11.385ms |
+| Revert time | 22.531ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -254,8 +255,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.089ms |
-| Average lookup | 0.000089ms |
+| Total time | 0.101ms |
+| Average lookup | 0.000101ms |
 
 Caveat:
 
@@ -337,7 +338,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 11.1ms |
+| Task generation time | 10.722ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -361,7 +362,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 17.432ms |
+| Result generation time | 10.793ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -434,10 +435,10 @@ Cases checked:
 
 | Case | Component | Bindings | Task time | Result |
 | --- | --- | ---: | ---: | --- |
-| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 11.18ms | pass |
-| arrow block | `ComponentSnapshotArrowBlock` | 2 | 3.034ms | pass |
-| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 2.31ms | pass |
-| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.583ms | pass |
+| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 2.25ms | pass |
+| arrow block | `ComponentSnapshotArrowBlock` | 2 | 2.334ms | pass |
+| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 1.994ms | pass |
+| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.982ms | pass |
 
 Interpretation:
 
@@ -455,9 +456,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.467ms |
+| Agent task generation time | 3.114ms |
 | Agent result created | true |
-| Agent result generation time | 8.882ms |
+| Agent result generation time | 9.987ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 0 |
@@ -475,6 +476,36 @@ Interpretation:
 - Direct token patch buttons are not shown; the flow degrades to an unsupported reason and agent handoff.
 - Simple variable-reference read-only bindings store the variable declaration range as related source.
 - In the fixture, the component body does not change, so component diff stays at 0, while the `const cardClass = ...` change is recorded as related source diff line count 2 and semantic token added/removed counts of 3/3.
+
+## 9.1 Read-only `cn()` Variable Handoff
+
+| Metric | Value |
+| --- | ---: |
+| Read-only entry created | true |
+| Binding kind | `read-only` |
+| Unsupported reason | `variable-reference` |
+| Editable token count | 0 |
+| Agent task created | true |
+| Agent task generation time | 3.031ms |
+| Agent result created | true |
+| Agent result generation time | 10.826ms |
+| Syntax errors after result | 0 |
+| Source diff line count | 2 |
+| Component source diff line count | 2 |
+| Component source diff present | true |
+| Related source snapshot available | true |
+| Related source diff line count | 2 |
+| Related source diff present | true |
+| Related semantic className change count | 2 |
+| Related semantic diff present | true |
+| Related semantic token added count | 4 |
+| Related semantic token removed count | 4 |
+
+Interpretation:
+
+- A declaration such as `const cardClass = cn("...", active && "...")` is still captured as a related source snapshot.
+- Result recording captures the base literal and conditional literal as separate semantic changes, with token added/removed counts of 4/4.
+- This fixture proves related source semantic diffing covers simple `cn()` variable declarations, not only single quoted variable declarations.
 
 ## 10. Gate Results
 
@@ -503,6 +534,7 @@ Interpretation:
 | component snapshot discovery | all 4 fixture cases pass | pass |
 | read-only handoff | read-only binding created + agent task created | pass |
 | read-only related source/semantic diff | related snapshot + related source diff + related semantic diff + syntax error 0 | pass |
+| read-only `cn()` variable related semantic diff | related source diff + related semantic change >= 2 + token added/removed >= 4 + syntax error 0 | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
@@ -525,6 +557,7 @@ What worked:
 - agent result markdown, selected source-window diff, component source diff, and selected/component/related `className` semantic diff generation
 - component snapshot discovery fixture pass 4/4
 - related source diff and semantic token diff generation for read-only variable references
+- related source diff and semantic token diff generation for read-only `cn()` variable references
 - real browser click-to-panel, preview, apply, and revert round-trip measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
@@ -541,12 +574,12 @@ What remains weak:
 - undo history UI and conflict-resolution UX are still missing
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports are still missing
-- related source semantic token diffs still focus on simple quoted variable declarations and need expansion to `cn()` / `clsx()` declarations, arrays, object maps, and template literals
+- related source semantic token diffs still focus on simple quoted declarations and simple `cn()` / `clsx()` variable declaration literal segments, and need expansion to arrays, object maps, and template literals
 - variant functions and runtime template literals remain unsupported for direct patching
 
 Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, undo history UI design, and related source semantic diff expansion for `cn()` / `clsx()`, arrays, and object maps.
+The next priority is independent external corpus validation, undo history UI design, and related source semantic diff expansion for arrays, object maps, and template literals.
 ```

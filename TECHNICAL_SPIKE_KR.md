@@ -249,6 +249,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - agent handoff는 선택 source window snapshot, component snapshot, related source snapshot, task/result markdown, intent diff 기록을 지원한다.
 - agent result는 선택 source window와 선택 component snapshot의 before/after line diff를 기록한다.
 - agent result는 단순 변수 참조 read-only binding의 related source diff와 related semantic token diff를 기록한다.
+- related semantic token diff는 단순 quoted 변수 선언과 simple `cn()` / `clsx()` 변수 선언의 literal segment를 fixture로 검증한다.
 - agent result는 선택 source window와 선택 component 범위에서 `className` semantic token diff를 기록한다.
 - component snapshot fixture는 function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens 4개 case를 검증한다.
 - 아직 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 추론하지는 않는다.
@@ -265,7 +266,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 1. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
 2. undo history UI와 충돌 해결 UX를 설계한다.
-3. related source semantic diff를 `cn()` / `clsx()` 변수 선언, 배열, object map, template literal까지 확장한다.
+3. related source semantic diff를 배열, object map, template literal까지 확장한다.
 4. HOC-wrapped component, memo/forwardRef, namespace export에 대한 component snapshot fixture를 추가한다.
 5. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
 
@@ -331,8 +332,8 @@ task 생성 시 선택 source window snapshot과 선택 component snapshot을 �
 선택 source window와 선택 component 범위 안의 `className` 값은 before/after token으로 다시 분석해 추가/삭제 token과 category를 intent diff에 남긴다.
 소스 파일의 현재 hash를 다시 읽어 `sourceHashChanged`도 기록한다.
 component-level semantic diff는 현재 `className` token 기준으로 제한한다.
-related source semantic diff는 단순 quoted 변수 선언 문자열을 token 단위로 재분석한다.
-아직 related source의 `cn()` / `clsx()`, 배열, object map, template literal, variant 함수 의미까지 자동 분석하지는 않는다.
+related source semantic diff는 단순 quoted 변수 선언 문자열과 simple `cn()` / `clsx()` 변수 선언의 literal segment를 token 단위로 재분석한다.
+아직 related source의 배열, object map, template literal, variant 함수 의미까지 자동 분석하지는 않는다.
 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 분석하지는 않는다.
 
 ### 9.1 Read-only Handoff
