@@ -36,6 +36,7 @@ Included:
 - undo for the last patch
 - structured agent handoff task generation
 - structured agent result artifact generation
+- agent handoff source snapshots and result source diffs
 - minimal intent operation/diff output
 - corpus analysis script
 - performance and safety evaluation script
@@ -206,8 +207,8 @@ Support model:
 - Variant functions and props forwarding degrade to read-only bindings and agent handoff.
 - Undo supports only the last patch.
 - Restarting the dev server clears the in-memory undo state.
-- Agent handoff currently records task/result markdown and intent diffs only.
-- Agent results structure the user's result summary, but they do not yet infer semantic before/after source changes automatically.
+- Agent handoff records a selected source-window snapshot plus task/result markdown and intent diffs.
+- Agent results record a before/after line diff for the selected source window, but they do not yet infer a full-file semantic diff automatically.
 - The current click-to-binding metric is only a graph lookup proxy, not a full browser click measurement.
 - Warm transform meets the 5ms target, but cold first transform can exceed 5ms.
 - Larger TSX files are not tested yet.
@@ -218,10 +219,10 @@ Priority order:
 
 1. Measure whether transform time stays under 5ms on larger TSX files.
 2. Measure real browser click -> binding -> patch round trip time.
-3. Connect agent results to actual before/after source diffs.
+3. Expand agent result source-window diffs into semantic intent diffs.
 4. Design an undo stack and operation-log-backed revert.
 5. Measure real browser click-to-panel time.
-6. Connect read-only source diffs to agent results.
+6. Connect read-only source diffs to a wider source window.
 7. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
 
 ## 9. Agent Handoff And Result
@@ -241,6 +242,7 @@ The task document includes:
 Goal
 Selected Component
 Current Intent Document
+Source Snapshot
 Desired Change
 Constraints
 Files That May Be Edited
@@ -268,11 +270,14 @@ Task
 Changed Files
 Checks
 Notes
+Source Diff
 Intent Diff
 ```
 
 At this stage, result recording is a deterministic audit log.
-It rereads the source file to record `sourceHashChanged`, but it does not yet infer the semantic meaning of the agent patch automatically.
+Task creation stores a selected source-window snapshot, and result recording compares it with the current source window to write a line diff.
+It also rereads the source file to record `sourceHashChanged`.
+It does not yet infer full-file semantic or component-level intent changes automatically.
 
 ### 9.1 Read-only Handoff
 

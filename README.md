@@ -64,7 +64,7 @@ The demo currently supports:
 - structured agent result artifact generation at `.intent/agent/result_*.md`
 - source hash validation before patching
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply
-- agent result `.intent-diff.yml` output for complex edit review handoff
+- source snapshot diff output for agent result review handoff
 
 The first evaluation result is stored in:
 

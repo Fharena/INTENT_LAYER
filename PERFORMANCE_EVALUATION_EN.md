@@ -20,6 +20,7 @@ Measured inputs:
 - last-patch revert fixture
 - agent handoff task fixture
 - agent result artifact fixture
+- agent result source diff fixture
 - read-only binding handoff fixture
 
 Important caveat:
@@ -86,8 +87,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 3.264ms / p95 5.812ms / max 5.812ms |
-| `src/main.tsx` | 0 | avg 0.003ms / p95 0.009ms / max 0.009ms |
+| `src/App.tsx` | 13 | avg 3.733ms / p95 5.986ms / max 5.986ms |
+| `src/main.tsx` | 0 | avg 0.003ms / p95 0.011ms / max 0.011ms |
 
 Summary:
 
@@ -95,12 +96,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 1.633ms |
-| Overall p95 transform time | 5.812ms |
-| Overall max transform time | 5.812ms |
-| Warm average transform time | 1.314ms |
-| Warm p95 transform time | 3.851ms |
-| Warm max transform time | 3.851ms |
+| Overall average transform time | 1.868ms |
+| Overall p95 transform time | 5.986ms |
+| Overall max transform time | 5.986ms |
+| Warm average transform time | 1.585ms |
+| Warm p95 transform time | 3.409ms |
+| Warm max transform time | 3.409ms |
 | Target | <= 5ms per warm transform |
 | Result | warm pass / cold fail |
 
@@ -117,13 +118,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.281ms |
-| Preview round trip | 1.741ms |
+| Preview time | 1.256ms |
+| Preview round trip | 1.703ms |
 | Apply success | true |
-| Static apply time | 5.771ms |
-| Simple `cn()` apply time | 4.89ms |
+| Static apply time | 15.126ms |
+| Simple `cn()` apply time | 6.023ms |
 | Revert success | true |
-| Revert time | 12.313ms |
+| Revert time | 5.652ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -143,8 +144,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.36ms |
-| Average lookup | 0.00036ms |
+| Total time | 0.457ms |
+| Average lookup | 0.000457ms |
 
 Caveat:
 
@@ -157,7 +158,7 @@ A real click-to-panel measurement still needs to be captured in the dev server a
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 1.264ms |
+| Task generation time | 3.12ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -166,6 +167,7 @@ Required sections checked:
 Goal
 Selected Component
 Current Intent Document
+Source Snapshot
 Desired Change
 Constraints
 Files That May Be Edited
@@ -178,10 +180,13 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 3.222ms |
+| Result generation time | 6.929ms |
 | Required sections present | true |
 | Result/diff files exist | true |
-| Source hash changed | false |
+| Source hash changed | true |
+| Source snapshot available | true |
+| Source diff line count | 2 |
+| Source diff present | true |
 
 Required sections checked:
 
@@ -191,6 +196,7 @@ Source Binding
 Task
 Changed Files
 Checks
+Source Diff
 Intent Diff
 ```
 
@@ -198,9 +204,12 @@ Dev server endpoint smoke test:
 
 | Metric | Value |
 | --- | ---: |
-| Test URL | `http://127.0.0.1:5177/__intent/agent-result` |
+| Test URL | `http://127.0.0.1:5178/__intent/agent-result` |
 | Result generation success | true |
-| Endpoint result time | 3.528ms |
+| Endpoint task time | 2.247ms |
+| Endpoint result time | 13.282ms |
+| Endpoint source snapshot available | true |
+| Endpoint source diff line count | 0 |
 | Result file returned | true |
 | Diff file returned | true |
 
@@ -208,7 +217,8 @@ Interpretation:
 
 - Agent result recording is still well below the 50ms target.
 - This step structures the user's result summary into `.intent/agent/result_*.md` and `.intent/diffs/*_agent.intent-diff.yml`.
-- It does not yet infer the semantic meaning of the actual agent patch automatically.
+- Task creation stores a selected source-window snapshot, and result recording compares it with the current source window to write a line diff.
+- It does not yet infer full-file semantic changes automatically.
 
 ## 8. Read-only Binding Handoff
 
@@ -219,7 +229,7 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.071ms |
+| Agent task generation time | 2.848ms |
 
 Interpretation:
 
@@ -238,7 +248,7 @@ Interpretation:
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
-| agent result generation | result/diff created + required sections present | pass |
+| agent result generation | result/diff created + source diff present | pass |
 | read-only handoff | read-only binding created + agent task created | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
@@ -257,7 +267,7 @@ What worked:
 - patch preview before apply
 - last-patch revert
 - agent handoff task markdown generation
-- agent result markdown and agent intent diff generation
+- agent result markdown and selected source-window diff generation
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
 - source hash stale rejection
@@ -270,7 +280,7 @@ What remains weak:
 - transform time still needs to be tested on larger TSX files
 - real browser click-to-panel time is not measured yet
 - real AI-generated 50-100 sample corpus audit is still missing
-- agent results are not yet connected to actual before/after source diffs
+- source-window diffs still need to become component-level semantic diffs
 - variant functions and runtime template literals remain unsupported
 
 Current decision:

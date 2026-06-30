@@ -20,6 +20,7 @@ npm run build
 - last-patch revert fixture
 - agent handoff task fixture
 - agent result artifact fixture
+- agent result source diff fixture
 - read-only binding handoff fixture
 
 주의:
@@ -86,8 +87,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 3.264ms / p95 5.812ms / max 5.812ms |
-| `src/main.tsx` | 0 | avg 0.003ms / p95 0.009ms / max 0.009ms |
+| `src/App.tsx` | 13 | avg 3.733ms / p95 5.986ms / max 5.986ms |
+| `src/main.tsx` | 0 | avg 0.003ms / p95 0.011ms / max 0.011ms |
 
 요약:
 
@@ -95,12 +96,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 1.633ms |
-| 전체 p95 transform time | 5.812ms |
-| 전체 최대 transform time | 5.812ms |
-| warm 평균 transform time | 1.314ms |
-| warm p95 transform time | 3.851ms |
-| warm 최대 transform time | 3.851ms |
+| 전체 평균 transform time | 1.868ms |
+| 전체 p95 transform time | 5.986ms |
+| 전체 최대 transform time | 5.986ms |
+| warm 평균 transform time | 1.585ms |
+| warm p95 transform time | 3.409ms |
+| warm 최대 transform time | 3.409ms |
 | 목표 | warm 파일당 5ms 이하 |
 | 결과 | warm 통과 / cold 미통과 |
 
@@ -117,13 +118,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 1.281ms |
-| preview round trip | 1.741ms |
+| preview time | 1.256ms |
+| preview round trip | 1.703ms |
 | apply 성공 | true |
-| static apply time | 5.771ms |
-| simple `cn()` apply time | 4.89ms |
+| static apply time | 15.126ms |
+| simple `cn()` apply time | 6.023ms |
 | revert 성공 | true |
-| revert time | 12.313ms |
+| revert time | 5.652ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -143,8 +144,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.36ms |
-| 평균 lookup | 0.00036ms |
+| 총 시간 | 0.457ms |
+| 평균 lookup | 0.000457ms |
 
 주의:
 
@@ -157,7 +158,7 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 1.264ms |
+| task 생성 시간 | 3.12ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -166,6 +167,7 @@ reports/performance/spike-evaluation.json
 Goal
 Selected Component
 Current Intent Document
+Source Snapshot
 Desired Change
 Constraints
 Files That May Be Edited
@@ -178,10 +180,13 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 3.222ms |
+| result 생성 시간 | 6.929ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
-| source hash changed | false |
+| source hash changed | true |
+| source snapshot 사용 가능 | true |
+| source diff line 수 | 2 |
+| source diff 포함 | true |
 
 검증한 필수 섹션:
 
@@ -191,6 +196,7 @@ Source Binding
 Task
 Changed Files
 Checks
+Source Diff
 Intent Diff
 ```
 
@@ -198,9 +204,12 @@ dev server endpoint smoke test:
 
 | 항목 | 값 |
 | --- | ---: |
-| 테스트 URL | `http://127.0.0.1:5177/__intent/agent-result` |
+| 테스트 URL | `http://127.0.0.1:5178/__intent/agent-result` |
 | result 생성 성공 | true |
-| endpoint result time | 3.528ms |
+| endpoint task time | 2.247ms |
+| endpoint result time | 13.282ms |
+| endpoint source snapshot 사용 가능 | true |
+| endpoint source diff line 수 | 0 |
 | result 파일 반환 | true |
 | diff 파일 반환 | true |
 
@@ -208,7 +217,8 @@ dev server endpoint smoke test:
 
 - agent result 기록은 목표 50ms보다 빠르게 동작했다.
 - 이번 단계는 사용자가 입력한 결과 요약을 구조화해 `.intent/agent/result_*.md`와 `.intent/diffs/*_agent.intent-diff.yml`로 남긴다.
-- 실제 agent patch의 의미를 자동 분석하는 단계는 아직 아니다.
+- task 생성 시 선택 source window snapshot을 저장하고, result 기록 시 현재 source window와 비교해 line diff를 남긴다.
+- 아직 전체 파일 semantic diff를 자동 분석하는 단계는 아니다.
 
 ## 8. Read-only Binding Handoff
 
@@ -219,7 +229,7 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 1.071ms |
+| agent task 생성 시간 | 2.848ms |
 
 해석:
 
@@ -238,7 +248,7 @@ dev server endpoint smoke test:
 | supported static patch | apply 성공 + syntax error 0 | 통과 |
 | last patch revert | revert 성공 + syntax error 0 | 통과 |
 | agent task generation | task 생성 + 필수 섹션 포함 | 통과 |
-| agent result generation | result/diff 생성 + 필수 섹션 포함 | 통과 |
+| agent result generation | result/diff 생성 + source diff 포함 | 통과 |
 | read-only handoff | read-only binding 생성 + agent task 생성 | 통과 |
 | simple `cn()` / `clsx()` patch | apply 성공 + syntax error 0 | 통과 |
 | stale rejection | source mismatch 거부 | 통과 |
@@ -257,7 +267,7 @@ dev server endpoint smoke test:
 - apply 전 patch preview
 - last-patch revert
 - agent handoff task markdown 생성
-- agent result markdown과 agent intent diff 생성
+- agent result markdown과 selected source-window diff 생성
 - unsupported className의 agent handoff degrade
 - simple `cn()` literal segment patch
 - source hash stale rejection
@@ -270,7 +280,7 @@ dev server endpoint smoke test:
 - 대형 TSX 파일에서 transform time 5ms 목표 유지
 - 실제 브라우저 click-to-panel 시간 측정
 - 실제 AI 생성 코드 50-100개 corpus 검증
-- agent 결과와 실제 before/after source diff 연결
+- agent source-window diff를 component-level semantic diff로 확장
 - variant 함수와 runtime template literal 지원
 
 다음 판단:
