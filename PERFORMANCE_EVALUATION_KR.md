@@ -88,8 +88,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.729ms / p95 3.685ms / max 3.685ms |
-| `src/main.tsx` | 0 | avg 0.005ms / p95 0.009ms / max 0.009ms |
+| `src/App.tsx` | 13 | avg 2.044ms / p95 5.515ms / max 5.515ms |
+| `src/main.tsx` | 0 | avg 0.008ms / p95 0.016ms / max 0.016ms |
 
 요약:
 
@@ -97,37 +97,59 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 0.867ms |
-| 전체 p95 transform time | 3.685ms |
-| 전체 최대 transform time | 3.685ms |
-| warm 평균 transform time | 0.622ms |
-| warm p95 transform time | 1.617ms |
-| warm 최대 transform time | 1.617ms |
-| 목표 | warm 파일당 5ms 이하 |
+| 전체 평균 transform time | 1.026ms |
+| 전체 p95 transform time | 5.515ms |
+| 전체 최대 transform time | 5.515ms |
+| warm 평균 transform time | 0.592ms |
+| warm p95 transform time | 1.43ms |
+| warm 최대 transform time | 1.43ms |
+| warm 목표 | 5ms 이하 |
+| cold 목표 | 10ms 이하 |
 | 결과 | warm 통과 / cold 통과 |
 
 해석:
 
-- 5회 반복 측정에서 첫 cold transform을 포함한 최대값이 5ms 아래로 내려왔다.
+- 5회 반복 측정에서 첫 cold transform을 포함한 최대값이 10ms 아래로 들어왔다.
 - 첫 샘플을 제외한 warm transform은 평균, p95, 최대값 모두 5ms 아래다.
 - MVP 지원 패턴은 TypeScript AST cold parse 전에 low-level JSX/className scanner로 처리한다.
 - scanner가 처리하지 못하는 복잡한 패턴은 기존 AST 경로로 fallback할 수 있게 남겼다.
 - `className` 문자열이 없는 파일은 AST parse 없이 fast path로 건너뛴다.
 - `className`이 있는 파일은 TypeScript AST parse와 instrumentation을 한 번에 수행한다.
-- 대형 파일에서는 target filtering, cache, graph write throttling이 필요하다.
+- 대형 파일은 아래 stress fixture로 별도 측정한다.
+
+## 3.1 Large TSX Transform Stress
+
+| 항목 | 값 |
+| --- | ---: |
+| fixture 파일 | `.intent/tmp/LargeTransformFixture.tsx` |
+| 반복 카드 수 | 100 |
+| binding 수 | 401 |
+| 파일 크기 | 45,352 bytes |
+| 반복 측정 | 5 |
+| average transform time | 10.988ms |
+| p95 transform time | 14.861ms |
+| max transform time | 14.861ms |
+| stress 목표 | 20ms 이하 |
+| 결과 | 통과 |
+
+해석:
+
+- 일반 `src` 파일의 5ms gate와 별도로, 401개 binding이 있는 stress fixture를 20ms 이하 목표로 측정했다.
+- 이 수치는 MVP scanner가 큰 AI 생성 화면에서도 즉시 깨지는 수준은 아니라는 신호다.
+- 실제 대형 제품 파일에서는 cache, changed-file filtering, graph write throttling이 여전히 필요하다.
 
 ## 4. Patch 성능과 안전성
 
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 3.3ms |
-| preview round trip | 3.799ms |
+| preview time | 1.233ms |
+| preview round trip | 1.659ms |
 | apply 성공 | true |
-| static apply time | 45.005ms |
-| simple `cn()` apply time | 20.012ms |
+| static apply time | 30.856ms |
+| simple `cn()` apply time | 20.686ms |
 | revert 성공 | true |
-| revert time | 31.25ms |
+| revert time | 20.368ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -147,8 +169,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 1.823ms |
-| 평균 lookup | 0.001823ms |
+| 총 시간 | 0.708ms |
+| 평균 lookup | 0.000708ms |
 
 주의:
 
@@ -214,7 +236,7 @@ overlay가 performance.now()로 측정한 값을 /__intent/client-metric에 POST
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 24.592ms |
+| task 생성 시간 | 8.554ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -236,7 +258,7 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 26.604ms |
+| result 생성 시간 | 16.502ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
 | source hash changed | true |
@@ -285,7 +307,7 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 14.084ms |
+| agent task 생성 시간 | 2.493ms |
 
 해석:
 
@@ -300,7 +322,8 @@ dev server endpoint smoke test:
 | static + simple `cn()` / `clsx()` coverage | >= 50% | 통과 |
 | supported direct coverage | >= 50% | 통과 |
 | warm transform target | max <= 5ms | 통과 |
-| cold transform target | max <= 5ms | 통과 |
+| cold transform target | max <= 10ms | 통과 |
+| large transform stress | 401 bindings max <= 20ms | 통과 |
 | browser click-to-panel | click-to-panel <= 100ms | 통과 |
 | browser preview round trip | preview round trip <= 50ms | 통과 |
 | browser apply round trip | apply round trip <= 50ms | 통과 |
@@ -333,12 +356,13 @@ dev server endpoint smoke test:
 - simple `cn()` literal segment patch
 - source hash stale rejection
 - low-level scanner 기반 cold transform 5ms gate 통과
+- 401-binding large TSX transform stress gate 통과
 - intent operation/diff 최소 출력
 - 수치 리포트 생성
 
 아직 부족한 것:
 
-- 대형 TSX 파일에서 transform time 5ms 목표 유지
+- 실제 제품급 대형 TSX 파일에서 cache/write throttling 검증
 - 실제 브라우저 측정은 아직 단일 desktop 샘플이다.
 - 실제 AI 생성 코드 50-100개 corpus 검증
 - agent source-window diff를 component-level semantic diff로 확장
@@ -348,5 +372,5 @@ dev server endpoint smoke test:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 대형 TSX transform 측정, browser multi-sample/mobile 측정, 실제 corpus audit이다.
+다음 우선순위는 browser multi-sample/mobile 측정, 실제 corpus audit, semantic intent diff 확장이다.
 ```

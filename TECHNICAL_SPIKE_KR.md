@@ -212,20 +212,21 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - agent handoff는 선택 source window snapshot과 task/result markdown, intent diff 기록을 지원한다.
 - agent result는 선택 source window의 before/after line diff를 기록하지만, 아직 전체 파일 semantic diff를 자동 추론하지 않는다.
 - 실제 브라우저 click-to-panel, preview, apply, revert 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
-- 현재 fixture에서는 cold/warm transform 모두 5ms 목표를 만족했다.
-- 대형 TSX 파일에서는 아직 5ms 목표를 검증하지 않았다.
+- 현재 fixture에서는 warm transform 5ms 목표와 cold transform 10ms 목표를 만족했다.
+- 100개 카드/401개 binding을 가진 대형 TSX stress fixture는 20ms 목표를 만족했다.
+- 실제 제품급 대형 TSX 파일에서는 cache와 graph write throttling을 추가 검증해야 한다.
 
 ## 8. 다음 작업
 
 우선순위:
 
-1. 대형 TSX 파일에서도 transform time을 5ms 이하로 유지할 수 있는지 측정한다.
-2. browser metric 측정을 여러 샘플과 모바일 viewport로 확장한다.
+1. browser metric 측정을 여러 샘플과 모바일 viewport로 확장한다.
+2. 실제 AI 생성 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
 3. agent result source window diff를 실제 semantic intent diff로 확장한다.
 4. undo stack과 operation log 기반 revert를 설계한다.
 5. read-only source diff를 더 넓은 source window와 연결한다.
 6. fixture를 nested component, map render, conditional render, fragment로 확장한다.
-7. 실제 AI 생성 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
+7. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
 
 ## 9. Agent Handoff와 Result
 

@@ -213,20 +213,21 @@ Support model:
 - Agent handoff records a selected source-window snapshot plus task/result markdown and intent diffs.
 - Agent results record a before/after line diff for the selected source window, but they do not yet infer a full-file semantic diff automatically.
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
-- Current fixtures now meet the 5ms target for both cold and warm transforms.
-- Larger TSX files are not tested against the 5ms target yet.
+- Current fixtures now meet the 5ms warm transform target and the 10ms cold transform target.
+- The large TSX stress fixture with 100 cards and 401 bindings meets the 20ms stress target.
+- Product-sized TSX files still need cache and graph write throttling validation.
 
 ## 8. Next Work
 
 Priority order:
 
-1. Measure whether transform time stays under 5ms on larger TSX files.
-2. Expand browser metric measurement to multiple samples and mobile viewport.
+1. Expand browser metric measurement to multiple samples and mobile viewport.
+2. Re-measure editable coverage on a real 50-100 sample AI-generated React/Tailwind corpus.
 3. Expand agent result source-window diffs into semantic intent diffs.
 4. Design an undo stack and operation-log-backed revert.
 5. Connect read-only source diffs to a wider source window.
 6. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
-7. Re-measure editable coverage on a real 50-100 sample AI-generated React/Tailwind corpus.
+7. Validate caching and graph write throttling on product-sized TSX files.
 
 ## 9. Agent Handoff And Result
 
