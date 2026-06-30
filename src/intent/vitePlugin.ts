@@ -7,11 +7,13 @@ import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
 import {
   applyTokenPatch,
+  pendingUndoHistoryFromOperationLog,
   pendingUndoStackFromOperationLog,
   planTokenPatch,
   recordPatchApplyInOperationLog,
   recordPatchRevertInOperationLog,
-  revertTokenPatch
+  revertTokenPatch,
+  undoHistoryFromStack
 } from "./patch";
 import type {
   AgentResultRequest,
@@ -165,6 +167,16 @@ export function intentLayerSpike(): Plugin {
               reason: "server-error",
               detail: error instanceof Error ? error.message : String(error)
             });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/undo-history" && request.method === "GET") {
+          if (state.undoStack.length === 0) {
+            const restored = pendingUndoHistoryFromOperationLog(state.rootDir);
+            writeJson(response, 200, restored);
+          } else {
+            writeJson(response, 200, undoHistoryFromStack(state.undoStack));
           }
           return;
         }

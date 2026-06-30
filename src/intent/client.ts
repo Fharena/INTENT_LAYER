@@ -10,7 +10,8 @@ import type {
   PatchApplyResult,
   PatchFailure,
   PatchPreview,
-  PatchRevertResult
+  PatchRevertResult,
+  UndoHistoryReport
 } from "./types";
 
 type PatchResponse = PatchApplyResult | PatchFailure;
@@ -18,6 +19,7 @@ type PreviewResponse = PatchPreview | PatchFailure;
 type RevertResponse = PatchRevertResult | PatchFailure;
 type AgentTaskResponse = AgentTaskResult | PatchFailure;
 type AgentResultResponse = AgentResultArtifact | PatchFailure;
+type UndoHistoryResponse = UndoHistoryReport;
 
 const lastAgentTaskFileByIntentId = new Map<string, string>();
 
@@ -175,7 +177,7 @@ function renderTokenRow(
     const responseAt = performance.now();
     const renderStartedAt = performance.now();
     if (result.ok) {
-      setStatus(`Applied ${result.oldToken} -> ${result.nextToken} in ${result.metrics.applyMs}ms`);
+      renderBinding(root, binding, `Applied ${result.oldToken} -> ${result.nextToken} in ${result.metrics.applyMs}ms`);
     } else {
       setStatus(`Rejected: ${result.reason}`);
     }
@@ -291,6 +293,56 @@ function renderAgentTaskForm(
   root.appendChild(wrapper);
 }
 
+function renderUndoHistory(root: HTMLElement) {
+  const wrapper = document.createElement("div");
+  wrapper.style.marginTop = "12px";
+  wrapper.style.paddingTop = "10px";
+  wrapper.style.borderTop = "1px solid #e2e8f0";
+
+  const header = document.createElement("div");
+  header.textContent = "Undo history";
+  header.style.fontSize = "12px";
+  header.style.fontWeight = "800";
+
+  const body = document.createElement("div");
+  body.textContent = "Loading...";
+  body.style.marginTop = "6px";
+  body.style.fontSize = "11px";
+  body.style.color = "#475569";
+
+  wrapper.append(header, body);
+  root.appendChild(wrapper);
+
+  void fetch("/__intent/undo-history")
+    .then((response) => response.json() as Promise<UndoHistoryResponse>)
+    .then((history) => {
+      body.innerHTML = "";
+      if (history.pendingCount === 0) {
+        body.textContent = "No pending undo operations.";
+        return;
+      }
+
+      const list = document.createElement("ol");
+      list.style.margin = "0";
+      list.style.paddingLeft = "18px";
+      list.style.display = "grid";
+      list.style.gap = "6px";
+
+      for (const item of history.entries.slice().reverse().slice(0, 5)) {
+        const entry = document.createElement("li");
+        entry.textContent = `${item.next ? "next: " : ""}${item.oldToken} -> ${item.nextToken} (${item.relativeFile})`;
+        entry.style.lineHeight = "1.35";
+        entry.style.fontWeight = item.next ? "800" : "500";
+        list.appendChild(entry);
+      }
+
+      body.appendChild(list);
+    })
+    .catch(() => {
+      body.textContent = "Undo history unavailable.";
+    });
+}
+
 function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status: string) {
   panel.innerHTML = "";
 
@@ -346,6 +398,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     });
   });
   panel.appendChild(undo);
+  renderUndoHistory(panel);
 
   if (!binding) {
     const hint = document.createElement("p");

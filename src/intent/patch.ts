@@ -9,7 +9,8 @@ import type {
   PatchOperationLog,
   PatchPreview,
   PatchRequest,
-  PatchRevertResult
+  PatchRevertResult,
+  UndoHistoryReport
 } from "./types";
 
 function lineSnippet(source: string, offset: number): string {
@@ -204,6 +205,30 @@ export function pendingUndoStackFromOperationLog(rootDir: string): PatchApplyRes
   }
 
   return stack;
+}
+
+export function undoHistoryFromStack(stack: PatchApplyResult[]): UndoHistoryReport {
+  return {
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    pendingCount: stack.length,
+    entries: stack.map((patch, index) => ({
+      index,
+      next: index === stack.length - 1,
+      id: patch.id,
+      file: patch.file,
+      relativeFile: patch.relativeFile,
+      oldToken: patch.oldToken,
+      nextToken: patch.nextToken,
+      range: patch.range,
+      operationFile: patch.operationFile,
+      diffFile: patch.diffFile
+    }))
+  };
+}
+
+export function pendingUndoHistoryFromOperationLog(rootDir: string): UndoHistoryReport {
+  return undoHistoryFromStack(pendingUndoStackFromOperationLog(rootDir));
 }
 
 function writeIntentArtifacts(params: {

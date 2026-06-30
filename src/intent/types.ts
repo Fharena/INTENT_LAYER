@@ -142,6 +142,29 @@ export interface PatchOperationLog {
   entries: PatchOperationLogEntry[];
 }
 
+export interface UndoHistoryItem {
+  index: number;
+  next: boolean;
+  id: string;
+  file: string;
+  relativeFile: string;
+  oldToken: string;
+  nextToken: string;
+  range: {
+    start: number;
+    end: number;
+  };
+  operationFile: string;
+  diffFile: string;
+}
+
+export interface UndoHistoryReport {
+  version: 1;
+  generatedAt: string;
+  pendingCount: number;
+  entries: UndoHistoryItem[];
+}
+
 export interface PatchRevertResult {
   ok: true;
   reverted: true;

@@ -7,6 +7,7 @@ import { createAgentTask } from "../src/intent/agentTask";
 import { instrumentSource } from "../src/intent/instrument";
 import {
   applyTokenPatch,
+  pendingUndoHistoryFromOperationLog,
   pendingUndoStackFromOperationLog,
   planTokenPatch,
   recordPatchApplyInOperationLog,
@@ -533,6 +534,7 @@ if (operationApplyTwo.ok) {
   recordPatchApplyInOperationLog(rootDir, operationApplyTwo);
 }
 const pendingAfterApply = pendingUndoStackFromOperationLog(rootDir);
+const historyAfterApply = pendingUndoHistoryFromOperationLog(rootDir);
 const operationRevertOne = revertTokenPatch(
   rootDir,
   pendingAfterApply[pendingAfterApply.length - 1],
@@ -542,6 +544,7 @@ if (operationRevertOne.ok) {
   recordPatchRevertInOperationLog(rootDir, operationRevertOne);
 }
 const pendingAfterFirstRevert = pendingUndoStackFromOperationLog(rootDir);
+const historyAfterFirstRevert = pendingUndoHistoryFromOperationLog(rootDir);
 const operationRevertTwo = revertTokenPatch(
   rootDir,
   pendingAfterFirstRevert[pendingAfterFirstRevert.length - 1],
@@ -551,6 +554,7 @@ if (operationRevertTwo.ok) {
   recordPatchRevertInOperationLog(rootDir, operationRevertTwo);
 }
 const pendingAfterSecondRevert = pendingUndoStackFromOperationLog(rootDir);
+const historyAfterSecondRevert = pendingUndoHistoryFromOperationLog(rootDir);
 const syntaxErrorsAfterOperationStack = parseSyntaxErrorCount(operationStackFixture);
 
 const graphLookupIterations = 1000;
@@ -641,10 +645,15 @@ const report = {
     firstApplyOk: operationApplyOne.ok,
     secondApplyOk: operationApplyTwo.ok,
     pendingAfterApply: pendingAfterApply.length,
+    historyAfterApplyCount: historyAfterApply.pendingCount,
+    historyAfterApplyNextToken:
+      historyAfterApply.entries.find((entry) => entry.next)?.nextToken ?? null,
     firstRevertOk: operationRevertOne.ok,
     pendingAfterFirstRevert: pendingAfterFirstRevert.length,
+    historyAfterFirstRevertCount: historyAfterFirstRevert.pendingCount,
     secondRevertOk: operationRevertTwo.ok,
     pendingAfterSecondRevert: pendingAfterSecondRevert.length,
+    historyAfterSecondRevertCount: historyAfterSecondRevert.pendingCount,
     syntaxErrorsAfterRevert: syntaxErrorsAfterOperationStack
   },
   agentTask: {
@@ -832,10 +841,14 @@ const report = {
       operationApplyOne.ok &&
       operationApplyTwo.ok &&
       pendingAfterApply.length === 2 &&
+      historyAfterApply.pendingCount === 2 &&
+      historyAfterApply.entries.some((entry) => entry.next && entry.nextToken === "p-8") &&
       operationRevertOne.ok &&
       pendingAfterFirstRevert.length === 1 &&
+      historyAfterFirstRevert.pendingCount === 1 &&
       operationRevertTwo.ok &&
       pendingAfterSecondRevert.length === 0 &&
+      historyAfterSecondRevert.pendingCount === 0 &&
       syntaxErrorsAfterOperationStack === 0
   }
 };
