@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { analyzeClassNames } from "./analyze-classnames";
+import { createAgentTask } from "../src/intent/agentTask";
 import { instrumentSource } from "../src/intent/instrument";
 import { applyTokenPatch, planTokenPatch, revertTokenPatch } from "../src/intent/patch";
 
@@ -116,6 +117,24 @@ const apply = applyTokenPatch(rootDir, patchEntry, {
 const syntaxErrorsAfterPatch = parseSyntaxErrorCount(patchFixture);
 const revert = revertTokenPatch(rootDir, apply.ok ? apply : null, patchEntry);
 const syntaxErrorsAfterRevert = parseSyntaxErrorCount(patchFixture);
+const agentTask = createAgentTask(rootDir, patchEntry, {
+  id: patchEntry.id,
+  desiredChange: "Add an empty state below this selected grid without changing the current spacing tokens."
+});
+const agentTaskMarkdown = agentTask.ok ? agentTask.markdown : "";
+const agentTaskRequiredSections = [
+  "## Goal",
+  "## Selected Component",
+  "## Current Intent Document",
+  "## Desired Change",
+  "## Constraints",
+  "## Files That May Be Edited",
+  "## Files That Should Not Be Edited",
+  "## Required Checks"
+];
+const agentTaskSectionsPresent = agentTaskRequiredSections.every((section) =>
+  agentTaskMarkdown.includes(section)
+);
 
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
 fs.writeFileSync(
@@ -218,6 +237,12 @@ const report = {
       dynamicSegments: cnPatchEntry.className.dynamicSegments
     }
   },
+  agentTask: {
+    ok: agentTask.ok,
+    taskMs: agentTask.ok ? agentTask.metrics.taskMs : agentTask.metrics?.applyMs,
+    sectionsPresent: agentTaskSectionsPresent,
+    taskFile: agentTask.ok ? path.relative(rootDir, agentTask.taskFile).replace(/\\/g, "/") : null
+  },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
@@ -227,6 +252,7 @@ const report = {
     warmTransformTargetPass: warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= 5,
     supportedPatchPass: apply.ok && syntaxErrorsAfterPatch === 0,
     revertPatchPass: revert.ok && syntaxErrorsAfterRevert === 0,
+    agentTaskPass: agentTask.ok && agentTaskSectionsPresent,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch"
   }

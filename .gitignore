@@ -13,4 +13,5 @@ dist/
 .intent/graph.intent.json
 .intent/operations/
 .intent/diffs/
+.intent/agent/task_*.md
 .intent/tmp/

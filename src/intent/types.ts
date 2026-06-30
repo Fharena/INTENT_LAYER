@@ -108,3 +108,20 @@ export interface PatchRevertResult {
     revertMs: number;
   };
 }
+
+export interface AgentTaskRequest {
+  id: string;
+  desiredChange: string;
+}
+
+export interface AgentTaskResult {
+  ok: true;
+  id: string;
+  file: string;
+  relativeFile: string;
+  taskFile: string;
+  markdown: string;
+  metrics: {
+    taskMs: number;
+  };
+}

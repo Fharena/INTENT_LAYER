@@ -1,5 +1,6 @@
 import { candidatesForToken } from "./tailwind";
 import type {
+  AgentTaskResult,
   IntentBinding,
   IntentGraph,
   IntentToken,
@@ -12,6 +13,7 @@ import type {
 type PatchResponse = PatchApplyResult | PatchFailure;
 type PreviewResponse = PatchPreview | PatchFailure;
 type RevertResponse = PatchRevertResult | PatchFailure;
+type AgentTaskResponse = AgentTaskResult | PatchFailure;
 
 function createButton(label: string): HTMLButtonElement {
   const button = document.createElement("button");
@@ -139,6 +141,57 @@ function renderTokenRow(
   root.appendChild(row);
 }
 
+function renderAgentTaskForm(
+  root: HTMLElement,
+  binding: IntentBinding,
+  setStatus: (message: string) => void
+) {
+  const wrapper = document.createElement("div");
+  wrapper.style.marginTop = "12px";
+  wrapper.style.paddingTop = "10px";
+  wrapper.style.borderTop = "1px solid #e2e8f0";
+
+  const label = document.createElement("label");
+  label.textContent = "Agent handoff";
+  label.style.display = "block";
+  label.style.fontSize = "12px";
+  label.style.fontWeight = "800";
+  label.style.marginBottom = "6px";
+
+  const textarea = document.createElement("textarea");
+  textarea.placeholder = "Describe a complex or unsupported edit";
+  textarea.rows = 3;
+  textarea.style.width = "100%";
+  textarea.style.boxSizing = "border-box";
+  textarea.style.border = "1px solid #cbd5e1";
+  textarea.style.borderRadius = "6px";
+  textarea.style.padding = "8px";
+  textarea.style.fontSize = "12px";
+  textarea.style.resize = "vertical";
+
+  const create = createButton("Create task");
+  create.style.marginTop = "8px";
+  create.addEventListener("click", async () => {
+    const response = await fetch("/__intent/agent-task", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        id: binding.id,
+        desiredChange: textarea.value
+      })
+    });
+    const result = (await response.json()) as AgentTaskResponse;
+    if (result.ok) {
+      setStatus(`Agent task created in ${result.metrics.taskMs}ms: ${result.taskFile}`);
+    } else {
+      setStatus(`Agent task rejected: ${result.reason}`);
+    }
+  });
+
+  wrapper.append(label, textarea, create);
+  root.appendChild(wrapper);
+}
+
 function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status: string) {
   panel.innerHTML = "";
 
@@ -220,6 +273,10 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
         renderBinding(panel, binding, message);
       });
     }
+
+    renderAgentTaskForm(panel, binding, (message) => {
+      renderBinding(panel, binding, message);
+    });
   }
 
   pick.addEventListener("click", () => {
