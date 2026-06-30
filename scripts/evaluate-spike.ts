@@ -949,6 +949,51 @@ interface ProductGraphWriteThrottleReport {
   pass: boolean;
 }
 
+interface ProductMultiFileGraphRefreshSample {
+  relativeFile: string;
+  transformMs: number;
+  transformReturnedCode: boolean;
+  generatedAt: string | null;
+  entries: number;
+  graphBytes: number;
+}
+
+interface ProductMultiFileGraphRefreshReport {
+  rootDir: string;
+  graphFile: string;
+  fileCount: number;
+  cardsPerFile: number;
+  expectedEntryCount: number;
+  initialEntryCount: number;
+  repeatEntryCount: number;
+  changedEntryCount: number;
+  changedRepeatEntryCount: number;
+  graphBytes: number;
+  changedFile: string;
+  changedFileTokenBefore: string | null;
+  changedFileTokenAfter: string | null;
+  unchangedSampleFiles: string[];
+  unchangedFilesRetained: boolean;
+  generatedAtInitial: string | null;
+  generatedAtRepeat: string | null;
+  generatedAtChanged: string | null;
+  generatedAtChangedRepeat: string | null;
+  sameCodeStable: boolean;
+  changedCodeUpdates: boolean;
+  changedRepeatStable: boolean;
+  entryCountStable: boolean;
+  initialSamples: ProductMultiFileGraphRefreshSample[];
+  repeatSamples: ProductMultiFileGraphRefreshSample[];
+  changedSample: ProductMultiFileGraphRefreshSample;
+  changedRepeatSample: ProductMultiFileGraphRefreshSample;
+  initialTotalMs: number;
+  repeatTotalMs: number;
+  changedFileTransformMs: number;
+  changedRepeatTransformMs: number;
+  changedFileTargetMs: number;
+  pass: boolean;
+}
+
 function resetTmpSubdir(name: string): string {
   const target = path.resolve(tmpDir, name);
   const tmpRoot = path.resolve(tmpDir);
@@ -1067,6 +1112,209 @@ function measureProductGraphWriteThrottle(
       entriesStable &&
       uniqueGeneratedAt.size === 2 &&
       inferredSkippedWriteCount === repeatCount + 1
+  };
+}
+
+function productMultiFileFixture(fileIndex: number, cardsPerFile: number, gapToken = "gap-4"): string {
+  const componentName = `ProductScreen${String(fileIndex).padStart(2, "0")}`;
+  const cards = Array.from({ length: cardsPerFile }, (_, index) =>
+    [
+      `        <article className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">`,
+      `          <h2 className="text-lg font-semibold text-slate-950">Metric ${fileIndex}-${index}</h2>`,
+      `          <p className={cn("text-sm leading-6 text-slate-600", active && "text-teal-700")}>Generated row</p>`,
+      `          <button className={clsx("rounded-lg px-4 py-2 text-sm font-semibold", selectedIndex === ${index} && "bg-teal-700 text-white")}>Inspect</button>`,
+      "        </article>"
+    ].join("\n")
+  ).join("\n");
+
+  return [
+    "declare function cn(...value: Array<string | false | undefined>): string;",
+    "declare function clsx(...value: Array<string | false | undefined>): string;",
+    `export function ${componentName}({ active, selectedIndex }: { active: boolean; selectedIndex: number }) {`,
+    "  return (",
+    "    <main className=\"min-h-screen bg-slate-50 p-6\">",
+    `      <section className="grid grid-cols-3 ${gapToken} rounded-2xl border border-slate-200 bg-white p-6">`,
+    cards,
+    "      </section>",
+    "    </main>",
+    "  );",
+    "}",
+    ""
+  ].join("\n");
+}
+
+function readIntentGraph(graphFile: string): IntentGraph {
+  return JSON.parse(fs.readFileSync(graphFile, "utf8")) as IntentGraph;
+}
+
+function graphEntryCount(graph: IntentGraph): number {
+  return Object.keys(graph.entries).length;
+}
+
+function graphHasFileToken(graph: IntentGraph, relativeFile: string, token: string): boolean {
+  return Object.values(graph.entries).some(
+    (entry) =>
+      entry.relativeFile === relativeFile && entry.tokens.some((item) => item.token === token)
+  );
+}
+
+function firstGraphFileToken(
+  graph: IntentGraph,
+  relativeFile: string,
+  token: string
+): string | null {
+  return graphHasFileToken(graph, relativeFile, token) ? token : null;
+}
+
+function measureProductMultiFileGraphRefresh(
+  fileCount: number,
+  cardsPerFile: number
+): ProductMultiFileGraphRefreshReport {
+  const refreshRoot = resetTmpSubdir("vite-product-multi-file-graph-refresh");
+  const sourceDir = path.join(refreshRoot, "src", "screens");
+  const graphFile = path.join(refreshRoot, ".intent", "graph.intent.json");
+  fs.mkdirSync(sourceDir, { recursive: true });
+
+  const files = Array.from({ length: fileCount }, (_, index) => {
+    const file = path.join(sourceDir, `ProductScreen${String(index).padStart(2, "0")}.tsx`);
+    return {
+      file,
+      relativeFile: path.relative(refreshRoot, file).replace(/\\/g, "/"),
+      code: productMultiFileFixture(index, cardsPerFile)
+    };
+  });
+
+  const plugin = intentLayer();
+  const configResolved = plugin.configResolved as unknown;
+
+  if (typeof configResolved === "function") {
+    (configResolved as (config: { root: string }) => void)({ root: refreshRoot });
+  }
+
+  const transformSource = plugin.transform as unknown;
+  const transform =
+    typeof transformSource === "function"
+      ? transformSource
+      : transformSource &&
+          typeof transformSource === "object" &&
+          "handler" in transformSource &&
+          typeof (transformSource as { handler?: unknown }).handler === "function"
+        ? (transformSource as { handler: unknown }).handler
+        : null;
+
+  if (!transform) {
+    throw new Error("intentLayer plugin did not expose a callable transform hook");
+  }
+
+  function sample(file: string, relativeFile: string, inputCode: string): ProductMultiFileGraphRefreshSample {
+    fs.writeFileSync(file, inputCode);
+    const started = performance.now();
+    const transformed = (transform as (code: string, id: string) => unknown)(inputCode, file);
+    const transformMs = Number((performance.now() - started).toFixed(3));
+
+    if (transformed && typeof (transformed as PromiseLike<unknown>).then === "function") {
+      throw new Error("Product multi-file graph refresh fixture expected a synchronous transform");
+    }
+
+    const graph = fs.existsSync(graphFile) ? readIntentGraph(graphFile) : null;
+    return {
+      relativeFile,
+      transformMs,
+      transformReturnedCode: transformed !== null,
+      generatedAt: graph?.generatedAt ?? null,
+      entries: graph ? graphEntryCount(graph) : 0,
+      graphBytes: fs.existsSync(graphFile) ? fs.statSync(graphFile).size : 0
+    };
+  }
+
+  const initialStarted = performance.now();
+  const initialSamples = files.map((item) => sample(item.file, item.relativeFile, item.code));
+  const initialTotalMs = Number((performance.now() - initialStarted).toFixed(3));
+  const initialGraph = readIntentGraph(graphFile);
+
+  const repeatStarted = performance.now();
+  const repeatSamples = files.map((item) => sample(item.file, item.relativeFile, item.code));
+  const repeatTotalMs = Number((performance.now() - repeatStarted).toFixed(3));
+  const repeatGraph = readIntentGraph(graphFile);
+
+  const changedFileIndex = Math.min(7, files.length - 1);
+  const changedFile = files[changedFileIndex];
+  const changedCode = changedFile.code.replace(
+    "className=\"grid grid-cols-3 gap-4",
+    "className=\"grid grid-cols-3 gap-8"
+  );
+  const changedFileTokenBefore = firstGraphFileToken(
+    initialGraph,
+    changedFile.relativeFile,
+    "gap-4"
+  );
+  const changedSample = sample(changedFile.file, changedFile.relativeFile, changedCode);
+  const changedGraph = readIntentGraph(graphFile);
+  const changedRepeatSample = sample(changedFile.file, changedFile.relativeFile, changedCode);
+  const changedRepeatGraph = readIntentGraph(graphFile);
+  const unchangedSampleFiles = files
+    .filter((item) => item.relativeFile !== changedFile.relativeFile)
+    .slice(0, 5)
+    .map((item) => item.relativeFile);
+  const unchangedFilesRetained = unchangedSampleFiles.every((relativeFile) =>
+    graphHasFileToken(changedGraph, relativeFile, "gap-4")
+  );
+  const initialEntryCount = graphEntryCount(initialGraph);
+  const repeatEntryCount = graphEntryCount(repeatGraph);
+  const changedEntryCount = graphEntryCount(changedGraph);
+  const changedRepeatEntryCount = graphEntryCount(changedRepeatGraph);
+  const sameCodeStable = repeatGraph.generatedAt === initialGraph.generatedAt;
+  const changedCodeUpdates = changedGraph.generatedAt !== initialGraph.generatedAt;
+  const changedRepeatStable = changedRepeatGraph.generatedAt === changedGraph.generatedAt;
+  const entryCountStable =
+    repeatEntryCount === initialEntryCount &&
+    changedEntryCount === initialEntryCount &&
+    changedRepeatEntryCount === initialEntryCount;
+  const changedFileTargetMs = 50;
+
+  return {
+    rootDir: reportPath(refreshRoot),
+    graphFile: reportPath(graphFile),
+    fileCount,
+    cardsPerFile,
+    expectedEntryCount: initialEntryCount,
+    initialEntryCount,
+    repeatEntryCount,
+    changedEntryCount,
+    changedRepeatEntryCount,
+    graphBytes: fs.statSync(graphFile).size,
+    changedFile: changedFile.relativeFile,
+    changedFileTokenBefore,
+    changedFileTokenAfter: firstGraphFileToken(changedGraph, changedFile.relativeFile, "gap-8"),
+    unchangedSampleFiles,
+    unchangedFilesRetained,
+    generatedAtInitial: initialGraph.generatedAt,
+    generatedAtRepeat: repeatGraph.generatedAt,
+    generatedAtChanged: changedGraph.generatedAt,
+    generatedAtChangedRepeat: changedRepeatGraph.generatedAt,
+    sameCodeStable,
+    changedCodeUpdates,
+    changedRepeatStable,
+    entryCountStable,
+    initialSamples,
+    repeatSamples,
+    changedSample,
+    changedRepeatSample,
+    initialTotalMs,
+    repeatTotalMs,
+    changedFileTransformMs: changedSample.transformMs,
+    changedRepeatTransformMs: changedRepeatSample.transformMs,
+    changedFileTargetMs,
+    pass:
+      initialEntryCount > 0 &&
+      changedFileTokenBefore === "gap-4" &&
+      firstGraphFileToken(changedGraph, changedFile.relativeFile, "gap-8") === "gap-8" &&
+      unchangedFilesRetained &&
+      sameCodeStable &&
+      changedCodeUpdates &&
+      changedRepeatStable &&
+      entryCountStable &&
+      changedSample.transformMs <= changedFileTargetMs
   };
 }
 
@@ -1265,6 +1513,7 @@ const productGraphWriteThrottle = measureProductGraphWriteThrottle(
   largeTransformCode,
   largeTransformCardCount
 );
+const productMultiFileGraphRefresh = measureProductMultiFileGraphRefresh(24, 6);
 
 const patchFixture = path.join(tmpDir, "StaticPatchFixture.tsx");
 fs.writeFileSync(
@@ -3373,6 +3622,7 @@ const report = {
     pass: Math.max(...largeTransformTimes) <= largeTransformTargetMs
   },
   productGraphWriteThrottle,
+  productMultiFileGraphRefresh,
   graphLookupProxy: {
     iterations: graphLookupIterations,
     totalMs: Number(graphLookupTotalMs.toFixed(3)),
@@ -4454,6 +4704,7 @@ const report = {
       warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
     largeTransformTargetPass: Math.max(...largeTransformTimes) <= largeTransformTargetMs,
     productGraphWriteThrottlePass: productGraphWriteThrottle.pass,
+    productMultiFileGraphRefreshPass: productMultiFileGraphRefresh.pass,
     cliInitPass:
       cliInit.exitCode === 0 &&
       cliInitReport?.command === "init" &&
