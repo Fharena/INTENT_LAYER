@@ -19,6 +19,7 @@ Measured inputs:
 - simple `cn()` patch fixture
 - last-patch revert fixture
 - agent handoff task fixture
+- agent result artifact fixture
 
 Important caveat:
 
@@ -84,8 +85,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 3.65ms / p95 6.458ms / max 6.458ms |
-| `src/main.tsx` | 0 | avg 1.039ms / p95 1.802ms / max 1.802ms |
+| `src/App.tsx` | 13 | avg 2.672ms / p95 5.392ms / max 5.392ms |
+| `src/main.tsx` | 0 | avg 0.703ms / p95 1.571ms / max 1.571ms |
 
 Summary:
 
@@ -93,12 +94,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 2.344ms |
-| Overall p95 transform time | 6.458ms |
-| Overall max transform time | 6.458ms |
-| Warm average transform time | 1.898ms |
-| Warm p95 transform time | 4.773ms |
-| Warm max transform time | 4.773ms |
+| Overall average transform time | 1.688ms |
+| Overall p95 transform time | 5.392ms |
+| Overall max transform time | 5.392ms |
+| Warm average transform time | 1.239ms |
+| Warm p95 transform time | 2.542ms |
+| Warm max transform time | 2.542ms |
 | Target | <= 5ms per warm transform |
 | Result | warm pass / cold fail |
 
@@ -114,13 +115,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.561ms |
-| Preview round trip | 2.062ms |
+| Preview time | 1.008ms |
+| Preview round trip | 1.279ms |
 | Apply success | true |
-| Static apply time | 4.302ms |
-| Simple `cn()` apply time | 13.227ms |
+| Static apply time | 4.19ms |
+| Simple `cn()` apply time | 4.368ms |
 | Revert success | true |
-| Revert time | 3.458ms |
+| Revert time | 3.355ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -140,8 +141,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.334ms |
-| Average lookup | 0.000334ms |
+| Total time | 0.382ms |
+| Average lookup | 0.000382ms |
 
 Caveat:
 
@@ -154,7 +155,7 @@ A real click-to-panel measurement still needs to be captured in the dev server a
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 1.376ms |
+| Task generation time | 9.167ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -170,7 +171,44 @@ Files That Should Not Be Edited
 Required Checks
 ```
 
-## 7. Gate Results
+## 7. Agent Result Generation
+
+| Metric | Value |
+| --- | ---: |
+| Result generation success | true |
+| Result generation time | 3.312ms |
+| Required sections present | true |
+| Result/diff files exist | true |
+| Source hash changed | false |
+
+Required sections checked:
+
+```text
+Summary
+Source Binding
+Task
+Changed Files
+Checks
+Intent Diff
+```
+
+Dev server endpoint smoke test:
+
+| Metric | Value |
+| --- | ---: |
+| Test URL | `http://127.0.0.1:5176/__intent/agent-result` |
+| Result generation success | true |
+| Endpoint result time | 12.559ms |
+| Result file returned | true |
+| Diff file returned | true |
+
+Interpretation:
+
+- Agent result recording is still well below the 50ms target.
+- This step structures the user's result summary into `.intent/agent/result_*.md` and `.intent/diffs/*_agent.intent-diff.yml`.
+- It does not yet infer the semantic meaning of the actual agent patch automatically.
+
+## 8. Gate Results
 
 | Gate | Threshold | Result |
 | --- | --- | --- |
@@ -182,10 +220,11 @@ Required Checks
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
+| agent result generation | result/diff created + required sections present | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
-## 8. Conclusion
+## 9. Conclusion
 
 This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments.
 
@@ -198,6 +237,7 @@ What worked:
 - patch preview before apply
 - last-patch revert
 - agent handoff task markdown generation
+- agent result markdown and agent intent diff generation
 - simple `cn()` literal segment patching
 - source hash stale rejection
 - minimal intent operation/diff output
@@ -209,12 +249,12 @@ What remains weak:
 - transform time still needs to be tested on larger TSX files
 - real browser click-to-panel time is not measured yet
 - real AI-generated 50-100 sample corpus audit is still missing
-- agent result patch analysis and result document generation are not implemented yet
+- agent results are not yet connected to actual before/after source diffs
 - variant functions and runtime template literals remain unsupported
 
 Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is cold transform optimization, a real corpus audit, and real browser click-to-panel measurement.
+The next priority is real browser click-to-panel measurement, cold transform optimization, and a real corpus audit.
 ```

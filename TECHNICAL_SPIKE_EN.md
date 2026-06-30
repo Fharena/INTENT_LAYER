@@ -34,6 +34,7 @@ Included:
 - range patch apply
 - undo for the last patch
 - structured agent handoff task generation
+- structured agent result artifact generation
 - minimal intent operation/diff output
 - corpus analysis script
 - performance and safety evaluation script
@@ -118,6 +119,8 @@ src/App.tsx
 src/intent/vitePlugin.ts
 src/intent/instrument.ts
 src/intent/patch.ts
+src/intent/agentTask.ts
+src/intent/agentResult.ts
 src/intent/tailwind.ts
 src/intent/client.ts
 scripts/analyze-classnames.ts
@@ -198,8 +201,8 @@ Support model:
 - Variant functions and props forwarding are read-only.
 - Undo supports only the last patch.
 - Restarting the dev server clears the in-memory undo state.
-- Agent handoff only creates task markdown.
-- Agent result patch analysis and result documents are not implemented yet.
+- Agent handoff currently records task/result markdown and intent diffs only.
+- Agent results structure the user's result summary, but they do not yet infer semantic before/after source changes automatically.
 - The current click-to-binding metric is only a graph lookup proxy, not a full browser click measurement.
 - Warm transform meets the 5ms target, but cold first transform can exceed 5ms.
 - Larger TSX files are not tested yet.
@@ -210,17 +213,17 @@ Priority order:
 
 1. Measure whether transform time stays under 5ms on larger TSX files.
 2. Measure real browser click -> binding -> patch round trip time.
-3. Add agent result analysis and `.intent/agent/result_*.md` generation.
+3. Connect agent results to actual before/after source diffs.
 4. Design an undo stack and operation-log-backed revert.
 5. Measure real browser click-to-panel time.
 6. Show read-only reasons clearly in the UI.
 7. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
 
-## 9. Agent Handoff
+## 9. Agent Handoff And Result
 
 Unsupported or structural edits can be delegated as structured agent tasks from the overlay.
 
-Current flow:
+Task creation flow:
 
 1. The user selects an element.
 2. The user describes the desired change in the `Agent handoff` field.
@@ -243,3 +246,25 @@ Expected Result
 
 This implementation does not call an LLM.
 It only turns the selected source binding and desired change into markdown that can be handed to Codex, Cursor, Claude, or another agent.
+
+Result recording flow:
+
+1. After the agent finishes, the user records a result summary.
+2. The `/__intent/agent-result` endpoint looks up the selected source binding.
+3. A `.intent/agent/result_*.md` document is generated.
+4. A `.intent/diffs/*_agent.intent-diff.yml` document is generated.
+
+The result document includes:
+
+```text
+Summary
+Source Binding
+Task
+Changed Files
+Checks
+Notes
+Intent Diff
+```
+
+At this stage, result recording is a deterministic audit log.
+It rereads the source file to record `sourceHashChanged`, but it does not yet infer the semantic meaning of the agent patch automatically.

@@ -4,7 +4,7 @@ Working product folder for the Intent Layer concept.
 
 Current state:
 
-> Static `className` click-to-patch spike for React + Vite + Tailwind.
+> React/Vite/Tailwind click-to-patch spike with structured agent handoff/result artifacts.
 
 Documents:
 
@@ -60,8 +60,10 @@ The demo currently supports:
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
 - undo for the last applied patch
 - structured agent handoff task generation at `.intent/agent/task_*.md`
+- structured agent result artifact generation at `.intent/agent/result_*.md`
 - source hash validation before patching
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply
+- agent result `.intent-diff.yml` output for complex edit review handoff
 
 The first evaluation result is stored in:
 

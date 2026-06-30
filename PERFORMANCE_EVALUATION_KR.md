@@ -19,6 +19,7 @@ npm run build
 - simple `cn()` patch fixture
 - last-patch revert fixture
 - agent handoff task fixture
+- agent result artifact fixture
 
 주의:
 
@@ -84,8 +85,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 3.65ms / p95 6.458ms / max 6.458ms |
-| `src/main.tsx` | 0 | avg 1.039ms / p95 1.802ms / max 1.802ms |
+| `src/App.tsx` | 13 | avg 2.672ms / p95 5.392ms / max 5.392ms |
+| `src/main.tsx` | 0 | avg 0.703ms / p95 1.571ms / max 1.571ms |
 
 요약:
 
@@ -93,12 +94,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 2.344ms |
-| 전체 p95 transform time | 6.458ms |
-| 전체 최대 transform time | 6.458ms |
-| warm 평균 transform time | 1.898ms |
-| warm p95 transform time | 4.773ms |
-| warm 최대 transform time | 4.773ms |
+| 전체 평균 transform time | 1.688ms |
+| 전체 p95 transform time | 5.392ms |
+| 전체 최대 transform time | 5.392ms |
+| warm 평균 transform time | 1.239ms |
+| warm p95 transform time | 2.542ms |
+| warm 최대 transform time | 2.542ms |
 | 목표 | warm 파일당 5ms 이하 |
 | 결과 | warm 통과 / cold 미통과 |
 
@@ -114,13 +115,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 1.561ms |
-| preview round trip | 2.062ms |
+| preview time | 1.008ms |
+| preview round trip | 1.279ms |
 | apply 성공 | true |
-| static apply time | 4.302ms |
-| simple `cn()` apply time | 13.227ms |
+| static apply time | 4.19ms |
+| simple `cn()` apply time | 4.368ms |
 | revert 성공 | true |
-| revert time | 3.458ms |
+| revert time | 3.355ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -140,8 +141,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.334ms |
-| 평균 lookup | 0.000334ms |
+| 총 시간 | 0.382ms |
+| 평균 lookup | 0.000382ms |
 
 주의:
 
@@ -154,7 +155,7 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 1.376ms |
+| task 생성 시간 | 9.167ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -170,7 +171,44 @@ Files That Should Not Be Edited
 Required Checks
 ```
 
-## 7. Gate 결과
+## 7. Agent Result 생성
+
+| 항목 | 값 |
+| --- | ---: |
+| result 생성 성공 | true |
+| result 생성 시간 | 3.312ms |
+| 필수 섹션 포함 | true |
+| result/diff 파일 존재 | true |
+| source hash changed | false |
+
+검증한 필수 섹션:
+
+```text
+Summary
+Source Binding
+Task
+Changed Files
+Checks
+Intent Diff
+```
+
+dev server endpoint smoke test:
+
+| 항목 | 값 |
+| --- | ---: |
+| 테스트 URL | `http://127.0.0.1:5176/__intent/agent-result` |
+| result 생성 성공 | true |
+| endpoint result time | 12.559ms |
+| result 파일 반환 | true |
+| diff 파일 반환 | true |
+
+해석:
+
+- agent result 기록은 목표 50ms보다 빠르게 동작했다.
+- 이번 단계는 사용자가 입력한 결과 요약을 구조화해 `.intent/agent/result_*.md`와 `.intent/diffs/*_agent.intent-diff.yml`로 남긴다.
+- 실제 agent patch의 의미를 자동 분석하는 단계는 아직 아니다.
+
+## 8. Gate 결과
 
 | Gate | 기준 | 결과 |
 | --- | --- | --- |
@@ -182,10 +220,11 @@ Required Checks
 | supported static patch | apply 성공 + syntax error 0 | 통과 |
 | last patch revert | revert 성공 + syntax error 0 | 통과 |
 | agent task generation | task 생성 + 필수 섹션 포함 | 통과 |
+| agent result generation | result/diff 생성 + 필수 섹션 포함 | 통과 |
 | simple `cn()` / `clsx()` patch | apply 성공 + syntax error 0 | 통과 |
 | stale rejection | source mismatch 거부 | 통과 |
 
-## 8. 결론
+## 9. 결론
 
 이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했다.
 
@@ -198,6 +237,7 @@ Required Checks
 - apply 전 patch preview
 - last-patch revert
 - agent handoff task markdown 생성
+- agent result markdown과 agent intent diff 생성
 - simple `cn()` literal segment patch
 - source hash stale rejection
 - intent operation/diff 최소 출력
@@ -209,12 +249,12 @@ Required Checks
 - 대형 TSX 파일에서 transform time 5ms 목표 유지
 - 실제 브라우저 click-to-panel 시간 측정
 - 실제 AI 생성 코드 50-100개 corpus 검증
-- agent 결과 patch 분석과 result 문서 생성
+- agent 결과와 실제 before/after source diff 연결
 - variant 함수와 runtime template literal 지원
 
 다음 판단:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 cold transform 최적화, 실제 corpus audit, 실제 browser click-to-panel 측정이다.
+다음 우선순위는 실제 browser click-to-panel 측정, cold transform 최적화, 실제 corpus audit이다.
 ```
