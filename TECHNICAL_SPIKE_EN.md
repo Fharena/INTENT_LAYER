@@ -34,6 +34,7 @@ Included:
 - old token validation
 - range patch apply
 - operation-log-backed undo stack and patch revert
+- undo conflict artifact output at `.intent/conflicts/*.intent-conflict.json`
 - structured agent handoff task generation
 - structured agent result artifact generation
 - agent handoff source snapshots, result source diffs, and selected/component/related `className` semantic token diffs
@@ -117,9 +118,10 @@ Revert flow:
 5. Revert operation/diff artifacts are written and a revert entry is appended to the operation log.
 6. If the in-memory stack is empty, pending apply entries are restored from the operation log.
 7. `/__intent/undo-history` returns the pending undo stack as JSON, and the overlay displays recent pending undo entries.
+8. If the stored range no longer contains `nextToken`, revert is rejected and `.intent/conflicts/*.intent-conflict.json` records the expected, actual, and restore tokens with review guidance.
 
 This is a LIFO undo stack for the MVP.
-Branching history and conflict-resolution UI are not implemented yet.
+Branching history UI and the workflow that turns conflict artifacts into a resolved change are not implemented yet.
 
 If the source hash changed, the patch is rejected.
 If the old token is missing, the patch is rejected.
@@ -248,7 +250,8 @@ Support model:
 - Undo uses an operation-log-backed LIFO stack and can revert multiple direct patches in order.
 - After a dev server restart, the pending undo stack can be restored from the operation log once graph bindings are available again.
 - The overlay displays up to 5 pending undo entries and highlights the next revert target.
-- Branch undo and conflict-resolution UI are not implemented yet.
+- Undo conflicts where the stored `nextToken` changed reject direct revert and write `.intent/conflicts/*.intent-conflict.json`.
+- Branch undo UI and the conflict artifact resolution workflow are not implemented yet.
 - Agent handoff records a selected source-window snapshot, component snapshot, related source snapshot, task/result markdown, and intent diffs.
 - Agent results record before/after line diffs for both the selected source window and the selected component snapshot.
 - Agent results record related source diffs and related semantic token diffs for simple variable-reference read-only bindings.
@@ -269,7 +272,7 @@ Support model:
 Priority order:
 
 1. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
-2. Design branch undo and conflict-resolution UX.
+2. Polish branch undo UI and the conflict artifact resolution workflow.
 3. Improve agent handoff context for imported variant functions and cross-variable data flow.
 4. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
 5. Validate caching and graph write throttling on product-sized TSX files.
