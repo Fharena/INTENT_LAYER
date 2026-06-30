@@ -417,10 +417,12 @@ intent-layer apply
 ```bash
 intent-layer scan
 intent-layer check
+intent-layer agent-task
 ```
 
 `scan`은 repo의 JSX/TSX binding, read-only 원인, editable token coverage, transform time을 JSON으로 출력한다.
 `check`는 같은 결과에 최소 gate를 적용하고 실패 시 non-zero exit code를 반환한다.
+`agent-task`는 `.intent/graph.intent.json`의 binding id와 desired change를 받아 `.intent/agent/task_*.md`를 생성한다.
 
 ### 7.5 Agent Integration
 

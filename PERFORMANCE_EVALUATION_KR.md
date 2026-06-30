@@ -35,7 +35,7 @@ npm run build
 - read-only composite variable related semantic diff fixture
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
-- CLI `scan`/`check` fixture
+- CLI `scan`/`check`/`agent-task` fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, revert 측정
 
@@ -696,7 +696,7 @@ dev server endpoint smoke test:
 | syntax error 수 | 0 |
 | max transform time | 0.196ms |
 | scan stdout bytes | 3261 |
-| check stdout bytes | 3657 |
+| check stdout bytes | 3658 |
 
 check gate:
 
@@ -707,12 +707,27 @@ check gate:
 | supported direct coverage | 87.5% | >= 50% | 통과 |
 | max file transform | 0.196ms | <= 20ms | 통과 |
 
+agent-task gate:
+
+| 항목 | 값 |
+| --- | ---: |
+| graph scan exit code | 0 |
+| agent-task exit code | 0 |
+| graph entry 수 | 40 |
+| 선택 binding id | `il_aecb838907` |
+| task file | `.intent/agent/task_2026-06-30T10-00-26-716Z.md` |
+| task 대상 파일 | `fixtures/corpus/DynamicRuntime.tsx` |
+| task markdown bytes | 3541 |
+| task 생성 시간 | 0.864ms |
+| 필수 섹션 포함 | true |
+
 해석:
 
 - `src/intent/cli.ts`는 별도 서버 없이 현재 instrumentation 엔진을 직접 호출한다.
 - `scan`은 파일별 binding 수, read-only 수, editable token coverage, transform time, unsupported reason을 JSON으로 출력한다.
 - `check`는 같은 결과에 최소 gate를 적용하고 실패 시 non-zero exit code를 돌려주는 출시 전 smoke check 역할이다.
-- 현재 CLI MVP는 `scan`/`check`만 구현했고, `init`, `dev`, `diff`, `apply` 같은 명령은 아직 별도 구현하지 않았다.
+- `agent-task`는 `.intent/graph.intent.json`의 binding id와 desired change를 받아 구조화된 handoff markdown을 생성한다.
+- 현재 CLI MVP는 `scan`/`check`/`agent-task`만 구현했고, `init`, `dev`, `diff`, `apply` 같은 명령은 아직 별도 구현하지 않았다.
 
 ## 10. Gate 결과
 
@@ -730,6 +745,7 @@ check gate:
 | large transform stress | 401 bindings max <= 20ms | 통과 |
 | CLI scan | command `scan` + files >= 8 + bindings > 0 + JSON output | 통과 |
 | CLI check | files/syntax/coverage/transform gate 모두 통과 + exit code 0 | 통과 |
+| CLI agent task | graph entry >= 40 + read-only binding 선택 + task markdown 필수 섹션 포함 | 통과 |
 | browser sample count | total >= 6, desktop >= 3, mobile >= 3 | 통과 |
 | browser click-to-panel | click-to-panel <= 100ms | 통과 |
 | browser preview round trip | preview round trip <= 50ms | 통과 |
@@ -755,7 +771,7 @@ check gate:
 
 ## 11. 결론
 
-이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local 및 one-hop relative imported variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `scan`/`check`도 추가해 브라우저를 열지 않고 repo 상태를 수치로 확인할 수 있게 했다.
+이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local 및 one-hop relative imported variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `scan`/`check`/`agent-task`도 추가해 브라우저를 열지 않고 repo 상태 확인과 agent handoff 문서 생성을 할 수 있게 했다.
 
 성공한 것:
 
@@ -788,6 +804,7 @@ check gate:
 - low-level scanner 기반 cold transform 5ms gate 통과
 - 401-binding large TSX transform stress gate 통과
 - CLI `scan`/`check` JSON report와 gate 통과
+- CLI `agent-task` handoff markdown 생성과 필수 섹션 검증 통과
 - intent operation/diff 최소 출력
 - 수치 리포트 생성
 
@@ -796,7 +813,7 @@ check gate:
 - 실제 제품급 대형 TSX 파일에서 cache/write throttling 검증
 - 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
 - branch undo는 현재 pending undo 폐기까지만 지원하며, 임의 non-top patch를 소스에서 직접 되돌리지는 않는다.
-- CLI는 현재 `scan`/`check`만 구현되어 있고, `init/dev/diff/apply` 명령은 출시 polish로 남아 있다.
+- CLI는 현재 `scan`/`check`/`agent-task`만 구현되어 있고, `init/dev/diff/apply` 명령은 출시 polish로 남아 있다.
 - 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
 - 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
 - path alias, barrel re-export, package import를 포함한 imported variant 함수와 cross-variable data flow 자동 분석

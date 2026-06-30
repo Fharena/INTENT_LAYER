@@ -393,10 +393,12 @@ Currently implemented MVP CLI smoke surface:
 ```bash
 intent-layer scan
 intent-layer check
+intent-layer agent-task
 ```
 
 `scan` emits JSON for JSX/TSX bindings, read-only reasons, editable token coverage, and transform time.
 `check` applies minimal gates to the same result and returns a non-zero exit code when they fail.
+`agent-task` takes a binding id from `.intent/graph.intent.json` plus a desired change and creates `.intent/agent/task_*.md`.
 
 ### 7.5 Agent Integration
 
