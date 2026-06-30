@@ -446,7 +446,7 @@ The task includes:
 selected element
 source file/range
 related source snapshot for variable/variant handoff
-related dependency snapshots for one-hop same-file variable handoff
+related dependency snapshots for one-hop same-file and imported-source variable handoff
 current intent
 desired change
 constraints
@@ -454,8 +454,8 @@ required checks
 patch style
 ```
 
-For the MVP, related source snapshots cover same-file variable declarations, one-hop same-file variable dependency snapshots, variable declarations behind workspace package imports, imported variable declarations behind tsconfig paths aliases plus multi-hop barrel re-exports, one-hop relative named imports, and `variant/cva` declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports.
-External npm package imports, variant-function meaning analysis, and cross-file/transitive variable data flow remain explicit non-goals for handoff context.
+For the MVP, related source snapshots cover same-file variable declarations, one-hop same-file and imported-source variable dependency snapshots, variable declarations behind workspace package imports, imported variable declarations behind tsconfig paths aliases plus multi-hop barrel re-exports, one-hop relative named imports, and `variant/cva` declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports.
+External npm package imports, variant-function meaning analysis, and deeper cross-file/transitive variable data flow remain explicit non-goals for handoff context.
 
 This turns unsupported features into graceful agent-assisted workflows.
 
