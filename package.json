@@ -14,6 +14,7 @@
     "intent:scan": "tsx src/intent/cli.ts scan",
     "intent:check": "tsx src/intent/cli.ts check",
     "intent:agent-task": "tsx src/intent/cli.ts agent-task",
+    "intent:agent-result": "tsx src/intent/cli.ts agent-result",
     "generate:ai-corpus": "tsx scripts/generate-ai-corpus.ts",
     "analyze:classnames": "tsx scripts/analyze-classnames.ts fixtures/corpus src --out reports/performance/corpus-audit.json",
     "analyze:ai-corpus": "tsx scripts/analyze-classnames.ts fixtures/ai-generated --out reports/performance/ai-corpus-audit.json",

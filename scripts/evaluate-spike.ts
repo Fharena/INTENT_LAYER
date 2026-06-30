@@ -1017,6 +1017,77 @@ const cliAgentTaskSectionsPresent = [
   "## Required Checks"
 ].every((section) => cliAgentTaskMarkdown.includes(section));
 
+const cliAgentResultFixture = path.join(tmpDir, "CliAgentResultFixture.tsx");
+fs.writeFileSync(
+  cliAgentResultFixture,
+  [
+    "export function CliAgentResultFixture() {",
+    "  return <section className=\"grid grid-cols-3 gap-4 rounded-lg p-6\">CLI result target</section>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const cliAgentResultFixtureRelative = path.relative(rootDir, cliAgentResultFixture).replace(/\\/g, "/");
+const cliAgentResultGraphScan = runCli(["scan", cliAgentResultFixtureRelative, "--write-graph"], rootDir);
+const cliAgentResultGraph = fs.existsSync(cliGraphFile)
+  ? (JSON.parse(fs.readFileSync(cliGraphFile, "utf8")) as IntentGraph)
+  : null;
+const cliAgentResultBinding =
+  cliAgentResultGraph &&
+  Object.values(cliAgentResultGraph.entries).find(
+    (entry) => entry.relativeFile === cliAgentResultFixtureRelative
+  );
+const cliAgentResultTask = runCli(
+  [
+    "agent-task",
+    "--id",
+    cliAgentResultBinding?.id ?? "missing-cli-agent-result-id",
+    "--change",
+    "CLI fixture: increase radius and padding, then record a result."
+  ],
+  rootDir
+);
+const cliAgentResultTaskReport =
+  cliAgentResultTask.report?.command === "agent-task" ? cliAgentResultTask.report : null;
+if (cliAgentResultTaskReport?.ok) {
+  fs.writeFileSync(
+    cliAgentResultFixture,
+    fs
+      .readFileSync(cliAgentResultFixture, "utf8")
+      .replace("gap-4 rounded-lg p-6", "gap-6 rounded-xl p-8")
+  );
+}
+const cliAgentResult = runCli(
+  [
+    "agent-result",
+    "--id",
+    cliAgentResultBinding?.id ?? "missing-cli-agent-result-id",
+    "--task",
+    cliAgentResultTaskReport?.taskFile ?? "",
+    "--summary",
+    "CLI agent-result fixture: updated spacing, radius, and padding through a recorded handoff result.",
+    "--changed",
+    cliAgentResultFixtureRelative,
+    "--check",
+    "npm run typecheck"
+  ],
+  rootDir
+);
+const cliAgentResultReport =
+  cliAgentResult.report?.command === "agent-result" ? cliAgentResult.report : null;
+const cliAgentResultMarkdown =
+  cliAgentResultReport?.resultFile && fs.existsSync(path.join(rootDir, cliAgentResultReport.resultFile))
+    ? fs.readFileSync(path.join(rootDir, cliAgentResultReport.resultFile), "utf8")
+    : "";
+const cliAgentResultSectionsPresent = [
+  "## Summary",
+  "## Source Binding",
+  "## Source Diff",
+  "## Semantic Intent Diff",
+  "## Intent Diff"
+].every((section) => cliAgentResultMarkdown.includes(section));
+const cliAgentResultSyntaxErrors = parseSyntaxErrorCount(cliAgentResultFixture);
+
 const graphLookupIterations = 1000;
 const graphLookup = new Map(patchInstrument.entries.map((entry) => [entry.id, entry]));
 const lookupStarted = performance.now();
@@ -1084,9 +1155,11 @@ const report = {
     checkExitCode: cliCheck.exitCode,
     graphScanExitCode: cliGraphScan.exitCode,
     agentTaskExitCode: cliAgentTask.exitCode,
+    agentResultExitCode: cliAgentResult.exitCode,
     scanCommand: cliScanReport?.command ?? null,
     checkCommand: cliCheckReport?.command ?? null,
     agentTaskCommand: cliAgentTaskReport?.command ?? null,
+    agentResultCommand: cliAgentResultReport?.command ?? null,
     filesScanned: cliCheckReport?.summary.filesScanned ?? 0,
     bindingCount: cliCheckReport?.summary.bindingCount ?? 0,
     directEditBindingCount: cliCheckReport?.summary.directEditBindingCount ?? 0,
@@ -1105,9 +1178,22 @@ const report = {
     agentTaskMarkdownBytes: cliAgentTaskReport?.markdownBytes ?? 0,
     agentTaskMs: cliAgentTaskReport?.taskMs ?? null,
     agentTaskSectionsPresent: cliAgentTaskSectionsPresent,
+    agentResultGraphScanExitCode: cliAgentResultGraphScan.exitCode,
+    agentResultTaskExitCode: cliAgentResultTask.exitCode,
+    agentResultOk: cliAgentResultReport?.ok ?? false,
+    agentResultFile: cliAgentResultReport?.resultFile ?? null,
+    agentResultDiffFile: cliAgentResultReport?.diffFile ?? null,
+    agentResultRelativeFile: cliAgentResultReport?.relativeFile ?? null,
+    agentResultMarkdownBytes: cliAgentResultReport?.resultMarkdownBytes ?? 0,
+    agentResultMs: cliAgentResultReport?.resultMs ?? null,
+    agentResultSourceDiffLineCount: cliAgentResultReport?.sourceDiffLineCount ?? 0,
+    agentResultSemanticChangeCount: cliAgentResultReport?.semanticChangeCount ?? 0,
+    agentResultSectionsPresent: cliAgentResultSectionsPresent,
+    agentResultSyntaxErrors: cliAgentResultSyntaxErrors,
     scanStdoutBytes: cliScan.stdout.length,
     checkStdoutBytes: cliCheck.stdout.length,
-    agentTaskStdoutBytes: cliAgentTask.stdout.length
+    agentTaskStdoutBytes: cliAgentTask.stdout.length,
+    agentResultStdoutBytes: cliAgentResult.stdout.length
   },
   patch: {
     previewOk: preview.ok,
@@ -1502,6 +1588,20 @@ const report = {
       cliAgentTaskReport.ok &&
       Boolean(cliAgentTaskReport.taskFile) &&
       cliAgentTaskSectionsPresent,
+    cliAgentResultPass:
+      cliAgentResultGraphScan.exitCode === 0 &&
+      Boolean(cliAgentResultBinding) &&
+      cliAgentResultTask.exitCode === 0 &&
+      cliAgentResultTaskReport?.ok &&
+      cliAgentResult.exitCode === 0 &&
+      cliAgentResultReport?.command === "agent-result" &&
+      cliAgentResultReport.ok &&
+      Boolean(cliAgentResultReport.resultFile) &&
+      Boolean(cliAgentResultReport.diffFile) &&
+      cliAgentResultReport.sourceDiffLineCount > 0 &&
+      cliAgentResultReport.semanticChangeCount > 0 &&
+      cliAgentResultSectionsPresent &&
+      cliAgentResultSyntaxErrors === 0,
     supportedPatchPass: apply.ok && syntaxErrorsAfterPatch === 0,
     revertPatchPass: revert.ok && syntaxErrorsAfterRevert === 0,
     agentTaskPass: agentTask.ok && agentTaskSectionsPresent,
