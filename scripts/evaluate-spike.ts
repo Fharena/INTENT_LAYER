@@ -1950,6 +1950,110 @@ const importedVariableDependencyHandoffResult = recordAgentResult(
   }
 );
 
+const propertyAccessRoot = resetTmpSubdir("property-access-handoff");
+const propertyAccessStylesDir = path.join(propertyAccessRoot, "src", "styles");
+const propertyAccessThemeDir = path.join(propertyAccessRoot, "src", "theme");
+const propertyAccessScreensDir = path.join(propertyAccessRoot, "src", "screens");
+fs.mkdirSync(propertyAccessStylesDir, { recursive: true });
+fs.mkdirSync(propertyAccessThemeDir, { recursive: true });
+fs.mkdirSync(propertyAccessScreensDir, { recursive: true });
+fs.writeFileSync(
+  path.join(propertyAccessRoot, "tsconfig.json"),
+  `${JSON.stringify(
+    {
+      compilerOptions: {
+        baseUrl: ".",
+        paths: {
+          "@/*": ["src/*"]
+        }
+      }
+    },
+    null,
+    2
+  )}\n`
+);
+const propertyAccessDefinitionFixture = path.join(propertyAccessStylesDir, "titleStyles.ts");
+fs.writeFileSync(
+  propertyAccessDefinitionFixture,
+  [
+    "export const styles = {",
+    "  title: \"text-xl font-semibold text-gray-950\",",
+    "  eyebrow: \"text-xs font-semibold uppercase tracking-wide text-teal-700\"",
+    "};",
+    ""
+  ].join("\n")
+);
+const propertyAccessStylesIndexFixture = path.join(propertyAccessStylesDir, "index.ts");
+fs.writeFileSync(propertyAccessStylesIndexFixture, "export { styles } from \"./titleStyles\";\n");
+const propertyAccessThemeIndexFixture = path.join(propertyAccessThemeDir, "index.ts");
+fs.writeFileSync(propertyAccessThemeIndexFixture, "export { styles } from \"../styles\";\n");
+const propertyAccessHandoffFixture = path.join(
+  propertyAccessScreensDir,
+  "PropertyAccessHandoffFixture.tsx"
+);
+fs.writeFileSync(
+  propertyAccessHandoffFixture,
+  [
+    "import { styles as cardStyles } from \"@/theme\";",
+    "",
+    "export function PropertyAccessHandoffFixture() {",
+    "  return <h2 className={cardStyles.title}>Property access handoff target</h2>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const propertyAccessHandoffInstrument = instrumentSource({
+  code: fs.readFileSync(propertyAccessHandoffFixture, "utf8"),
+  file: propertyAccessHandoffFixture,
+  rootDir: propertyAccessRoot
+});
+const propertyAccessHandoffEntry = propertyAccessHandoffInstrument.entries[0];
+const propertyAccessHandoffTask = createAgentTask(
+  propertyAccessRoot,
+  propertyAccessHandoffEntry,
+  {
+    id: propertyAccessHandoffEntry?.id ?? "missing-property-access-handoff-binding",
+    desiredChange:
+      "Change this property-access-backed className through an agent handoff."
+  }
+);
+const propertyAccessHandoffRelatedSnapshot = propertyAccessHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedSourceSnapshot | null>(
+      propertyAccessHandoffTask.markdown,
+      "Related Source Snapshot"
+    )
+  : null;
+if (propertyAccessHandoffTask.ok) {
+  fs.writeFileSync(
+    propertyAccessDefinitionFixture,
+    fs
+      .readFileSync(propertyAccessDefinitionFixture, "utf8")
+      .replace(
+        "text-xl font-semibold text-gray-950",
+        "text-2xl font-bold tracking-tight text-cyan-700"
+      )
+  );
+}
+const propertyAccessHandoffSyntaxErrorsAfterResult =
+  parseSyntaxErrorCount(propertyAccessDefinitionFixture) +
+  parseSyntaxErrorCount(propertyAccessStylesIndexFixture) +
+  parseSyntaxErrorCount(propertyAccessThemeIndexFixture) +
+  parseSyntaxErrorCount(propertyAccessHandoffFixture);
+const propertyAccessHandoffResult = recordAgentResult(
+  propertyAccessRoot,
+  propertyAccessHandoffEntry,
+  {
+    id: propertyAccessHandoffEntry?.id ?? "missing-property-access-handoff-binding",
+    taskFile: propertyAccessHandoffTask.ok ? propertyAccessHandoffTask.taskFile : undefined,
+    summary:
+      "Property access handoff fixture: updated the object property className behind an imported object alias.",
+    changedFiles: ["src/styles/titleStyles.ts"],
+    checks: ["npm run typecheck", "npm run eval", "npm run build"],
+    notes:
+      "Evaluation fixture for property-access related source handoff context; no LLM call is made."
+  }
+);
+
 const packageImportRoot = resetTmpSubdir("workspace-package-import-handoff");
 const packageImportUiDir = path.join(packageImportRoot, "packages", "ui");
 const packageImportUiSrcDir = path.join(packageImportUiDir, "src");
@@ -3617,6 +3721,65 @@ const report = {
       ? importedVariableDependencyHandoffResult.relatedDependencySemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  propertyAccessHandoffBinding: {
+    entryCreated: Boolean(propertyAccessHandoffEntry),
+    root: reportPath(propertyAccessRoot),
+    kind: propertyAccessHandoffEntry?.className.kind ?? null,
+    unsupportedReason: propertyAccessHandoffEntry?.className.unsupportedReason ?? null,
+    value: propertyAccessHandoffEntry?.className.value ?? null,
+    tokenCount: propertyAccessHandoffEntry?.tokens.length ?? 0,
+    taskOk: propertyAccessHandoffTask.ok,
+    taskMs: propertyAccessHandoffTask.ok
+      ? propertyAccessHandoffTask.metrics.taskMs
+      : propertyAccessHandoffTask.metrics?.taskMs,
+    relatedSnapshotAvailable: Boolean(propertyAccessHandoffRelatedSnapshot),
+    relatedSnapshotFile: propertyAccessHandoffRelatedSnapshot?.file ?? null,
+    relatedSnapshotKind: propertyAccessHandoffRelatedSnapshot?.kind ?? null,
+    relatedSnapshotIdentifier: propertyAccessHandoffRelatedSnapshot?.identifier ?? null,
+    relatedSnapshotIncludesPropertyClass: Boolean(
+      propertyAccessHandoffRelatedSnapshot?.excerpt.includes(
+        "text-xl font-semibold text-gray-950"
+      )
+    ),
+    resultOk: propertyAccessHandoffResult.ok,
+    resultMs: propertyAccessHandoffResult.ok
+      ? propertyAccessHandoffResult.metrics.resultMs
+      : propertyAccessHandoffResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: propertyAccessHandoffSyntaxErrorsAfterResult,
+    sourceDiffLineCount: propertyAccessHandoffResult.ok
+      ? propertyAccessHandoffResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: propertyAccessHandoffResult.ok
+      ? Boolean(propertyAccessHandoffResult.sourceDiff)
+      : false,
+    componentDiffLineCount: propertyAccessHandoffResult.ok
+      ? propertyAccessHandoffResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: propertyAccessHandoffResult.ok
+      ? Boolean(propertyAccessHandoffResult.componentSourceDiff)
+      : false,
+    relatedResultSnapshotAvailable: propertyAccessHandoffResult.ok
+      ? propertyAccessHandoffResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: propertyAccessHandoffResult.ok
+      ? propertyAccessHandoffResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: propertyAccessHandoffResult.ok
+      ? Boolean(propertyAccessHandoffResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: propertyAccessHandoffResult.ok
+      ? propertyAccessHandoffResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedSemanticDiffPresent: propertyAccessHandoffResult.ok
+      ? Boolean(propertyAccessHandoffResult.relatedSemanticDiff)
+      : false,
+    relatedSemanticTokenAddedCount: propertyAccessHandoffResult.ok
+      ? propertyAccessHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedSemanticTokenRemovedCount: propertyAccessHandoffResult.ok
+      ? propertyAccessHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   packageImportHandoffBinding: {
     entryCreated: Boolean(packageImportHandoffEntry),
     root: reportPath(packageImportRoot),
@@ -4163,6 +4326,24 @@ const report = {
       (importedVariableDependencyHandoffResult.relatedDependencySemanticDiff?.tokenRemovedCount ??
         0) >= 5 &&
       importedVariableDependencySyntaxErrorsAfterResult === 0,
+    propertyAccessHandoffPass:
+      propertyAccessHandoffEntry?.className.kind === "read-only" &&
+      propertyAccessHandoffEntry.className.unsupportedReason === "property-access-reference" &&
+      propertyAccessHandoffTask.ok &&
+      propertyAccessHandoffRelatedSnapshot?.kind === "object-property" &&
+      propertyAccessHandoffRelatedSnapshot.identifier === "styles.title" &&
+      propertyAccessHandoffRelatedSnapshot.file === "src/styles/titleStyles.ts" &&
+      propertyAccessHandoffRelatedSnapshot.excerpt.includes(
+        "text-xl font-semibold text-gray-950"
+      ) &&
+      propertyAccessHandoffResult.ok &&
+      propertyAccessHandoffResult.source.relatedSnapshotAvailable &&
+      propertyAccessHandoffResult.source.relatedDiffLineCount > 0 &&
+      Boolean(propertyAccessHandoffResult.relatedSourceDiff) &&
+      propertyAccessHandoffResult.source.relatedSemanticChangeCount >= 1 &&
+      (propertyAccessHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 4 &&
+      (propertyAccessHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 3 &&
+      propertyAccessHandoffSyntaxErrorsAfterResult === 0,
     workspacePackageImportHandoffPass:
       packageImportHandoffEntry?.className.kind === "read-only" &&
       packageImportHandoffEntry.className.unsupportedReason === "variable-reference" &&

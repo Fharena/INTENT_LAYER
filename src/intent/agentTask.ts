@@ -207,7 +207,7 @@ interface RelatedSourceRange {
   relativeFile: string;
   sourceHash: string;
   source: string;
-  kind: "variable-declaration" | "variant-function";
+  kind: "variable-declaration" | "object-property" | "variant-function";
   identifier: string;
   start: number;
   end: number;
@@ -538,6 +538,96 @@ function findVariableDeclarationRange(
   };
 }
 
+function trimSourceRange(source: string, start: number, end: number): { start: number; end: number } {
+  let nextStart = start;
+  let nextEnd = end;
+  while (nextStart < nextEnd && /\s/.test(source[nextStart] ?? "")) nextStart += 1;
+  while (nextEnd > nextStart && /\s/.test(source[nextEnd - 1] ?? "")) nextEnd -= 1;
+  return { start: nextStart, end: nextEnd };
+}
+
+function splitTopLevelRanges(
+  source: string,
+  start: number,
+  end: number,
+  delimiter: string
+): Array<{ start: number; end: number }> {
+  const ranges: Array<{ start: number; end: number }> = [];
+  let quote: string | null = null;
+  let depth = 0;
+  let cursor = start;
+
+  for (let index = start; index < end; index += 1) {
+    const character = source[index];
+    const previous = source[index - 1];
+
+    if (quote) {
+      if (character === quote && previous !== "\\") quote = null;
+      continue;
+    }
+
+    if (character === "\"" || character === "'" || character === "`") {
+      quote = character;
+      continue;
+    }
+
+    if (character === "(" || character === "{" || character === "[") depth += 1;
+    if (character === ")" || character === "}" || character === "]") depth = Math.max(0, depth - 1);
+    if (character === delimiter && depth === 0) {
+      ranges.push(trimSourceRange(source, cursor, index));
+      cursor = index + 1;
+    }
+  }
+
+  ranges.push(trimSourceRange(source, cursor, end));
+  return ranges.filter((range) => range.start < range.end);
+}
+
+function objectPropertyKey(source: string, range: { start: number; end: number }): string | null {
+  const first = source[range.start];
+  if (first === "\"" || first === "'") {
+    let cursor = range.start + 1;
+    while (cursor < range.end) {
+      if (source[cursor] === first && source[cursor - 1] !== "\\") {
+        const afterQuote = skipWhitespace(source, cursor + 1);
+        return source[afterQuote] === ":" ? source.slice(range.start + 1, cursor) : null;
+      }
+      cursor += 1;
+    }
+    return null;
+  }
+
+  const match = /^[A-Za-z_$][\w$]*/.exec(source.slice(range.start, range.end));
+  if (!match) return null;
+
+  const afterName = skipWhitespace(source, range.start + match[0].length);
+  return source[afterName] === ":" ? match[0] : null;
+}
+
+function findObjectPropertyRange(
+  source: string,
+  objectName: string,
+  propertyName: string
+): { start: number; end: number } | null {
+  const variableRange = findVariableDeclarationRange(source, objectName);
+  if (!variableRange) return null;
+
+  const equalsIndex = source.indexOf("=", variableRange.start);
+  if (equalsIndex < 0 || equalsIndex >= variableRange.end) return null;
+
+  const objectStart = skipWhitespace(source, equalsIndex + 1);
+  if (source[objectStart] !== "{" || objectStart >= variableRange.end) return null;
+
+  const objectEnd = scanBalanced(source, objectStart, "{", "}");
+  if (objectEnd < 0 || objectEnd > variableRange.end) return null;
+
+  for (const range of splitTopLevelRanges(source, objectStart + 1, objectEnd - 1, ",")) {
+    if (objectPropertyKey(source, range) === propertyName) return range;
+  }
+
+  return null;
+}
+
 function relatedRangeFromLocalDeclaration(
   rootDir: string,
   file: string,
@@ -556,6 +646,24 @@ function relatedRangeFromLocalDeclaration(
     start: range.start,
     end: range.end
   };
+}
+
+function relatedRangeFromObjectProperty(
+  rootDir: string,
+  file: string,
+  source: string,
+  objectName: string,
+  propertyName: string,
+  range: { start: number; end: number }
+): RelatedSourceRange {
+  return relatedRangeFromLocalDeclaration(
+    rootDir,
+    file,
+    source,
+    "object-property",
+    `${objectName}.${propertyName}`,
+    range
+  );
 }
 
 function maskStringAndCommentContent(source: string): string {
@@ -693,6 +801,67 @@ function findImportedVariableDeclaration(
   return findImportedVariableDeclaration(rootDir, reExportFile, reExport.importedName, visited);
 }
 
+function propertyAccessReference(
+  value: string
+): { objectName: string; propertyName: string } | null {
+  const trimmed = value.trim();
+  const dotMatch = /^([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)$/.exec(trimmed);
+  if (dotMatch) {
+    return {
+      objectName: dotMatch[1],
+      propertyName: dotMatch[2]
+    };
+  }
+
+  const bracketMatch = /^([A-Za-z_$][\w$]*)\[\s*["']([^"']+)["']\s*\]$/.exec(trimmed);
+  if (bracketMatch && /^[A-Za-z_$][\w$]*$/.test(bracketMatch[2])) {
+    return {
+      objectName: bracketMatch[1],
+      propertyName: bracketMatch[2]
+    };
+  }
+
+  return null;
+}
+
+function findImportedObjectPropertyDeclaration(
+  rootDir: string,
+  file: string,
+  objectName: string,
+  propertyName: string,
+  visited = new Set<string>()
+): RelatedSourceRange | null {
+  const normalizedFile = path.resolve(file);
+  const visitKey = `${normalizedFile}:${objectName}.${propertyName}`;
+  if (visited.has(visitKey) || visited.size > 6) return null;
+  visited.add(visitKey);
+
+  const source = fs.readFileSync(normalizedFile, "utf8");
+  const propertyRange = findObjectPropertyRange(source, objectName, propertyName);
+  if (propertyRange) {
+    return relatedRangeFromObjectProperty(
+      rootDir,
+      normalizedFile,
+      source,
+      objectName,
+      propertyName,
+      propertyRange
+    );
+  }
+
+  const reExport = reExportForIdentifier(source, objectName);
+  const reExportFile = reExport ? resolveImportFile(rootDir, normalizedFile, reExport.file) : null;
+  if (!reExport || !reExportFile) return null;
+
+  return findImportedObjectPropertyDeclaration(
+    rootDir,
+    reExportFile,
+    reExport.importedName,
+    propertyName,
+    visited
+  );
+}
+
 function findImportedVariantDeclaration(
   rootDir: string,
   file: string,
@@ -754,6 +923,38 @@ function findRelatedSourceRange(
     if (!imported || !importedFile) return null;
 
     return findImportedVariableDeclaration(rootDir, importedFile, imported.importedName);
+  }
+
+  if (binding.className.unsupportedReason === "property-access-reference") {
+    const reference = propertyAccessReference(binding.className.value);
+    if (!reference) return null;
+
+    const localPropertyRange = findObjectPropertyRange(
+      source,
+      reference.objectName,
+      reference.propertyName
+    );
+    if (localPropertyRange) {
+      return relatedRangeFromObjectProperty(
+        rootDir,
+        binding.file,
+        source,
+        reference.objectName,
+        reference.propertyName,
+        localPropertyRange
+      );
+    }
+
+    const imported = importedNameForLocalIdentifier(source, reference.objectName);
+    const importedFile = imported ? resolveImportFile(rootDir, binding.file, imported.file) : null;
+    if (!imported || !importedFile) return null;
+
+    return findImportedObjectPropertyDeclaration(
+      rootDir,
+      importedFile,
+      imported.importedName,
+      reference.propertyName
+    );
   }
 
   if (binding.className.unsupportedReason !== "variant-function") return null;

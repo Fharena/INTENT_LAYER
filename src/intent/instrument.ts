@@ -110,6 +110,9 @@ function stringSegment(node: ts.Node, sourceFile: ts.SourceFile): SourceSegment 
 
 function unsupportedReasonForExpression(node: ts.Expression): string {
   if (ts.isIdentifier(node)) return "variable-reference";
+  if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
+    return "property-access-reference";
+  }
   if (ts.isTemplateExpression(node)) return "template-expression";
   if (ts.isCallExpression(node)) {
     const calleeText = node.expression.getText();
@@ -175,7 +178,13 @@ function collectLiteralSegments(
   return {
     segments: [],
     dynamicSegments: 1,
-    unsupportedReasons: [ts.isIdentifier(node) ? "variable-reference" : "runtime-expression"]
+    unsupportedReasons: [
+      ts.isIdentifier(node)
+        ? "variable-reference"
+        : ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)
+          ? "property-access-reference"
+          : "runtime-expression"
+    ]
   };
 }
 
@@ -493,15 +502,26 @@ function collectArgumentSegments(
   return {
     segments: [],
     dynamicSegments: 1,
-    unsupportedReasons: [/^\s*[A-Za-z_$][\w$]*\s*$/.test(code.slice(start, end))
-      ? "variable-reference"
-      : "runtime-expression"]
+    unsupportedReasons: [
+      /^\s*[A-Za-z_$][\w$]*\s*$/.test(code.slice(start, end))
+        ? "variable-reference"
+        : /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\s*["'][^"']+["']\s*\])+$/.test(
+              code.slice(start, end).trim()
+            )
+          ? "property-access-reference"
+          : "runtime-expression"
+    ]
   };
 }
 
 function unsupportedReasonForExpressionText(expression: string): string {
   const trimmed = expression.trim();
   if (/^[A-Za-z_$][\w$]*$/.test(trimmed)) return "variable-reference";
+  if (
+    /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\s*["'][^"']+["']\s*\])+$/.test(trimmed)
+  ) {
+    return "property-access-reference";
+  }
   if (trimmed.startsWith("`") && trimmed.includes("${")) return "template-expression";
   if (/^[\w$.]*variant[\w$.]*\s*\(/i.test(trimmed) || /^cva\s*\(/i.test(trimmed)) {
     return "variant-function";
