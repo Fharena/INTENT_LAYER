@@ -27,6 +27,10 @@ Keep this file updated when the user's operating preferences change.
   - document how it was used in this project
 - The user wants numeric performance evaluation because the project is in progress and needs measurable evidence.
 - Record performance evaluation in project docs, not only in chat.
+- Continue development toward the MVP when the user gives a next target; do not stop at product direction or high-level planning.
+- Keep milestone scopes large enough for fast Codex-driven delivery, but avoid speculative architecture work before the feature needs it.
+- Avoid over-engineering. Prefer small in-repo implementations, including low-level scanners/parsers where they are sufficient.
+- Do not introduce external services or heavy dependencies just because they exist; use them only when they clearly reduce risk or implementation time.
 
 ## Documentation Rules
 
@@ -189,4 +193,3 @@ For each task, final reporting should include:
 - numeric results, if measurement was part of the task
 - docs updated in Korean and English, or a clear reason if only one language was updated
 - known limitations and next recommended step
-

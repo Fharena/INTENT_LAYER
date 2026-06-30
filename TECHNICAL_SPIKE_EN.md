@@ -247,8 +247,10 @@ Support model:
 - Undo uses an operation-log-backed LIFO stack and can revert multiple direct patches in order.
 - After a dev server restart, the pending undo stack can be restored from the operation log once graph bindings are available again.
 - Undo history UI, branch undo, and conflict-resolution UI are not implemented yet.
-- Agent handoff records a selected source-window snapshot plus task/result markdown and intent diffs.
-- Agent results record a before/after line diff and a `className` semantic token diff for the selected source window, but they do not yet infer a full-file or component-level semantic diff automatically.
+- Agent handoff records a selected source-window snapshot, component snapshot, task/result markdown, and intent diffs.
+- Agent results record before/after line diffs for both the selected source window and the selected component snapshot.
+- Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
+- They still do not infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
 - The latest browser measurement repeats 3 desktop samples and 3 mobile 390x844 viewport samples.
 - The Codex-generated 50-file React/Tailwind corpus records 78.76% supported direct editable coverage.
@@ -260,12 +262,11 @@ Support model:
 
 Priority order:
 
-1. Expand selected source-window semantic diffs into component-level semantic diffs.
-2. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
+1. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
+2. Expand component snapshot discovery fixtures to nested components, map rendering, conditional rendering, fragments, and arrow components.
 3. Connect read-only source diffs to a wider source window.
-4. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
-5. Validate caching and graph write throttling on product-sized TSX files.
-6. Design undo history UI and conflict-resolution UX.
+4. Validate caching and graph write throttling on product-sized TSX files.
+5. Design undo history UI and conflict-resolution UX.
 
 ## 9. Agent Handoff And Result
 
@@ -284,6 +285,7 @@ The task document includes:
 Goal
 Selected Component
 Current Intent Document
+Component Snapshot
 Source Snapshot
 Desired Change
 Constraints
@@ -314,14 +316,17 @@ Checks
 Notes
 Source Diff
 Semantic Intent Diff
+Component Source Diff
+Component Semantic Intent Diff
 Intent Diff
 ```
 
 At this stage, result recording is a deterministic audit log.
-Task creation stores a selected source-window snapshot, and result recording compares it with the current source window to write a line diff.
-`className` values inside the selected source window are also re-analyzed into before/after tokens so the intent diff records added/removed tokens and categories.
+Task creation stores both a selected source-window snapshot and a selected component snapshot, and result recording compares both with the current source to write line diffs.
+`className` values inside the selected source window and selected component range are also re-analyzed into before/after tokens so the intent diff records added/removed tokens and categories.
 It also rereads the source file to record `sourceHashChanged`.
-It does not yet infer full-file semantic or component-level intent changes automatically.
+Component-level semantic diffing is currently limited to `className` tokens.
+It does not yet infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 
 ### 9.1 Read-only Handoff
 

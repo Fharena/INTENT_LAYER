@@ -24,6 +24,7 @@ npm run build
 - agent result artifact fixture
 - agent result source diff fixture
 - agent result selected `className` semantic diff fixture
+- agent result component snapshot/source diff/semantic diff fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, revert 측정
 
@@ -150,8 +151,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.134ms / p95 2.683ms / max 2.683ms |
-| `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
+| `src/App.tsx` | 13 | avg 1.443ms / p95 3.258ms / max 3.258ms |
+| `src/main.tsx` | 0 | avg 0.005ms / p95 0.008ms / max 0.008ms |
 
 요약:
 
@@ -159,12 +160,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 0.569ms |
-| 전체 p95 transform time | 2.683ms |
-| 전체 최대 transform time | 2.683ms |
-| warm 평균 transform time | 0.375ms |
-| warm p95 transform time | 0.859ms |
-| warm 최대 transform time | 0.859ms |
+| 전체 평균 transform time | 0.724ms |
+| 전체 p95 transform time | 3.258ms |
+| 전체 최대 transform time | 3.258ms |
+| warm 평균 transform time | 0.497ms |
+| warm p95 transform time | 1.701ms |
+| warm 최대 transform time | 1.701ms |
 | warm 목표 | 5ms 이하 |
 | cold 목표 | 10ms 이하 |
 | 결과 | warm 통과 / cold 통과 |
@@ -188,9 +189,9 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 파일 크기 | 45,352 bytes |
 | 반복 측정 | 5 |
-| average transform time | 7.056ms |
-| p95 transform time | 12.196ms |
-| max transform time | 12.196ms |
+| average transform time | 10.991ms |
+| p95 transform time | 18.089ms |
+| max transform time | 18.089ms |
 | stress 목표 | 20ms 이하 |
 | 결과 | 통과 |
 
@@ -205,13 +206,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 0.96ms |
-| preview round trip | 1.368ms |
+| preview time | 1.427ms |
+| preview round trip | 1.821ms |
 | apply 성공 | true |
-| static apply time | 20.898ms |
-| simple `cn()` apply time | 6.51ms |
+| static apply time | 34.63ms |
+| simple `cn()` apply time | 11.377ms |
 | revert 성공 | true |
-| revert time | 18.854ms |
+| revert time | 34.014ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -251,8 +252,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.087ms |
-| 평균 lookup | 0.000087ms |
+| 총 시간 | 0.102ms |
+| 평균 lookup | 0.000102ms |
 
 주의:
 
@@ -333,7 +334,7 @@ Viewport별 최대값:
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 5.365ms |
+| task 생성 시간 | 6.986ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -342,6 +343,7 @@ Viewport별 최대값:
 Goal
 Selected Component
 Current Intent Document
+Component Snapshot
 Source Snapshot
 Desired Change
 Constraints
@@ -355,7 +357,7 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 7.512ms |
+| result 생성 시간 | 22.542ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
 | source hash changed | true |
@@ -366,6 +368,13 @@ Required Checks
 | semantic token added 수 | 2 |
 | semantic token removed 수 | 2 |
 | semantic diff 포함 | true |
+| component snapshot 사용 가능 | true |
+| component source diff line 수 | 2 |
+| component source diff 포함 | true |
+| component semantic className change 수 | 1 |
+| component semantic token added 수 | 2 |
+| component semantic token removed 수 | 2 |
+| component semantic diff 포함 | true |
 
 검증한 필수 섹션:
 
@@ -377,6 +386,8 @@ Changed Files
 Checks
 Source Diff
 Semantic Intent Diff
+Component Source Diff
+Component Semantic Intent Diff
 Intent Diff
 ```
 
@@ -399,7 +410,9 @@ dev server endpoint smoke test:
 - 이번 단계는 사용자가 입력한 결과 요약을 구조화해 `.intent/agent/result_*.md`와 `.intent/diffs/*_agent.intent-diff.yml`로 남긴다.
 - task 생성 시 선택 source window snapshot을 저장하고, result 기록 시 현재 source window와 비교해 line diff를 남긴다.
 - 선택 source window 안의 `className`은 before/after token으로 분석해 추가 token 2개(`rounded-xl`, `p-8`)와 제거 token 2개(`rounded-lg`, `p-6`)를 기록했다.
-- 아직 전체 파일/component-level semantic diff를 자동 분석하는 단계는 아니다.
+- task 생성 시 component snapshot도 저장하며, result 기록 시 component-level source diff와 `className` semantic token diff도 함께 남긴다.
+- component-level semantic diff는 같은 fixture에서 추가 token 2개(`rounded-xl`, `p-8`)와 제거 token 2개(`rounded-lg`, `p-6`)를 기록했다.
+- 아직 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 분석하는 단계는 아니다.
 
 ## 9. Read-only Binding Handoff
 
@@ -410,7 +423,7 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 10.034ms |
+| agent task 생성 시간 | 2.609ms |
 
 해석:
 
@@ -440,7 +453,7 @@ dev server endpoint smoke test:
 | last patch revert | revert 성공 + syntax error 0 | 통과 |
 | operation log undo stack | 2 apply + 2 revert + pending stack 0 + syntax error 0 | 통과 |
 | agent task generation | task 생성 + 필수 섹션 포함 | 통과 |
-| agent result generation | result/diff 생성 + source diff + semantic diff 포함 | 통과 |
+| agent result generation | result/diff 생성 + source diff + selected/component semantic diff 포함 | 통과 |
 | read-only handoff | read-only binding 생성 + agent task 생성 | 통과 |
 | simple `cn()` / `clsx()` patch | apply 성공 + syntax error 0 | 통과 |
 | stale rejection | source mismatch 거부 | 통과 |
@@ -461,7 +474,7 @@ dev server endpoint smoke test:
 - operation-log 기반 undo stack
 - last-patch revert endpoint의 LIFO stack 동작
 - agent handoff task markdown 생성
-- agent result markdown, selected source-window diff, selected `className` semantic diff 생성
+- agent result markdown, selected source-window diff, component source diff, selected/component `className` semantic diff 생성
 - 실제 브라우저 click-to-panel, preview, apply, revert round-trip 측정
 - unsupported className의 agent handoff degrade
 - simple `cn()` literal segment patch
@@ -477,12 +490,12 @@ dev server endpoint smoke test:
 - 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
 - undo history UI와 충돌 해결 UX는 아직 없다.
 - 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
-- selected source-window semantic diff를 component-level semantic diff로 확장
+- component snapshot 탐색 fixture를 nested component, map render, conditional render, fragment, arrow component로 확장
 - variant 함수와 runtime template literal 지원
 
 다음 판단:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 component-level semantic diff 확장, 외부 독립 corpus 검증, undo history UI 설계다.
+다음 우선순위는 외부 독립 corpus 검증, component snapshot fixture 확장, undo history UI 설계다.
 ```

@@ -24,6 +24,7 @@ Measured inputs:
 - agent result artifact fixture
 - agent result source diff fixture
 - agent result selected `className` semantic diff fixture
+- agent result component snapshot/source diff/semantic diff fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -150,8 +151,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.134ms / p95 2.683ms / max 2.683ms |
-| `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
+| `src/App.tsx` | 13 | avg 1.443ms / p95 3.258ms / max 3.258ms |
+| `src/main.tsx` | 0 | avg 0.005ms / p95 0.008ms / max 0.008ms |
 
 Summary:
 
@@ -159,12 +160,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.569ms |
-| Overall p95 transform time | 2.683ms |
-| Overall max transform time | 2.683ms |
-| Warm average transform time | 0.375ms |
-| Warm p95 transform time | 0.859ms |
-| Warm max transform time | 0.859ms |
+| Overall average transform time | 0.724ms |
+| Overall p95 transform time | 3.258ms |
+| Overall max transform time | 3.258ms |
+| Warm average transform time | 0.497ms |
+| Warm p95 transform time | 1.701ms |
+| Warm max transform time | 1.701ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -188,9 +189,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 7.056ms |
-| p95 transform time | 12.196ms |
-| Max transform time | 12.196ms |
+| Average transform time | 10.991ms |
+| p95 transform time | 18.089ms |
+| Max transform time | 18.089ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -205,13 +206,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 0.96ms |
-| Preview round trip | 1.368ms |
+| Preview time | 1.427ms |
+| Preview round trip | 1.821ms |
 | Apply success | true |
-| Static apply time | 20.898ms |
-| Simple `cn()` apply time | 6.51ms |
+| Static apply time | 34.63ms |
+| Simple `cn()` apply time | 11.377ms |
 | Revert success | true |
-| Revert time | 18.854ms |
+| Revert time | 34.014ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -251,8 +252,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.087ms |
-| Average lookup | 0.000087ms |
+| Total time | 0.102ms |
+| Average lookup | 0.000102ms |
 
 Caveat:
 
@@ -334,7 +335,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 5.365ms |
+| Task generation time | 6.986ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -343,6 +344,7 @@ Required sections checked:
 Goal
 Selected Component
 Current Intent Document
+Component Snapshot
 Source Snapshot
 Desired Change
 Constraints
@@ -356,7 +358,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 7.512ms |
+| Result generation time | 22.542ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -367,6 +369,13 @@ Required Checks
 | Semantic token added count | 2 |
 | Semantic token removed count | 2 |
 | Semantic diff present | true |
+| Component snapshot available | true |
+| Component source diff line count | 2 |
+| Component source diff present | true |
+| Component semantic className change count | 1 |
+| Component semantic token added count | 2 |
+| Component semantic token removed count | 2 |
+| Component semantic diff present | true |
 
 Required sections checked:
 
@@ -378,6 +387,8 @@ Changed Files
 Checks
 Source Diff
 Semantic Intent Diff
+Component Source Diff
+Component Semantic Intent Diff
 Intent Diff
 ```
 
@@ -400,7 +411,9 @@ Interpretation:
 - This step structures the user's result summary into `.intent/agent/result_*.md` and `.intent/diffs/*_agent.intent-diff.yml`.
 - Task creation stores a selected source-window snapshot, and result recording compares it with the current source window to write a line diff.
 - `className` values inside the selected source window are also analyzed into before/after tokens; this fixture records 2 added tokens (`rounded-xl`, `p-8`) and 2 removed tokens (`rounded-lg`, `p-6`).
-- It does not yet infer full-file or component-level semantic changes automatically.
+- Task creation also stores a component snapshot; result recording now writes component-level source diff and `className` semantic token diff.
+- The component-level semantic diff records the same fixture change: 2 added tokens (`rounded-xl`, `p-8`) and 2 removed tokens (`rounded-lg`, `p-6`).
+- It does not yet infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 
 ## 9. Read-only Binding Handoff
 
@@ -411,7 +424,7 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 10.034ms |
+| Agent task generation time | 2.609ms |
 
 Interpretation:
 
@@ -441,7 +454,7 @@ Interpretation:
 | last patch revert | revert success + syntax error 0 | pass |
 | operation log undo stack | 2 applies + 2 reverts + pending stack 0 + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
-| agent result generation | result/diff created + source diff + semantic diff present | pass |
+| agent result generation | result/diff created + source diff + selected/component semantic diff present | pass |
 | read-only handoff | read-only binding created + agent task created | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
@@ -462,7 +475,7 @@ What worked:
 - operation-log-backed undo stack
 - LIFO stack behavior through the last-patch revert endpoint
 - agent handoff task markdown generation
-- agent result markdown, selected source-window diff, and selected `className` semantic diff generation
+- agent result markdown, selected source-window diff, component source diff, and selected/component `className` semantic diff generation
 - real browser click-to-panel, preview, apply, and revert round-trip measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
@@ -478,12 +491,12 @@ What remains weak:
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - undo history UI and conflict-resolution UX are still missing
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
-- selected source-window semantic diffs still need to become component-level semantic diffs
+- component snapshot discovery fixtures still need to cover nested components, map rendering, conditional rendering, fragments, and arrow components
 - variant functions and runtime template literals remain unsupported
 
 Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is component-level semantic diff expansion, independent external corpus validation, and undo history UI design.
+The next priority is independent external corpus validation, component snapshot fixture expansion, and undo history UI design.
 ```

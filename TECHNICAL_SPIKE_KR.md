@@ -246,8 +246,10 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - undo는 operation log 기반 LIFO stack으로 여러 direct patch를 순서대로 되돌릴 수 있다.
 - dev server 재시작 후에도 graph binding이 다시 준비되면 operation log에서 pending undo stack을 복원할 수 있다.
 - undo history UI, branch undo, 충돌 해결 UI는 아직 없다.
-- agent handoff는 선택 source window snapshot과 task/result markdown, intent diff 기록을 지원한다.
-- agent result는 선택 source window의 before/after line diff와 `className` semantic token diff를 기록하지만, 아직 전체 파일/component-level semantic diff를 자동 추론하지 않는다.
+- agent handoff는 선택 source window snapshot, component snapshot, task/result markdown, intent diff 기록을 지원한다.
+- agent result는 선택 source window와 선택 component snapshot의 before/after line diff를 기록한다.
+- agent result는 선택 source window와 선택 component 범위에서 `className` semantic token diff를 기록한다.
+- 아직 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 추론하지는 않는다.
 - 실제 브라우저 click-to-panel, preview, apply, revert 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
 - 최신 브라우저 측정은 desktop 3회, mobile 390x844 viewport 3회로 반복했다.
 - Codex-generated 50개 React/Tailwind corpus에서는 supported direct editable coverage 78.76%를 기록했다.
@@ -259,12 +261,11 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 우선순위:
 
-1. selected source-window semantic diff를 component-level semantic diff로 확장한다.
-2. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
+1. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
+2. component snapshot 탐색 fixture를 nested component, map render, conditional render, fragment, arrow component로 확장한다.
 3. read-only source diff를 더 넓은 source window와 연결한다.
-4. fixture를 nested component, map render, conditional render, fragment로 확장한다.
-5. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
-6. undo history UI와 충돌 해결 UX를 설계한다.
+4. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
+5. undo history UI와 충돌 해결 UX를 설계한다.
 
 ## 9. Agent Handoff와 Result
 
@@ -283,6 +284,7 @@ task 문서에는 다음 항목을 포함한다.
 Goal
 Selected Component
 Current Intent Document
+Component Snapshot
 Source Snapshot
 Desired Change
 Constraints
@@ -313,14 +315,17 @@ Checks
 Notes
 Source Diff
 Semantic Intent Diff
+Component Source Diff
+Component Semantic Intent Diff
 Intent Diff
 ```
 
 이번 단계의 result 기록은 결정론적 감사 로그다.
-task 생성 시 선택 source window snapshot을 저장하고, result 기록 시 현재 source window와 비교해 line diff를 남긴다.
-선택 source window 안의 `className` 값은 before/after token으로 다시 분석해 추가/삭제 token과 category를 intent diff에 남긴다.
+task 생성 시 선택 source window snapshot과 선택 component snapshot을 저장하고, result 기록 시 현재 source와 비교해 각각 line diff를 남긴다.
+선택 source window와 선택 component 범위 안의 `className` 값은 before/after token으로 다시 분석해 추가/삭제 token과 category를 intent diff에 남긴다.
 소스 파일의 현재 hash를 다시 읽어 `sourceHashChanged`도 기록한다.
-아직 전체 파일의 의미 변화나 component-level semantic diff를 자동 분석하지는 않는다.
+component-level semantic diff는 현재 `className` token 기준으로 제한한다.
+전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 분석하지는 않는다.
 
 ### 9.1 Read-only Handoff
 
