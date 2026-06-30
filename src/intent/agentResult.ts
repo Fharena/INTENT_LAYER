@@ -236,6 +236,64 @@ function literalStringsFromExpression(expression: string): string[] {
   return values;
 }
 
+function classNameValuesFromTemplateLiteral(value: string): string[] {
+  const values: string[] = [];
+  let staticPart = "";
+
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] !== "$" || value[index + 1] !== "{") {
+      staticPart += value[index];
+      continue;
+    }
+
+    if (staticPart.trim()) values.push(staticPart);
+    staticPart = "";
+
+    let depth = 1;
+    let quote: string | null = null;
+    let expression = "";
+    index += 2;
+
+    for (; index < value.length; index += 1) {
+      const character = value[index];
+      const previous = value[index - 1];
+
+      if (quote) {
+        if (character === quote && previous !== "\\") quote = null;
+        expression += character;
+        continue;
+      }
+
+      if (character === "\"" || character === "'" || character === "`") {
+        quote = character;
+        expression += character;
+        continue;
+      }
+
+      if (character === "{") depth += 1;
+      if (character === "}") {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+
+      expression += character;
+    }
+
+    values.push(...literalStringsFromExpression(expression));
+  }
+
+  if (staticPart.trim()) values.push(staticPart);
+  return values;
+}
+
+function classNameValuesFromLiteral(literal: { value: string; quote: string }): string[] {
+  if (literal.quote === "`" && literal.value.includes("${")) {
+    return classNameValuesFromTemplateLiteral(literal.value);
+  }
+
+  return [literal.value];
+}
+
 function tokensForClassName(value: string): ClassNameIntent["tokens"] {
   return tokenizeClassName(value).map((token) => ({
     token: token.token,
@@ -312,13 +370,15 @@ function extractLiteralClassNameIntents(source: string): ClassNameIntent[] {
     const literal = scanQuotedLiteral(source, index);
     if (!literal) continue;
 
-    const tokens = tokensForClassName(literal.value);
-    if (tokens.some((token) => token.category !== null)) {
-      intents.push({
-        kind: "static",
-        value: literal.value,
-        tokens
-      });
+    for (const value of classNameValuesFromLiteral(literal)) {
+      const tokens = tokensForClassName(value);
+      if (tokens.some((token) => token.category !== null)) {
+        intents.push({
+          kind: "static",
+          value,
+          tokens
+        });
+      }
     }
     index = literal.end - 1;
   }

@@ -434,6 +434,61 @@ const readOnlyCnVariableResult = recordAgentResult(rootDir, readOnlyCnVariableEn
   notes: "Evaluation fixture for related source semantic diff across cn literal segments; no LLM call is made."
 });
 
+const readOnlyCompositeVariableFixture = path.join(tmpDir, "ReadOnlyCompositeVariableFixture.tsx");
+fs.writeFileSync(
+  readOnlyCompositeVariableFixture,
+  [
+    "export function ReadOnlyCompositeVariableFixture({ active }: { active: boolean }) {",
+    "  const cardClass = [",
+    "    \"grid grid-cols-3 gap-4 rounded-lg p-6\",",
+    "    active ? \"bg-teal-50\" : \"bg-slate-50\",",
+    "    {",
+    "      active: \"border-teal-200\",",
+    "      muted: \"border-slate-200\"",
+    "    }[active ? \"active\" : \"muted\"],",
+    "    `text-sm ${active ? \"text-teal-700\" : \"text-slate-600\"}`",
+    "  ].join(\" \");",
+    "  return <div className={cardClass}>Read-only composite variable target</div>;",
+    "}",
+    ""
+  ].join("\n")
+);
+
+const readOnlyCompositeVariableInstrument = instrumentSource({
+  code: fs.readFileSync(readOnlyCompositeVariableFixture, "utf8"),
+  file: readOnlyCompositeVariableFixture,
+  rootDir
+});
+const readOnlyCompositeVariableEntry = readOnlyCompositeVariableInstrument.entries[0];
+const readOnlyCompositeVariableTask = createAgentTask(rootDir, readOnlyCompositeVariableEntry, {
+  id: readOnlyCompositeVariableEntry?.id ?? "missing-read-only-composite-variable-binding",
+  desiredChange: "Change this array/object/template variable className through an agent handoff."
+});
+if (readOnlyCompositeVariableTask.ok) {
+  fs.writeFileSync(
+    readOnlyCompositeVariableFixture,
+    fs
+      .readFileSync(readOnlyCompositeVariableFixture, "utf8")
+      .replace("grid grid-cols-3 gap-4 rounded-lg p-6", "grid grid-cols-3 gap-6 rounded-xl p-8")
+      .replace("bg-teal-50", "bg-cyan-50")
+      .replace("border-teal-200", "border-cyan-200")
+      .replace("text-teal-700", "text-cyan-700")
+  );
+}
+const readOnlyCompositeVariableSyntaxErrorsAfterResult = parseSyntaxErrorCount(
+  readOnlyCompositeVariableFixture
+);
+const readOnlyCompositeVariableResult = recordAgentResult(rootDir, readOnlyCompositeVariableEntry, {
+  id: readOnlyCompositeVariableEntry?.id ?? "missing-read-only-composite-variable-binding",
+  taskFile: readOnlyCompositeVariableTask.ok ? readOnlyCompositeVariableTask.taskFile : undefined,
+  summary:
+    "Read-only composite variable fixture: updated array, object map, and template literal segments.",
+  changedFiles: [path.relative(rootDir, readOnlyCompositeVariableFixture).replace(/\\/g, "/")],
+  checks: ["npm run typecheck", "npm run eval", "npm run build"],
+  notes:
+    "Evaluation fixture for related source semantic diff across arrays, object maps, and template literals; no LLM call is made."
+});
+
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
 fs.writeFileSync(
   cnPatchFixture,
@@ -777,6 +832,54 @@ const report = {
       ? readOnlyCnVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  readOnlyCompositeVariableBinding: {
+    entryCreated: Boolean(readOnlyCompositeVariableEntry),
+    kind: readOnlyCompositeVariableEntry?.className.kind ?? null,
+    unsupportedReason: readOnlyCompositeVariableEntry?.className.unsupportedReason ?? null,
+    tokenCount: readOnlyCompositeVariableEntry?.tokens.length ?? 0,
+    taskOk: readOnlyCompositeVariableTask.ok,
+    taskMs: readOnlyCompositeVariableTask.ok
+      ? readOnlyCompositeVariableTask.metrics.taskMs
+      : readOnlyCompositeVariableTask.metrics?.taskMs,
+    resultOk: readOnlyCompositeVariableResult.ok,
+    resultMs: readOnlyCompositeVariableResult.ok
+      ? readOnlyCompositeVariableResult.metrics.resultMs
+      : readOnlyCompositeVariableResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: readOnlyCompositeVariableSyntaxErrorsAfterResult,
+    sourceDiffLineCount: readOnlyCompositeVariableResult.ok
+      ? readOnlyCompositeVariableResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: readOnlyCompositeVariableResult.ok
+      ? Boolean(readOnlyCompositeVariableResult.sourceDiff)
+      : false,
+    componentDiffLineCount: readOnlyCompositeVariableResult.ok
+      ? readOnlyCompositeVariableResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: readOnlyCompositeVariableResult.ok
+      ? Boolean(readOnlyCompositeVariableResult.componentSourceDiff)
+      : false,
+    relatedSnapshotAvailable: readOnlyCompositeVariableResult.ok
+      ? readOnlyCompositeVariableResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: readOnlyCompositeVariableResult.ok
+      ? readOnlyCompositeVariableResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: readOnlyCompositeVariableResult.ok
+      ? Boolean(readOnlyCompositeVariableResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: readOnlyCompositeVariableResult.ok
+      ? readOnlyCompositeVariableResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedSemanticDiffPresent: readOnlyCompositeVariableResult.ok
+      ? Boolean(readOnlyCompositeVariableResult.relatedSemanticDiff)
+      : false,
+    relatedSemanticTokenAddedCount: readOnlyCompositeVariableResult.ok
+      ? readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedSemanticTokenRemovedCount: readOnlyCompositeVariableResult.ok
+      ? readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
@@ -835,6 +938,15 @@ const report = {
       (readOnlyCnVariableResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 4 &&
       (readOnlyCnVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 4 &&
       readOnlyCnVariableSyntaxErrorsAfterResult === 0,
+    readOnlyCompositeVariableRelatedSemanticDiffPass:
+      readOnlyCompositeVariableResult.ok &&
+      readOnlyCompositeVariableResult.source.relatedSnapshotAvailable &&
+      readOnlyCompositeVariableResult.source.relatedDiffLineCount > 0 &&
+      Boolean(readOnlyCompositeVariableResult.relatedSourceDiff) &&
+      readOnlyCompositeVariableResult.source.relatedSemanticChangeCount >= 4 &&
+      (readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 6 &&
+      (readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 6 &&
+      readOnlyCompositeVariableSyntaxErrorsAfterResult === 0,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch",
     operationLogUndoStackPass:
