@@ -1809,6 +1809,110 @@ const importedVariableHandoffResult = recordAgentResult(
   }
 );
 
+const packageImportRoot = resetTmpSubdir("workspace-package-import-handoff");
+const packageImportUiDir = path.join(packageImportRoot, "packages", "ui");
+const packageImportUiSrcDir = path.join(packageImportUiDir, "src");
+const packageImportScreensDir = path.join(packageImportRoot, "src", "screens");
+fs.mkdirSync(packageImportUiSrcDir, { recursive: true });
+fs.mkdirSync(packageImportScreensDir, { recursive: true });
+fs.writeFileSync(
+  path.join(packageImportRoot, "package.json"),
+  `${JSON.stringify(
+    {
+      private: true,
+      workspaces: ["packages/*"]
+    },
+    null,
+    2
+  )}\n`
+);
+fs.writeFileSync(
+  path.join(packageImportUiDir, "package.json"),
+  `${JSON.stringify(
+    {
+      name: "@intent-fixtures/ui",
+      version: "0.0.0",
+      exports: {
+        "./styles": "./src/styles.ts"
+      }
+    },
+    null,
+    2
+  )}\n`
+);
+const packageImportDefinitionFixture = path.join(packageImportUiSrcDir, "styles.ts");
+fs.writeFileSync(
+  packageImportDefinitionFixture,
+  [
+    "export const cardClass = \"grid grid-cols-3 gap-4 rounded-lg bg-white p-6 shadow-sm\";",
+    ""
+  ].join("\n")
+);
+const packageImportHandoffFixture = path.join(
+  packageImportScreensDir,
+  "PackageImportHandoffFixture.tsx"
+);
+fs.writeFileSync(
+  packageImportHandoffFixture,
+  [
+    "import { cardClass as packageCardClass } from \"@intent-fixtures/ui/styles\";",
+    "",
+    "export function PackageImportHandoffFixture() {",
+    "  return <article className={packageCardClass}>Package import handoff target</article>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const packageImportHandoffInstrument = instrumentSource({
+  code: fs.readFileSync(packageImportHandoffFixture, "utf8"),
+  file: packageImportHandoffFixture,
+  rootDir: packageImportRoot
+});
+const packageImportHandoffEntry = packageImportHandoffInstrument.entries[0];
+const packageImportHandoffTask = createAgentTask(
+  packageImportRoot,
+  packageImportHandoffEntry,
+  {
+    id: packageImportHandoffEntry?.id ?? "missing-package-import-handoff-binding",
+    desiredChange:
+      "Change this workspace-package imported variable-backed className through an agent handoff."
+  }
+);
+const packageImportHandoffRelatedSnapshot = packageImportHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedSourceSnapshot | null>(
+      packageImportHandoffTask.markdown,
+      "Related Source Snapshot"
+    )
+  : null;
+if (packageImportHandoffTask.ok) {
+  fs.writeFileSync(
+    packageImportDefinitionFixture,
+    fs
+      .readFileSync(packageImportDefinitionFixture, "utf8")
+      .replace(
+        "grid grid-cols-3 gap-4 rounded-lg bg-white p-6 shadow-sm",
+        "grid grid-cols-2 gap-6 rounded-xl bg-slate-50 p-8 shadow-md"
+      )
+  );
+}
+const packageImportHandoffSyntaxErrorsAfterResult =
+  parseSyntaxErrorCount(packageImportDefinitionFixture) +
+  parseSyntaxErrorCount(packageImportHandoffFixture);
+const packageImportHandoffResult = recordAgentResult(
+  packageImportRoot,
+  packageImportHandoffEntry,
+  {
+    id: packageImportHandoffEntry?.id ?? "missing-package-import-handoff-binding",
+    taskFile: packageImportHandoffTask.ok ? packageImportHandoffTask.taskFile : undefined,
+    summary:
+      "Workspace package import handoff fixture: updated the related className variable behind a package export.",
+    changedFiles: ["packages/ui/src/styles.ts"],
+    checks: ["npm run typecheck", "npm run eval", "npm run build"],
+    notes:
+      "Evaluation fixture for workspace package import handoff context; no LLM call is made."
+  }
+);
+
 const variantHandoffFixture = path.join(tmpDir, "VariantHandoffFixture.tsx");
 fs.writeFileSync(
   variantHandoffFixture,
@@ -3287,6 +3391,65 @@ const report = {
       ? importedVariableHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  packageImportHandoffBinding: {
+    entryCreated: Boolean(packageImportHandoffEntry),
+    root: reportPath(packageImportRoot),
+    kind: packageImportHandoffEntry?.className.kind ?? null,
+    unsupportedReason: packageImportHandoffEntry?.className.unsupportedReason ?? null,
+    value: packageImportHandoffEntry?.className.value ?? null,
+    tokenCount: packageImportHandoffEntry?.tokens.length ?? 0,
+    taskOk: packageImportHandoffTask.ok,
+    taskMs: packageImportHandoffTask.ok
+      ? packageImportHandoffTask.metrics.taskMs
+      : packageImportHandoffTask.metrics?.taskMs,
+    relatedSnapshotAvailable: Boolean(packageImportHandoffRelatedSnapshot),
+    relatedSnapshotFile: packageImportHandoffRelatedSnapshot?.file ?? null,
+    relatedSnapshotKind: packageImportHandoffRelatedSnapshot?.kind ?? null,
+    relatedSnapshotIdentifier: packageImportHandoffRelatedSnapshot?.identifier ?? null,
+    relatedSnapshotIncludesClass: Boolean(
+      packageImportHandoffRelatedSnapshot?.excerpt.includes("grid grid-cols-3")
+    ),
+    relatedSnapshotIsWorkspacePackageSource:
+      packageImportHandoffRelatedSnapshot?.file === "packages/ui/src/styles.ts",
+    resultOk: packageImportHandoffResult.ok,
+    resultMs: packageImportHandoffResult.ok
+      ? packageImportHandoffResult.metrics.resultMs
+      : packageImportHandoffResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: packageImportHandoffSyntaxErrorsAfterResult,
+    sourceDiffLineCount: packageImportHandoffResult.ok
+      ? packageImportHandoffResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: packageImportHandoffResult.ok
+      ? Boolean(packageImportHandoffResult.sourceDiff)
+      : false,
+    componentDiffLineCount: packageImportHandoffResult.ok
+      ? packageImportHandoffResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: packageImportHandoffResult.ok
+      ? Boolean(packageImportHandoffResult.componentSourceDiff)
+      : false,
+    relatedResultSnapshotAvailable: packageImportHandoffResult.ok
+      ? packageImportHandoffResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: packageImportHandoffResult.ok
+      ? packageImportHandoffResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: packageImportHandoffResult.ok
+      ? Boolean(packageImportHandoffResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: packageImportHandoffResult.ok
+      ? packageImportHandoffResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedSemanticDiffPresent: packageImportHandoffResult.ok
+      ? Boolean(packageImportHandoffResult.relatedSemanticDiff)
+      : false,
+    relatedSemanticTokenAddedCount: packageImportHandoffResult.ok
+      ? packageImportHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedSemanticTokenRemovedCount: packageImportHandoffResult.ok
+      ? packageImportHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   variantHandoffBinding: {
     entryCreated: Boolean(variantHandoffEntry),
     kind: variantHandoffEntry?.className.kind ?? null,
@@ -3744,6 +3907,22 @@ const report = {
       (importedVariableHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
       (importedVariableHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
       importedVariableHandoffSyntaxErrorsAfterResult === 0,
+    workspacePackageImportHandoffPass:
+      packageImportHandoffEntry?.className.kind === "read-only" &&
+      packageImportHandoffEntry.className.unsupportedReason === "variable-reference" &&
+      packageImportHandoffTask.ok &&
+      packageImportHandoffRelatedSnapshot?.kind === "variable-declaration" &&
+      packageImportHandoffRelatedSnapshot.identifier === "cardClass" &&
+      packageImportHandoffRelatedSnapshot.file === "packages/ui/src/styles.ts" &&
+      packageImportHandoffRelatedSnapshot.excerpt.includes("grid grid-cols-3") &&
+      packageImportHandoffResult.ok &&
+      packageImportHandoffResult.source.relatedSnapshotAvailable &&
+      packageImportHandoffResult.source.relatedDiffLineCount > 0 &&
+      Boolean(packageImportHandoffResult.relatedSourceDiff) &&
+      packageImportHandoffResult.source.relatedSemanticChangeCount >= 1 &&
+      (packageImportHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
+      (packageImportHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
+      packageImportHandoffSyntaxErrorsAfterResult === 0,
     variantHandoffRelatedSourcePass:
       variantHandoffEntry?.className.kind === "read-only" &&
       variantHandoffEntry.className.unsupportedReason === "variant-function" &&

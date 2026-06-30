@@ -318,8 +318,138 @@ function resolvePathAliasImport(rootDir: string, specifier: string): string | nu
   return null;
 }
 
+interface PackageSpecifier {
+  packageName: string;
+  subpath: string;
+}
+
+interface PackageJsonLike {
+  name?: string;
+  workspaces?: string[] | { packages?: string[] };
+  exports?: unknown;
+  source?: string;
+  module?: string;
+  main?: string;
+  types?: string;
+  typings?: string;
+}
+
+function readPackageJson(file: string): PackageJsonLike | null {
+  if (!fs.existsSync(file)) return null;
+
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8")) as PackageJsonLike;
+  } catch {
+    return null;
+  }
+}
+
+function packageSpecifierParts(specifier: string): PackageSpecifier | null {
+  if (specifier.startsWith(".") || specifier.startsWith("/")) return null;
+
+  const parts = specifier.split("/").filter(Boolean);
+  if (parts.length === 0) return null;
+
+  const packageName = specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+  const subpathParts = specifier.startsWith("@") ? parts.slice(2) : parts.slice(1);
+  if (specifier.startsWith("@") && parts.length < 2) return null;
+
+  return {
+    packageName,
+    subpath: subpathParts.length > 0 ? `./${subpathParts.join("/")}` : "."
+  };
+}
+
+function workspacePatterns(rootDir: string): string[] {
+  const rootPackage = readPackageJson(path.join(rootDir, "package.json"));
+  const workspaces = rootPackage?.workspaces;
+  if (Array.isArray(workspaces)) return workspaces;
+  if (workspaces && Array.isArray(workspaces.packages)) return workspaces.packages;
+  return [];
+}
+
+function candidateWorkspacePackageDirs(rootDir: string, pattern: string): string[] {
+  if (!pattern.includes("*")) {
+    const fullPath = path.resolve(rootDir, pattern);
+    return fs.existsSync(path.join(fullPath, "package.json")) ? [fullPath] : [];
+  }
+
+  const wildcardIndex = pattern.indexOf("*");
+  const prefix = pattern.slice(0, wildcardIndex);
+  const suffix = pattern.slice(wildcardIndex + 1).replace(/^[/\\]+/, "");
+  const baseDir = path.resolve(rootDir, prefix);
+  if (!fs.existsSync(baseDir) || !fs.statSync(baseDir).isDirectory()) return [];
+
+  return fs
+    .readdirSync(baseDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.resolve(baseDir, entry.name, suffix))
+    .filter((candidate) => fs.existsSync(path.join(candidate, "package.json")));
+}
+
+function findWorkspacePackageRoot(rootDir: string, packageName: string): string | null {
+  for (const pattern of workspacePatterns(rootDir)) {
+    for (const packageDir of candidateWorkspacePackageDirs(rootDir, pattern)) {
+      const packageJson = readPackageJson(path.join(packageDir, "package.json"));
+      if (packageJson?.name === packageName) return packageDir;
+    }
+  }
+
+  return null;
+}
+
+function packageExportValue(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  for (const key of ["source", "development", "import", "module", "default", "require", "types", "typings"]) {
+    const resolved = packageExportValue(record[key]);
+    if (resolved) return resolved;
+  }
+
+  return null;
+}
+
+function packageExportTarget(exportsField: unknown, subpath: string): string | null {
+  if (typeof exportsField === "string") return subpath === "." ? exportsField : null;
+  if (!exportsField || typeof exportsField !== "object") return null;
+
+  const record = exportsField as Record<string, unknown>;
+  const mappedSubpath = packageExportValue(record[subpath]);
+  if (mappedSubpath) return mappedSubpath;
+
+  return subpath === "." ? packageExportValue(exportsField) : null;
+}
+
+function resolveWorkspacePackageImport(rootDir: string, specifier: string): string | null {
+  const parts = packageSpecifierParts(specifier);
+  if (!parts) return null;
+
+  const packageRoot = findWorkspacePackageRoot(rootDir, parts.packageName);
+  if (!packageRoot) return null;
+
+  const packageJson = readPackageJson(path.join(packageRoot, "package.json"));
+  const target =
+    packageExportTarget(packageJson?.exports, parts.subpath) ??
+    (parts.subpath === "."
+      ? packageJson?.source ?? packageJson?.module ?? packageJson?.main ?? packageJson?.types ?? packageJson?.typings
+      : parts.subpath);
+  if (!target) return null;
+
+  const resolvedBase = path.resolve(packageRoot, target);
+  const relativeToPackage = path.relative(packageRoot, resolvedBase);
+  if (relativeToPackage.startsWith("..") || path.isAbsolute(relativeToPackage)) return null;
+
+  return resolveFileCandidate(resolvedBase);
+}
+
 function resolveImportFile(rootDir: string, fromFile: string, specifier: string): string | null {
-  return resolveRelativeImport(fromFile, specifier) ?? resolvePathAliasImport(rootDir, specifier);
+  return (
+    resolveRelativeImport(fromFile, specifier) ??
+    resolvePathAliasImport(rootDir, specifier) ??
+    resolveWorkspacePackageImport(rootDir, specifier)
+  );
 }
 
 function importedNameForLocalIdentifier(source: string, localIdentifier: string): { importedName: string; file: string } | null {
