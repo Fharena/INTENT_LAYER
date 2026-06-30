@@ -198,6 +198,7 @@ const agentTaskRequiredSections = [
   "## Selected Component",
   "## Current Intent Document",
   "## Component Snapshot",
+  "## Related Source Snapshot",
   "## Source Snapshot",
   "## Desired Change",
   "## Constraints",
@@ -235,6 +236,7 @@ const agentResultRequiredSections = [
   "## Checks",
   "## Source Diff",
   "## Semantic Intent Diff",
+  "## Related Source Diff",
   "## Component Source Diff",
   "## Component Semantic Intent Diff",
   "## Intent Diff"
@@ -367,6 +369,24 @@ const readOnlyEntry = readOnlyInstrument.entries[0];
 const readOnlyTask = createAgentTask(rootDir, readOnlyEntry, {
   id: readOnlyEntry?.id ?? "missing-read-only-binding",
   desiredChange: "Change this variable-backed className through an agent handoff."
+});
+if (readOnlyTask.ok) {
+  fs.writeFileSync(
+    readOnlyFixture,
+    fs
+      .readFileSync(readOnlyFixture, "utf8")
+      .replace("grid grid-cols-3 gap-4 rounded-lg p-6", "grid grid-cols-3 gap-6 rounded-xl p-8")
+  );
+}
+const readOnlySyntaxErrorsAfterResult = parseSyntaxErrorCount(readOnlyFixture);
+const readOnlyResult = recordAgentResult(rootDir, readOnlyEntry, {
+  id: readOnlyEntry?.id ?? "missing-read-only-binding",
+  taskFile: readOnlyTask.ok ? readOnlyTask.taskFile : undefined,
+  summary:
+    "Read-only fixture: updated the variable-backed className through an agent handoff result.",
+  changedFiles: [path.relative(rootDir, readOnlyFixture).replace(/\\/g, "/")],
+  checks: ["npm run typecheck", "npm run eval", "npm run build"],
+  notes: "Evaluation fixture for related source diff; no LLM call is made."
 });
 
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
@@ -638,7 +658,17 @@ const report = {
     unsupportedReason: readOnlyEntry?.className.unsupportedReason ?? null,
     tokenCount: readOnlyEntry?.tokens.length ?? 0,
     taskOk: readOnlyTask.ok,
-    taskMs: readOnlyTask.ok ? readOnlyTask.metrics.taskMs : readOnlyTask.metrics?.taskMs
+    taskMs: readOnlyTask.ok ? readOnlyTask.metrics.taskMs : readOnlyTask.metrics?.taskMs,
+    resultOk: readOnlyResult.ok,
+    resultMs: readOnlyResult.ok ? readOnlyResult.metrics.resultMs : readOnlyResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: readOnlySyntaxErrorsAfterResult,
+    sourceDiffLineCount: readOnlyResult.ok ? readOnlyResult.source.diffLineCount : 0,
+    sourceDiffPresent: readOnlyResult.ok ? Boolean(readOnlyResult.sourceDiff) : false,
+    componentDiffLineCount: readOnlyResult.ok ? readOnlyResult.source.componentDiffLineCount : 0,
+    componentSourceDiffPresent: readOnlyResult.ok ? Boolean(readOnlyResult.componentSourceDiff) : false,
+    relatedSnapshotAvailable: readOnlyResult.ok ? readOnlyResult.source.relatedSnapshotAvailable : false,
+    relatedDiffLineCount: readOnlyResult.ok ? readOnlyResult.source.relatedDiffLineCount : 0,
+    relatedSourceDiffPresent: readOnlyResult.ok ? Boolean(readOnlyResult.relatedSourceDiff) : false
   },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
@@ -681,6 +711,12 @@ const report = {
       readOnlyEntry?.className.kind === "read-only" &&
       readOnlyEntry.tokens.length === 0 &&
       readOnlyTask.ok,
+    readOnlyRelatedSourceDiffPass:
+      readOnlyResult.ok &&
+      readOnlyResult.source.relatedSnapshotAvailable &&
+      readOnlyResult.source.relatedDiffLineCount > 0 &&
+      Boolean(readOnlyResult.relatedSourceDiff) &&
+      readOnlySyntaxErrorsAfterResult === 0,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch",
     operationLogUndoStackPass:

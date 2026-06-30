@@ -222,11 +222,14 @@ export interface AgentResultArtifact {
     componentSnapshotAvailable: boolean;
     componentDiffLineCount: number;
     componentSemanticChangeCount: number;
+    relatedSnapshotAvailable: boolean;
+    relatedDiffLineCount: number;
   };
   sourceDiff: string | null;
   semanticDiff: AgentSemanticClassNameDiff | null;
   componentSourceDiff: string | null;
   componentSemanticDiff: AgentSemanticClassNameDiff | null;
+  relatedSourceDiff: string | null;
   metrics: {
     resultMs: number;
   };

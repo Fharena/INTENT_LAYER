@@ -169,6 +169,27 @@ function findComponentRange(source: string, componentName: string | null): { sta
   return null;
 }
 
+function findRelatedSourceRange(
+  source: string,
+  binding: IntentBinding
+): { kind: "variable-declaration"; identifier: string; start: number; end: number } | null {
+  if (binding.className.kind !== "read-only") return null;
+  if (binding.className.unsupportedReason !== "variable-reference") return null;
+
+  const identifier = binding.className.value.trim();
+  if (!/^[A-Za-z_$][\w$]*$/.test(identifier)) return null;
+
+  const match = new RegExp(`\\b(?:const|let|var)\\s+${escapeRegExp(identifier)}\\b`).exec(source);
+  if (!match) return null;
+
+  return {
+    kind: "variable-declaration",
+    identifier,
+    start: match.index,
+    end: scanExpressionStatementEnd(source, match.index)
+  };
+}
+
 function sourceRange(binding: IntentBinding) {
   const tokenStarts = binding.tokens.map((token) => token.sourceStart);
   const tokenEnds = binding.tokens.map((token) => token.sourceEnd);
@@ -224,6 +245,20 @@ export function createAgentTask(
         ...lineWindow(currentSource, componentRange.start, componentRange.end, 0)
       }
     : null;
+  const relatedRange = findRelatedSourceRange(currentSource, binding);
+  const relatedSnapshot = relatedRange
+    ? {
+        file: binding.relativeFile,
+        sourceHash: binding.sourceHash,
+        kind: relatedRange.kind,
+        identifier: relatedRange.identifier,
+        range: {
+          start: relatedRange.start,
+          end: relatedRange.end
+        },
+        ...lineWindow(currentSource, relatedRange.start, relatedRange.end, 1)
+      }
+    : null;
   const taskDir = path.join(rootDir, ".intent", "agent");
   fs.mkdirSync(taskDir, { recursive: true });
   const taskFile = path.join(taskDir, `task_${timestampSlug()}.md`);
@@ -259,6 +294,10 @@ export function createAgentTask(
     "## Component Snapshot",
     "",
     codeFence(componentSnapshot),
+    "",
+    "## Related Source Snapshot",
+    "",
+    codeFence(relatedSnapshot),
     "",
     "## Source Snapshot",
     "",

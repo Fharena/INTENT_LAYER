@@ -73,6 +73,11 @@ interface ComponentSnapshot extends SourceSnapshot {
   componentName: string | null;
 }
 
+interface RelatedSourceSnapshot extends SourceSnapshot {
+  kind: string;
+  identifier: string;
+}
+
 interface ClassNameIntent {
   kind: "static" | "call-literals" | "read-only";
   value: string;
@@ -110,6 +115,12 @@ function parseSourceSnapshot(rootDir: string, taskFile: string | null): SourceSn
 
 function parseComponentSnapshot(rootDir: string, taskFile: string | null): ComponentSnapshot | null {
   const parsed = parseJsonSection<ComponentSnapshot | null>(rootDir, taskFile, "Component Snapshot");
+  if (!parsed || !parsed.file || typeof parsed.excerpt !== "string") return null;
+  return parsed;
+}
+
+function parseRelatedSourceSnapshot(rootDir: string, taskFile: string | null): RelatedSourceSnapshot | null {
+  const parsed = parseJsonSection<RelatedSourceSnapshot | null>(rootDir, taskFile, "Related Source Snapshot");
   if (!parsed || !parsed.file || typeof parsed.excerpt !== "string") return null;
   return parsed;
 }
@@ -504,6 +515,7 @@ export function recordAgentResult(
   const notes = request.notes?.trim() ?? "";
   const snapshot = parseSourceSnapshot(rootDir, taskFile);
   const componentSnapshot = parseComponentSnapshot(rootDir, taskFile);
+  const relatedSnapshot = parseRelatedSourceSnapshot(rootDir, taskFile);
 
   let sourceHashAfter: string | null = null;
   let currentSource: string | null = null;
@@ -533,6 +545,13 @@ export function recordAgentResult(
       ? semanticClassNameDiff(componentSnapshot.excerpt, currentComponentExcerpt)
       : null;
   const componentSemanticChangeCount = componentSemanticDiff?.classNameChangeCount ?? 0;
+  const currentRelatedExcerpt =
+    relatedSnapshot && currentSource ? excerptBySnapshot(currentSource, relatedSnapshot) : "";
+  const relatedSourceDiff =
+    relatedSnapshot && currentSource
+      ? unifiedLineDiff(relatedSnapshot.excerpt, currentRelatedExcerpt, "related-source-snapshot")
+      : "";
+  const relatedChangedLineCount = diffLineCount(relatedSourceDiff);
   const markdown = [
     "# Intent Agent Result",
     "",
@@ -577,6 +596,20 @@ export function recordAgentResult(
     "## Semantic Intent Diff",
     "",
     semanticDiffMarkdown(semanticDiff),
+    "",
+    "## Related Source Diff",
+    "",
+    relatedSnapshot
+      ? relatedSourceDiff
+        ? [
+            `- Kind: \`${relatedSnapshot.kind}\``,
+            `- Identifier: \`${relatedSnapshot.identifier}\``,
+            `- Snapshot file: \`${relatedSnapshot.file}\``,
+            "",
+            codeFence(relatedSourceDiff, "diff")
+          ].join("\n")
+        : "- Related source snapshot matched current source. No line diff recorded."
+      : "- No related source snapshot was available from the task file.",
     "",
     "## Component Source Diff",
     "",
@@ -627,6 +660,13 @@ export function recordAgentResult(
     `  diffLineCount: ${changedLineCount}`,
     sourceDiff ? "  patch: |-" : "  patch: null",
     ...(sourceDiff ? sourceDiff.split(/\r?\n/).map((line) => `    ${line}`) : []),
+    "relatedSourceDiff:",
+    `  snapshotAvailable: ${Boolean(relatedSnapshot)}`,
+    relatedSnapshot ? `  kind: ${yamlString(relatedSnapshot.kind)}` : "  kind: null",
+    relatedSnapshot ? `  identifier: ${yamlString(relatedSnapshot.identifier)}` : "  identifier: null",
+    `  diffLineCount: ${relatedChangedLineCount}`,
+    relatedSourceDiff ? "  patch: |-" : "  patch: null",
+    ...(relatedSourceDiff ? relatedSourceDiff.split(/\r?\n/).map((line) => `    ${line}`) : []),
     "componentSourceDiff:",
     `  snapshotAvailable: ${Boolean(componentSnapshot)}`,
     `  componentName: ${yamlString(componentSnapshot?.componentName ?? binding.componentName ?? "Unknown")}`,
@@ -671,12 +711,15 @@ export function recordAgentResult(
       semanticChangeCount,
       componentSnapshotAvailable: Boolean(componentSnapshot),
       componentDiffLineCount: componentChangedLineCount,
-      componentSemanticChangeCount
+      componentSemanticChangeCount,
+      relatedSnapshotAvailable: Boolean(relatedSnapshot),
+      relatedDiffLineCount: relatedChangedLineCount
     },
     sourceDiff: sourceDiff || null,
     semanticDiff,
     componentSourceDiff: componentSourceDiff || null,
     componentSemanticDiff,
+    relatedSourceDiff: relatedSourceDiff || null,
     metrics: {
       resultMs: Number((performance.now() - started).toFixed(3))
     }
