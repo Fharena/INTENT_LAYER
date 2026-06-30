@@ -1,0 +1,122 @@
+{
+  "generatedAt": "2026-06-30T14:44:20.671Z",
+  "available": true,
+  "mode": "analyze-only",
+  "sample": {
+    "label": "shadcn-ui-ui-dbf9c5e",
+    "sourceKind": "independent-external",
+    "independent": true,
+    "localSmokeFixture": false,
+    "generatedFixture": false
+  },
+  "filesDir": ".intent/external-corpus/files",
+  "manifestFile": ".intent/external-corpus/manifest.json",
+  "sourceRoots": [
+    ".intent/tmp/external-projects/shadcn-ui"
+  ],
+  "selectedFileCount": 100,
+  "skipped": {
+    "non-jsx-tsx": 6239,
+    "ignored-dir:.git": 1,
+    "no-className": 395,
+    "test-story-file": 3
+  },
+  "gates": {
+    "minFilesPass": true,
+    "staticAndSimpleCoveragePass": false,
+    "supportedDirectCoveragePass": false,
+    "allObservedCoveragePass": false
+  },
+  "targets": {
+    "minFiles": 50,
+    "editableCoverage": 0.5,
+    "mvpIndependentFiles": 50
+  },
+  "summary": {
+    "classNameOccurrences": 915,
+    "directEditClassNameCount": 904,
+    "readOnlyClassNameCount": 11,
+    "readOnlyClassNameRatio": 0.012,
+    "averageClassNamesPerFile": 9.15,
+    "editableTokenCoverage": 0.4621,
+    "topUnsupportedReasons": [
+      {
+        "reason": "variable-reference",
+        "count": 9
+      },
+      {
+        "reason": "complex-cn-variable-reference",
+        "count": 1
+      },
+      {
+        "reason": "template-expression",
+        "count": 1
+      }
+    ]
+  },
+  "gateFailures": [
+    {
+      "gate": "staticAndSimpleCoveragePass",
+      "actual": 0.4635,
+      "target": 0.5,
+      "detail": "Static and simple cn()/clsx() editable token coverage is below the configured threshold."
+    },
+    {
+      "gate": "supportedDirectCoveragePass",
+      "actual": 0.4621,
+      "target": 0.5,
+      "detail": "Directly supported className expressions do not expose enough editable Tailwind tokens."
+    },
+    {
+      "gate": "allObservedCoveragePass",
+      "actual": 0.4621,
+      "target": 0.5,
+      "detail": "Overall observed editable token coverage is below the configured threshold."
+    }
+  ],
+  "mvpEvidence": {
+    "usableAsMvpEvidence": false,
+    "decision": "coverage-gate-failed",
+    "reason": "One or more editable coverage gates failed.",
+    "nextStep": "Inspect gateFailures and unsupportedReasons, then decide whether to widen deterministic support or reposition the MVP surface."
+  },
+  "analysis": {
+    "generatedAt": "2026-06-30T14:44:20.669Z",
+    "filesScanned": 100,
+    "classNameOccurrences": 915,
+    "classification": {
+      "static": 881,
+      "simple-cn-clsx": 3,
+      "partial-cn-clsx": 20,
+      "read-only": 11
+    },
+    "classificationRatio": {
+      "static": 0.9628,
+      "simple-cn-clsx": 0.0033,
+      "partial-cn-clsx": 0.0219,
+      "read-only": 0.012
+    },
+    "tokenTotals": {
+      "static": 3141,
+      "staticEditable": 1461,
+      "staticAndSimple": 3165,
+      "staticAndSimpleEditable": 1467,
+      "supportedDirect": 3404,
+      "supportedDirectEditable": 1573,
+      "all": 3404,
+      "allEditable": 1573
+    },
+    "editableCoverage": {
+      "staticOnly": 0.4651,
+      "staticAndSimpleCnClsx": 0.4635,
+      "supportedDirect": 0.4621,
+      "allObservedTokens": 0.4621
+    },
+    "unsupportedReasons": {
+      "variable-reference": 9,
+      "template-expression": 1,
+      "complex-cn-variable-reference": 1
+    }
+  },
+  "caveat": "External corpus copies are local measurement artifacts under .intent/ and should not be committed without checking source licenses. This report keeps aggregate metrics and omits per-record className source strings."
+}

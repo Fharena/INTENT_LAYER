@@ -87,7 +87,9 @@ npm run import:external-corpus -- <external-react-project-or-samples>
 npm run analyze:external-corpus
 ```
 
-External corpus copies are written under `.intent/external-corpus/`, and the numeric report is written to `reports/performance/external-corpus-audit.json`. The report records `sample.sourceKind`, `gateFailures`, read-only ratio, top unsupported reasons, and `mvpEvidence.usableAsMvpEvidence` so local smoke fixtures are not mistaken for independent external validation.
+External corpus copies are written under `.intent/external-corpus/`, and the numeric report is written to `reports/performance/external-corpus-audit.json`. The report records `sample.sourceKind`, `gateFailures`, read-only ratio, top unsupported reasons, and `mvpEvidence.usableAsMvpEvidence` so local smoke fixtures are not mistaken for independent external validation. It intentionally omits per-record external `className` source strings.
+
+Current independent external baseline: `shadcn-ui/ui` at `dbf9c5e`, 100 files, 915 `className` occurrences, 46.21% supported direct editable coverage, and `mvpEvidence.decision = coverage-gate-failed`. The read-only ratio is only 1.20%, so the next MVP decision is the deterministic Tailwind token taxonomy rather than broader dynamic `className` chasing.
 
 `npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, apply refresh, and a 3-file graph refresh after one TSX file changes. It also verifies a missing-plugin `doctor` failure guidance fixture, generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture, a 24-file/624-binding multi-file fixture, and an external corpus import/report smoke marked as `local-smoke-fixture`.
 
@@ -127,6 +129,7 @@ The demo currently supports:
 - product-sized Vite graph write throttling measurement for repeated 401-binding transforms
 - product-sized multi-file Vite graph refresh measurement for 24 TSX files / 624 bindings with one changed file
 - external corpus import/analyze harness with local `.intent/external-corpus/` copies, manifest output, and coverage gates
+- independent `shadcn-ui/ui` external corpus baseline report showing 46.21% supported direct editable coverage against the current token taxonomy
 
 The first evaluation result is stored in:
 
@@ -135,6 +138,7 @@ reports/performance/corpus-audit.json
 reports/performance/ai-corpus-audit.json
 reports/performance/spike-evaluation.json
 reports/performance/browser-click-metric.json
+reports/performance/external-corpus-audit.json
 ```
 
-`reports/performance/external-corpus-audit.json` is generated when `npm run import:external-corpus -- <path>` or `npm run analyze:external-corpus` is run against local external samples.
+`reports/performance/external-corpus-audit.json` is regenerated when `npm run import:external-corpus -- <path>` or `npm run analyze:external-corpus` is run against local external samples.

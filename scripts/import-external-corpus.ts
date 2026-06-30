@@ -48,6 +48,8 @@ interface ExternalCorpusManifest {
   skipped: Record<string, number>;
 }
 
+type ClassNameAnalysisSummary = Omit<ReturnType<typeof analyzeClassNames>, "records">;
+
 interface ExternalCorpusReport {
   generatedAt: string;
   available: boolean;
@@ -101,7 +103,7 @@ interface ExternalCorpusReport {
     reason: string;
     nextStep: string;
   };
-  analysis: ReturnType<typeof analyzeClassNames>;
+  analysis: ClassNameAnalysisSummary;
   caveat: string;
 }
 
@@ -421,6 +423,11 @@ function topUnsupportedReasons(analysis: ReturnType<typeof analyzeClassNames>): 
     .slice(0, 5);
 }
 
+function reportableAnalysis(analysis: ReturnType<typeof analyzeClassNames>): ClassNameAnalysisSummary {
+  const { records: _records, ...summary } = analysis;
+  return summary;
+}
+
 function gateFailuresFor(
   analysis: ReturnType<typeof analyzeClassNames>,
   gates: ExternalCorpusReport["gates"],
@@ -547,7 +554,7 @@ export function runExternalCorpusImport(args: CliArgs): ExternalCorpusReport {
     },
     filesDir: toRepoPath(filesDir),
     manifestFile: toRepoPath(manifestFile),
-    sourceRoots: manifest.sourceRoots,
+    sourceRoots: manifest.sourceRoots.map((sourceRoot) => toRepoPath(sourceRoot)),
     selectedFileCount: manifest.selectedFiles.length,
     skipped: manifest.skipped,
     gates,
@@ -567,9 +574,9 @@ export function runExternalCorpusImport(args: CliArgs): ExternalCorpusReport {
     },
     gateFailures,
     mvpEvidence: mvpEvidenceFor(analysis, gates, sourceKind),
-    analysis,
+    analysis: reportableAnalysis(analysis),
     caveat:
-      "External corpus copies are local measurement artifacts under .intent/ and should not be committed without checking source licenses."
+      "External corpus copies are local measurement artifacts under .intent/ and should not be committed without checking source licenses. This report keeps aggregate metrics and omits per-record className source strings."
   };
 
   fs.mkdirSync(path.dirname(args.reportFile), { recursive: true });

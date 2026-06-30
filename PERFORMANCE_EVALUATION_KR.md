@@ -61,6 +61,7 @@ npm run build
 
 두 번째 corpus는 AI가 생성한 코드 표면을 더 넓게 재기 위한 재현 가능한 로컬 benchmark다.
 다만 외부 프로젝트나 실제 사용자 코드에서 독립 수집한 benchmark는 아직 아니다.
+이 문서는 이제 `shadcn-ui/ui`에서 독립 수집한 100파일 baseline도 함께 기록한다.
 
 ## 2. Corpus 분석 결과
 
@@ -188,6 +189,7 @@ npm run analyze:external-corpus
 - 같은 `analyzeClassNames` 기준으로 editable coverage와 gate 결과를 계산한다.
 - report에 `sample.sourceKind`, read-only 비율, 상위 unsupported reason, `gateFailures`, `mvpEvidence`를 기록한다.
 - `mvpEvidence.usableAsMvpEvidence`는 독립 외부 sample 50개 이상에서 gate가 통과해야 true가 된다.
+- 외부 source 조각을 커밋하지 않기 위해 per-record `className` 문자열은 report에서 제외한다.
 
 `npm run eval` smoke 요약:
 
@@ -217,7 +219,61 @@ npm run analyze:external-corpus
 - 외부 corpus를 로컬 `.intent/` artifact로 가져와 같은 coverage 기준으로 측정하는 루프가 생겼다.
 - 이 smoke는 importer/report/gate 형식을 검증하는 작은 fixture다.
 - coverage gate는 통과했지만 `sample.sourceKind = local-smoke-fixture`이므로 MVP evidence로 쓰지 않도록 report가 명시한다.
-- 실제 시장 검증 수치로 쓰려면 독립 수집한 외부 React/Tailwind 샘플 50-100개로 다시 실행해야 한다.
+- 아래 2.3의 독립 외부 baseline은 이 흐름으로 측정한 첫 외부 수치다.
+
+## 2.3 Independent External Corpus Baseline
+
+원본 리포트:
+
+```text
+reports/performance/external-corpus-audit.json
+```
+
+측정 대상:
+
+```text
+repository: shadcn-ui/ui
+commit: dbf9c5e
+sample source: independent-external
+source root: .intent/tmp/external-projects/shadcn-ui
+```
+
+요약:
+
+| 항목 | 값 |
+| --- | ---: |
+| 선택 파일 수 | 100 |
+| 스캔 파일 수 | 100 |
+| `className` 발생 수 | 915 |
+| static `className` | 881 / 915 = 96.28% |
+| simple `cn()` / `clsx()` | 3 / 915 = 0.33% |
+| partial `cn()` / `clsx()` | 20 / 915 = 2.19% |
+| read-only | 11 / 915 = 1.20% |
+| supported direct token 수 | 3,404 |
+| supported direct editable token 수 | 1,573 |
+| supported direct editable coverage | 46.21% |
+| static + simple editable coverage | 46.35% |
+| 전체 observed editable coverage | 46.21% |
+| gate failure 수 | 3 |
+| `mvpEvidence.usableAsMvpEvidence` | false |
+| `mvpEvidence.decision` | `coverage-gate-failed` |
+
+Gate:
+
+| Gate | 기준 | 결과 |
+| --- | --- | --- |
+| sample count | files >= 50 | 통과 |
+| static + simple coverage | editable coverage >= 50% | 실패: 46.35% |
+| supported direct coverage | editable coverage >= 50% | 실패: 46.21% |
+| all observed coverage | editable coverage >= 50% | 실패: 46.21% |
+
+해석:
+
+- 독립 외부 baseline에서는 동적 `className` 비율이 높아서 실패한 것이 아니다. read-only는 1.20%뿐이다.
+- 실패 원인은 현재 editable token taxonomy가 너무 좁다는 점이다.
+- 상위 non-editable token은 `flex`, `w-full`, `hidden`, `flex-1`, `absolute`, `h-*`, `size-*`, `relative`, `grid`, `overflow-*`, `ring-*` 계열에 집중되어 있다.
+- 따라서 다음 구현 판단은 DOM mapping 확대나 agent handoff 확장이 아니라, MVP에서 어떤 Tailwind token family를 deterministic direct-edit 대상으로 인정할지 정하는 것이다.
+- 현 상태의 외부 baseline은 MVP evidence로 쓰면 안 된다. `46.21% < 50%`이므로 coverage gate가 실패했다.
 
 ## 3. Transform 성능
 
@@ -1595,7 +1651,7 @@ package install smoke gate:
 - generated product-sized multi-file graph refresh는 통과했지만, 독립 외부 corpus와 실제 import graph가 있는 제품급 HMR 세션에서 graph write throttle과 changed-file filtering 재측정은 아직 남아 있다.
 - 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
 - CLI tarball install, package `intent-layer/vite` wrapper export smoke, 설치된 plugin transform/graph smoke, 설치된 Vite dev server HTTP preview/apply, apply refresh, 3-file graph refresh smoke, install/failure guide tarball 포함은 통과했지만, npm registry publish와 registry 기준 install copy는 아직 남아 있다.
-- 외부 corpus import harness는 준비됐지만, 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 실제 검증은 아직 남아 있다.
+- 독립 외부 baseline은 `shadcn-ui/ui` 100파일로 완료했지만, supported direct editable coverage가 46.21%로 50% gate를 통과하지 못했다.
 - 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
 - external npm package source 분석/직접 patch, variant 함수 의미 분석, 임의 깊이의 cross-file/transitive variable data flow를 포함한 imported variant 함수 자동 분석
 - variant 함수와 runtime template literal 직접 patch 지원
@@ -1603,6 +1659,6 @@ package install smoke gate:
 다음 판단:
 
 ```text
-MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 준비된 external corpus harness로 독립 외부 샘플 50-100개를 실제 측정하고, 임의 깊이 transitive data-flow를 어디까지 MVP에서 막을지 정한 뒤 외부 제품급 TSX 파일에서 component snapshot 및 실제 HMR 기반 product-sized graph refresh를 재측정하는 것이다.
+MVP direct-edit 범위는 계속 확장할 가치가 있지만, 지금은 agent handoff나 import 추적을 더 넓히면 과하다.
+다음 우선순위는 독립 외부 baseline의 46.21% coverage 실패를 기준으로 Tailwind token taxonomy를 재정의하고, 같은 기준으로 외부 corpus를 다시 측정하는 것이다.
 ```

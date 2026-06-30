@@ -253,6 +253,7 @@ Behavior:
 - computes coverage with the same `analyzeClassNames` path and writes JSON gate results
 - records `sample.sourceKind`, read-only ratio, top unsupported reasons, `gateFailures`, and `mvpEvidence.usableAsMvpEvidence` in the report
 - `sample.sourceKind` is one of `independent-external`, `local-smoke-fixture`, or `generated-fixture`
+- omits per-record `className` strings from the report so external source fragments are not committed
 
 Small `npm run eval` smoke result:
 
@@ -273,7 +274,31 @@ gate: externalCorpusHarnessPass = true
 
 This smoke verifies the importer/report/gate format.
 The coverage gate passes, but `sample.sourceKind` is `local-smoke-fixture`, so it is not treated as MVP evidence.
-The market-validation number still requires running the harness with `--sample-source independent-external` against an independently collected external 50-100 file corpus.
+The independent external baseline below is the first external number measured with `--sample-source independent-external`.
+
+Independent external baseline:
+
+```text
+source: shadcn-ui/ui @ dbf9c5e
+sample source: independent-external
+selected files: 100
+files scanned: 100
+className occurrences: 915
+static className: 881 / 915 = 96.28%
+simple cn/clsx: 3 / 915 = 0.33%
+partial cn/clsx: 20 / 915 = 2.19%
+read-only: 11 / 915 = 1.20%
+supported direct editable coverage: 46.21%
+static + simple editable coverage: 46.35%
+mvp evidence usable: false
+mvp evidence decision: coverage-gate-failed
+```
+
+Interpretation:
+
+- The failure is not caused by dynamic `className` usage. It comes from a narrow editable token taxonomy.
+- Top non-editable tokens cluster around `flex`, `w-full`, `hidden`, `flex-1`, `absolute`, `h-*`, `size-*`, `relative`, `grid`, `overflow-*`, and `ring-*`.
+- The next step is not broader agent handoff. It is deciding which Tailwind token families count as deterministic MVP direct-edit, then re-running the same external corpus.
 
 ### 3.3 Simple cn/clsx literal segment support
 
@@ -326,6 +351,7 @@ Support model:
 - The latest browser measurement repeats 3 desktop samples and 3 mobile 390x844 viewport samples.
 - The Codex-generated 50-file React/Tailwind corpus records 78.76% supported direct editable coverage.
 - The external corpus import/analyze harness can create local `.intent/external-corpus/` copies, a manifest, and coverage gates; its eval smoke passes with 3 samples and 75.76% supported direct coverage.
+- The independent external `shadcn-ui/ui` 100-file baseline records 46.21% supported direct editable coverage and fails the 50% gate.
 - Current fixtures now meet the 5ms warm transform target and the 10ms cold transform target.
 - The large TSX stress fixture with 100 cards and 401 bindings meets the 20ms stress target.
 - The repeated-transform fixture with 100 cards and 401 bindings now passes semantic graph fingerprint based write throttling.
@@ -336,10 +362,11 @@ Support model:
 
 Priority order:
 
-1. Run `npm run import:external-corpus -- <path>` against an independently collected external 50-100 sample React/Tailwind corpus and re-measure editable coverage.
-2. Decide where external npm package source-analysis boundaries and arbitrary-depth cross-file/transitive variable data-flow handoff context should stop.
-3. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
-4. Validate caching, changed-file filtering, and graph write throttling on real product-sized TSX files and HMR sessions.
+1. Use the `shadcn-ui/ui` 100-file baseline's 46.21% failure to redefine the MVP direct-edit Tailwind token families.
+2. Re-run the same independent external corpus gate after the token taxonomy change.
+3. Do not widen external npm package source analysis or arbitrary-depth cross-file/transitive handoff context for now.
+4. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
+5. Validate caching, changed-file filtering, and graph write throttling on real product-sized TSX files and HMR sessions.
 
 ## 9. Agent Handoff And Result
 

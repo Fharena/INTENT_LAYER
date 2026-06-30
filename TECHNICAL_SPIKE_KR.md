@@ -252,6 +252,7 @@ supported direct editable coverage: 78.76%
 - 같은 `analyzeClassNames` 기준으로 coverage를 계산하고 gate 결과를 JSON으로 저장한다.
 - report에는 `sample.sourceKind`, read-only 비율, 상위 unsupported reason, `gateFailures`, `mvpEvidence.usableAsMvpEvidence`를 함께 기록한다.
 - `sample.sourceKind`는 `independent-external`, `local-smoke-fixture`, `generated-fixture` 중 하나다.
+- 외부 source 조각을 커밋하지 않기 위해 per-record `className` 문자열은 report에서 제외한다.
 
 `npm run eval`의 작은 smoke 결과:
 
@@ -272,7 +273,31 @@ gate: externalCorpusHarnessPass = true
 
 이 smoke는 importer와 report/gate 형식이 동작함을 검증한다.
 coverage gate는 통과했지만 `sample.sourceKind`가 `local-smoke-fixture`이므로 MVP evidence로는 쓰지 않는다.
-실제 시장 검증용 수치는 `--sample-source independent-external`로 독립 외부 corpus 50-100개를 넣어 다시 측정해야 한다.
+아래 독립 외부 baseline은 `--sample-source independent-external`로 측정한 첫 외부 수치다.
+
+독립 외부 baseline:
+
+```text
+source: shadcn-ui/ui @ dbf9c5e
+sample source: independent-external
+selected files: 100
+files scanned: 100
+className occurrences: 915
+static className: 881 / 915 = 96.28%
+simple cn/clsx: 3 / 915 = 0.33%
+partial cn/clsx: 20 / 915 = 2.19%
+read-only: 11 / 915 = 1.20%
+supported direct editable coverage: 46.21%
+static + simple editable coverage: 46.35%
+mvp evidence usable: false
+mvp evidence decision: coverage-gate-failed
+```
+
+해석:
+
+- 실패 원인은 동적 `className` 비율이 아니라 editable token taxonomy가 좁은 것이다.
+- 상위 non-editable token은 `flex`, `w-full`, `hidden`, `flex-1`, `absolute`, `h-*`, `size-*`, `relative`, `grid`, `overflow-*`, `ring-*` 계열이다.
+- 다음 단계는 agent handoff 확장이 아니라 MVP direct-edit token family를 어디까지 인정할지 정하고 같은 외부 corpus로 재측정하는 것이다.
 
 ### 3.3 Simple cn/clsx literal segment support
 
@@ -325,6 +350,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - 최신 브라우저 측정은 desktop 3회, mobile 390x844 viewport 3회로 반복했다.
 - Codex-generated 50개 React/Tailwind corpus에서는 supported direct editable coverage 78.76%를 기록했다.
 - 외부 corpus import/analyze harness는 `.intent/external-corpus/` 로컬 복사본, manifest, coverage gate를 생성할 수 있고, eval smoke에서 3개 샘플/75.76% coverage로 통과했다.
+- 독립 외부 `shadcn-ui/ui` 100파일 baseline에서는 supported direct editable coverage 46.21%로 50% gate를 통과하지 못했다.
 - 현재 fixture에서는 warm transform 5ms 목표와 cold transform 10ms 목표를 만족했다.
 - 100개 카드/401개 binding을 가진 대형 TSX stress fixture는 20ms 목표를 만족했다.
 - 100개 카드/401개 binding 반복 transform fixture에서는 semantic graph fingerprint 기반 write throttling이 통과했다.
@@ -335,10 +361,11 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 우선순위:
 
-1. `npm run import:external-corpus -- <path>`로 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개를 넣고 editable coverage를 다시 측정한다.
-2. external npm package source 분석 경계와 임의 깊이 cross-file/transitive variable data flow에 대한 agent handoff 문맥을 어디까지 막을지 정한다.
-3. 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative를 재측정한다.
-4. 실제 제품급 대형 TSX 파일과 HMR 세션에서 cache, changed-file filtering, graph write throttling을 검증한다.
+1. `shadcn-ui/ui` 100파일 baseline의 46.21% 실패를 기준으로 MVP direct-edit Tailwind token family를 재정의한다.
+2. token taxonomy 수정 뒤 같은 독립 외부 corpus로 coverage gate를 재측정한다.
+3. external npm package source 분석 경계와 임의 깊이 cross-file/transitive variable data flow에 대한 agent handoff 문맥은 당분간 더 넓히지 않는다.
+4. 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative를 재측정한다.
+5. 실제 제품급 대형 TSX 파일과 HMR 세션에서 cache, changed-file filtering, graph write throttling을 검증한다.
 
 ## 9. Agent Handoff와 Result
 

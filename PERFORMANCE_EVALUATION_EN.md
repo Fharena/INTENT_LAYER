@@ -61,6 +61,7 @@ The evaluation now has two corpora plus one external corpus import harness smoke
 
 The second corpus is a reproducible local benchmark for a wider AI-generated code surface.
 It is still not an independently collected benchmark from external projects or real user code.
+This document now also records a 100-file independent external baseline from `shadcn-ui/ui`.
 
 ## 2. Corpus Analysis Results
 
@@ -188,6 +189,7 @@ Purpose:
 - calculate editable coverage and gates through the same `analyzeClassNames` path
 - record `sample.sourceKind`, read-only ratio, top unsupported reasons, `gateFailures`, and `mvpEvidence`
 - `mvpEvidence.usableAsMvpEvidence` becomes true only when gates pass on at least 50 independent external samples
+- omit per-record `className` strings from the report so external source fragments are not committed
 
 `npm run eval` smoke summary:
 
@@ -217,7 +219,61 @@ Interpretation:
 - There is now a repeatable loop for importing local external corpus copies and measuring them with the same coverage criteria.
 - This smoke verifies the importer/report/gate format with a small fixture.
 - The coverage gate passes, but `sample.sourceKind = local-smoke-fixture`, so the report explicitly prevents treating this run as MVP evidence.
-- A market-validation number still requires running the harness against an independently collected external 50-100 file React/Tailwind corpus.
+- The independent external baseline in section 2.3 is the first external number measured through this flow.
+
+## 2.3 Independent External Corpus Baseline
+
+Raw report:
+
+```text
+reports/performance/external-corpus-audit.json
+```
+
+Measured target:
+
+```text
+repository: shadcn-ui/ui
+commit: dbf9c5e
+sample source: independent-external
+source root: .intent/tmp/external-projects/shadcn-ui
+```
+
+Summary:
+
+| Metric | Value |
+| --- | ---: |
+| selected files | 100 |
+| files scanned | 100 |
+| `className` occurrences | 915 |
+| static `className` | 881 / 915 = 96.28% |
+| simple `cn()` / `clsx()` | 3 / 915 = 0.33% |
+| partial `cn()` / `clsx()` | 20 / 915 = 2.19% |
+| read-only | 11 / 915 = 1.20% |
+| supported direct tokens | 3,404 |
+| supported direct editable tokens | 1,573 |
+| supported direct editable coverage | 46.21% |
+| static + simple editable coverage | 46.35% |
+| all observed editable coverage | 46.21% |
+| gate failures | 3 |
+| `mvpEvidence.usableAsMvpEvidence` | false |
+| `mvpEvidence.decision` | `coverage-gate-failed` |
+
+Gate:
+
+| Gate | Target | Result |
+| --- | --- | --- |
+| sample count | files >= 50 | pass |
+| static + simple coverage | editable coverage >= 50% | fail: 46.35% |
+| supported direct coverage | editable coverage >= 50% | fail: 46.21% |
+| all observed coverage | editable coverage >= 50% | fail: 46.21% |
+
+Interpretation:
+
+- The independent external baseline did not fail because dynamic `className` usage is high. Read-only is only 1.20%.
+- The failure comes from the current editable token taxonomy being too narrow.
+- Top non-editable tokens cluster around `flex`, `w-full`, `hidden`, `flex-1`, `absolute`, `h-*`, `size-*`, `relative`, `grid`, `overflow-*`, and `ring-*`.
+- The next implementation decision is not more DOM mapping or agent handoff breadth. It is deciding which Tailwind token families belong in deterministic direct-edit for the MVP.
+- This baseline must not be treated as MVP evidence yet. `46.21% < 50%`, so the coverage gate failed.
 
 ## 3. Transform Performance
 
@@ -1596,7 +1652,7 @@ What remains weak:
 - generated product-sized multi-file graph refresh passes, but graph write throttling and changed-file filtering still need re-measurement in real product-sized HMR sessions with independent external corpus files and real import graphs
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - CLI tarball install, package `intent-layer/vite` wrapper export smoke, installed plugin transform/graph smoke, installed Vite dev server HTTP preview/apply, apply refresh, 3-file graph refresh smoke, and install/failure guide tarball inclusion pass, but npm registry publish and registry-oriented install copy remain
-- the external corpus import harness is ready, but the real independently collected external 50-100 sample AI-generated corpus audit is still missing
+- the independent external baseline now covers 100 `shadcn-ui/ui` files, but supported direct editable coverage is 46.21%, below the 50% gate
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
 - external package source analysis/direct patching, variant-function meaning analysis, and arbitrary-depth cross-file/transitive variable data flow are still missing
 - variant functions and runtime template literals remain unsupported for direct patching
@@ -1605,5 +1661,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is running the prepared external corpus harness against an independently collected 50-100 sample set, deciding where arbitrary-depth transitive data flow should stop for the MVP, and re-measuring component snapshots plus real-HMR product-sized graph refresh on external product-sized TSX files.
+The next priority is not more agent handoff or import chasing. It is using the 46.21% independent external coverage failure to redefine the deterministic Tailwind token taxonomy, then re-running the same external corpus gate.
 ```
