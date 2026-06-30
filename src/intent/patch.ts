@@ -6,6 +6,7 @@ import type {
   IntentToken,
   PatchApplyResult,
   PatchFailure,
+  PatchOperationLog,
   PatchPreview,
   PatchRequest,
   PatchRevertResult
@@ -117,6 +118,92 @@ export function planTokenPatch(
 
 function timestampSlug(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
+}
+
+function operationLogPath(rootDir: string): string {
+  return path.join(rootDir, ".intent", "operations", "operation-log.json");
+}
+
+function readOperationLog(rootDir: string): PatchOperationLog {
+  const file = operationLogPath(rootDir);
+  if (!fs.existsSync(file)) {
+    return {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      entries: []
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as PatchOperationLog;
+    if (parsed.version !== 1 || !Array.isArray(parsed.entries)) {
+      throw new Error("Unsupported operation log format");
+    }
+    return parsed;
+  } catch {
+    return {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      entries: []
+    };
+  }
+}
+
+function writeOperationLog(rootDir: string, log: PatchOperationLog): string {
+  const file = operationLogPath(rootDir);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(log, null, 2)}\n`);
+  return file;
+}
+
+export function recordPatchApplyInOperationLog(rootDir: string, patch: PatchApplyResult): string {
+  const log = readOperationLog(rootDir);
+  const now = new Date().toISOString();
+  log.updatedAt = now;
+  log.entries.push({
+    action: "apply",
+    createdAt: now,
+    patch
+  });
+  return writeOperationLog(rootDir, log);
+}
+
+export function recordPatchRevertInOperationLog(rootDir: string, patch: PatchRevertResult): string {
+  const log = readOperationLog(rootDir);
+  const now = new Date().toISOString();
+  log.updatedAt = now;
+  log.entries.push({
+    action: "revert",
+    createdAt: now,
+    patch
+  });
+  return writeOperationLog(rootDir, log);
+}
+
+export function pendingUndoStackFromOperationLog(rootDir: string): PatchApplyResult[] {
+  const stack: PatchApplyResult[] = [];
+
+  for (const entry of readOperationLog(rootDir).entries) {
+    if (entry.action === "apply") {
+      stack.push(entry.patch);
+      continue;
+    }
+
+    const index = [...stack]
+      .reverse()
+      .findIndex(
+        (patch) =>
+          patch.id === entry.patch.id &&
+          patch.nextToken === entry.patch.oldToken &&
+          patch.oldToken === entry.patch.restoredToken &&
+          patch.range.start === entry.patch.range.start
+      );
+    if (index >= 0) {
+      stack.splice(stack.length - 1 - index, 1);
+    }
+  }
+
+  return stack;
 }
 
 function writeIntentArtifacts(params: {

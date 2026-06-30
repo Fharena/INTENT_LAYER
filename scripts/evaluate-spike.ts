@@ -5,7 +5,14 @@ import { analyzeClassNames } from "./analyze-classnames";
 import { recordAgentResult } from "../src/intent/agentResult";
 import { createAgentTask } from "../src/intent/agentTask";
 import { instrumentSource } from "../src/intent/instrument";
-import { applyTokenPatch, planTokenPatch, revertTokenPatch } from "../src/intent/patch";
+import {
+  applyTokenPatch,
+  pendingUndoStackFromOperationLog,
+  planTokenPatch,
+  recordPatchApplyInOperationLog,
+  recordPatchRevertInOperationLog,
+  revertTokenPatch
+} from "../src/intent/patch";
 
 const rootDir = process.cwd();
 const reportsDir = path.join(rootDir, "reports", "performance");
@@ -287,6 +294,75 @@ const staleApply = applyTokenPatch(rootDir, staleEntry, {
   nextToken: "gap-6"
 });
 
+const operationLogFile = path.join(rootDir, ".intent", "operations", "operation-log.json");
+if (fs.existsSync(operationLogFile)) {
+  fs.unlinkSync(operationLogFile);
+}
+const operationStackFixture = path.join(tmpDir, "OperationStackFixture.tsx");
+fs.writeFileSync(
+  operationStackFixture,
+  [
+    "export function OperationStackFixture() {",
+    "  return <div className=\"grid grid-cols-3 gap-4 rounded-lg p-6\">Stack target</div>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const operationStackInstrument = instrumentSource({
+  code: fs.readFileSync(operationStackFixture, "utf8"),
+  file: operationStackFixture,
+  rootDir
+});
+const operationStackEntry = operationStackInstrument.entries[0];
+const operationStackGap = operationStackEntry.tokens.find((token) => token.token === "gap-4");
+const operationApplyOne = applyTokenPatch(rootDir, operationStackEntry, {
+  id: operationStackEntry.id,
+  oldToken: "gap-4",
+  nextToken: "gap-6",
+  sourceStart: operationStackGap?.sourceStart,
+  sourceEnd: operationStackGap?.sourceEnd
+});
+if (operationApplyOne.ok) {
+  recordPatchApplyInOperationLog(rootDir, operationApplyOne);
+}
+const operationStackAfterOne = instrumentSource({
+  code: fs.readFileSync(operationStackFixture, "utf8"),
+  file: operationStackFixture,
+  rootDir
+});
+const operationStackEntryAfterOne = operationStackAfterOne.entries[0];
+const operationStackPadding = operationStackEntryAfterOne.tokens.find((token) => token.token === "p-6");
+const operationApplyTwo = applyTokenPatch(rootDir, operationStackEntryAfterOne, {
+  id: operationStackEntryAfterOne.id,
+  oldToken: "p-6",
+  nextToken: "p-8",
+  sourceStart: operationStackPadding?.sourceStart,
+  sourceEnd: operationStackPadding?.sourceEnd
+});
+if (operationApplyTwo.ok) {
+  recordPatchApplyInOperationLog(rootDir, operationApplyTwo);
+}
+const pendingAfterApply = pendingUndoStackFromOperationLog(rootDir);
+const operationRevertOne = revertTokenPatch(
+  rootDir,
+  pendingAfterApply[pendingAfterApply.length - 1],
+  operationStackEntryAfterOne
+);
+if (operationRevertOne.ok) {
+  recordPatchRevertInOperationLog(rootDir, operationRevertOne);
+}
+const pendingAfterFirstRevert = pendingUndoStackFromOperationLog(rootDir);
+const operationRevertTwo = revertTokenPatch(
+  rootDir,
+  pendingAfterFirstRevert[pendingAfterFirstRevert.length - 1],
+  operationStackEntry
+);
+if (operationRevertTwo.ok) {
+  recordPatchRevertInOperationLog(rootDir, operationRevertTwo);
+}
+const pendingAfterSecondRevert = pendingUndoStackFromOperationLog(rootDir);
+const syntaxErrorsAfterOperationStack = parseSyntaxErrorCount(operationStackFixture);
+
 const graphLookupIterations = 1000;
 const graphLookup = new Map(patchInstrument.entries.map((entry) => [entry.id, entry]));
 const lookupStarted = performance.now();
@@ -370,6 +446,17 @@ const report = {
       dynamicSegments: cnPatchEntry.className.dynamicSegments
     }
   },
+  operationLog: {
+    logFile: path.relative(rootDir, operationLogFile).replace(/\\/g, "/"),
+    firstApplyOk: operationApplyOne.ok,
+    secondApplyOk: operationApplyTwo.ok,
+    pendingAfterApply: pendingAfterApply.length,
+    firstRevertOk: operationRevertOne.ok,
+    pendingAfterFirstRevert: pendingAfterFirstRevert.length,
+    secondRevertOk: operationRevertTwo.ok,
+    pendingAfterSecondRevert: pendingAfterSecondRevert.length,
+    syntaxErrorsAfterRevert: syntaxErrorsAfterOperationStack
+  },
   agentTask: {
     ok: agentTask.ok,
     taskMs: agentTask.ok ? agentTask.metrics.taskMs : agentTask.metrics?.taskMs,
@@ -437,7 +524,16 @@ const report = {
       readOnlyEntry.tokens.length === 0 &&
       readOnlyTask.ok,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
-    staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch"
+    staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch",
+    operationLogUndoStackPass:
+      operationApplyOne.ok &&
+      operationApplyTwo.ok &&
+      pendingAfterApply.length === 2 &&
+      operationRevertOne.ok &&
+      pendingAfterFirstRevert.length === 1 &&
+      operationRevertTwo.ok &&
+      pendingAfterSecondRevert.length === 0 &&
+      syntaxErrorsAfterOperationStack === 0
   }
 };
 

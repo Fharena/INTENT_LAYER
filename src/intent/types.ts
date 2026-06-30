@@ -124,6 +124,24 @@ export interface PatchApplyResult extends PatchPreview {
   };
 }
 
+export type PatchOperationLogEntry =
+  | {
+      action: "apply";
+      createdAt: string;
+      patch: PatchApplyResult;
+    }
+  | {
+      action: "revert";
+      createdAt: string;
+      patch: PatchRevertResult;
+    };
+
+export interface PatchOperationLog {
+  version: 1;
+  updatedAt: string;
+  entries: PatchOperationLogEntry[];
+}
+
 export interface PatchRevertResult {
   ok: true;
   reverted: true;

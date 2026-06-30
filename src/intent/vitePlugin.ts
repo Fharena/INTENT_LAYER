@@ -5,7 +5,14 @@ import type { Plugin } from "vite";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
-import { applyTokenPatch, planTokenPatch, revertTokenPatch } from "./patch";
+import {
+  applyTokenPatch,
+  pendingUndoStackFromOperationLog,
+  planTokenPatch,
+  recordPatchApplyInOperationLog,
+  recordPatchRevertInOperationLog,
+  revertTokenPatch
+} from "./patch";
 import type {
   AgentResultRequest,
   AgentTaskRequest,
@@ -20,7 +27,7 @@ interface IntentState {
   rootDir: string;
   entriesByFile: Map<string, IntentBinding[]>;
   entriesById: Map<string, IntentBinding>;
-  lastAppliedPatch: PatchApplyResult | null;
+  undoStack: PatchApplyResult[];
   clientMetrics: ClientMetric[];
 }
 
@@ -83,7 +90,7 @@ export function intentLayerSpike(): Plugin {
     rootDir: process.cwd(),
     entriesByFile: new Map(),
     entriesById: new Map(),
-    lastAppliedPatch: null,
+    undoStack: [],
     clientMetrics: []
   };
 
@@ -172,7 +179,8 @@ export function intentLayerSpike(): Plugin {
             if (url.pathname === "/__intent/apply") {
               const result = applyTokenPatch(state.rootDir, entry, body);
               if (result.ok) {
-                state.lastAppliedPatch = result;
+                state.undoStack.push(result);
+                recordPatchApplyInOperationLog(state.rootDir, result);
               }
               writeJson(response, result.ok ? 200 : 409, result);
             } else {
@@ -191,12 +199,15 @@ export function intentLayerSpike(): Plugin {
 
         if (url.pathname === "/__intent/revert-last" && request.method === "POST") {
           try {
-            const entry = state.lastAppliedPatch
-              ? state.entriesById.get(state.lastAppliedPatch.id)
-              : undefined;
-            const result = revertTokenPatch(state.rootDir, state.lastAppliedPatch, entry);
+            if (state.undoStack.length === 0) {
+              state.undoStack = pendingUndoStackFromOperationLog(state.rootDir);
+            }
+            const lastPatch = state.undoStack[state.undoStack.length - 1] ?? null;
+            const entry = lastPatch ? state.entriesById.get(lastPatch.id) : undefined;
+            const result = revertTokenPatch(state.rootDir, lastPatch, entry);
             if (result.ok) {
-              state.lastAppliedPatch = null;
+              state.undoStack.pop();
+              recordPatchRevertInOperationLog(state.rootDir, result);
             }
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
