@@ -75,6 +75,7 @@ const transformMeasurements = sourceFiles("src")
   });
 
 const transformTimes = transformMeasurements.flatMap((item) => item.samples);
+const warmTransformTimes = transformMeasurements.flatMap((item) => item.samples.slice(1));
 
 const patchFixture = path.join(tmpDir, "StaticPatchFixture.tsx");
 fs.writeFileSync(
@@ -98,17 +99,49 @@ const previewStarted = performance.now();
 const preview = planTokenPatch(patchEntry, {
   id: patchEntry.id,
   oldToken: "gap-4",
-  nextToken: "gap-6"
+  nextToken: "gap-6",
+  sourceStart: patchEntry.tokens.find((token) => token.token === "gap-4")?.sourceStart,
+  sourceEnd: patchEntry.tokens.find((token) => token.token === "gap-4")?.sourceEnd
 });
 const previewRoundTripMs = Number((performance.now() - previewStarted).toFixed(3));
 
 const apply = applyTokenPatch(rootDir, patchEntry, {
   id: patchEntry.id,
   oldToken: "gap-4",
-  nextToken: "gap-6"
+  nextToken: "gap-6",
+  sourceStart: patchEntry.tokens.find((token) => token.token === "gap-4")?.sourceStart,
+  sourceEnd: patchEntry.tokens.find((token) => token.token === "gap-4")?.sourceEnd
 });
 
 const syntaxErrorsAfterPatch = parseSyntaxErrorCount(patchFixture);
+
+const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
+fs.writeFileSync(
+  cnPatchFixture,
+  [
+    "declare function cn(...value: Array<string | false>): string;",
+    "export function CnPatchFixture({ active }: { active: boolean }) {",
+    "  return <div className={cn(\"grid grid-cols-3 gap-4 rounded-lg p-6\", active && \"bg-teal-50\")}>Patch target</div>;",
+    "}",
+    ""
+  ].join("\n")
+);
+
+const cnPatchInstrument = instrumentSource({
+  code: fs.readFileSync(cnPatchFixture, "utf8"),
+  file: cnPatchFixture,
+  rootDir
+});
+const cnPatchEntry = cnPatchInstrument.entries[0];
+const cnPatchTarget = cnPatchEntry.tokens.find((token) => token.token === "gap-4");
+const cnApply = applyTokenPatch(rootDir, cnPatchEntry, {
+  id: cnPatchEntry.id,
+  oldToken: "gap-4",
+  nextToken: "gap-6",
+  sourceStart: cnPatchTarget?.sourceStart,
+  sourceEnd: cnPatchTarget?.sourceEnd
+});
+const syntaxErrorsAfterCnPatch = parseSyntaxErrorCount(cnPatchFixture);
 
 const staleFixture = path.join(tmpDir, "StalePatchFixture.tsx");
 fs.writeFileSync(
@@ -151,7 +184,10 @@ const report = {
     measurements: transformMeasurements,
     averageMs: average(transformTimes),
     p95Ms: percentile(transformTimes, 0.95),
-    maxMs: transformTimes.length ? Number(Math.max(...transformTimes).toFixed(3)) : 0
+    maxMs: transformTimes.length ? Number(Math.max(...transformTimes).toFixed(3)) : 0,
+    warmAverageMs: average(warmTransformTimes),
+    warmP95Ms: percentile(warmTransformTimes, 0.95),
+    warmMaxMs: warmTransformTimes.length ? Number(Math.max(...warmTransformTimes).toFixed(3)) : 0
   },
   graphLookupProxy: {
     iterations: graphLookupIterations,
@@ -167,13 +203,25 @@ const report = {
     applyMs: apply.ok ? apply.metrics.applyMs : apply.metrics?.applyMs,
     syntaxErrorsAfterPatch,
     staleRejectionOk: !staleApply.ok && staleApply.reason === "source-hash-mismatch",
-    staleRejectionReason: staleApply.ok ? null : staleApply.reason
+    staleRejectionReason: staleApply.ok ? null : staleApply.reason,
+    simpleCnClsx: {
+      applyOk: cnApply.ok,
+      applyMs: cnApply.ok ? cnApply.metrics.applyMs : cnApply.metrics?.applyMs,
+      syntaxErrorsAfterPatch: syntaxErrorsAfterCnPatch,
+      bindingKind: cnPatchEntry.className.kind,
+      callee: cnPatchEntry.className.callee,
+      dynamicSegments: cnPatchEntry.className.dynamicSegments
+    }
   },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
-    transformTargetPass: transformTimes.length > 0 && Math.max(...transformTimes) <= 5,
+    supportedDirectCoveragePass: corpus.editableCoverage.supportedDirect >= 0.5,
+    transformTargetPass: warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= 5,
+    coldTransformTargetPass: transformTimes.length > 0 && Math.max(...transformTimes) <= 5,
+    warmTransformTargetPass: warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= 5,
     supportedPatchPass: apply.ok && syntaxErrorsAfterPatch === 0,
+    simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch"
   }
 };

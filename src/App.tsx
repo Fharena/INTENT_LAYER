@@ -16,6 +16,12 @@ const products = [
   }
 ];
 
+function cn(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(" ");
+}
+
+const clsx = cn;
+
 export function App() {
   return (
     <main className="min-h-screen bg-slate-50 px-8 py-10 text-slate-950">
@@ -37,7 +43,10 @@ export function App() {
           {products.map((product) => (
             <article
               key={product.name}
-              className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm"
+              className={cn(
+                "flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm",
+                product.price === "$39" && "ring-2 ring-teal-200"
+              )}
             >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-slate-950">{product.name}</h2>
@@ -46,7 +55,12 @@ export function App() {
                 </span>
               </div>
               <p className="text-sm leading-6 text-slate-600">{product.description}</p>
-              <button className="mt-auto rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
+              <button
+                className={clsx(
+                  "mt-auto rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white",
+                  product.price === "$49" && "bg-teal-700"
+                )}
+              >
                 Inspect
               </button>
             </article>

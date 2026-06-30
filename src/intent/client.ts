@@ -78,7 +78,9 @@ function renderTokenRow(
       body: JSON.stringify({
         id: binding.id,
         oldToken: token.token,
-        nextToken: select.value
+        nextToken: select.value,
+        sourceStart: token.sourceStart,
+        sourceEnd: token.sourceEnd
       })
     });
     const result = (await response.json()) as PatchResponse;
@@ -115,15 +117,23 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
 
   if (!binding) {
     const hint = document.createElement("p");
-    hint.textContent = "Pick a visible element with a static className binding.";
+    hint.textContent = "Pick a visible element with a supported className binding.";
     hint.style.fontSize = "12px";
     hint.style.lineHeight = "1.5";
     panel.appendChild(hint);
   } else {
     const meta = document.createElement("pre");
-    meta.textContent = `${binding.componentName ?? "Unknown"} <${binding.tagName}>\n${
-      binding.relativeFile
-    }\n${binding.id}`;
+    meta.textContent = [
+      `${binding.componentName ?? "Unknown"} <${binding.tagName}>`,
+      binding.relativeFile,
+      binding.id,
+      `className: ${binding.className.kind}${
+        binding.className.callee ? ` (${binding.className.callee})` : ""
+      }`,
+      binding.className.dynamicSegments > 0
+        ? `dynamic args read-only: ${binding.className.dynamicSegments}`
+        : "dynamic args read-only: 0"
+    ].join("\n");
     meta.style.marginTop = "10px";
     meta.style.padding = "8px";
     meta.style.borderRadius = "6px";
@@ -132,7 +142,16 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     meta.style.whiteSpace = "pre-wrap";
     panel.appendChild(meta);
 
-    for (const token of binding.tokens.filter((item) => item.editable)) {
+    const editableTokens = binding.tokens.filter((item) => item.editable);
+    if (editableTokens.length === 0) {
+      const empty = document.createElement("p");
+      empty.textContent = "No supported direct-edit tokens found for this binding.";
+      empty.style.fontSize = "12px";
+      empty.style.lineHeight = "1.5";
+      panel.appendChild(empty);
+    }
+
+    for (const token of editableTokens) {
       renderTokenRow(panel, binding, token, (message) => {
         renderBinding(panel, binding, message);
       });

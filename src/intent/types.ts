@@ -9,6 +9,8 @@ export interface IntentToken {
   token: string;
   start: number;
   end: number;
+  sourceStart: number;
+  sourceEnd: number;
   category: IntentTokenCategory | null;
   editable: boolean;
 }
@@ -22,9 +24,13 @@ export interface IntentBinding {
   sourceHash: string;
   transformMs: number;
   className: {
+    kind: "static" | "call-literals";
     start: number;
     end: number;
     value: string;
+    callee?: "cn" | "clsx";
+    dynamicSegments: number;
+    unsupportedReason?: string;
   };
   tokens: IntentToken[];
 }
@@ -39,6 +45,8 @@ export interface PatchRequest {
   id: string;
   oldToken: string;
   nextToken: string;
+  sourceStart?: number;
+  sourceEnd?: number;
 }
 
 export interface PatchPreview {

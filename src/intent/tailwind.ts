@@ -54,6 +54,8 @@ export function tokenizeClassName(className: string): IntentToken[] {
       token,
       start: match.index,
       end: match.index + token.length,
+      sourceStart: match.index,
+      sourceEnd: match.index + token.length,
       category,
       editable: category !== null
     });

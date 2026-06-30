@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { categorizeTailwindToken, tokenizeClassName } from "../src/intent/tailwind";
 
-type Classification = "static" | "simple-cn-clsx" | "read-only";
+type Classification = "static" | "simple-cn-clsx" | "partial-cn-clsx" | "read-only";
 
 interface ClassNameRecord {
   file: string;
@@ -27,12 +27,15 @@ interface Summary {
     staticEditable: number;
     staticAndSimple: number;
     staticAndSimpleEditable: number;
+    supportedDirect: number;
+    supportedDirectEditable: number;
     all: number;
     allEditable: number;
   };
   editableCoverage: {
     staticOnly: number;
     staticAndSimpleCnClsx: number;
+    supportedDirect: number;
     allObservedTokens: number;
   };
   unsupportedReasons: Record<string, number>;
@@ -143,16 +146,30 @@ function classifyInitializer(
     }
 
     const values: string[] = [];
+    const dynamicReasons: string[] = [];
     for (const argument of expression.arguments) {
       const result = extractStringValues(argument);
       if (!result.ok) {
-        return {
-          classification: "read-only",
-          reason: `complex-${calleeName}-${result.reason}`,
-          stringValues: values
-        };
+        dynamicReasons.push(`complex-${calleeName}-${result.reason}`);
+      } else {
+        values.push(...result.values);
       }
-      values.push(...result.values);
+    }
+
+    if (values.length === 0) {
+      return {
+        classification: "read-only",
+        reason: dynamicReasons[0] ?? `complex-${calleeName}`,
+        stringValues: []
+      };
+    }
+
+    if (dynamicReasons.length > 0) {
+      return {
+        classification: "partial-cn-clsx",
+        reason: dynamicReasons.join(", "),
+        stringValues: values
+      };
     }
 
     return {
@@ -203,6 +220,7 @@ export function analyzeClassNames(inputs: string[], rootDir = process.cwd()): Su
   const classification: Record<Classification, number> = {
     static: 0,
     "simple-cn-clsx": 0,
+    "partial-cn-clsx": 0,
     "read-only": 0
   };
   const unsupportedReasons: Record<string, number> = {};
@@ -215,13 +233,21 @@ export function analyzeClassNames(inputs: string[], rootDir = process.cwd()): Su
   }
 
   const staticRecords = records.filter((record) => record.classification === "static");
-  const staticAndSimpleRecords = records.filter((record) => record.classification !== "read-only");
+  const staticAndSimpleRecords = records.filter(
+    (record) => record.classification === "static" || record.classification === "simple-cn-clsx"
+  );
+  const supportedDirectRecords = records.filter((record) => record.classification !== "read-only");
 
   const tokenTotals = {
     static: staticRecords.reduce((sum, record) => sum + record.tokenCount, 0),
     staticEditable: staticRecords.reduce((sum, record) => sum + record.editableTokenCount, 0),
     staticAndSimple: staticAndSimpleRecords.reduce((sum, record) => sum + record.tokenCount, 0),
     staticAndSimpleEditable: staticAndSimpleRecords.reduce((sum, record) => sum + record.editableTokenCount, 0),
+    supportedDirect: supportedDirectRecords.reduce((sum, record) => sum + record.tokenCount, 0),
+    supportedDirectEditable: supportedDirectRecords.reduce(
+      (sum, record) => sum + record.editableTokenCount,
+      0
+    ),
     all: records.reduce((sum, record) => sum + record.tokenCount, 0),
     allEditable: records.reduce((sum, record) => sum + record.editableTokenCount, 0)
   };
@@ -234,12 +260,14 @@ export function analyzeClassNames(inputs: string[], rootDir = process.cwd()): Su
     classificationRatio: {
       static: ratio(classification.static, records.length),
       "simple-cn-clsx": ratio(classification["simple-cn-clsx"], records.length),
+      "partial-cn-clsx": ratio(classification["partial-cn-clsx"], records.length),
       "read-only": ratio(classification["read-only"], records.length)
     },
     tokenTotals,
     editableCoverage: {
       staticOnly: ratio(tokenTotals.staticEditable, tokenTotals.static),
       staticAndSimpleCnClsx: ratio(tokenTotals.staticAndSimpleEditable, tokenTotals.staticAndSimple),
+      supportedDirect: ratio(tokenTotals.supportedDirectEditable, tokenTotals.supportedDirect),
       allObservedTokens: ratio(tokenTotals.allEditable, tokenTotals.all)
     },
     unsupportedReasons,

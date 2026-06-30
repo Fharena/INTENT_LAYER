@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { sha256 } from "./hash";
-import { tokenizeClassName } from "./tailwind";
 import type {
   IntentBinding,
+  IntentToken,
   PatchApplyResult,
   PatchFailure,
   PatchPreview,
@@ -15,6 +15,19 @@ function lineSnippet(source: string, offset: number): string {
   const lineEndIndex = source.indexOf("\n", offset);
   const lineEnd = lineEndIndex === -1 ? source.length : lineEndIndex;
   return source.slice(lineStart, lineEnd);
+}
+
+function findPatchTarget(entry: IntentBinding, request: PatchRequest): IntentToken | undefined {
+  if (request.sourceStart !== undefined && request.sourceEnd !== undefined) {
+    return entry.tokens.find(
+      (token) =>
+        token.sourceStart === request.sourceStart &&
+        token.sourceEnd === request.sourceEnd &&
+        token.token === request.oldToken
+    );
+  }
+
+  return entry.tokens.find((token) => token.token === request.oldToken);
 }
 
 export function planTokenPatch(
@@ -45,9 +58,7 @@ export function planTokenPatch(
     };
   }
 
-  const className = source.slice(entry.className.start, entry.className.end);
-  const tokens = tokenizeClassName(className);
-  const target = tokens.find((token) => token.token === request.oldToken);
+  const target = findPatchTarget(entry, request);
 
   if (!target) {
     return {
@@ -69,8 +80,20 @@ export function planTokenPatch(
     };
   }
 
-  const start = entry.className.start + target.start;
-  const end = entry.className.start + target.end;
+  const start = target.sourceStart;
+  const end = target.sourceEnd;
+  const currentToken = source.slice(start, end);
+
+  if (currentToken !== request.oldToken) {
+    return {
+      ok: false,
+      id: request.id,
+      reason: "old-token-mismatch",
+      detail: `Expected "${request.oldToken}" at the stored source range, found "${currentToken}".`,
+      metrics: { previewMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
   const before = lineSnippet(source, start);
   const patchedSource = `${source.slice(0, start)}${request.nextToken}${source.slice(end)}`;
   const after = lineSnippet(patchedSource, start);
