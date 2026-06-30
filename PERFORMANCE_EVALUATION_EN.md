@@ -19,6 +19,7 @@ Measured inputs:
 - static patch fixture
 - simple `cn()` patch fixture
 - last-patch revert fixture
+- operation-log undo stack fixture
 - agent handoff task fixture
 - agent result artifact fixture
 - agent result source diff fixture
@@ -149,8 +150,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.442ms / p95 3.293ms / max 3.293ms |
-| `src/main.tsx` | 0 | avg 0.005ms / p95 0.009ms / max 0.009ms |
+| `src/App.tsx` | 13 | avg 1.134ms / p95 2.683ms / max 2.683ms |
+| `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
 
 Summary:
 
@@ -158,12 +159,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.724ms |
-| Overall p95 transform time | 3.293ms |
-| Overall max transform time | 3.293ms |
-| Warm average transform time | 0.492ms |
-| Warm p95 transform time | 1.361ms |
-| Warm max transform time | 1.361ms |
+| Overall average transform time | 0.569ms |
+| Overall p95 transform time | 2.683ms |
+| Overall max transform time | 2.683ms |
+| Warm average transform time | 0.375ms |
+| Warm p95 transform time | 0.859ms |
+| Warm max transform time | 0.859ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -187,9 +188,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 9.898ms |
-| p95 transform time | 14.48ms |
-| Max transform time | 14.48ms |
+| Average transform time | 7.056ms |
+| p95 transform time | 12.196ms |
+| Max transform time | 12.196ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -204,13 +205,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.095ms |
-| Preview round trip | 1.524ms |
+| Preview time | 0.96ms |
+| Preview round trip | 1.368ms |
 | Apply success | true |
-| Static apply time | 22.628ms |
-| Simple `cn()` apply time | 15.573ms |
+| Static apply time | 20.898ms |
+| Simple `cn()` apply time | 6.51ms |
 | Revert success | true |
-| Revert time | 16.472ms |
+| Revert time | 18.854ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -225,13 +226,33 @@ Interpretation:
 - Patches are rejected when the source hash does not match.
 - No syntax error was produced after supported static/simple token patches.
 
+## 4.1 Operation Log Undo Stack
+
+| Metric | Value |
+| --- | ---: |
+| Operation log file | `.intent/operations/operation-log.json` |
+| First apply success | true |
+| Second apply success | true |
+| Pending undo count after apply | 2 |
+| First revert success | true |
+| Pending undo count after first revert | 1 |
+| Second revert success | true |
+| Pending undo count after second revert | 0 |
+| Syntax errors after stack revert | 0 |
+
+Interpretation:
+
+- The fixture applies two direct patches, restores the pending undo stack from the operation log, then reverts both patches in order.
+- This verifies the same LIFO flow used by `/__intent/revert-last`.
+- The operation log is an append-only JSON file for apply/revert entries and does not require a database or external service.
+
 ## 5. Graph Lookup Proxy
 
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.604ms |
-| Average lookup | 0.000604ms |
+| Total time | 0.087ms |
+| Average lookup | 0.000087ms |
 
 Caveat:
 
@@ -313,7 +334,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 6.605ms |
+| Task generation time | 5.365ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -335,7 +356,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 7.183ms |
+| Result generation time | 7.512ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -390,7 +411,7 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.489ms |
+| Agent task generation time | 10.034ms |
 
 Interpretation:
 
@@ -418,6 +439,7 @@ Interpretation:
 | browser revert round trip | revert round trip <= 50ms | pass |
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
+| operation log undo stack | 2 applies + 2 reverts + pending stack 0 + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
 | agent result generation | result/diff created + source diff + semantic diff present | pass |
 | read-only handoff | read-only binding created + agent task created | pass |
@@ -437,7 +459,8 @@ What worked:
 - read-only source binding generation
 - source token range patching
 - patch preview before apply
-- last-patch revert
+- operation-log-backed undo stack
+- LIFO stack behavior through the last-patch revert endpoint
 - agent handoff task markdown generation
 - agent result markdown, selected source-window diff, and selected `className` semantic diff generation
 - real browser click-to-panel, preview, apply, and revert round-trip measurement
@@ -453,6 +476,7 @@ What remains weak:
 
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
+- undo history UI and conflict-resolution UX are still missing
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - selected source-window semantic diffs still need to become component-level semantic diffs
 - variant functions and runtime template literals remain unsupported
@@ -461,5 +485,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is undo stack design, component-level semantic diff expansion, and independent external corpus validation.
+The next priority is component-level semantic diff expansion, independent external corpus validation, and undo history UI design.
 ```

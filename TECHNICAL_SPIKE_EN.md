@@ -33,7 +33,7 @@ Included:
 - source hash validation
 - old token validation
 - range patch apply
-- undo for the last patch
+- operation-log-backed undo stack and patch revert
 - structured agent handoff task generation
 - structured agent result artifact generation
 - agent handoff source snapshots, result source diffs, and selected `className` semantic token diffs
@@ -110,13 +110,15 @@ Patch flow:
 
 Revert flow:
 
-1. The dev server keeps the last apply result in memory.
-2. `/__intent/revert-last` checks whether `nextToken` still exists at the last patch range.
-3. If it matches, the range is replaced with `oldToken`.
-4. Revert operation/diff artifacts are written.
+1. After a successful apply, the dev server pushes the patch result onto an in-memory undo stack.
+2. The same apply is appended to `.intent/operations/operation-log.json`.
+3. `/__intent/revert-last` checks whether `nextToken` still exists at the last patch range.
+4. If it matches, the range is replaced with `oldToken`.
+5. Revert operation/diff artifacts are written and a revert entry is appended to the operation log.
+6. If the in-memory stack is empty, pending apply entries are restored from the operation log.
 
-This is last-patch undo for the MVP.
-Long undo stacks and cross-session undo are not implemented yet.
+This is a LIFO undo stack for the MVP.
+Branching history and conflict-resolution UI are not implemented yet.
 
 If the source hash changed, the patch is rejected.
 If the old token is missing, the patch is rejected.
@@ -242,8 +244,9 @@ Support model:
 - `className={someVariable}` degrades to a read-only binding and agent handoff.
 - Template literals degrade to read-only bindings and agent handoff.
 - Variant functions and props forwarding degrade to read-only bindings and agent handoff.
-- Undo supports only the last patch.
-- Restarting the dev server clears the in-memory undo state.
+- Undo uses an operation-log-backed LIFO stack and can revert multiple direct patches in order.
+- After a dev server restart, the pending undo stack can be restored from the operation log once graph bindings are available again.
+- Undo history UI, branch undo, and conflict-resolution UI are not implemented yet.
 - Agent handoff records a selected source-window snapshot plus task/result markdown and intent diffs.
 - Agent results record a before/after line diff and a `className` semantic token diff for the selected source window, but they do not yet infer a full-file or component-level semantic diff automatically.
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
@@ -257,12 +260,12 @@ Support model:
 
 Priority order:
 
-1. Design an undo stack and operation-log-backed revert.
-2. Expand selected source-window semantic diffs into component-level semantic diffs.
-3. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
-4. Connect read-only source diffs to a wider source window.
-5. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
-6. Validate caching and graph write throttling on product-sized TSX files.
+1. Expand selected source-window semantic diffs into component-level semantic diffs.
+2. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
+3. Connect read-only source diffs to a wider source window.
+4. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
+5. Validate caching and graph write throttling on product-sized TSX files.
+6. Design undo history UI and conflict-resolution UX.
 
 ## 9. Agent Handoff And Result
 

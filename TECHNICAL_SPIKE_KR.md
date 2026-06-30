@@ -32,7 +32,7 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 - source hash 검증
 - old token 검증
 - range patch 적용
-- 마지막 patch 되돌리기
+- operation log 기반 undo stack과 patch 되돌리기
 - 구조화된 agent handoff task 생성
 - 구조화된 agent result 문서 생성
 - agent handoff source snapshot, result source diff, selected `className` semantic token diff 생성
@@ -109,13 +109,15 @@ AST code generation으로 파일을 다시 출력하지 않는다.
 
 되돌리기 방식:
 
-1. dev server가 마지막 apply 결과를 메모리에 저장한다.
-2. `/__intent/revert-last` 호출 시 마지막 patch range에 `nextToken`이 그대로 있는지 확인한다.
-3. 정확히 일치하면 `oldToken`으로 다시 교체한다.
-4. revert operation/diff 파일을 생성한다.
+1. apply 성공 시 dev server가 patch 결과를 in-memory undo stack에 push한다.
+2. 동시에 `.intent/operations/operation-log.json`에 apply entry를 append한다.
+3. `/__intent/revert-last` 호출 시 stack의 마지막 patch range에 `nextToken`이 그대로 있는지 확인한다.
+4. 정확히 일치하면 `oldToken`으로 다시 교체한다.
+5. revert operation/diff 파일을 생성하고 operation log에 revert entry를 append한다.
+6. dev server 메모리 stack이 비어 있으면 operation log에서 아직 revert되지 않은 apply stack을 복원한다.
 
-이 방식은 현재 MVP용 last-patch undo다.
-긴 undo stack이나 cross-session undo는 아직 만들지 않았다.
+이 방식은 MVP용 LIFO undo stack이다.
+브랜치 히스토리 UI나 충돌 해결 UI는 아직 만들지 않았다.
 
 source hash가 다르면 patch를 거부한다.
 old token이 없으면 patch를 거부한다.
@@ -241,8 +243,9 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - `className={someVariable}`는 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
 - template literal은 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
 - variant 함수와 props forwarding은 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
-- undo는 마지막 patch 1개만 지원한다.
-- dev server 재시작 후에는 in-memory undo 상태가 사라진다.
+- undo는 operation log 기반 LIFO stack으로 여러 direct patch를 순서대로 되돌릴 수 있다.
+- dev server 재시작 후에도 graph binding이 다시 준비되면 operation log에서 pending undo stack을 복원할 수 있다.
+- undo history UI, branch undo, 충돌 해결 UI는 아직 없다.
 - agent handoff는 선택 source window snapshot과 task/result markdown, intent diff 기록을 지원한다.
 - agent result는 선택 source window의 before/after line diff와 `className` semantic token diff를 기록하지만, 아직 전체 파일/component-level semantic diff를 자동 추론하지 않는다.
 - 실제 브라우저 click-to-panel, preview, apply, revert 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
@@ -256,12 +259,12 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 우선순위:
 
-1. undo stack과 operation log 기반 revert를 설계한다.
-2. selected source-window semantic diff를 component-level semantic diff로 확장한다.
-3. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
-4. read-only source diff를 더 넓은 source window와 연결한다.
-5. fixture를 nested component, map render, conditional render, fragment로 확장한다.
-6. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
+1. selected source-window semantic diff를 component-level semantic diff로 확장한다.
+2. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
+3. read-only source diff를 더 넓은 source window와 연결한다.
+4. fixture를 nested component, map render, conditional render, fragment로 확장한다.
+5. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
+6. undo history UI와 충돌 해결 UX를 설계한다.
 
 ## 9. Agent Handoff와 Result
 
