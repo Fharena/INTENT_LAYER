@@ -397,6 +397,7 @@ intent-layer scan
 intent-layer check
 intent-layer apply
 intent-layer diff
+intent-layer agent-context
 intent-layer agent-task
 intent-layer agent-result
 ```
@@ -406,6 +407,7 @@ intent-layer agent-result
 `check` applies minimal gates to the same result and returns a non-zero exit code when they fail.
 `apply` runs a single Tailwind token replace from `.intent-op.json` through the existing safe patch engine.
 `diff` summarizes `.intent-diff.yml` files as JSON for CLI/CI inspection.
+`agent-context` summarizes repo/selected binding/supported and unsupported surfaces from `.intent/graph.intent.json` into AI-ready markdown.
 `agent-task` takes a binding id from `.intent/graph.intent.json` plus a desired change and creates `.intent/agent/task_*.md`.
 `agent-result` takes a task file, summary, changed files, and checks, then creates `.intent/agent/result_*.md` plus `.intent-diff.yml`.
 
