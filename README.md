@@ -53,6 +53,7 @@ The demo currently supports:
 
 - React + Vite + Tailwind demo UI
 - compile-time `data-intent-id` injection for intrinsic JSX elements with supported or read-only `className`
+- low-level JSX/className scanner for the current MVP direct-edit path, with AST fallback for complex syntax
 - source sidecar graph generation at `.intent/graph.intent.json`
 - floating browser overlay
 - patch preview before apply

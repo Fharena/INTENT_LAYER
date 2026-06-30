@@ -435,7 +435,7 @@ structure:
             end: 231
 
 validation:
-  sourceHash: "sha256:..."
+  sourceHash: "fingerprint:..."
   generatedAt: "2026-06-29T00:00:00Z"
 ```
 
@@ -467,6 +467,8 @@ user-authored: 사람이 확인/수정
 
 ```text
 코드와 intent 문서 drift 감지.
+MVP 구현은 local deterministic source fingerprint를 사용하고,
+필요하면 배포 단계에서 cryptographic hash로 교체할 수 있다.
 ```
 
 ## 10. 내부 아키텍처
@@ -860,4 +862,3 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 있음.
 단, 2주 스파이크에서 "와, 이거 말로 AI에게 시키는 것보다 낫다"가 나오지 않으면 접는다.
 ```
-

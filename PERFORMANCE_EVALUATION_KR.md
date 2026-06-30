@@ -88,8 +88,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 2.683ms / p95 5.294ms / max 5.294ms |
-| `src/main.tsx` | 0 | avg 0.002ms / p95 0.008ms / max 0.008ms |
+| `src/App.tsx` | 13 | avg 1.729ms / p95 3.685ms / max 3.685ms |
+| `src/main.tsx` | 0 | avg 0.005ms / p95 0.009ms / max 0.009ms |
 
 요약:
 
@@ -97,19 +97,21 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 1.343ms |
-| 전체 p95 transform time | 5.294ms |
-| 전체 최대 transform time | 5.294ms |
-| warm 평균 transform time | 1.015ms |
-| warm p95 transform time | 2.994ms |
-| warm 최대 transform time | 2.994ms |
+| 전체 평균 transform time | 0.867ms |
+| 전체 p95 transform time | 3.685ms |
+| 전체 최대 transform time | 3.685ms |
+| warm 평균 transform time | 0.622ms |
+| warm p95 transform time | 1.617ms |
+| warm 최대 transform time | 1.617ms |
 | 목표 | warm 파일당 5ms 이하 |
-| 결과 | warm 통과 / cold 미통과 |
+| 결과 | warm 통과 / cold 통과 |
 
 해석:
 
-- 5회 반복 측정에서 첫 cold transform은 5ms를 넘었다.
+- 5회 반복 측정에서 첫 cold transform을 포함한 최대값이 5ms 아래로 내려왔다.
 - 첫 샘플을 제외한 warm transform은 평균, p95, 최대값 모두 5ms 아래다.
+- MVP 지원 패턴은 TypeScript AST cold parse 전에 low-level JSX/className scanner로 처리한다.
+- scanner가 처리하지 못하는 복잡한 패턴은 기존 AST 경로로 fallback할 수 있게 남겼다.
 - `className` 문자열이 없는 파일은 AST parse 없이 fast path로 건너뛴다.
 - `className`이 있는 파일은 TypeScript AST parse와 instrumentation을 한 번에 수행한다.
 - 대형 파일에서는 target filtering, cache, graph write throttling이 필요하다.
@@ -119,13 +121,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 1.223ms |
-| preview round trip | 1.542ms |
+| preview time | 3.3ms |
+| preview round trip | 3.799ms |
 | apply 성공 | true |
-| static apply time | 17.55ms |
-| simple `cn()` apply time | 8.796ms |
+| static apply time | 45.005ms |
+| simple `cn()` apply time | 20.012ms |
 | revert 성공 | true |
-| revert time | 8.689ms |
+| revert time | 31.25ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -145,8 +147,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.487ms |
-| 평균 lookup | 0.000487ms |
+| 총 시간 | 1.823ms |
+| 평균 lookup | 0.001823ms |
 
 주의:
 
@@ -173,24 +175,24 @@ overlay가 performance.now()로 측정한 값을 /__intent/client-metric에 POST
 
 | 항목 | 값 |
 | --- | ---: |
-| 테스트 URL | `http://127.0.0.1:5181/` |
+| 테스트 URL | `http://127.0.0.1:5182/` |
 | binding 선택 성공 | true |
-| graph fetch time | 4.4ms |
-| pick-to-panel time | 343.3ms |
-| click-to-panel time | 1.3ms |
+| graph fetch time | 5.4ms |
+| pick-to-panel time | 355.2ms |
+| click-to-panel time | 1.6ms |
 | binding lookup time | 0ms |
-| panel render time | 1.3ms |
+| panel render time | 1.6ms |
 | preview token | `text-lg -> text-xl` |
-| preview round trip | 3.3ms |
-| preview server time | 0.466ms |
-| preview render time | 0.2ms |
+| preview round trip | 3ms |
+| preview server time | 0.499ms |
+| preview render time | 0.1ms |
 | apply token | `text-lg -> text-xl` |
-| apply round trip | 11.7ms |
-| apply server time | 8.475ms |
-| apply render time | 0.2ms |
+| apply round trip | 15.9ms |
+| apply server time | 12.201ms |
+| apply render time | 0.1ms |
 | revert token | `text-xl -> text-lg` |
-| revert round trip | 12.5ms |
-| revert server time | 9.257ms |
+| revert round trip | 22ms |
+| revert server time | 18.814ms |
 | revert render time | 1.4ms |
 | click-to-panel 목표 | 100ms 이하 |
 | preview round trip 목표 | 50ms 이하 |
@@ -200,11 +202,11 @@ overlay가 performance.now()로 측정한 값을 /__intent/client-metric에 POST
 
 해석:
 
-- 사용자가 실제 대상 요소를 클릭한 순간부터 panel이 binding 상태로 렌더되기까지는 1.3ms였다.
+- 사용자가 실제 대상 요소를 클릭한 순간부터 panel이 binding 상태로 렌더되기까지는 1.6ms였다.
 - `pickToPanelMs`는 사용자가 pick mode에 들어간 뒤 실제 대상을 클릭하기까지 머문 시간까지 포함하므로 UX latency가 아니라 사용자 대기 시간이 섞인 값이다.
-- preview 버튼 클릭부터 preview 상태 렌더까지의 실제 browser round trip은 3.3ms였다.
-- apply 버튼 클릭부터 source patch 완료 및 상태 렌더까지의 실제 browser round trip은 11.7ms였다.
-- Undo last 클릭부터 source revert 완료 및 상태 렌더까지의 실제 browser round trip은 12.5ms였다.
+- preview 버튼 클릭부터 preview 상태 렌더까지의 실제 browser round trip은 3ms였다.
+- apply 버튼 클릭부터 source patch 완료 및 상태 렌더까지의 실제 browser round trip은 15.9ms였다.
+- Undo last 클릭부터 source revert 완료 및 상태 렌더까지의 실제 browser round trip은 22ms였다.
 - 현재 수치는 단일 desktop viewport 샘플이다.
 
 ## 7. Agent Task 생성
@@ -212,7 +214,7 @@ overlay가 performance.now()로 측정한 값을 /__intent/client-metric에 POST
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 3.786ms |
+| task 생성 시간 | 24.592ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -234,7 +236,7 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 10.596ms |
+| result 생성 시간 | 26.604ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
 | source hash changed | true |
@@ -283,7 +285,7 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 2.091ms |
+| agent task 생성 시간 | 14.084ms |
 
 해석:
 
@@ -298,7 +300,7 @@ dev server endpoint smoke test:
 | static + simple `cn()` / `clsx()` coverage | >= 50% | 통과 |
 | supported direct coverage | >= 50% | 통과 |
 | warm transform target | max <= 5ms | 통과 |
-| cold transform target | max <= 5ms | 미통과 |
+| cold transform target | max <= 5ms | 통과 |
 | browser click-to-panel | click-to-panel <= 100ms | 통과 |
 | browser preview round trip | preview round trip <= 50ms | 통과 |
 | browser apply round trip | apply round trip <= 50ms | 통과 |
@@ -330,12 +332,12 @@ dev server endpoint smoke test:
 - unsupported className의 agent handoff degrade
 - simple `cn()` literal segment patch
 - source hash stale rejection
+- low-level scanner 기반 cold transform 5ms gate 통과
 - intent operation/diff 최소 출력
 - 수치 리포트 생성
 
 아직 부족한 것:
 
-- cold first transform 5ms 목표
 - 대형 TSX 파일에서 transform time 5ms 목표 유지
 - 실제 브라우저 측정은 아직 단일 desktop 샘플이다.
 - 실제 AI 생성 코드 50-100개 corpus 검증
@@ -346,5 +348,5 @@ dev server endpoint smoke test:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 cold transform 최적화, browser multi-sample/mobile 측정, 실제 corpus audit이다.
+다음 우선순위는 대형 TSX transform 측정, browser multi-sample/mobile 측정, 실제 corpus audit이다.
 ```

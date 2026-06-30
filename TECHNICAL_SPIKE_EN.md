@@ -61,6 +61,8 @@ Excluded:
 DOM-to-source mapping is not inferred in the browser at runtime.
 
 The current Vite plugin parses TSX files and injects `data-intent-id` into intrinsic JSX elements that have static `className` values.
+Common MVP patterns, including static `className`, simple/partial `cn()` / `clsx()`, and read-only expressions, are handled by a low-level JSX/className scanner first.
+Patterns the scanner cannot handle can still fall back to the TypeScript AST path.
 
 Input example:
 
@@ -211,8 +213,8 @@ Support model:
 - Agent handoff records a selected source-window snapshot plus task/result markdown and intent diffs.
 - Agent results record a before/after line diff for the selected source window, but they do not yet infer a full-file semantic diff automatically.
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
-- Warm transform meets the 5ms target, but cold first transform can exceed 5ms.
-- Larger TSX files are not tested yet.
+- Current fixtures now meet the 5ms target for both cold and warm transforms.
+- Larger TSX files are not tested against the 5ms target yet.
 
 ## 8. Next Work
 

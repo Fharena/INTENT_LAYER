@@ -433,7 +433,7 @@ structure:
             end: 231
 
 validation:
-  sourceHash: "sha256:..."
+  sourceHash: "fingerprint:..."
   generatedAt: "2026-06-29T00:00:00Z"
 ```
 
@@ -465,6 +465,8 @@ user-authored: confirmed or edited by a human
 
 ```text
 Used to detect drift between code and intent documents.
+The MVP implementation uses a local deterministic source fingerprint,
+which can be replaced with a cryptographic hash before distribution if needed.
 ```
 
 ## 10. Internal Architecture
@@ -859,4 +861,3 @@ Worth starting.
 But run a two-week spike first.
 If the spike does not feel clearly better than prompting AI for the same UI tweaks, stop.
 ```
-

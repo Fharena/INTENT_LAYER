@@ -60,6 +60,8 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 DOM-to-source mapping은 브라우저 런타임에서 추론하지 않는다.
 
 현재 구현은 Vite plugin에서 TSX 파일을 파싱하고, 정적 `className`을 가진 intrinsic JSX element에 `data-intent-id`를 삽입한다.
+MVP에서 자주 나오는 static `className`, simple/partial `cn()` / `clsx()`, read-only expression은 먼저 low-level JSX/className scanner로 처리한다.
+scanner가 처리하지 못하는 복잡한 syntax는 기존 TypeScript AST 경로로 fallback한다.
 
 대상 예:
 
@@ -210,8 +212,8 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - agent handoff는 선택 source window snapshot과 task/result markdown, intent diff 기록을 지원한다.
 - agent result는 선택 source window의 before/after line diff를 기록하지만, 아직 전체 파일 semantic diff를 자동 추론하지 않는다.
 - 실제 브라우저 click-to-panel, preview, apply, revert 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
-- warm transform은 5ms 목표를 만족했지만, cold first transform은 5ms를 넘을 수 있다.
-- 대형 TSX 파일에서는 아직 검증하지 않았다.
+- 현재 fixture에서는 cold/warm transform 모두 5ms 목표를 만족했다.
+- 대형 TSX 파일에서는 아직 5ms 목표를 검증하지 않았다.
 
 ## 8. 다음 작업
 

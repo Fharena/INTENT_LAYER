@@ -88,8 +88,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 2.683ms / p95 5.294ms / max 5.294ms |
-| `src/main.tsx` | 0 | avg 0.002ms / p95 0.008ms / max 0.008ms |
+| `src/App.tsx` | 13 | avg 1.729ms / p95 3.685ms / max 3.685ms |
+| `src/main.tsx` | 0 | avg 0.005ms / p95 0.009ms / max 0.009ms |
 
 Summary:
 
@@ -97,19 +97,21 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 1.343ms |
-| Overall p95 transform time | 5.294ms |
-| Overall max transform time | 5.294ms |
-| Warm average transform time | 1.015ms |
-| Warm p95 transform time | 2.994ms |
-| Warm max transform time | 2.994ms |
+| Overall average transform time | 0.867ms |
+| Overall p95 transform time | 3.685ms |
+| Overall max transform time | 3.685ms |
+| Warm average transform time | 0.622ms |
+| Warm p95 transform time | 1.617ms |
+| Warm max transform time | 1.617ms |
 | Target | <= 5ms per warm transform |
-| Result | warm pass / cold fail |
+| Result | warm pass / cold pass |
 
 Interpretation:
 
-- In the 5-iteration run, the first cold transform exceeded 5ms.
+- In the 5-iteration run, the maximum transform time, including the first cold transform, stayed under 5ms.
 - Excluding the first sample, warm average, p95, and max transform time are under 5ms.
+- MVP-supported patterns now go through a low-level JSX/className scanner before the TypeScript AST cold-parse path.
+- The AST path remains as a fallback for patterns the scanner cannot handle.
 - Files without the literal `className` string now use a fast path and skip AST parsing.
 - Files with `className` still perform TypeScript AST parse and instrumentation in one pass.
 - Larger TSX files will still need file filtering, caching, and graph write throttling.
@@ -119,13 +121,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.223ms |
-| Preview round trip | 1.542ms |
+| Preview time | 3.3ms |
+| Preview round trip | 3.799ms |
 | Apply success | true |
-| Static apply time | 17.55ms |
-| Simple `cn()` apply time | 8.796ms |
+| Static apply time | 45.005ms |
+| Simple `cn()` apply time | 20.012ms |
 | Revert success | true |
-| Revert time | 8.689ms |
+| Revert time | 31.25ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -145,8 +147,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.487ms |
-| Average lookup | 0.000487ms |
+| Total time | 1.823ms |
+| Average lookup | 0.001823ms |
 
 Caveat:
 
@@ -174,24 +176,24 @@ The overlay posted performance.now measurements to /__intent/client-metric.
 
 | Metric | Value |
 | --- | ---: |
-| Test URL | `http://127.0.0.1:5181/` |
+| Test URL | `http://127.0.0.1:5182/` |
 | Binding selected | true |
-| Graph fetch time | 4.4ms |
-| Pick-to-panel time | 343.3ms |
-| Click-to-panel time | 1.3ms |
+| Graph fetch time | 5.4ms |
+| Pick-to-panel time | 355.2ms |
+| Click-to-panel time | 1.6ms |
 | Binding lookup time | 0ms |
-| Panel render time | 1.3ms |
+| Panel render time | 1.6ms |
 | Preview token | `text-lg -> text-xl` |
-| Preview round trip | 3.3ms |
-| Preview server time | 0.466ms |
-| Preview render time | 0.2ms |
+| Preview round trip | 3ms |
+| Preview server time | 0.499ms |
+| Preview render time | 0.1ms |
 | Apply token | `text-lg -> text-xl` |
-| Apply round trip | 11.7ms |
-| Apply server time | 8.475ms |
-| Apply render time | 0.2ms |
+| Apply round trip | 15.9ms |
+| Apply server time | 12.201ms |
+| Apply render time | 0.1ms |
 | Revert token | `text-xl -> text-lg` |
-| Revert round trip | 12.5ms |
-| Revert server time | 9.257ms |
+| Revert round trip | 22ms |
+| Revert server time | 18.814ms |
 | Revert render time | 1.4ms |
 | Click-to-panel target | <= 100ms |
 | Preview round trip target | <= 50ms |
@@ -201,11 +203,11 @@ The overlay posted performance.now measurements to /__intent/client-metric.
 
 Interpretation:
 
-- From the actual target-element click to the panel rendering the selected binding, latency was 1.3ms.
+- From the actual target-element click to the panel rendering the selected binding, latency was 1.6ms.
 - `pickToPanelMs` includes the time spent waiting for the user to click a target after entering pick mode, so it is not pure UI latency.
-- From the preview button click to preview-state rendering, real browser round trip was 3.3ms.
-- From the apply button click to source patch completion and status rendering, real browser round trip was 11.7ms.
-- From the Undo last click to source revert completion and status rendering, real browser round trip was 12.5ms.
+- From the preview button click to preview-state rendering, real browser round trip was 3ms.
+- From the apply button click to source patch completion and status rendering, real browser round trip was 15.9ms.
+- From the Undo last click to source revert completion and status rendering, real browser round trip was 22ms.
 - This is currently a single desktop viewport sample.
 
 ## 7. Agent Task Generation
@@ -213,7 +215,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 3.786ms |
+| Task generation time | 24.592ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -235,7 +237,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 10.596ms |
+| Result generation time | 26.604ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -284,7 +286,7 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.091ms |
+| Agent task generation time | 14.084ms |
 
 Interpretation:
 
@@ -299,7 +301,7 @@ Interpretation:
 | static + simple `cn()` / `clsx()` coverage | >= 50% | pass |
 | supported direct coverage | >= 50% | pass |
 | warm transform target | max <= 5ms | pass |
-| cold transform target | max <= 5ms | fail |
+| cold transform target | max <= 5ms | pass |
 | browser click-to-panel | click-to-panel <= 100ms | pass |
 | browser preview round trip | preview round trip <= 50ms | pass |
 | browser apply round trip | apply round trip <= 50ms | pass |
@@ -331,12 +333,12 @@ What worked:
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
 - source hash stale rejection
+- low-level scanner cold transform gate pass
 - minimal intent operation/diff output
 - numeric report generation
 
 What remains weak:
 
-- cold first transform exceeds the 5ms target
 - transform time still needs to be tested on larger TSX files
 - real browser measurement is still a single desktop sample
 - real AI-generated 50-100 sample corpus audit is still missing
@@ -347,5 +349,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is cold transform optimization, browser multi-sample/mobile measurement, and a real corpus audit.
+The next priority is large-TSX transform measurement, browser multi-sample/mobile measurement, and a real corpus audit.
 ```
