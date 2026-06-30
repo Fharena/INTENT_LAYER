@@ -26,6 +26,17 @@ declare global {
   }
 }
 
+function recordClientMetric(metric: ClientMetric) {
+  window.__intentMetrics = [...(window.__intentMetrics ?? []), metric];
+  void fetch("/__intent/client-metric", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(metric)
+  }).catch(() => {
+    // Metrics must never break the editing path.
+  });
+}
+
 function createButton(label: string): HTMLButtonElement {
   const button = document.createElement("button");
   button.textContent = label;
@@ -117,12 +128,15 @@ function renderTokenRow(
   }
 
   preview.addEventListener("click", async () => {
+    const startedAt = performance.now();
     const response = await fetch("/__intent/preview", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: patchBody()
     });
     const result = (await response.json()) as PreviewResponse;
+    const responseAt = performance.now();
+    const renderStartedAt = performance.now();
     if (result.ok) {
       previewBox.style.display = "block";
       previewBox.textContent = [`- ${result.before}`, `+ ${result.after}`].join("\n");
@@ -132,20 +146,49 @@ function renderTokenRow(
       previewBox.textContent = result.detail ?? result.reason;
       setStatus(`Preview rejected: ${result.reason}`);
     }
+    const renderedAt = performance.now();
+    recordClientMetric({
+      kind: "patch-preview",
+      id: binding.id,
+      status: result.ok ? "ok" : "rejected",
+      createdAt: new Date().toISOString(),
+      oldToken: token.token,
+      nextToken: select.value,
+      roundTripMs: Number((responseAt - startedAt).toFixed(3)),
+      serverMs: result.ok ? result.metrics.previewMs : result.metrics?.previewMs ?? null,
+      renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
+      reason: result.ok ? undefined : result.reason
+    });
   });
 
   apply.addEventListener("click", async () => {
+    const startedAt = performance.now();
     const response = await fetch("/__intent/apply", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: patchBody()
     });
     const result = (await response.json()) as PatchResponse;
+    const responseAt = performance.now();
+    const renderStartedAt = performance.now();
     if (result.ok) {
       setStatus(`Applied ${result.oldToken} -> ${result.nextToken} in ${result.metrics.applyMs}ms`);
     } else {
       setStatus(`Rejected: ${result.reason}`);
     }
+    const renderedAt = performance.now();
+    recordClientMetric({
+      kind: "patch-apply",
+      id: binding.id,
+      status: result.ok ? "ok" : "rejected",
+      createdAt: new Date().toISOString(),
+      oldToken: token.token,
+      nextToken: select.value,
+      roundTripMs: Number((responseAt - startedAt).toFixed(3)),
+      serverMs: result.ok ? result.metrics.applyMs : result.metrics?.applyMs ?? null,
+      renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
+      reason: result.ok ? undefined : result.reason
+    });
   });
 
   row.append(label, select, preview, apply, previewBox);
@@ -355,17 +398,6 @@ export function initIntentOverlay() {
   let pickStartedAt = 0;
   let graphFetchMs: number | null = null;
 
-  function recordMetric(metric: ClientMetric) {
-    window.__intentMetrics = [...(window.__intentMetrics ?? []), metric];
-    void fetch("/__intent/client-metric", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(metric)
-    }).catch(() => {
-      // Metrics must never break the editing path.
-    });
-  }
-
   function setStatus(message: string) {
     renderBinding(panel, selectedBinding, message);
   }
@@ -400,7 +432,7 @@ export function initIntentOverlay() {
         const renderStartedAt = performance.now();
         setStatus("No intent binding on this element");
         const renderedAt = performance.now();
-        recordMetric({
+        recordClientMetric({
           kind: "click-to-panel",
           id: null,
           status: element ? "missing-binding" : "missing-element",
@@ -426,7 +458,7 @@ export function initIntentOverlay() {
       const renderStartedAt = performance.now();
       renderBinding(panel, selectedBinding, selectedBinding ? "Binding selected" : "Binding missing");
       const renderedAt = performance.now();
-      recordMetric({
+      recordClientMetric({
         kind: "click-to-panel",
         id: element.dataset.intentId ?? null,
         status: selectedBinding ? "selected" : "missing-binding",

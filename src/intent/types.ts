@@ -41,7 +41,7 @@ export interface IntentGraph {
   entries: Record<string, IntentBinding>;
 }
 
-export interface ClientMetric {
+export interface ClickToPanelMetric {
   kind: "click-to-panel";
   id: string | null;
   status: "selected" | "missing-binding" | "missing-element";
@@ -52,6 +52,21 @@ export interface ClientMetric {
   bindingLookupMs: number;
   renderMs: number;
 }
+
+export interface PatchInteractionMetric {
+  kind: "patch-preview" | "patch-apply";
+  id: string;
+  status: "ok" | "rejected";
+  createdAt: string;
+  oldToken: string;
+  nextToken: string;
+  roundTripMs: number;
+  serverMs: number | null;
+  renderMs: number;
+  reason?: string;
+}
+
+export type ClientMetric = ClickToPanelMetric | PatchInteractionMetric;
 
 export interface ClientMetricsReport {
   version: 1;
