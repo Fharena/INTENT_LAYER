@@ -393,6 +393,7 @@ Currently implemented MVP CLI smoke surface:
 
 ```bash
 intent-layer init
+intent-layer dev
 intent-layer scan
 intent-layer check
 intent-layer apply
@@ -403,6 +404,7 @@ intent-layer agent-result
 ```
 
 `init` creates the base `.intent` folders and lightweight schema files.
+`dev` starts the local Vite dev server at `127.0.0.1:5173` by default, with `--dry-run` support for command-plan verification.
 `scan` emits JSON for JSX/TSX bindings, read-only reasons, editable token coverage, and transform time.
 `check` applies minimal gates to the same result and returns a non-zero exit code when they fail.
 `apply` runs a single Tailwind token replace from `.intent-op.json` through the existing safe patch engine.

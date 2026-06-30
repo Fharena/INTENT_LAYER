@@ -417,6 +417,7 @@ intent-layer apply
 
 ```bash
 intent-layer init
+intent-layer dev
 intent-layer scan
 intent-layer check
 intent-layer apply
@@ -427,6 +428,7 @@ intent-layer agent-result
 ```
 
 `init`은 `.intent` 기본 폴더와 lightweight schema 파일을 만든다.
+`dev`는 local Vite dev server를 `127.0.0.1:5173` 기준으로 실행하며, `--dry-run`으로 command plan을 검증할 수 있다.
 `scan`은 repo의 JSX/TSX binding, read-only 원인, editable token coverage, transform time을 JSON으로 출력한다.
 `check`는 같은 결과에 최소 gate를 적용하고 실패 시 non-zero exit code를 반환한다.
 `apply`는 `.intent-op.json`의 단일 Tailwind token replace를 기존 safe patch 엔진으로 적용한다.

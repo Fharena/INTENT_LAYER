@@ -35,7 +35,7 @@ Measured inputs:
 - read-only composite variable related semantic diff fixture
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
-- CLI `init`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
+- CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -680,17 +680,19 @@ Interpretation:
 - Result recording creates related source and semantic token diffs even when only the imported definition changes.
 - Path aliases, barrel re-exports, package imports, and multi-hop import graphs are still out of scope.
 
-## 9.5 CLI Init/Scan/Check/Apply/Diff/Handoff
+## 9.5 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
 
 | Metric | Value |
 | --- | ---: |
 | Init exit code | 0 |
+| Dev exit code | 0 |
 | Scan exit code | 0 |
 | Check exit code | 0 |
 | Apply exit code | 0 |
 | Diff exit code | 0 |
 | Agent-context exit code | 0 |
 | Init command | `init` |
+| Dev command | `dev` |
 | Scan command | `scan` |
 | Check command | `check` |
 | Apply command | `apply` |
@@ -703,10 +705,11 @@ Interpretation:
 | Supported direct coverage | 87.5% |
 | Editable token coverage | 81.08% |
 | Syntax error count | 0 |
-| Max transform time | 0.3ms |
-| Init stdout bytes | 496 |
+| Max transform time | 0.221ms |
+| Init stdout bytes | 498 |
+| Dev stdout bytes | 499 |
 | Scan stdout bytes | 3262 |
-| Check stdout bytes | 3651 |
+| Check stdout bytes | 3658 |
 
 Init gate:
 
@@ -717,6 +720,20 @@ Init gate:
 | Existing path count | 4 |
 | Schema files present | true |
 
+Dev dry-run gate:
+
+| Metric | Value |
+| --- | ---: |
+| Dev ok | true |
+| Dry-run | true |
+| Host | `127.0.0.1` |
+| Port | 5173 |
+| URL | `http://127.0.0.1:5173` |
+| Uses local Vite | true |
+| Executable present | true |
+| Dev arg count | 5 |
+| Dev command plan time | 0.148ms |
+
 Check gates:
 
 | Gate | Value | Threshold | Result |
@@ -724,7 +741,7 @@ Check gates:
 | files scanned | 8 | >= 1 | pass |
 | syntax errors | 0 | 0 | pass |
 | supported direct coverage | 87.5% | >= 50% | pass |
-| max file transform | 0.3ms | <= 20ms | pass |
+| max file transform | 0.221ms | <= 20ms | pass |
 
 Apply/diff gate:
 
@@ -734,10 +751,10 @@ Apply/diff gate:
 | Apply exit code | 0 |
 | Diff exit code | 0 |
 | Apply target file | `.intent/tmp/CliApplyFixture.tsx` |
-| Operation file | `.intent/operations/2026-06-30T10-21-35-670Z.intent-op.json` |
-| Diff file | `.intent/diffs/2026-06-30T10-21-35-670Z.intent-diff.yml` |
+| Operation file | `.intent/operations/2026-06-30T10-29-38-960Z.intent-op.json` |
+| Diff file | `.intent/diffs/2026-06-30T10-29-38-960Z.intent-diff.yml` |
 | Operation log file | `.intent/operations/operation-log.json` |
-| Apply time | 3.189ms |
+| Apply time | 2.09ms |
 | Syntax errors after apply | 0 |
 | Diff bytes | 229 |
 | Diff change count | 1 |
@@ -749,7 +766,7 @@ Agent-context gate:
 | Graph scan exit code | 0 |
 | Agent-context exit code | 0 |
 | Subject | `DynamicRuntime` |
-| Context file | `.intent/agent/context_2026-06-30T10-21-35-622Z.md` |
+| Context file | `.intent/agent/context_2026-06-30T10-29-38-915Z.md` |
 | Selected binding id | `il_aecb838907` |
 | Selected file | `fixtures/corpus/DynamicRuntime.tsx` |
 | Graph entry count | 40 |
@@ -757,7 +774,7 @@ Agent-context gate:
 | Read-only binding count | 5 |
 | Editable token coverage | 81.08% |
 | Context markdown bytes | 9078 |
-| Context generation time | 17.646ms |
+| Context generation time | 19.122ms |
 | Required sections present | true |
 
 Agent-task gate:
@@ -768,10 +785,10 @@ Agent-task gate:
 | Agent-task exit code | 0 |
 | Graph entry count | 40 |
 | Selected binding id | `il_aecb838907` |
-| Task file | `.intent/agent/task_2026-06-30T10-21-35-641Z.md` |
+| Task file | `.intent/agent/task_2026-06-30T10-29-38-936Z.md` |
 | Task target file | `fixtures/corpus/DynamicRuntime.tsx` |
 | Task markdown bytes | 3541 |
-| Task generation time | 1.371ms |
+| Task generation time | 1.03ms |
 | Required sections present | true |
 
 Agent-result gate:
@@ -779,11 +796,11 @@ Agent-result gate:
 | Metric | Value |
 | --- | ---: |
 | Agent-result exit code | 0 |
-| Result file | `.intent/agent/result_2026-06-30T10-21-35-653Z.md` |
-| Diff file | `.intent/diffs/2026-06-30T10-21-35-653Z_agent.intent-diff.yml` |
+| Result file | `.intent/agent/result_2026-06-30T10-29-38-946Z.md` |
+| Diff file | `.intent/diffs/2026-06-30T10-29-38-946Z_agent.intent-diff.yml` |
 | Result target file | `.intent/tmp/CliAgentResultFixture.tsx` |
 | Result markdown bytes | 2388 |
-| Result generation time | 4.573ms |
+| Result generation time | 3.489ms |
 | Source diff line count | 2 |
 | Semantic change count | 1 |
 | Required sections present | true |
@@ -791,8 +808,9 @@ Agent-result gate:
 
 Interpretation:
 
-- `src/intent/cli.ts` calls the current instrumentation engine directly without starting a server.
+- `dev` is a thin wrapper around the local Vite binary; the other CLI commands call the current instrumentation engine directly without starting a server.
 - `init` creates the base `.intent` folders and lightweight schema files.
+- `dev --dry-run` verifies the command plan as JSON without starting the Vite process.
 - `scan` prints per-file binding counts, read-only counts, editable token coverage, transform time, and unsupported reasons as JSON.
 - `check` applies minimal gates to the same scan output and returns a non-zero exit code when they fail.
 - `apply` runs a single Tailwind token replace from `.intent-op.json` through the existing safe patch engine and records operation/diff/log artifacts.
@@ -800,7 +818,7 @@ Interpretation:
 - `agent-context` summarizes the full graph and selected binding into AI-ready markdown.
 - `agent-task` takes a binding id from `.intent/graph.intent.json` plus a desired change and creates structured handoff markdown.
 - `agent-result` takes a task file, result summary, changed files, and checks, then creates result markdown plus `.intent-diff.yml`.
-- The current CLI MVP implements `init`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`. `dev` wrapping remains launch polish work.
+- The current CLI MVP implements `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`.
 
 ## 10. Gate Results
 
@@ -817,6 +835,7 @@ Interpretation:
 | cold transform target | max <= 10ms | pass |
 | large transform stress | 401 bindings max <= 20ms | pass |
 | CLI init | `.intent` folders/schema created or present + exit code 0 | pass |
+| CLI dev dry-run | local Vite command plan created + host/port verified + exit code 0 | pass |
 | CLI scan | command `scan` + files >= 8 + bindings > 0 + JSON output | pass |
 | CLI check | files/syntax/coverage/transform gates all pass + exit code 0 | pass |
 | CLI apply/diff | `.intent-op.json` apply success + operation/diff/log created + diff summary change > 0 + syntax error 0 | pass |
@@ -848,7 +867,7 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `init`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now lets the repo state be inspected numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts without opening the browser.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts.
 
 What worked:
 
@@ -882,6 +901,7 @@ What worked:
 - 401-binding large TSX transform stress gate pass
 - CLI `scan`/`check` JSON report and gate pass
 - CLI `init` workspace/schema creation and gate pass
+- CLI `dev --dry-run` local Vite command plan creation and gate pass
 - CLI `apply` safe patch execution from `.intent-op.json` plus operation/diff/log output
 - CLI `diff` `.intent-diff.yml` JSON summary and gate pass
 - CLI `agent-context` AI-ready graph/binding context markdown generation and required-section gate pass
@@ -895,7 +915,7 @@ What remains weak:
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - branch undo currently supports pending undo discard only; arbitrary non-top patches are not directly reverted from source
-- CLI currently implements `init`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`; `dev` wrapping remains launch polish work
+- CLI currently implements `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`; npm packaging/install guidance remains launch polish work
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
 - automatic semantic analysis across path aliases, barrel re-exports, package imports, and cross-variable data flow is still missing

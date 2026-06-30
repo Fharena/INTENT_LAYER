@@ -520,7 +520,7 @@ packages/
     check
 ```
 
-MVP 구현 순서는 `init`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`를 먼저 제공하고, `dev`는 출시 polish 단계에서 확장한다.
+MVP 구현 순서는 `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`를 먼저 제공한다.
 
 ### 10.2 의존성 원칙
 
