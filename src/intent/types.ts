@@ -41,6 +41,24 @@ export interface IntentGraph {
   entries: Record<string, IntentBinding>;
 }
 
+export interface ClientMetric {
+  kind: "click-to-panel";
+  id: string | null;
+  status: "selected" | "missing-binding" | "missing-element";
+  createdAt: string;
+  graphFetchMs: number | null;
+  pickToPanelMs: number;
+  clickToPanelMs: number;
+  bindingLookupMs: number;
+  renderMs: number;
+}
+
+export interface ClientMetricsReport {
+  version: 1;
+  generatedAt: string;
+  metrics: ClientMetric[];
+}
+
 export interface PatchRequest {
   id: string;
   oldToken: string;

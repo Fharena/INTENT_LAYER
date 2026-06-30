@@ -1,6 +1,7 @@
 import { candidatesForToken } from "./tailwind";
 import type {
   AgentResultArtifact,
+  ClientMetric,
   AgentTaskResult,
   IntentBinding,
   IntentGraph,
@@ -18,6 +19,12 @@ type AgentTaskResponse = AgentTaskResult | PatchFailure;
 type AgentResultResponse = AgentResultArtifact | PatchFailure;
 
 const lastAgentTaskFileByIntentId = new Map<string, string>();
+
+declare global {
+  interface Window {
+    __intentMetrics?: ClientMetric[];
+  }
+}
 
 function createButton(label: string): HTMLButtonElement {
   const button = document.createElement("button");
@@ -345,6 +352,19 @@ export function initIntentOverlay() {
   let selectedElement: HTMLElement | null = null;
   let selectedBinding: IntentBinding | null = null;
   let pickMode = false;
+  let pickStartedAt = 0;
+  let graphFetchMs: number | null = null;
+
+  function recordMetric(metric: ClientMetric) {
+    window.__intentMetrics = [...(window.__intentMetrics ?? []), metric];
+    void fetch("/__intent/client-metric", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(metric)
+    }).catch(() => {
+      // Metrics must never break the editing path.
+    });
+  }
 
   function setStatus(message: string) {
     renderBinding(panel, selectedBinding, message);
@@ -353,8 +373,11 @@ export function initIntentOverlay() {
   renderBinding(panel, null, "Ready");
 
   panel.addEventListener("intent:start-pick", async () => {
+    const graphStartedAt = performance.now();
     const response = await fetch("/__intent/graph");
     graph = (await response.json()) as IntentGraph;
+    graphFetchMs = Number((performance.now() - graphStartedAt).toFixed(3));
+    pickStartedAt = performance.now();
     pickMode = true;
     setStatus("Pick mode active");
   });
@@ -367,13 +390,27 @@ export function initIntentOverlay() {
       const target = event.target as HTMLElement | null;
       if (!target || panel.contains(target)) return;
 
+      const clickStartedAt = performance.now();
       const element = target.closest("[data-intent-id]") as HTMLElement | null;
       event.preventDefault();
       event.stopPropagation();
       pickMode = false;
 
       if (!element || !graph) {
+        const renderStartedAt = performance.now();
         setStatus("No intent binding on this element");
+        const renderedAt = performance.now();
+        recordMetric({
+          kind: "click-to-panel",
+          id: null,
+          status: element ? "missing-binding" : "missing-element",
+          createdAt: new Date().toISOString(),
+          graphFetchMs,
+          pickToPanelMs: Number((renderedAt - pickStartedAt).toFixed(3)),
+          clickToPanelMs: Number((renderedAt - clickStartedAt).toFixed(3)),
+          bindingLookupMs: 0,
+          renderMs: Number((renderedAt - renderStartedAt).toFixed(3))
+        });
         return;
       }
 
@@ -383,8 +420,23 @@ export function initIntentOverlay() {
 
       selectedElement = element;
       selectedElement.setAttribute("data-intent-selected", "true");
+      const lookupStartedAt = performance.now();
       selectedBinding = graph.entries[element.dataset.intentId ?? ""] ?? null;
+      const lookupEndedAt = performance.now();
+      const renderStartedAt = performance.now();
       renderBinding(panel, selectedBinding, selectedBinding ? "Binding selected" : "Binding missing");
+      const renderedAt = performance.now();
+      recordMetric({
+        kind: "click-to-panel",
+        id: element.dataset.intentId ?? null,
+        status: selectedBinding ? "selected" : "missing-binding",
+        createdAt: new Date().toISOString(),
+        graphFetchMs,
+        pickToPanelMs: Number((renderedAt - pickStartedAt).toFixed(3)),
+        clickToPanelMs: Number((renderedAt - clickStartedAt).toFixed(3)),
+        bindingLookupMs: Number((lookupEndedAt - lookupStartedAt).toFixed(3)),
+        renderMs: Number((renderedAt - renderStartedAt).toFixed(3))
+      });
     },
     true
   );

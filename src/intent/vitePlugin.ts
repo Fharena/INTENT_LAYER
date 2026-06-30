@@ -9,6 +9,7 @@ import { applyTokenPatch, planTokenPatch, revertTokenPatch } from "./patch";
 import type {
   AgentResultRequest,
   AgentTaskRequest,
+  ClientMetric,
   IntentBinding,
   IntentGraph,
   PatchApplyResult,
@@ -20,6 +21,7 @@ interface IntentState {
   entriesByFile: Map<string, IntentBinding[]>;
   entriesById: Map<string, IntentBinding>;
   lastAppliedPatch: PatchApplyResult | null;
+  clientMetrics: ClientMetric[];
 }
 
 function writeJson(response: ServerResponse, statusCode: number, value: unknown) {
@@ -81,7 +83,8 @@ export function intentLayerSpike(): Plugin {
     rootDir: process.cwd(),
     entriesByFile: new Map(),
     entriesById: new Map(),
-    lastAppliedPatch: null
+    lastAppliedPatch: null,
+    clientMetrics: []
   };
 
   return {
@@ -122,6 +125,40 @@ export function intentLayerSpike(): Plugin {
 
         if (url.pathname === "/__intent/graph" && request.method === "GET") {
           writeJson(response, 200, toGraph(state));
+          return;
+        }
+
+        if (url.pathname === "/__intent/client-metrics" && request.method === "GET") {
+          writeJson(response, 200, {
+            version: 1,
+            generatedAt: new Date().toISOString(),
+            metrics: state.clientMetrics
+          });
+          return;
+        }
+
+        if (url.pathname === "/__intent/client-metrics" && request.method === "DELETE") {
+          state.clientMetrics = [];
+          writeJson(response, 200, {
+            ok: true,
+            metrics: []
+          });
+          return;
+        }
+
+        if (url.pathname === "/__intent/client-metric" && request.method === "POST") {
+          try {
+            const metric = JSON.parse(await readBody(request)) as ClientMetric;
+            state.clientMetrics.push(metric);
+            state.clientMetrics = state.clientMetrics.slice(-100);
+            writeJson(response, 200, { ok: true });
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
           return;
         }
 
