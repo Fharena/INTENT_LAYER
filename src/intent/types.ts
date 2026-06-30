@@ -54,12 +54,12 @@ export interface ClickToPanelMetric {
 }
 
 export interface PatchInteractionMetric {
-  kind: "patch-preview" | "patch-apply";
-  id: string;
+  kind: "patch-preview" | "patch-apply" | "patch-revert";
+  id: string | null;
   status: "ok" | "rejected";
   createdAt: string;
-  oldToken: string;
-  nextToken: string;
+  oldToken?: string;
+  nextToken?: string;
   roundTripMs: number;
   serverMs: number | null;
   renderMs: number;
@@ -108,6 +108,7 @@ export interface PatchFailure {
   metrics?: {
     previewMs?: number;
     applyMs?: number;
+    revertMs?: number;
     taskMs?: number;
     resultMs?: number;
   };

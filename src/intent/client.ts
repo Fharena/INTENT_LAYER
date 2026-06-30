@@ -5,6 +5,7 @@ import type {
   AgentTaskResult,
   IntentBinding,
   IntentGraph,
+  PatchRequest,
   IntentToken,
   PatchApplyResult,
   PatchFailure,
@@ -117,22 +118,23 @@ function renderTokenRow(
   previewBox.style.whiteSpace = "pre-wrap";
   previewBox.style.display = "none";
 
-  function patchBody() {
-    return JSON.stringify({
+  function patchRequest(): PatchRequest {
+    return {
       id: binding.id,
       oldToken: token.token,
       nextToken: select.value,
       sourceStart: token.sourceStart,
       sourceEnd: token.sourceEnd
-    });
+    };
   }
 
   preview.addEventListener("click", async () => {
+    const request = patchRequest();
     const startedAt = performance.now();
     const response = await fetch("/__intent/preview", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: patchBody()
+      body: JSON.stringify(request)
     });
     const result = (await response.json()) as PreviewResponse;
     const responseAt = performance.now();
@@ -152,8 +154,8 @@ function renderTokenRow(
       id: binding.id,
       status: result.ok ? "ok" : "rejected",
       createdAt: new Date().toISOString(),
-      oldToken: token.token,
-      nextToken: select.value,
+      oldToken: result.ok ? result.oldToken : request.oldToken,
+      nextToken: result.ok ? result.nextToken : request.nextToken,
       roundTripMs: Number((responseAt - startedAt).toFixed(3)),
       serverMs: result.ok ? result.metrics.previewMs : result.metrics?.previewMs ?? null,
       renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
@@ -162,11 +164,12 @@ function renderTokenRow(
   });
 
   apply.addEventListener("click", async () => {
+    const request = patchRequest();
     const startedAt = performance.now();
     const response = await fetch("/__intent/apply", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: patchBody()
+      body: JSON.stringify(request)
     });
     const result = (await response.json()) as PatchResponse;
     const responseAt = performance.now();
@@ -182,8 +185,8 @@ function renderTokenRow(
       id: binding.id,
       status: result.ok ? "ok" : "rejected",
       createdAt: new Date().toISOString(),
-      oldToken: token.token,
-      nextToken: select.value,
+      oldToken: result.ok ? result.oldToken : request.oldToken,
+      nextToken: result.ok ? result.nextToken : request.nextToken,
       roundTripMs: Number((responseAt - startedAt).toFixed(3)),
       serverMs: result.ok ? result.metrics.applyMs : result.metrics?.applyMs ?? null,
       renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
@@ -312,10 +315,13 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   undo.style.marginTop = "10px";
   undo.style.marginLeft = "8px";
   undo.addEventListener("click", async () => {
+    const startedAt = performance.now();
     const response = await fetch("/__intent/revert-last", {
       method: "POST"
     });
     const result = (await response.json()) as RevertResponse;
+    const responseAt = performance.now();
+    const renderStartedAt = performance.now();
     if (result.ok) {
       renderBinding(
         panel,
@@ -325,6 +331,19 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     } else {
       renderBinding(panel, binding, `Undo rejected: ${result.reason}`);
     }
+    const renderedAt = performance.now();
+    recordClientMetric({
+      kind: "patch-revert",
+      id: result.ok ? result.id : binding?.id ?? null,
+      status: result.ok ? "ok" : "rejected",
+      createdAt: new Date().toISOString(),
+      oldToken: result.ok ? result.oldToken : undefined,
+      nextToken: result.ok ? result.restoredToken : undefined,
+      roundTripMs: Number((responseAt - startedAt).toFixed(3)),
+      serverMs: result.ok ? result.metrics.revertMs : result.metrics?.revertMs ?? null,
+      renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
+      reason: result.ok ? undefined : result.reason
+    });
   });
   panel.appendChild(undo);
 
@@ -369,12 +388,12 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
 
     for (const token of editableTokens) {
       renderTokenRow(panel, binding, token, (message) => {
-        renderBinding(panel, binding, message);
+        statusLine.textContent = message;
       });
     }
 
     renderAgentTaskForm(panel, binding, (message) => {
-      renderBinding(panel, binding, message);
+      statusLine.textContent = message;
     });
   }
 

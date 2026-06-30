@@ -227,7 +227,7 @@ export function revertTokenPatch(
       ok: false,
       reason: "missing-last-patch",
       detail: "No applied patch is available to revert.",
-      metrics: { applyMs: Number((performance.now() - started).toFixed(3)) }
+      metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
     };
   }
 
@@ -237,7 +237,7 @@ export function revertTokenPatch(
       id: lastPatch.id,
       reason: "missing-binding",
       detail: "No source binding exists for the last patch.",
-      metrics: { applyMs: Number((performance.now() - started).toFixed(3)) }
+      metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
     };
   }
 
@@ -252,7 +252,7 @@ export function revertTokenPatch(
       id: lastPatch.id,
       reason: "revert-token-mismatch",
       detail: `Expected "${lastPatch.nextToken}" at the last patch range, found "${currentToken}".`,
-      metrics: { applyMs: Number((performance.now() - started).toFixed(3)) }
+      metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
     };
   }
 
