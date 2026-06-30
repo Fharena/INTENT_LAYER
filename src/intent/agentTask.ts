@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { sourceHash } from "./hash";
 import type { AgentTaskRequest, AgentTaskResult, IntentBinding, PatchFailure } from "./types";
 
@@ -215,7 +216,10 @@ interface RelatedSourceRange {
 function resolveRelativeImport(fromFile: string, specifier: string): string | null {
   if (!specifier.startsWith(".")) return null;
 
-  const base = path.resolve(path.dirname(fromFile), specifier);
+  return resolveFileCandidate(path.resolve(path.dirname(fromFile), specifier));
+}
+
+function resolveFileCandidate(base: string): string | null {
   const candidates = [
     base,
     `${base}.ts`,
@@ -229,6 +233,71 @@ function resolveRelativeImport(fromFile: string, specifier: string): string | nu
   ];
 
   return candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) ?? null;
+}
+
+interface TsConfigPaths {
+  baseUrl: string;
+  paths: Record<string, string[]>;
+}
+
+function readTsConfigPaths(rootDir: string): TsConfigPaths | null {
+  const configFile = path.join(rootDir, "tsconfig.json");
+  if (!fs.existsSync(configFile)) return null;
+
+  try {
+    const parsed = ts.parseConfigFileTextToJson(configFile, fs.readFileSync(configFile, "utf8")).config as {
+      compilerOptions?: {
+        baseUrl?: string;
+        paths?: Record<string, string[]>;
+      };
+    };
+    const paths = parsed.compilerOptions?.paths;
+    if (!paths || typeof paths !== "object") return null;
+
+    return {
+      baseUrl: path.resolve(rootDir, parsed.compilerOptions?.baseUrl ?? "."),
+      paths
+    };
+  } catch {
+    return null;
+  }
+}
+
+function matchPathAlias(pattern: string, specifier: string): string[] | null {
+  const wildcardIndex = pattern.indexOf("*");
+  if (wildcardIndex < 0) return pattern === specifier ? [] : null;
+
+  const prefix = pattern.slice(0, wildcardIndex);
+  const suffix = pattern.slice(wildcardIndex + 1);
+  if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix)) return null;
+
+  return [specifier.slice(prefix.length, specifier.length - suffix.length)];
+}
+
+function resolvePathAliasImport(rootDir: string, specifier: string): string | null {
+  const config = readTsConfigPaths(rootDir);
+  if (!config) return null;
+
+  for (const [pattern, targets] of Object.entries(config.paths)) {
+    const wildcards = matchPathAlias(pattern, specifier);
+    if (!wildcards) continue;
+
+    for (const target of targets) {
+      let mapped = target;
+      for (const wildcard of wildcards) {
+        mapped = mapped.replace("*", wildcard);
+      }
+
+      const resolved = resolveFileCandidate(path.resolve(config.baseUrl, mapped));
+      if (resolved) return resolved;
+    }
+  }
+
+  return null;
+}
+
+function resolveImportFile(rootDir: string, fromFile: string, specifier: string): string | null {
+  return resolveRelativeImport(fromFile, specifier) ?? resolvePathAliasImport(rootDir, specifier);
 }
 
 function importedNameForLocalIdentifier(source: string, localIdentifier: string): { importedName: string; file: string } | null {
@@ -253,6 +322,36 @@ function importedNameForLocalIdentifier(source: string, localIdentifier: string)
   return null;
 }
 
+function reExportForIdentifier(
+  source: string,
+  identifier: string
+): { importedName: string; file: string } | null {
+  const namedExportPattern = /export\s+{([\s\S]*?)}\s+from\s+["']([^"']+)["']/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = namedExportPattern.exec(source)) !== null) {
+    const specifiers = match[1].split(",");
+    for (const rawSpecifier of specifiers) {
+      const specifier = rawSpecifier.trim();
+      if (!specifier) continue;
+
+      const aliasMatch = /^([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)$/.exec(specifier);
+      const importedName = aliasMatch?.[1] ?? specifier;
+      const exportedName = aliasMatch?.[2] ?? specifier;
+      if (exportedName === identifier && /^[A-Za-z_$][\w$]*$/.test(importedName)) {
+        return { importedName, file: match[2] };
+      }
+    }
+  }
+
+  const starExportPattern = /export\s+\*\s+from\s+["']([^"']+)["']/g;
+  while ((match = starExportPattern.exec(source)) !== null) {
+    return { importedName: identifier, file: match[1] };
+  }
+
+  return null;
+}
+
 function findVariantDeclarationRange(
   source: string,
   identifier: string
@@ -272,6 +371,39 @@ function findVariantDeclarationRange(
     start: variableMatch.index,
     end: scanExpressionStatementEnd(source, variableMatch.index)
   };
+}
+
+function findImportedVariantDeclaration(
+  rootDir: string,
+  file: string,
+  identifier: string,
+  visited = new Set<string>()
+): RelatedSourceRange | null {
+  const normalizedFile = path.resolve(file);
+  const visitKey = `${normalizedFile}:${identifier}`;
+  if (visited.has(visitKey) || visited.size > 4) return null;
+  visited.add(visitKey);
+
+  const source = fs.readFileSync(normalizedFile, "utf8");
+  const localRange = findVariantDeclarationRange(source, identifier);
+  if (localRange) {
+    return {
+      file: normalizedFile,
+      relativeFile: path.relative(rootDir, normalizedFile).replace(/\\/g, "/"),
+      sourceHash: sourceHash(source),
+      source,
+      kind: "variant-function",
+      identifier,
+      start: localRange.start,
+      end: localRange.end
+    };
+  }
+
+  const reExport = reExportForIdentifier(source, identifier);
+  const reExportFile = reExport ? resolveImportFile(rootDir, normalizedFile, reExport.file) : null;
+  if (!reExport || !reExportFile) return null;
+
+  return findImportedVariantDeclaration(rootDir, reExportFile, reExport.importedName, visited);
 }
 
 function findRelatedSourceRange(
@@ -321,23 +453,10 @@ function findRelatedSourceRange(
   }
 
   const imported = importedNameForLocalIdentifier(source, identifier);
-  const importedFile = imported ? resolveRelativeImport(binding.file, imported.file) : null;
+  const importedFile = imported ? resolveImportFile(rootDir, binding.file, imported.file) : null;
   if (!imported || !importedFile) return null;
 
-  const importedSource = fs.readFileSync(importedFile, "utf8");
-  const importedRange = findVariantDeclarationRange(importedSource, imported.importedName);
-  if (!importedRange) return null;
-
-  return {
-    file: importedFile,
-    relativeFile: path.relative(rootDir, importedFile).replace(/\\/g, "/"),
-    sourceHash: sourceHash(importedSource),
-    source: importedSource,
-    kind: "variant-function",
-    identifier: imported.importedName,
-    start: importedRange.start,
-    end: importedRange.end
-  };
+  return findImportedVariantDeclaration(rootDir, importedFile, imported.importedName);
 }
 
 function sourceRange(binding: IntentBinding) {

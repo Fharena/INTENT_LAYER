@@ -1064,6 +1064,110 @@ const importedVariantHandoffResult = recordAgentResult(rootDir, importedVariantH
     "Evaluation fixture for one-hop relative named import variant-function handoff context; no LLM call is made."
 });
 
+const aliasBarrelVariantRoot = resetTmpSubdir("alias-barrel-variant-handoff");
+const aliasBarrelUiDir = path.join(aliasBarrelVariantRoot, "src", "ui");
+const aliasBarrelScreensDir = path.join(aliasBarrelVariantRoot, "src", "screens");
+fs.mkdirSync(aliasBarrelUiDir, { recursive: true });
+fs.mkdirSync(aliasBarrelScreensDir, { recursive: true });
+fs.writeFileSync(
+  path.join(aliasBarrelVariantRoot, "tsconfig.json"),
+  `${JSON.stringify(
+    {
+      compilerOptions: {
+        baseUrl: ".",
+        paths: {
+          "@/*": ["src/*"]
+        }
+      }
+    },
+    null,
+    2
+  )}\n`
+);
+const aliasBarrelVariantDefinitionFixture = path.join(aliasBarrelUiDir, "buttonVariants.ts");
+fs.writeFileSync(
+  aliasBarrelVariantDefinitionFixture,
+  [
+    "declare function cva(base: string, options: unknown): (value: { variant: \"primary\" | \"ghost\" }) => string;",
+    "export const buttonVariants = cva(\"inline-flex items-center gap-4 rounded-lg px-4 py-2\", {",
+    "  variants: {",
+    "    variant: {",
+    "      primary: \"bg-teal-700 text-white\",",
+    "      ghost: \"bg-white text-slate-700\"",
+    "    }",
+    "  }",
+    "});",
+    ""
+  ].join("\n")
+);
+const aliasBarrelIndexFixture = path.join(aliasBarrelUiDir, "index.ts");
+fs.writeFileSync(aliasBarrelIndexFixture, "export { buttonVariants } from \"./buttonVariants\";\n");
+const aliasBarrelVariantHandoffFixture = path.join(
+  aliasBarrelScreensDir,
+  "AliasBarrelVariantHandoffFixture.tsx"
+);
+fs.writeFileSync(
+  aliasBarrelVariantHandoffFixture,
+  [
+    "import { buttonVariants } from \"@/ui\";",
+    "",
+    "export function AliasBarrelVariantHandoffFixture() {",
+    "  return <button className={buttonVariants({ variant: \"primary\" })}>Alias barrel handoff target</button>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const aliasBarrelVariantHandoffInstrument = instrumentSource({
+  code: fs.readFileSync(aliasBarrelVariantHandoffFixture, "utf8"),
+  file: aliasBarrelVariantHandoffFixture,
+  rootDir: aliasBarrelVariantRoot
+});
+const aliasBarrelVariantHandoffEntry = aliasBarrelVariantHandoffInstrument.entries[0];
+const aliasBarrelVariantHandoffTask = createAgentTask(
+  aliasBarrelVariantRoot,
+  aliasBarrelVariantHandoffEntry,
+  {
+    id: aliasBarrelVariantHandoffEntry?.id ?? "missing-alias-barrel-variant-handoff-binding",
+    desiredChange: "Change this path-alias barrel variant-backed className through an agent handoff."
+  }
+);
+const aliasBarrelVariantHandoffRelatedSnapshot = aliasBarrelVariantHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedSourceSnapshot | null>(
+      aliasBarrelVariantHandoffTask.markdown,
+      "Related Source Snapshot"
+    )
+  : null;
+if (aliasBarrelVariantHandoffTask.ok) {
+  fs.writeFileSync(
+    aliasBarrelVariantDefinitionFixture,
+    fs
+      .readFileSync(aliasBarrelVariantDefinitionFixture, "utf8")
+      .replace(
+        "inline-flex items-center gap-4 rounded-lg px-4 py-2",
+        "inline-flex items-center gap-6 rounded-xl px-5 py-3"
+      )
+      .replace("bg-teal-700", "bg-cyan-700")
+  );
+}
+const aliasBarrelVariantHandoffSyntaxErrorsAfterResult =
+  parseSyntaxErrorCount(aliasBarrelVariantDefinitionFixture) +
+  parseSyntaxErrorCount(aliasBarrelIndexFixture) +
+  parseSyntaxErrorCount(aliasBarrelVariantHandoffFixture);
+const aliasBarrelVariantHandoffResult = recordAgentResult(
+  aliasBarrelVariantRoot,
+  aliasBarrelVariantHandoffEntry,
+  {
+    id: aliasBarrelVariantHandoffEntry?.id ?? "missing-alias-barrel-variant-handoff-binding",
+    taskFile: aliasBarrelVariantHandoffTask.ok ? aliasBarrelVariantHandoffTask.taskFile : undefined,
+    summary:
+      "Alias barrel variant handoff fixture: updated the related cva-like declaration behind a tsconfig path alias and barrel export.",
+    changedFiles: ["src/ui/buttonVariants.ts"],
+    checks: ["npm run typecheck", "npm run eval", "npm run build"],
+    notes:
+      "Evaluation fixture for tsconfig paths plus one-hop barrel variant-function handoff context; no LLM call is made."
+  }
+);
+
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
 fs.writeFileSync(
   cnPatchFixture,
@@ -2049,6 +2153,61 @@ const report = {
       ? importedVariantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  aliasBarrelVariantHandoffBinding: {
+    entryCreated: Boolean(aliasBarrelVariantHandoffEntry),
+    root: reportPath(aliasBarrelVariantRoot),
+    kind: aliasBarrelVariantHandoffEntry?.className.kind ?? null,
+    unsupportedReason: aliasBarrelVariantHandoffEntry?.className.unsupportedReason ?? null,
+    value: aliasBarrelVariantHandoffEntry?.className.value ?? null,
+    tokenCount: aliasBarrelVariantHandoffEntry?.tokens.length ?? 0,
+    taskOk: aliasBarrelVariantHandoffTask.ok,
+    taskMs: aliasBarrelVariantHandoffTask.ok
+      ? aliasBarrelVariantHandoffTask.metrics.taskMs
+      : aliasBarrelVariantHandoffTask.metrics?.taskMs,
+    relatedSnapshotAvailable: Boolean(aliasBarrelVariantHandoffRelatedSnapshot),
+    relatedSnapshotFile: aliasBarrelVariantHandoffRelatedSnapshot?.file ?? null,
+    relatedSnapshotKind: aliasBarrelVariantHandoffRelatedSnapshot?.kind ?? null,
+    relatedSnapshotIdentifier: aliasBarrelVariantHandoffRelatedSnapshot?.identifier ?? null,
+    relatedSnapshotIncludesCva: Boolean(aliasBarrelVariantHandoffRelatedSnapshot?.excerpt.includes("cva(")),
+    resultOk: aliasBarrelVariantHandoffResult.ok,
+    resultMs: aliasBarrelVariantHandoffResult.ok
+      ? aliasBarrelVariantHandoffResult.metrics.resultMs
+      : aliasBarrelVariantHandoffResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: aliasBarrelVariantHandoffSyntaxErrorsAfterResult,
+    sourceDiffLineCount: aliasBarrelVariantHandoffResult.ok
+      ? aliasBarrelVariantHandoffResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: aliasBarrelVariantHandoffResult.ok
+      ? Boolean(aliasBarrelVariantHandoffResult.sourceDiff)
+      : false,
+    componentDiffLineCount: aliasBarrelVariantHandoffResult.ok
+      ? aliasBarrelVariantHandoffResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: aliasBarrelVariantHandoffResult.ok
+      ? Boolean(aliasBarrelVariantHandoffResult.componentSourceDiff)
+      : false,
+    relatedResultSnapshotAvailable: aliasBarrelVariantHandoffResult.ok
+      ? aliasBarrelVariantHandoffResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: aliasBarrelVariantHandoffResult.ok
+      ? aliasBarrelVariantHandoffResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: aliasBarrelVariantHandoffResult.ok
+      ? Boolean(aliasBarrelVariantHandoffResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: aliasBarrelVariantHandoffResult.ok
+      ? aliasBarrelVariantHandoffResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedSemanticDiffPresent: aliasBarrelVariantHandoffResult.ok
+      ? Boolean(aliasBarrelVariantHandoffResult.relatedSemanticDiff)
+      : false,
+    relatedSemanticTokenAddedCount: aliasBarrelVariantHandoffResult.ok
+      ? aliasBarrelVariantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedSemanticTokenRemovedCount: aliasBarrelVariantHandoffResult.ok
+      ? aliasBarrelVariantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
@@ -2245,6 +2404,22 @@ const report = {
       (importedVariantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
       (importedVariantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
       importedVariantHandoffSyntaxErrorsAfterResult === 0,
+    aliasBarrelVariantHandoffRelatedSourcePass:
+      aliasBarrelVariantHandoffEntry?.className.kind === "read-only" &&
+      aliasBarrelVariantHandoffEntry.className.unsupportedReason === "variant-function" &&
+      aliasBarrelVariantHandoffTask.ok &&
+      aliasBarrelVariantHandoffRelatedSnapshot?.kind === "variant-function" &&
+      aliasBarrelVariantHandoffRelatedSnapshot.identifier === "buttonVariants" &&
+      aliasBarrelVariantHandoffRelatedSnapshot.file === "src/ui/buttonVariants.ts" &&
+      aliasBarrelVariantHandoffRelatedSnapshot.excerpt.includes("cva(") &&
+      aliasBarrelVariantHandoffResult.ok &&
+      aliasBarrelVariantHandoffResult.source.relatedSnapshotAvailable &&
+      aliasBarrelVariantHandoffResult.source.relatedDiffLineCount > 0 &&
+      Boolean(aliasBarrelVariantHandoffResult.relatedSourceDiff) &&
+      aliasBarrelVariantHandoffResult.source.relatedSemanticChangeCount >= 2 &&
+      (aliasBarrelVariantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
+      (aliasBarrelVariantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
+      aliasBarrelVariantHandoffSyntaxErrorsAfterResult === 0,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch",
     operationLogUndoStackPass:
