@@ -274,6 +274,10 @@ export interface PatchUndoDiscardRequest {
   note?: string;
 }
 
+export interface PatchUndoRevertRequest {
+  operationFile: string;
+}
+
 export interface PatchUndoDiscardResult {
   ok: true;
   discarded: true;
@@ -284,6 +288,11 @@ export interface PatchUndoDiscardResult {
   metrics: {
     discardMs: number;
   };
+}
+
+export interface PatchUndoRevertResult extends PatchRevertResult {
+  operationLogFile: string;
+  pendingCount: number;
 }
 
 export interface AgentTaskRequest {

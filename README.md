@@ -91,7 +91,7 @@ The demo currently supports:
 - installable `intent-layer` bin wrapper through `bin/intent-layer.cjs`, plus package `/vite` wrapper export, installed plugin transform smoke, installed Vite dev server preview/apply smoke, and installed multi-file graph refresh metrics in `reports/performance/spike-evaluation.json`
 - Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
 - operation-log-backed undo stack and pending undo history display for applied patches
-- non-destructive pending undo discard controls for minimal branch undo handling
+- pending undo discard and safe non-top revert controls for branch undo handling
 - revert conflict artifact output at `.intent/conflicts/*.intent-conflict.json` when undo cannot safely restore the stored token
 - undo conflict list and discard-pending-undo resolution flow in the overlay
 - structured agent handoff task generation at `.intent/agent/task_*.md`

@@ -15,6 +15,7 @@ import {
   recordPatchApplyInOperationLog,
   recordPatchRevertInOperationLog,
   removeDiscardedPatchFromStack,
+  revertPendingUndo,
   revertTokenPatch,
   resolvePatchConflict,
   undoHistoryFromStack
@@ -28,7 +29,8 @@ import type {
   PatchApplyResult,
   PatchConflictResolveRequest,
   PatchRequest,
-  PatchUndoDiscardRequest
+  PatchUndoDiscardRequest,
+  PatchUndoRevertRequest
 } from "./types";
 
 interface IntentState {
@@ -316,6 +318,29 @@ export function intentLayerSpike(): Plugin {
             const result = discardPendingUndo(state.rootDir, body);
             if (result.ok) {
               state.undoStack = removeDiscardedPatchFromStack(state.undoStack, result.discardedPatch);
+            }
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/revert-undo" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as PatchUndoRevertRequest;
+            if (state.undoStack.length === 0) {
+              state.undoStack = pendingUndoStackFromOperationLog(state.rootDir);
+            }
+            const patch = state.undoStack.find((item) => item.operationFile === body.operationFile);
+            const entry = patch ? state.entriesById.get(patch.id) : undefined;
+            const result = revertPendingUndo(state.rootDir, entry, body);
+            if (result.ok) {
+              state.undoStack = state.undoStack.filter((item) => item.operationFile !== body.operationFile);
             }
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {

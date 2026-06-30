@@ -14,6 +14,7 @@ import type {
   PatchPreview,
   PatchRevertResult,
   PatchUndoDiscardResult,
+  PatchUndoRevertResult,
   UndoHistoryReport
 } from "./types";
 
@@ -26,6 +27,7 @@ type UndoHistoryResponse = UndoHistoryReport;
 type ConflictReportResponse = PatchConflictReport;
 type ConflictResolveResponse = PatchConflictResolveResult | PatchFailure;
 type UndoDiscardResponse = PatchUndoDiscardResult | PatchFailure;
+type UndoRevertResponse = PatchUndoRevertResult | PatchFailure;
 
 const lastAgentTaskFileByIntentId = new Map<string, string>();
 
@@ -367,7 +369,31 @@ function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => vo
           }
         });
 
-        entry.append(text, discard);
+        const revert = createButton("Revert");
+        revert.style.marginLeft = "6px";
+        revert.style.padding = "3px 6px";
+        revert.style.fontSize = "10px";
+        revert.addEventListener("click", async () => {
+          revert.disabled = true;
+          revert.style.cursor = "default";
+          const response = await fetch("/__intent/revert-undo", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              operationFile: item.operationFile
+            })
+          });
+          const result = (await response.json()) as UndoRevertResponse;
+          if (result.ok) {
+            setStatus(`Undo reverted: ${item.nextToken} -> ${item.oldToken}, ${result.pendingCount} pending`);
+          } else {
+            revert.disabled = false;
+            revert.style.cursor = "pointer";
+            setStatus(`Undo revert rejected: ${result.reason}`);
+          }
+        });
+
+        entry.append(text, revert, discard);
         list.appendChild(entry);
       }
 

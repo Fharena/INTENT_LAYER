@@ -18,6 +18,8 @@ import type {
   PatchUndoDiscardReference,
   PatchUndoDiscardRequest,
   PatchUndoDiscardResult,
+  PatchUndoRevertRequest,
+  PatchUndoRevertResult,
   UndoHistoryReport
 } from "./types";
 
@@ -503,6 +505,39 @@ export function discardPendingUndo(
     metrics: {
       discardMs: Number((performance.now() - started).toFixed(3))
     }
+  };
+}
+
+export function revertPendingUndo(
+  rootDir: string,
+  entry: IntentBinding | undefined,
+  request: PatchUndoRevertRequest
+): PatchUndoRevertResult | PatchFailure {
+  const started = performance.now();
+  const pending = pendingUndoStackFromOperationLog(rootDir);
+  const patch = pending.find((item) => patchMatchesOperationFile(rootDir, item, request.operationFile));
+
+  if (!patch) {
+    return {
+      ok: false,
+      reason: "missing-pending-undo",
+      detail: "No pending undo entry matches the requested operation file.",
+      metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
+  const result = revertTokenPatch(rootDir, patch, entry);
+  if (!result.ok) {
+    return result;
+  }
+
+  const operationLogFile = recordPatchRevertInOperationLog(rootDir, result);
+  const pendingCount = pendingUndoStackFromOperationLog(rootDir).length;
+
+  return {
+    ...result,
+    operationLogFile,
+    pendingCount
   };
 }
 

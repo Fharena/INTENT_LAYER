@@ -17,6 +17,7 @@ import {
   readPatchConflictReport,
   recordPatchApplyInOperationLog,
   recordPatchRevertInOperationLog,
+  revertPendingUndo,
   revertTokenPatch,
   resolvePatchConflict
 } from "../src/intent/patch";
@@ -1984,6 +1985,89 @@ const pendingAfterBranchRevert = pendingUndoStackFromOperationLog(rootDir);
 const historyAfterBranchRevert = pendingUndoHistoryFromOperationLog(rootDir);
 const syntaxErrorsAfterBranchDiscard = parseSyntaxErrorCount(operationBranchDiscardFixture);
 
+const operationBranchRevertFixture = path.join(tmpDir, "OperationBranchRevertFixture.tsx");
+fs.writeFileSync(
+  operationBranchRevertFixture,
+  [
+    "export function OperationBranchRevertFixture() {",
+    "  return <div className=\"grid grid-cols-3 gap-4 rounded-lg p-6\">Branch revert target</div>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const operationBranchRevertInstrument = instrumentSource({
+  code: fs.readFileSync(operationBranchRevertFixture, "utf8"),
+  file: operationBranchRevertFixture,
+  rootDir
+});
+const operationBranchRevertEntry = operationBranchRevertInstrument.entries[0];
+const operationBranchRevertGap = operationBranchRevertEntry.tokens.find((token) => token.token === "gap-4");
+const operationBranchRevertApplyOne = applyTokenPatch(rootDir, operationBranchRevertEntry, {
+  id: operationBranchRevertEntry.id,
+  oldToken: "gap-4",
+  nextToken: "gap-6",
+  sourceStart: operationBranchRevertGap?.sourceStart,
+  sourceEnd: operationBranchRevertGap?.sourceEnd
+});
+if (operationBranchRevertApplyOne.ok) {
+  recordPatchApplyInOperationLog(rootDir, operationBranchRevertApplyOne);
+}
+const operationBranchRevertAfterOne = instrumentSource({
+  code: fs.readFileSync(operationBranchRevertFixture, "utf8"),
+  file: operationBranchRevertFixture,
+  rootDir
+});
+const operationBranchRevertEntryAfterOne = operationBranchRevertAfterOne.entries[0];
+const operationBranchRevertPadding = operationBranchRevertEntryAfterOne.tokens.find((token) => token.token === "p-6");
+const operationBranchRevertApplyTwo = applyTokenPatch(rootDir, operationBranchRevertEntryAfterOne, {
+  id: operationBranchRevertEntryAfterOne.id,
+  oldToken: "p-6",
+  nextToken: "p-8",
+  sourceStart: operationBranchRevertPadding?.sourceStart,
+  sourceEnd: operationBranchRevertPadding?.sourceEnd
+});
+if (operationBranchRevertApplyTwo.ok) {
+  recordPatchApplyInOperationLog(rootDir, operationBranchRevertApplyTwo);
+}
+const pendingAfterBranchRevertApply = pendingUndoStackFromOperationLog(rootDir);
+const historyAfterBranchRevertApply = pendingUndoHistoryFromOperationLog(rootDir);
+const operationBranchRevertAfterTwo = instrumentSource({
+  code: fs.readFileSync(operationBranchRevertFixture, "utf8"),
+  file: operationBranchRevertFixture,
+  rootDir
+});
+const operationBranchRevertEntryAfterTwo = operationBranchRevertAfterTwo.entries[0];
+const operationBranchRevertNonTop = operationBranchRevertApplyOne.ok
+  ? revertPendingUndo(rootDir, operationBranchRevertEntryAfterTwo, {
+      operationFile: operationBranchRevertApplyOne.operationFile
+    })
+  : {
+      ok: false as const,
+      reason: "missing-branch-revert-apply",
+      detail: "The first branch revert apply failed."
+    };
+const pendingAfterBranchRevertNonTop = pendingUndoStackFromOperationLog(rootDir);
+const historyAfterBranchRevertNonTop = pendingUndoHistoryFromOperationLog(rootDir);
+const branchRevertSourceAfterNonTop = fs.readFileSync(operationBranchRevertFixture, "utf8");
+const operationBranchRevertAfterNonTop = instrumentSource({
+  code: branchRevertSourceAfterNonTop,
+  file: operationBranchRevertFixture,
+  rootDir
+});
+const operationBranchRevertEntryAfterNonTop = operationBranchRevertAfterNonTop.entries[0];
+const operationBranchRevertTop = revertTokenPatch(
+  rootDir,
+  pendingAfterBranchRevertNonTop[pendingAfterBranchRevertNonTop.length - 1],
+  operationBranchRevertEntryAfterNonTop
+);
+if (operationBranchRevertTop.ok) {
+  recordPatchRevertInOperationLog(rootDir, operationBranchRevertTop);
+}
+const pendingAfterBranchRevertTop = pendingUndoStackFromOperationLog(rootDir);
+const historyAfterBranchRevertTop = pendingUndoHistoryFromOperationLog(rootDir);
+const branchRevertSourceAfterTop = fs.readFileSync(operationBranchRevertFixture, "utf8");
+const syntaxErrorsAfterBranchRevert = parseSyntaxErrorCount(operationBranchRevertFixture);
+
 const operationConflictFixture = path.join(tmpDir, "OperationConflictFixture.tsx");
 fs.writeFileSync(
   operationConflictFixture,
@@ -2467,6 +2551,27 @@ const report = {
     pendingAfterRevert: pendingAfterBranchRevert.length,
     historyAfterRevertCount: historyAfterBranchRevert.pendingCount,
     syntaxErrorsAfterDiscard: syntaxErrorsAfterBranchDiscard
+  },
+  operationBranchRevert: {
+    firstApplyOk: operationBranchRevertApplyOne.ok,
+    secondApplyOk: operationBranchRevertApplyTwo.ok,
+    pendingAfterApply: pendingAfterBranchRevertApply.length,
+    historyAfterApplyCount: historyAfterBranchRevertApply.pendingCount,
+    nonTopRevertOk: operationBranchRevertNonTop.ok,
+    nonTopRevertMs: operationBranchRevertNonTop.ok ? operationBranchRevertNonTop.metrics.revertMs : null,
+    nonTopRestoredToken: operationBranchRevertNonTop.ok ? operationBranchRevertNonTop.restoredToken : null,
+    pendingAfterNonTopRevert: pendingAfterBranchRevertNonTop.length,
+    historyAfterNonTopRevertCount: historyAfterBranchRevertNonTop.pendingCount,
+    historyAfterNonTopRevertNextToken:
+      historyAfterBranchRevertNonTop.entries.find((entry) => entry.next)?.nextToken ?? null,
+    sourceHasRestoredNonTopToken: branchRevertSourceAfterNonTop.includes("gap-4"),
+    sourceKeepsTopPatchToken: branchRevertSourceAfterNonTop.includes("p-8"),
+    topRevertOk: operationBranchRevertTop.ok,
+    pendingAfterTopRevert: pendingAfterBranchRevertTop.length,
+    historyAfterTopRevertCount: historyAfterBranchRevertTop.pendingCount,
+    sourceRestoredAfterTopRevert:
+      branchRevertSourceAfterTop.includes("gap-4") && branchRevertSourceAfterTop.includes("p-6"),
+    syntaxErrorsAfterRevert: syntaxErrorsAfterBranchRevert
   },
   operationConflict: {
     applyOk: operationConflictApply.ok,
@@ -3099,6 +3204,24 @@ const report = {
       pendingAfterBranchRevert.length === 0 &&
       historyAfterBranchRevert.pendingCount === 0 &&
       syntaxErrorsAfterBranchDiscard === 0,
+    operationBranchUndoRevertPass:
+      operationBranchRevertApplyOne.ok &&
+      operationBranchRevertApplyTwo.ok &&
+      pendingAfterBranchRevertApply.length === 2 &&
+      historyAfterBranchRevertApply.pendingCount === 2 &&
+      operationBranchRevertNonTop.ok &&
+      operationBranchRevertNonTop.restoredToken === "gap-4" &&
+      pendingAfterBranchRevertNonTop.length === 1 &&
+      historyAfterBranchRevertNonTop.pendingCount === 1 &&
+      historyAfterBranchRevertNonTop.entries.some((entry) => entry.next && entry.nextToken === "p-8") &&
+      branchRevertSourceAfterNonTop.includes("gap-4") &&
+      branchRevertSourceAfterNonTop.includes("p-8") &&
+      operationBranchRevertTop.ok &&
+      pendingAfterBranchRevertTop.length === 0 &&
+      historyAfterBranchRevertTop.pendingCount === 0 &&
+      branchRevertSourceAfterTop.includes("gap-4") &&
+      branchRevertSourceAfterTop.includes("p-6") &&
+      syntaxErrorsAfterBranchRevert === 0,
     operationConflictArtifactPass:
       operationConflictApply.ok &&
       !operationConflictRevert.ok &&
