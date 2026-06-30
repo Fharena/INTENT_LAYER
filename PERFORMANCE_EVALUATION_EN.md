@@ -47,6 +47,7 @@ Measured inputs:
 - CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
 - package install smoke fixture with installed plugin transform/graph, Vite dev server verification, and 3-file graph refresh verification
 - product-sized Vite graph write throttle fixture
+- product-sized multi-file Vite graph refresh fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -191,7 +192,7 @@ Purpose:
 | Metric | Value |
 | --- | ---: |
 | import exit code | 0 |
-| import time | 1,724.165ms |
+| import time | 1,570.458ms |
 | selected files | 3 |
 | files scanned | 3 |
 | `className` occurrences | 6 |
@@ -219,8 +220,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.286ms / p95 3.229ms / max 3.229ms |
-| `src/main.tsx` | 0 | avg 0.005ms / p95 0.008ms / max 0.008ms |
+| `src/App.tsx` | 13 | avg 1.427ms / p95 4.355ms / max 4.355ms |
+| `src/main.tsx` | 0 | avg 0.004ms / p95 0.008ms / max 0.008ms |
 
 Summary:
 
@@ -228,12 +229,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.646ms |
-| Overall p95 transform time | 3.229ms |
-| Overall max transform time | 3.229ms |
-| Warm average transform time | 0.402ms |
-| Warm p95 transform time | 0.948ms |
-| Warm max transform time | 0.948ms |
+| Overall average transform time | 0.716ms |
+| Overall p95 transform time | 4.355ms |
+| Overall max transform time | 4.355ms |
+| Warm average transform time | 0.349ms |
+| Warm p95 transform time | 0.981ms |
+| Warm max transform time | 0.981ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -258,9 +259,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 10.42ms |
-| p95 transform time | 14.031ms |
-| Max transform time | 14.031ms |
+| Average transform time | 10.491ms |
+| p95 transform time | 13.659ms |
+| Max transform time | 13.659ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -269,7 +270,8 @@ Interpretation:
 - Separate from the 5ms gate for normal `src` files, the stress fixture measures 401 bindings against a 20ms target.
 - This suggests the MVP scanner does not collapse immediately on larger AI-generated screens.
 - Graph write throttling is measured separately in the product-sized fixture below.
-- Real product-sized projects still need multi-file HMR and changed-file filtering re-measurement across more files and real import graphs.
+- A generated product-sized multi-file fixture now also passes with 24 files and 624 bindings.
+- Real product-sized projects still need re-measurement on independent external corpus files and real import graphs.
 
 ## 3.2 Product-sized Graph Write Throttle
 
@@ -281,10 +283,10 @@ Interpretation:
 | Bindings | 401 |
 | Input size | 45,352 bytes |
 | Same-input repeats | 4 |
-| Initial transform | 24.465ms |
-| Same-input repeat transforms | 12.909ms / 12.644ms / 8.385ms / 12.224ms |
-| Changed-token transform | 14.061ms |
-| Changed-token repeat transform | 15.118ms |
+| Initial transform | 24.529ms |
+| Same-input repeat transforms | 13.854ms / 13.377ms / 14.148ms / 10.697ms |
+| Changed-token transform | 18.387ms |
+| Changed-token repeat transform | 9.956ms |
 | Inferred write count | 2 |
 | Inferred skipped write count | 5 |
 | Same-code generatedAt stable | true |
@@ -298,6 +300,43 @@ Interpretation:
 - `transformMs` is a diagnostic field that changes on every run, so it is excluded from the graph publish fingerprint.
 - Four same-input repeats and one post-change repeat preserve `.intent/graph.intent.json` `generatedAt`, which infers skipped writes.
 - A real semantic token change (`gap-4` -> `gap-6`) updates `generatedAt` once.
+
+## 3.3 Product-sized Multi-file Graph Refresh
+
+| Metric | Value |
+| --- | ---: |
+| Fixture root | `.intent/tmp/vite-product-multi-file-graph-refresh` |
+| Graph file | `.intent/tmp/vite-product-multi-file-graph-refresh/.intent/graph.intent.json` |
+| File count | 24 |
+| Cards per file | 6 |
+| Initial graph entries | 624 |
+| Same-input repeat graph entries | 624 |
+| Post-change graph entries | 624 |
+| Post-change repeat graph entries | 624 |
+| Graph size | 1,160,409 bytes |
+| Changed file | `src/screens/ProductScreen07.tsx` |
+| Token before change | `gap-4` |
+| Token after change | `gap-8` |
+| Unchanged sample files | 5 |
+| Unchanged file tokens retained | true |
+| Same-input generatedAt stable | true |
+| Changed-input generatedAt update | true |
+| Post-change repeat generatedAt stable | true |
+| Entry count stable | true |
+| Initial full transform time | 448.453ms |
+| Same-input full repeat time | 503.317ms |
+| Changed-file transform time | 16.338ms |
+| Changed-file repeat transform time | 7.633ms |
+| Changed-file target | <= 50ms |
+| Result | pass |
+
+Interpretation:
+
+- The fixture uses 24 TSX files with 624 total graph entries, then changes only one file from `gap-4` to `gap-8`.
+- Only the changed file token updates; the five sampled unchanged files keep their original `gap-4` token.
+- Same-input repeats preserve `generatedAt`, so semantic fingerprint based write skipping works for the multi-file graph as well.
+- Repeating the changed input also preserves `generatedAt`, which infers no duplicate graph write after the change.
+- This is a generated product-sized smoke fixture. Real HMR verification on independently collected external project files and real import graphs remains open.
 
 ## 4. Patch Performance and Safety
 
@@ -1357,7 +1396,7 @@ Package install smoke gate:
 | Installed Vite dev server multi-file unchanged files retained | true |
 | Installed Vite dev server multi-file graph generatedAt changed | true |
 | Installed Vite dev server multi-file changed module includes `gap-8` | true |
-| Installed Vite dev server multi-file time | 292.774ms |
+| Installed Vite dev server multi-file time | 267.399ms |
 | Installed Vite dev server smoke time | 1930.772ms |
 | Dry-run time | 3414.767ms |
 | Pack time | 3022.469ms |
@@ -1393,6 +1432,7 @@ Interpretation:
 | cold transform target | max <= 10ms | pass |
 | large transform stress | 401 bindings max <= 20ms | pass |
 | product graph write throttle | 401 bindings, same input stable, changed input updates, inferred writes = 2, inferred skipped writes = 5 | pass |
+| product multi-file graph refresh | 24 files / 624 bindings, one changed file, unchanged files retained, changed file <= 50ms | pass |
 | CLI init | `.intent` folders/schema created or present + exit code 0 | pass |
 | CLI dev dry-run | local Vite command plan created + host/port verified + exit code 0 | pass |
 | package install smoke | pack dry-run + tarball install + installed `intent-layer --help` + installed `/vite` import + installed plugin transform/graph + installed Vite dev server HTTP graph/preview/apply + 3-file graph refresh + context-pack excluded | pass |
@@ -1437,7 +1477,7 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures one-hop dependency declarations in same-file and imported-source contexts as related dependency handoff context. It captures imported variable declarations behind tsconfig paths aliases, import aliases, multi-hop barrel re-exports, workspace package imports, and one extra named-import dependency hop inside the related declaration as dependency snapshot/diff context. It also captures `styles.title`-style object properties as related source handoff context. External npm package imports are recorded as `External Import Reference` task context instead of chasing package source or patching `node_modules`. It also captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop/multi-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, and 3-file graph refresh verification. This update also adds and passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, plus an external corpus import/report/gate harness smoke.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures one-hop dependency declarations in same-file and imported-source contexts as related dependency handoff context. It captures imported variable declarations behind tsconfig paths aliases, import aliases, multi-hop barrel re-exports, workspace package imports, and one extra named-import dependency hop inside the related declaration as dependency snapshot/diff context. It also captures `styles.title`-style object properties as related source handoff context. External npm package imports are recorded as `External Import Reference` task context instead of chasing package source or patching `node_modules`. It also captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop/multi-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, and 3-file graph refresh verification. This update also passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, a 24-file/624-binding generated product-sized multi-file graph refresh gate, and an external corpus import/report/gate harness smoke.
 
 What worked:
 
@@ -1481,6 +1521,7 @@ What worked:
 - low-level scanner cold transform gate pass
 - 401-binding large TSX transform stress gate pass
 - 401-binding product graph write throttle gate pass
+- 24-file/624-binding product-sized multi-file graph refresh gate pass
 - CLI `scan`/`check` JSON report and gate pass
 - CLI `init` workspace/schema creation and gate pass
 - CLI `dev --dry-run` local Vite command plan creation and gate pass
@@ -1495,7 +1536,7 @@ What worked:
 
 What remains weak:
 
-- graph write throttling and changed-file filtering still need re-measurement in product-sized multi-file HMR sessions
+- generated product-sized multi-file graph refresh passes, but graph write throttling and changed-file filtering still need re-measurement in real product-sized HMR sessions with independent external corpus files and real import graphs
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - CLI tarball install, package `/vite` wrapper export smoke, installed plugin transform/graph smoke, and installed Vite dev server HTTP preview/apply plus 3-file graph refresh smoke pass, but public npm package naming and external install-guide copy remain launch-polish work
 - the external corpus import harness is ready, but the real independently collected external 50-100 sample AI-generated corpus audit is still missing
@@ -1507,5 +1548,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is running the prepared external corpus harness against an independently collected 50-100 sample set, deciding where arbitrary-depth transitive data flow should stop for the MVP, and re-measuring component snapshots plus product-sized graph throttling on external product-sized TSX files.
+The next priority is running the prepared external corpus harness against an independently collected 50-100 sample set, deciding where arbitrary-depth transitive data flow should stop for the MVP, and re-measuring component snapshots plus real-HMR product-sized graph refresh on external product-sized TSX files.
 ```

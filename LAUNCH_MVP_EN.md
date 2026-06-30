@@ -488,6 +488,7 @@ direct patch apply: <50ms
 intent diff small change: <1s
 Vite transform overhead: <5ms/file target
 sidecar graph write: only when the semantic fingerprint changes
+product-sized graph refresh: generated 24-file/624-binding fixture passes, real external-project HMR still needs re-measurement
 ```
 
 ## 10. Build Order

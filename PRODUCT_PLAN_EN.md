@@ -272,7 +272,7 @@ npm run dev
 npx intent-layer
 ```
 
-The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper and package `/vite` export. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, installed `intent-layer --help`, installed `intent-layer-spike/vite` import, installed plugin transform/graph, real Vite dev server graph/preview/apply, and a 3-file graph refresh smoke as the package smoke gate. Public npm package naming and external install-guide wording remain launch-polish decisions.
+The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper and package `/vite` export. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, installed `intent-layer --help`, installed `intent-layer-spike/vite` import, installed plugin transform/graph, real Vite dev server graph/preview/apply, a 3-file graph refresh smoke, and a generated 24-file/624-binding product-sized graph refresh as package/performance smoke gates. Public npm package naming and external install-guide wording remain launch-polish decisions.
 
 ### 8.2 Basic Flow
 
@@ -616,6 +616,7 @@ HMR update: preserve existing Vite speed
 DOM id overhead: roughly under 20 bytes per node
 sidecar graph write: only when the semantic fingerprint changes
 external corpus validation: measure external source only through local `.intent/external-corpus/` copies and manifests
+product-sized graph refresh: generated 24-file/624-binding fixture passes, but real external-project HMR still needs re-measurement
 ```
 
 ## 12. AI Usage Principles

@@ -318,7 +318,8 @@ Support model:
 - Current fixtures now meet the 5ms warm transform target and the 10ms cold transform target.
 - The large TSX stress fixture with 100 cards and 401 bindings meets the 20ms stress target.
 - The repeated-transform fixture with 100 cards and 401 bindings now passes semantic graph fingerprint based write throttling.
-- Product-sized multi-file HMR sessions still need cache, changed-file filtering, and graph write throttling re-measurement across more files and real import graphs.
+- A generated product-sized fixture with 24 TSX files and 624 bindings now verifies that changing only one file from `gap-4` to `gap-8` preserves graph entry count, updates the changed-file token, retains unchanged-file tokens, keeps same-input `generatedAt` stable, and completes the changed-file transform in 16.338ms.
+- Real external-project product-sized multi-file HMR sessions still need cache, changed-file filtering, and graph write throttling re-measurement with real import graphs.
 
 ## 8. Next Work
 
@@ -327,7 +328,7 @@ Priority order:
 1. Run `npm run import:external-corpus -- <path>` against an independently collected external 50-100 sample React/Tailwind corpus and re-measure editable coverage.
 2. Decide where external npm package source-analysis boundaries and arbitrary-depth cross-file/transitive variable data-flow handoff context should stop.
 3. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
-4. Validate caching and graph write throttling on product-sized TSX files.
+4. Validate caching, changed-file filtering, and graph write throttling on real product-sized TSX files and HMR sessions.
 
 ## 9. Agent Handoff And Result
 

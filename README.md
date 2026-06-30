@@ -83,7 +83,7 @@ npm run analyze:external-corpus
 
 External corpus copies are written under `.intent/external-corpus/`, and the numeric report is written to `reports/performance/external-corpus-audit.json`.
 
-`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer-spike/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, and a 3-file graph refresh after one TSX file changes.
+`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer-spike/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, and a 3-file graph refresh after one TSX file changes. It also runs generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture and a 24-file/624-binding multi-file fixture.
 
 The demo currently supports:
 
@@ -118,6 +118,7 @@ The demo currently supports:
 - browser click-to-panel, preview, apply, and revert round-trip metric capture with desktop/mobile sample summaries at `/__intent/client-metrics`
 - large TSX transform stress reporting for a generated 401-binding fixture
 - product-sized Vite graph write throttling measurement for repeated 401-binding transforms
+- product-sized multi-file Vite graph refresh measurement for 24 TSX files / 624 bindings with one changed file
 - external corpus import/analyze harness with local `.intent/external-corpus/` copies, manifest output, and coverage gates
 
 The first evaluation result is stored in:

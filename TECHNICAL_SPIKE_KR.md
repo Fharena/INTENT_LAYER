@@ -317,7 +317,8 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - 현재 fixture에서는 warm transform 5ms 목표와 cold transform 10ms 목표를 만족했다.
 - 100개 카드/401개 binding을 가진 대형 TSX stress fixture는 20ms 목표를 만족했다.
 - 100개 카드/401개 binding 반복 transform fixture에서는 semantic graph fingerprint 기반 write throttling이 통과했다.
-- 제품급 multi-file HMR 세션에서는 cache, changed-file filtering, graph write throttling을 더 큰 파일 수와 실제 import graph로 추가 재측정해야 한다.
+- 24개 TSX 파일/624개 binding generated product-sized fixture에서는 한 파일만 `gap-4 -> gap-8`로 변경해도 graph entry 수 유지, 변경 파일 token 갱신, 미변경 파일 유지, 동일 입력 `generatedAt` 안정성, changed-file transform 16.338ms를 확인했다.
+- 실제 외부 프로젝트 기반 제품급 multi-file HMR 세션에서는 cache, changed-file filtering, graph write throttling을 실제 import graph로 추가 재측정해야 한다.
 
 ## 8. 다음 작업
 
@@ -326,7 +327,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 1. `npm run import:external-corpus -- <path>`로 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개를 넣고 editable coverage를 다시 측정한다.
 2. external npm package source 분석 경계와 임의 깊이 cross-file/transitive variable data flow에 대한 agent handoff 문맥을 어디까지 막을지 정한다.
 3. 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative를 재측정한다.
-4. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
+4. 실제 제품급 대형 TSX 파일과 HMR 세션에서 cache, changed-file filtering, graph write throttling을 검증한다.
 
 ## 9. Agent Handoff와 Result
 

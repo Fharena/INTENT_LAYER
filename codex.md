@@ -128,6 +128,18 @@ write numeric coverage gates to reports/performance/external-corpus-audit.json
 record whether the sample set is independently collected or only a local smoke fixture
 ```
 
+For product-sized graph validation:
+
+```text
+single-file graph write throttle entry count
+multi-file graph entry count before/after one changed file
+changed-file token before/after
+unchanged file token retention
+generatedAt stability for same input and changed-input repeat
+changed-file transform time and target
+whether the fixture is generated smoke data or independent external project data
+```
+
 For the click-to-patch spike:
 
 ```text
