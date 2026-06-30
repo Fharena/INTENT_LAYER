@@ -35,7 +35,7 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 - operation log 기반 undo stack과 patch 되돌리기
 - 구조화된 agent handoff task 생성
 - 구조화된 agent result 문서 생성
-- agent handoff source snapshot, result source diff, selected `className` semantic token diff 생성
+- agent handoff source snapshot, result source diff, selected/component/related `className` semantic token diff 생성
 - 브라우저 click-to-panel, preview, apply, revert round-trip latency 측정
 - 최소 intent operation/diff 파일 생성
 - corpus 분석 스크립트
@@ -248,7 +248,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - undo history UI, branch undo, 충돌 해결 UI는 아직 없다.
 - agent handoff는 선택 source window snapshot, component snapshot, related source snapshot, task/result markdown, intent diff 기록을 지원한다.
 - agent result는 선택 source window와 선택 component snapshot의 before/after line diff를 기록한다.
-- agent result는 단순 변수 참조 read-only binding의 related source diff를 기록한다.
+- agent result는 단순 변수 참조 read-only binding의 related source diff와 related semantic token diff를 기록한다.
 - agent result는 선택 source window와 선택 component 범위에서 `className` semantic token diff를 기록한다.
 - component snapshot fixture는 function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens 4개 case를 검증한다.
 - 아직 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 추론하지는 않는다.
@@ -265,7 +265,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 1. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
 2. undo history UI와 충돌 해결 UX를 설계한다.
-3. related source semantic diff가 변수 선언 문자열을 token 단위로 재분석하게 확장한다.
+3. related source semantic diff를 `cn()` / `clsx()` 변수 선언, 배열, object map, template literal까지 확장한다.
 4. HOC-wrapped component, memo/forwardRef, namespace export에 대한 component snapshot fixture를 추가한다.
 5. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
 
@@ -319,6 +319,7 @@ Notes
 Source Diff
 Semantic Intent Diff
 Related Source Diff
+Related Semantic Intent Diff
 Component Source Diff
 Component Semantic Intent Diff
 Intent Diff
@@ -326,11 +327,12 @@ Intent Diff
 
 이번 단계의 result 기록은 결정론적 감사 로그다.
 task 생성 시 선택 source window snapshot과 선택 component snapshot을 저장하고, result 기록 시 현재 source와 비교해 각각 line diff를 남긴다.
-단순 변수 참조 read-only binding은 관련 변수 선언을 related source snapshot으로 저장하고, result 기록 시 related source diff를 남긴다.
+단순 변수 참조 read-only binding은 관련 변수 선언을 related source snapshot으로 저장하고, result 기록 시 related source diff와 related semantic token diff를 남긴다.
 선택 source window와 선택 component 범위 안의 `className` 값은 before/after token으로 다시 분석해 추가/삭제 token과 category를 intent diff에 남긴다.
 소스 파일의 현재 hash를 다시 읽어 `sourceHashChanged`도 기록한다.
 component-level semantic diff는 현재 `className` token 기준으로 제한한다.
-related source semantic diff는 아직 변수 선언 문자열을 token 단위로 재분석하지 않는다.
+related source semantic diff는 단순 quoted 변수 선언 문자열을 token 단위로 재분석한다.
+아직 related source의 `cn()` / `clsx()`, 배열, object map, template literal, variant 함수 의미까지 자동 분석하지는 않는다.
 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 분석하지는 않는다.
 
 ### 9.1 Read-only Handoff
@@ -356,7 +358,7 @@ unsupported: variable-reference
 ```
 
 직접 token patch 버튼은 표시되지 않고, agent handoff task/result 기록만 사용할 수 있다.
-단순 변수 참조인 경우 task에는 변수 선언 related source snapshot이 포함되고, result에는 해당 선언의 line diff가 기록된다.
+단순 변수 참조인 경우 task에는 변수 선언 related source snapshot이 포함되고, result에는 해당 선언의 line diff와 semantic token diff가 기록된다.
 
 ## 10. Browser Metrics
 

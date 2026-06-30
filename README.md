@@ -74,7 +74,7 @@ The demo currently supports:
 - source hash validation before patching
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply
 - source snapshot diff, component snapshot diff, selected `className` semantic token diff, and component-level `className` semantic token diff output for agent result review handoff
-- related source snapshot/diff output for simple variable-reference read-only handoff
+- related source snapshot/diff and semantic token diff output for simple variable-reference read-only handoff
 - component snapshot discovery fixture reporting for function, nested/map/conditional/fragment, and arrow component patterns
 - browser click-to-panel, preview, apply, and revert round-trip metric capture with desktop/mobile sample summaries at `/__intent/client-metrics`
 - large TSX transform stress reporting for a generated 401-binding fixture
