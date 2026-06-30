@@ -132,6 +132,17 @@ function excerptBySnapshot(source: string, snapshot: SourceSnapshot): string {
   return lines.slice(start - 1, end).join("\n");
 }
 
+function readSnapshotFile(rootDir: string, snapshot: SourceSnapshot | null): string | null {
+  if (!snapshot) return null;
+
+  const fullPath = path.isAbsolute(snapshot.file) ? snapshot.file : path.join(rootDir, snapshot.file);
+  try {
+    return fs.readFileSync(fullPath, "utf8");
+  } catch {
+    return null;
+  }
+}
+
 function unifiedLineDiff(before: string, after: string, label = "selected-source-window"): string {
   const beforeLines = before.split(/\r?\n/);
   const afterLines = after.split(/\r?\n/);
@@ -638,15 +649,16 @@ export function recordAgentResult(
       ? semanticClassNameDiff(componentSnapshot.excerpt, currentComponentExcerpt)
       : null;
   const componentSemanticChangeCount = componentSemanticDiff?.classNameChangeCount ?? 0;
+  const currentRelatedSource = readSnapshotFile(rootDir, relatedSnapshot);
   const currentRelatedExcerpt =
-    relatedSnapshot && currentSource ? excerptBySnapshot(currentSource, relatedSnapshot) : "";
+    relatedSnapshot && currentRelatedSource ? excerptBySnapshot(currentRelatedSource, relatedSnapshot) : "";
   const relatedSourceDiff =
-    relatedSnapshot && currentSource
+    relatedSnapshot && currentRelatedSource
       ? unifiedLineDiff(relatedSnapshot.excerpt, currentRelatedExcerpt, "related-source-snapshot")
       : "";
   const relatedChangedLineCount = diffLineCount(relatedSourceDiff);
   const relatedSemanticDiff =
-    relatedSnapshot && currentSource
+    relatedSnapshot && currentRelatedSource
       ? semanticLiteralClassNameDiff(relatedSnapshot.excerpt, currentRelatedExcerpt)
       : null;
   const relatedSemanticChangeCount = relatedSemanticDiff?.classNameChangeCount ?? 0;

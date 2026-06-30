@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { sourceHash } from "./hash";
 import type { AgentTaskRequest, AgentTaskResult, IntentBinding, PatchFailure } from "./types";
 
 function timestampSlug(): string {
@@ -200,10 +201,84 @@ function findComponentRange(source: string, componentName: string | null): { sta
   return null;
 }
 
+interface RelatedSourceRange {
+  file: string;
+  relativeFile: string;
+  sourceHash: string;
+  source: string;
+  kind: "variable-declaration" | "variant-function";
+  identifier: string;
+  start: number;
+  end: number;
+}
+
+function resolveRelativeImport(fromFile: string, specifier: string): string | null {
+  if (!specifier.startsWith(".")) return null;
+
+  const base = path.resolve(path.dirname(fromFile), specifier);
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    `${base}.js`,
+    `${base}.jsx`,
+    path.join(base, "index.ts"),
+    path.join(base, "index.tsx"),
+    path.join(base, "index.js"),
+    path.join(base, "index.jsx")
+  ];
+
+  return candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) ?? null;
+}
+
+function importedNameForLocalIdentifier(source: string, localIdentifier: string): { importedName: string; file: string } | null {
+  const importPattern = /import\s+{([\s\S]*?)}\s+from\s+["']([^"']+)["']/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = importPattern.exec(source)) !== null) {
+    const specifiers = match[1].split(",");
+    for (const rawSpecifier of specifiers) {
+      const specifier = rawSpecifier.trim();
+      if (!specifier) continue;
+
+      const aliasMatch = /^([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)$/.exec(specifier);
+      const importedName = aliasMatch?.[1] ?? specifier;
+      const localName = aliasMatch?.[2] ?? specifier;
+      if (localName === localIdentifier && /^[A-Za-z_$][\w$]*$/.test(importedName)) {
+        return { importedName, file: match[2] };
+      }
+    }
+  }
+
+  return null;
+}
+
+function findVariantDeclarationRange(
+  source: string,
+  identifier: string
+): { start: number; end: number } | null {
+  const functionMatch = new RegExp(`\\bfunction\\s+${escapeRegExp(identifier)}\\s*\\(`).exec(source);
+  if (functionMatch) {
+    return {
+      start: functionMatch.index,
+      end: scanFunctionDeclarationEnd(source, functionMatch.index)
+    };
+  }
+
+  const variableMatch = new RegExp(`\\b(?:const|let|var)\\s+${escapeRegExp(identifier)}\\b`).exec(source);
+  if (!variableMatch) return null;
+
+  return {
+    start: variableMatch.index,
+    end: scanExpressionStatementEnd(source, variableMatch.index)
+  };
+}
+
 function findRelatedSourceRange(
+  rootDir: string,
   source: string,
   binding: IntentBinding
-): { kind: "variable-declaration" | "variant-function"; identifier: string; start: number; end: number } | null {
+): RelatedSourceRange | null {
   if (binding.className.kind !== "read-only") return null;
 
   if (binding.className.unsupportedReason === "variable-reference") {
@@ -214,6 +289,10 @@ function findRelatedSourceRange(
     if (!match) return null;
 
     return {
+      file: binding.file,
+      relativeFile: binding.relativeFile,
+      sourceHash: binding.sourceHash,
+      source,
       kind: "variable-declaration",
       identifier,
       start: match.index,
@@ -227,24 +306,37 @@ function findRelatedSourceRange(
   const identifier = calleeMatch?.[1];
   if (!identifier) return null;
 
-  const functionMatch = new RegExp(`\\bfunction\\s+${escapeRegExp(identifier)}\\s*\\(`).exec(source);
-  if (functionMatch) {
+  const localRange = findVariantDeclarationRange(source, identifier);
+  if (localRange) {
     return {
+      file: binding.file,
+      relativeFile: binding.relativeFile,
+      sourceHash: binding.sourceHash,
+      source,
       kind: "variant-function",
       identifier,
-      start: functionMatch.index,
-      end: scanFunctionDeclarationEnd(source, functionMatch.index)
+      start: localRange.start,
+      end: localRange.end
     };
   }
 
-  const variableMatch = new RegExp(`\\b(?:const|let|var)\\s+${escapeRegExp(identifier)}\\b`).exec(source);
-  if (!variableMatch) return null;
+  const imported = importedNameForLocalIdentifier(source, identifier);
+  const importedFile = imported ? resolveRelativeImport(binding.file, imported.file) : null;
+  if (!imported || !importedFile) return null;
+
+  const importedSource = fs.readFileSync(importedFile, "utf8");
+  const importedRange = findVariantDeclarationRange(importedSource, imported.importedName);
+  if (!importedRange) return null;
 
   return {
+    file: importedFile,
+    relativeFile: path.relative(rootDir, importedFile).replace(/\\/g, "/"),
+    sourceHash: sourceHash(importedSource),
+    source: importedSource,
     kind: "variant-function",
-    identifier,
-    start: variableMatch.index,
-    end: scanExpressionStatementEnd(source, variableMatch.index)
+    identifier: imported.importedName,
+    start: importedRange.start,
+    end: importedRange.end
   };
 }
 
@@ -303,20 +395,26 @@ export function createAgentTask(
         ...lineWindow(currentSource, componentRange.start, componentRange.end, 0)
       }
     : null;
-  const relatedRange = findRelatedSourceRange(currentSource, binding);
+  const relatedRange = findRelatedSourceRange(rootDir, currentSource, binding);
   const relatedSnapshot = relatedRange
     ? {
-        file: binding.relativeFile,
-        sourceHash: binding.sourceHash,
+        file: relatedRange.relativeFile,
+        sourceHash: relatedRange.sourceHash,
         kind: relatedRange.kind,
         identifier: relatedRange.identifier,
         range: {
           start: relatedRange.start,
           end: relatedRange.end
         },
-        ...lineWindow(currentSource, relatedRange.start, relatedRange.end, 1)
+        ...lineWindow(relatedRange.source, relatedRange.start, relatedRange.end, 1)
       }
     : null;
+  const editableFiles = Array.from(
+    new Set([
+      binding.relativeFile,
+      ...(relatedSnapshot && relatedSnapshot.file !== binding.relativeFile ? [relatedSnapshot.file] : [])
+    ])
+  );
   const taskDir = path.join(rootDir, ".intent", "agent");
   fs.mkdirSync(taskDir, { recursive: true });
   const taskFile = path.join(taskDir, `task_${timestampSlug()}.md`);
@@ -375,7 +473,7 @@ export function createAgentTask(
     "",
     "## Files That May Be Edited",
     "",
-    `- \`${binding.relativeFile}\``,
+    ...editableFiles.map((file) => `- \`${file}\``),
     "- `.intent/components/*.intent.yml` if an intent document already exists for this component",
     "- `.intent/diffs/*.intent-diff.yml` for the semantic result summary",
     "",

@@ -628,6 +628,78 @@ const variantHandoffResult = recordAgentResult(rootDir, variantHandoffEntry, {
     "Evaluation fixture for variant-function related source handoff context; no LLM call is made."
 });
 
+const importedVariantDefinitionFixture = path.join(tmpDir, "ImportedVariantDefinition.ts");
+fs.writeFileSync(
+  importedVariantDefinitionFixture,
+  [
+    "declare function cva(base: string, options: unknown): (value: { variant: \"primary\" | \"ghost\" }) => string;",
+    "export const buttonVariants = cva(\"inline-flex items-center gap-4 rounded-lg px-4 py-2\", {",
+    "  variants: {",
+    "    variant: {",
+    "      primary: \"bg-teal-700 text-white\",",
+    "      ghost: \"bg-white text-slate-700\"",
+    "    }",
+    "  }",
+    "});",
+    ""
+  ].join("\n")
+);
+
+const importedVariantHandoffFixture = path.join(tmpDir, "ImportedVariantHandoffFixture.tsx");
+fs.writeFileSync(
+  importedVariantHandoffFixture,
+  [
+    "import { buttonVariants } from \"./ImportedVariantDefinition\";",
+    "",
+    "export function ImportedVariantHandoffFixture() {",
+    "  return <button className={buttonVariants({ variant: \"primary\" })}>Imported variant handoff target</button>;",
+    "}",
+    ""
+  ].join("\n")
+);
+
+const importedVariantHandoffInstrument = instrumentSource({
+  code: fs.readFileSync(importedVariantHandoffFixture, "utf8"),
+  file: importedVariantHandoffFixture,
+  rootDir
+});
+const importedVariantHandoffEntry = importedVariantHandoffInstrument.entries[0];
+const importedVariantHandoffTask = createAgentTask(rootDir, importedVariantHandoffEntry, {
+  id: importedVariantHandoffEntry?.id ?? "missing-imported-variant-handoff-binding",
+  desiredChange: "Change this imported variant-backed className through an agent handoff."
+});
+const importedVariantHandoffRelatedSnapshot = importedVariantHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedSourceSnapshot | null>(
+      importedVariantHandoffTask.markdown,
+      "Related Source Snapshot"
+    )
+  : null;
+if (importedVariantHandoffTask.ok) {
+  fs.writeFileSync(
+    importedVariantDefinitionFixture,
+    fs
+      .readFileSync(importedVariantDefinitionFixture, "utf8")
+      .replace(
+        "inline-flex items-center gap-4 rounded-lg px-4 py-2",
+        "inline-flex items-center gap-6 rounded-xl px-5 py-3"
+      )
+      .replace("bg-teal-700", "bg-cyan-700")
+  );
+}
+const importedVariantHandoffSyntaxErrorsAfterResult =
+  parseSyntaxErrorCount(importedVariantDefinitionFixture) +
+  parseSyntaxErrorCount(importedVariantHandoffFixture);
+const importedVariantHandoffResult = recordAgentResult(rootDir, importedVariantHandoffEntry, {
+  id: importedVariantHandoffEntry?.id ?? "missing-imported-variant-handoff-binding",
+  taskFile: importedVariantHandoffTask.ok ? importedVariantHandoffTask.taskFile : undefined,
+  summary:
+    "Imported variant handoff fixture: updated the related cva-like variant declaration in another file.",
+  changedFiles: [path.relative(rootDir, importedVariantDefinitionFixture).replace(/\\/g, "/")],
+  checks: ["npm run typecheck", "npm run eval", "npm run build"],
+  notes:
+    "Evaluation fixture for one-hop relative named import variant-function handoff context; no LLM call is made."
+});
+
 const cnPatchFixture = path.join(tmpDir, "CnPatchFixture.tsx");
 fs.writeFileSync(
   cnPatchFixture,
@@ -1254,6 +1326,60 @@ const report = {
       ? variantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  importedVariantHandoffBinding: {
+    entryCreated: Boolean(importedVariantHandoffEntry),
+    kind: importedVariantHandoffEntry?.className.kind ?? null,
+    unsupportedReason: importedVariantHandoffEntry?.className.unsupportedReason ?? null,
+    value: importedVariantHandoffEntry?.className.value ?? null,
+    tokenCount: importedVariantHandoffEntry?.tokens.length ?? 0,
+    taskOk: importedVariantHandoffTask.ok,
+    taskMs: importedVariantHandoffTask.ok
+      ? importedVariantHandoffTask.metrics.taskMs
+      : importedVariantHandoffTask.metrics?.taskMs,
+    relatedSnapshotAvailable: Boolean(importedVariantHandoffRelatedSnapshot),
+    relatedSnapshotFile: importedVariantHandoffRelatedSnapshot?.file ?? null,
+    relatedSnapshotKind: importedVariantHandoffRelatedSnapshot?.kind ?? null,
+    relatedSnapshotIdentifier: importedVariantHandoffRelatedSnapshot?.identifier ?? null,
+    relatedSnapshotIncludesCva: Boolean(importedVariantHandoffRelatedSnapshot?.excerpt.includes("cva(")),
+    resultOk: importedVariantHandoffResult.ok,
+    resultMs: importedVariantHandoffResult.ok
+      ? importedVariantHandoffResult.metrics.resultMs
+      : importedVariantHandoffResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: importedVariantHandoffSyntaxErrorsAfterResult,
+    sourceDiffLineCount: importedVariantHandoffResult.ok
+      ? importedVariantHandoffResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: importedVariantHandoffResult.ok
+      ? Boolean(importedVariantHandoffResult.sourceDiff)
+      : false,
+    componentDiffLineCount: importedVariantHandoffResult.ok
+      ? importedVariantHandoffResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: importedVariantHandoffResult.ok
+      ? Boolean(importedVariantHandoffResult.componentSourceDiff)
+      : false,
+    relatedResultSnapshotAvailable: importedVariantHandoffResult.ok
+      ? importedVariantHandoffResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: importedVariantHandoffResult.ok
+      ? importedVariantHandoffResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: importedVariantHandoffResult.ok
+      ? Boolean(importedVariantHandoffResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: importedVariantHandoffResult.ok
+      ? importedVariantHandoffResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedSemanticDiffPresent: importedVariantHandoffResult.ok
+      ? Boolean(importedVariantHandoffResult.relatedSemanticDiff)
+      : false,
+    relatedSemanticTokenAddedCount: importedVariantHandoffResult.ok
+      ? importedVariantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedSemanticTokenRemovedCount: importedVariantHandoffResult.ok
+      ? importedVariantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   gates: {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
@@ -1336,6 +1462,22 @@ const report = {
       (variantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
       (variantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
       variantHandoffSyntaxErrorsAfterResult === 0,
+    importedVariantHandoffRelatedSourcePass:
+      importedVariantHandoffEntry?.className.kind === "read-only" &&
+      importedVariantHandoffEntry.className.unsupportedReason === "variant-function" &&
+      importedVariantHandoffTask.ok &&
+      importedVariantHandoffRelatedSnapshot?.kind === "variant-function" &&
+      importedVariantHandoffRelatedSnapshot.identifier === "buttonVariants" &&
+      importedVariantHandoffRelatedSnapshot.file.endsWith("ImportedVariantDefinition.ts") &&
+      importedVariantHandoffRelatedSnapshot.excerpt.includes("cva(") &&
+      importedVariantHandoffResult.ok &&
+      importedVariantHandoffResult.source.relatedSnapshotAvailable &&
+      importedVariantHandoffResult.source.relatedDiffLineCount > 0 &&
+      Boolean(importedVariantHandoffResult.relatedSourceDiff) &&
+      importedVariantHandoffResult.source.relatedSemanticChangeCount >= 2 &&
+      (importedVariantHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
+      (importedVariantHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
+      importedVariantHandoffSyntaxErrorsAfterResult === 0,
     simpleCnClsxPatchPass: cnApply.ok && syntaxErrorsAfterCnPatch === 0,
     staleRejectionPass: !staleApply.ok && staleApply.reason === "source-hash-mismatch",
     operationLogUndoStackPass:
