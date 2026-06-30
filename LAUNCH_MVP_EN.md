@@ -413,6 +413,8 @@ intent-layer agent-result
 `agent-task` takes a binding id from `.intent/graph.intent.json` plus a desired change and creates `.intent/agent/task_*.md`.
 `agent-result` takes a task file, summary, changed files, and checks, then creates `.intent/agent/result_*.md` plus `.intent-diff.yml`.
 
+The MVP validation scripts can import an external React/Tailwind corpus as local `.intent/external-corpus/` copies and write a manifest plus editable coverage gates to `reports/performance/external-corpus-audit.json`.
+
 ### 7.5 Agent Integration
 
 Full built-in agent automation is not required for v1.0. The product should support:

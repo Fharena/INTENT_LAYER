@@ -608,6 +608,7 @@ simple patch write: under 50ms
 HMR update: preserve existing Vite speed
 DOM id overhead: roughly under 20 bytes per node
 sidecar graph write: only when the semantic fingerprint changes
+external corpus validation: measure external source only through local `.intent/external-corpus/` copies and manifests
 ```
 
 ## 12. AI Usage Principles

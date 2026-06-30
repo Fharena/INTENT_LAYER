@@ -44,10 +44,11 @@ Measured inputs:
 
 Important caveat:
 
-The evaluation now has two corpora.
+The evaluation now has two corpora plus one external corpus import harness smoke.
 
 1. Initial fixture corpus: small samples for feature validation.
 2. Codex-generated AI corpus: 50 committed React/Tailwind TSX samples.
+3. External corpus harness smoke: a small sample that verifies the import/report/gate flow for external TSX/JSX files copied under `.intent/external-corpus/`.
 
 The second corpus is a reproducible local benchmark for a wider AI-generated code surface.
 It is still not an independently collected benchmark from external projects or real user code.
@@ -152,6 +153,51 @@ Interpretation:
 - This reduces the risk that the product only works for a toy 10% slice.
 - The 10.26% read-only surface clusters around variable references, property access, and variant functions.
 - Because this is not an independently collected external corpus, it should not be treated as the final market-validation benchmark.
+
+## 2.2 External Corpus Import Harness Smoke
+
+Raw report:
+
+```text
+reports/performance/spike-evaluation.json
+```
+
+Related script:
+
+```text
+scripts/import-external-corpus.ts
+npm run import:external-corpus -- <external-react-project-or-samples>
+npm run analyze:external-corpus
+```
+
+Purpose:
+
+- avoid committing external project source directly into this repo
+- copy only TSX/JSX files with `className` into `.intent/external-corpus/files/`
+- skip story/test/spec files, build output, and `node_modules` by default
+- write a manifest with original path, copied path, SHA-256 hash, byte count, and `className` count
+- calculate editable coverage and gates through the same `analyzeClassNames` path
+
+`npm run eval` smoke summary:
+
+| Metric | Value |
+| --- | ---: |
+| import exit code | 0 |
+| import time | 1,724.165ms |
+| selected files | 3 |
+| files scanned | 3 |
+| `className` occurrences | 6 |
+| skipped story files | 1 |
+| static + simple editable coverage | 75.76% |
+| supported direct editable coverage | 75.76% |
+| all observed editable coverage | 75.76% |
+| gate | pass |
+
+Interpretation:
+
+- There is now a repeatable loop for importing local external corpus copies and measuring them with the same coverage criteria.
+- This smoke verifies the importer/report/gate format with a small fixture.
+- A market-validation number still requires running the harness against an independently collected external 50-100 file React/Tailwind corpus.
 
 ## 3. Transform Performance
 
@@ -933,8 +979,8 @@ Package install smoke gate:
 | Installed plugin transform exit code | 0 |
 | Installed Vite dev server exit code | 0 |
 | Package file count | 15 |
-| Package size | 41211 bytes |
-| Unpacked size | 202343 bytes |
+| Package size | 41234 bytes |
+| Unpacked size | 202501 bytes |
 | Includes bin wrapper | true |
 | Includes CLI source | true |
 | Includes Vite plugin source | true |
@@ -1014,6 +1060,7 @@ Interpretation:
 | AI corpus static + simple coverage | editable coverage >= 50% | pass |
 | AI corpus supported direct coverage | editable coverage >= 50% | pass |
 | AI corpus all observed coverage | editable coverage >= 50% | pass |
+| external corpus harness | import exit 0 + files 3 + story skip 1 + coverage >= 50% | pass |
 | warm transform target | max <= 5ms | pass |
 | cold transform target | max <= 10ms | pass |
 | large transform stress | 401 bindings max <= 20ms | pass |
@@ -1054,13 +1101,14 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, and 3-file graph refresh verification. This update also adds and passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, and 3-file graph refresh verification. This update also adds and passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, plus an external corpus import/report/gate harness smoke.
 
 What worked:
 
 - static `className` token analysis
 - simple/partial `cn()` / `clsx()` literal segment analysis
 - Codex-generated 50-file React/Tailwind corpus coverage measurement
+- external corpus import/analyze harness with manifest/report/gate output
 - compile-time source binding generation
 - read-only source binding generation
 - source token range patching
@@ -1106,7 +1154,7 @@ What remains weak:
 - graph write throttling and changed-file filtering still need re-measurement in product-sized multi-file HMR sessions
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - CLI tarball install, package `/vite` wrapper export smoke, installed plugin transform/graph smoke, and installed Vite dev server HTTP preview/apply plus 3-file graph refresh smoke pass, but public npm package naming and external install-guide copy remain launch-polish work
-- independently collected external 50-100 sample AI-generated corpus audit is still missing
+- the external corpus import harness is ready, but the real independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
 - automatic semantic analysis across package imports, multi-hop import graphs, and cross-variable data flow is still missing
 - variant functions and runtime template literals remain unsupported for direct patching
@@ -1115,5 +1163,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, package-import/multi-hop/cross-variable handoff context, and component snapshot plus product-sized graph throttle re-measurement on external product-sized TSX files.
+The next priority is running the prepared external corpus harness against an independently collected 50-100 sample set, then improving package-import/multi-hop/cross-variable handoff context and re-measuring component snapshots plus product-sized graph throttling on external product-sized TSX files.
 ```

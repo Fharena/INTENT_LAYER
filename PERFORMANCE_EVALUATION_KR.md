@@ -44,10 +44,11 @@ npm run build
 
 주의:
 
-평가에는 두 종류의 corpus가 있다.
+평가에는 두 종류의 corpus와 한 가지 외부 corpus import harness smoke가 있다.
 
 1. 초기 fixture corpus: 작은 기능 검증용 샘플이다.
 2. Codex-generated AI corpus: repo에 커밋된 50개 React/Tailwind TSX 샘플이다.
+3. External corpus harness smoke: 외부 TSX/JSX 샘플을 `.intent/external-corpus/`로 가져오는 import/report/gate 흐름 검증용 샘플이다.
 
 두 번째 corpus는 AI가 생성한 코드 표면을 더 넓게 재기 위한 재현 가능한 로컬 benchmark다.
 다만 외부 프로젝트나 실제 사용자 코드에서 독립 수집한 benchmark는 아직 아니다.
@@ -152,6 +153,51 @@ Gate:
 - 이 수치는 "10% 케이스만 되는 장난감" 위험은 낮춘다.
 - read-only 10.26%는 변수 참조, property access, variant 함수 패턴에 집중되어 있다.
 - 아직 외부 프로젝트에서 독립 수집한 corpus가 아니므로, 시장 검증용 최종 수치로 쓰면 안 된다.
+
+## 2.2 External Corpus Import Harness Smoke
+
+원본 리포트:
+
+```text
+reports/performance/spike-evaluation.json
+```
+
+관련 스크립트:
+
+```text
+scripts/import-external-corpus.ts
+npm run import:external-corpus -- <external-react-project-or-samples>
+npm run analyze:external-corpus
+```
+
+목적:
+
+- 외부 프로젝트 코드를 repo에 직접 커밋하지 않는다.
+- 입력 TSX/JSX 파일 중 `className`이 있는 파일만 `.intent/external-corpus/files/`로 복사한다.
+- story/test/spec, build output, `node_modules`는 기본 제외한다.
+- manifest에 원본 경로, 복사본 경로, SHA-256 hash, byte 수, `className` 수를 남긴다.
+- 같은 `analyzeClassNames` 기준으로 editable coverage와 gate 결과를 계산한다.
+
+`npm run eval` smoke 요약:
+
+| 항목 | 값 |
+| --- | ---: |
+| import exit code | 0 |
+| import 시간 | 1,724.165ms |
+| 선택 파일 수 | 3 |
+| 스캔 파일 수 | 3 |
+| `className` 발생 수 | 6 |
+| skip된 story 파일 수 | 1 |
+| static + simple editable coverage | 75.76% |
+| supported direct editable coverage | 75.76% |
+| 전체 observed editable coverage | 75.76% |
+| gate | 통과 |
+
+해석:
+
+- 외부 corpus를 로컬 `.intent/` artifact로 가져와 같은 coverage 기준으로 측정하는 루프가 생겼다.
+- 이 smoke는 importer/report/gate 형식을 검증하는 작은 fixture다.
+- 실제 시장 검증 수치로 쓰려면 독립 수집한 외부 React/Tailwind 샘플 50-100개로 다시 실행해야 한다.
 
 ## 3. Transform 성능
 
@@ -932,8 +978,8 @@ package install smoke gate:
 | installed plugin transform exit code | 0 |
 | installed Vite dev server exit code | 0 |
 | package file 수 | 15 |
-| package size | 41211 bytes |
-| unpacked size | 202343 bytes |
+| package size | 41234 bytes |
+| unpacked size | 202501 bytes |
 | bin wrapper 포함 | true |
 | CLI source 포함 | true |
 | Vite plugin source 포함 | true |
@@ -1013,6 +1059,7 @@ package install smoke gate:
 | AI corpus static + simple coverage | editable coverage >= 50% | 통과 |
 | AI corpus supported direct coverage | editable coverage >= 50% | 통과 |
 | AI corpus all observed coverage | editable coverage >= 50% | 통과 |
+| external corpus harness | import exit 0 + files 3 + story skip 1 + coverage >= 50% | 통과 |
 | warm transform target | max <= 5ms | 통과 |
 | cold transform target | max <= 10ms | 통과 |
 | large transform stress | 401 bindings max <= 20ms | 통과 |
@@ -1053,13 +1100,14 @@ package install smoke gate:
 
 ## 11. 결론
 
-이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local/one-hop relative import/tsconfig paths alias + one-hop named barrel 뒤의 variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 package smoke도 tarball install, 설치된 bin 실행, `/vite` wrapper export import, 외부 temp fixture transform/graph 생성, 실제 Vite dev server HTTP graph/preview/apply, source patch artifact, 3-file graph refresh 검증까지 통과했다. 이번 갱신에서는 401-binding TSX 반복 transform에서 semantic fingerprint가 같으면 sidecar graph write를 건너뛰는 gate도 추가로 통과했다.
+이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local/one-hop relative import/tsconfig paths alias + one-hop named barrel 뒤의 variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 package smoke도 tarball install, 설치된 bin 실행, `/vite` wrapper export import, 외부 temp fixture transform/graph 생성, 실제 Vite dev server HTTP graph/preview/apply, source patch artifact, 3-file graph refresh 검증까지 통과했다. 이번 갱신에서는 401-binding TSX 반복 transform에서 semantic fingerprint가 같으면 sidecar graph write를 건너뛰는 gate와 외부 corpus import/report/gate harness smoke도 통과했다.
 
 성공한 것:
 
 - static `className` token 분석
 - simple/partial `cn()` / `clsx()` literal segment 분석
 - Codex-generated 50개 React/Tailwind corpus coverage 측정
+- 외부 corpus import/analyze harness와 manifest/report/gate 생성
 - compile-time source binding 생성
 - read-only source binding 생성
 - source token range 기반 patch
@@ -1105,7 +1153,7 @@ package install smoke gate:
 - 제품급 multi-file HMR 세션에서 graph write throttle과 changed-file filtering 재측정
 - 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
 - CLI tarball install, package `/vite` wrapper export smoke, 설치된 plugin transform/graph smoke, 설치된 Vite dev server HTTP preview/apply 및 3-file graph refresh smoke는 통과했지만, public npm package 이름과 외부 사용자용 install guide copy는 출시 polish로 남아 있다.
-- 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
+- 외부 corpus import harness는 준비됐지만, 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 실제 검증은 아직 남아 있다.
 - 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
 - package import, 다단계 import graph, cross-variable data flow를 포함한 imported variant 함수 자동 분석
 - variant 함수와 runtime template literal 직접 patch 지원
@@ -1114,5 +1162,5 @@ package install smoke gate:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 외부 독립 corpus 검증, package import/multi-hop/cross-variable handoff 문맥 보강, 외부 제품급 TSX 파일에서 component snapshot 및 product-sized graph throttle 재측정이다.
+다음 우선순위는 준비된 external corpus harness로 독립 외부 샘플 50-100개를 실제 측정하고, package import/multi-hop/cross-variable handoff 문맥 보강과 외부 제품급 TSX 파일에서 component snapshot 및 product-sized graph throttle 재측정을 진행하는 것이다.
 ```

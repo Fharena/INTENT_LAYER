@@ -610,6 +610,7 @@ Vite transform 추가 비용: 파일당 5ms 이하 목표
 HMR 반영: 기존 Vite 속도 유지
 DOM id 추가 오버헤드: node당 20 bytes 내외 목표
 sidecar graph write: 의미 fingerprint 변경 시에만 수행
+external corpus 검증: 외부 source는 `.intent/external-corpus/` 로컬 복사본과 manifest로만 측정
 ```
 
 ## 12. AI 사용 원칙

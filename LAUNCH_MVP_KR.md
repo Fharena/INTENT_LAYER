@@ -437,6 +437,8 @@ intent-layer agent-result
 `agent-task`는 `.intent/graph.intent.json`의 binding id와 desired change를 받아 `.intent/agent/task_*.md`를 생성한다.
 `agent-result`는 task file, summary, changed files, checks를 받아 `.intent/agent/result_*.md`와 `.intent-diff.yml`을 생성한다.
 
+MVP 검증용 script는 외부 React/Tailwind corpus를 `.intent/external-corpus/` 로컬 복사본으로 가져오고, manifest와 editable coverage gate를 `reports/performance/external-corpus-audit.json`에 기록할 수 있다.
+
 ### 7.5 Agent Integration
 
 v1.0에서 완전 자동 agent 내장은 필수 아님. 대신 다음을 지원한다.

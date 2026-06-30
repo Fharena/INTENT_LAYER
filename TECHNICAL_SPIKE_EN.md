@@ -146,6 +146,7 @@ src/intent/client.ts
 scripts/analyze-classnames.ts
 scripts/evaluate-spike.ts
 scripts/generate-ai-corpus.ts
+scripts/import-external-corpus.ts
 fixtures/corpus/*.tsx
 fixtures/ai-generated/*.tsx
 reports/performance/*.json
@@ -179,6 +180,16 @@ Regenerate or inspect the AI corpus fixtures:
 npm run generate:ai-corpus
 npm run analyze:ai-corpus
 ```
+
+Import and inspect a local external corpus:
+
+```bash
+npm run import:external-corpus -- <external-react-project-or-samples>
+npm run analyze:external-corpus
+```
+
+External corpus copies are stored under `.intent/external-corpus/` and should not be committed.
+The default report is written to `reports/performance/external-corpus-audit.json`.
 
 `npm run eval` writes:
 
@@ -229,6 +240,32 @@ Interpretation:
 - Read-only cases are mainly variable references (20), property access references (10), and variant functions (10).
 - This corpus is a reproducible local benchmark, not an independently collected external benchmark.
 
+## 6.2 External Corpus Import Harness
+
+`scripts/import-external-corpus.ts` was added so external project code does not need to be committed directly to this repo.
+
+Behavior:
+
+- scans external React/Tailwind TSX/JSX files from user-provided inputs
+- skips files without `className`, test/spec/story files, build output, and `node_modules` by default
+- stores selected file copies under `.intent/external-corpus/files/`
+- records original path, copied path, SHA-256 hash, byte count, and `className` count in a manifest
+- computes coverage with the same `analyzeClassNames` path and writes JSON gate results
+
+Small `npm run eval` smoke result:
+
+```text
+selected files: 3
+files scanned: 3
+className occurrences: 6
+skipped story files: 1
+supported direct editable coverage: 75.76%
+gate: externalCorpusHarnessPass = true
+```
+
+This smoke verifies the importer/report/gate format.
+The market-validation number still requires running the harness against an independently collected external 50-100 file corpus.
+
 ### 3.3 Simple cn/clsx literal segment support
 
 The current MVP can patch these patterns directly:
@@ -273,6 +310,7 @@ Support model:
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
 - The latest browser measurement repeats 3 desktop samples and 3 mobile 390x844 viewport samples.
 - The Codex-generated 50-file React/Tailwind corpus records 78.76% supported direct editable coverage.
+- The external corpus import/analyze harness can create local `.intent/external-corpus/` copies, a manifest, and coverage gates; its eval smoke passes with 3 samples and 75.76% supported direct coverage.
 - Current fixtures now meet the 5ms warm transform target and the 10ms cold transform target.
 - The large TSX stress fixture with 100 cards and 401 bindings meets the 20ms stress target.
 - The repeated-transform fixture with 100 cards and 401 bindings now passes semantic graph fingerprint based write throttling.
@@ -282,7 +320,7 @@ Support model:
 
 Priority order:
 
-1. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
+1. Run `npm run import:external-corpus -- <path>` against an independently collected external 50-100 sample React/Tailwind corpus and re-measure editable coverage.
 2. Improve agent handoff context for package imports, multi-hop import graphs, and cross-variable data flow.
 3. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
 4. Validate caching and graph write throttling on product-sized TSX files.

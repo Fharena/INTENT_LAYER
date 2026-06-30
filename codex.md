@@ -118,6 +118,16 @@ editable Tailwind token count and ratio
 unsupported reason distribution
 ```
 
+For external corpus validation:
+
+```text
+do not commit third-party source samples by default
+copy local samples under .intent/external-corpus/
+write a manifest with original path, copied path, hash, byte count, and className count
+write numeric coverage gates to reports/performance/external-corpus-audit.json
+record whether the sample set is independently collected or only a local smoke fixture
+```
+
 For the click-to-patch spike:
 
 ```text

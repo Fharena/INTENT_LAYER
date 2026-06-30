@@ -145,6 +145,7 @@ src/intent/client.ts
 scripts/analyze-classnames.ts
 scripts/evaluate-spike.ts
 scripts/generate-ai-corpus.ts
+scripts/import-external-corpus.ts
 fixtures/corpus/*.tsx
 fixtures/ai-generated/*.tsx
 reports/performance/*.json
@@ -178,6 +179,16 @@ AI corpus fixture 재생성/분석:
 npm run generate:ai-corpus
 npm run analyze:ai-corpus
 ```
+
+로컬 외부 corpus import/분석:
+
+```bash
+npm run import:external-corpus -- <external-react-project-or-samples>
+npm run analyze:external-corpus
+```
+
+외부 corpus 복사본은 `.intent/external-corpus/` 아래에 저장하고 커밋하지 않는다.
+기본 리포트는 `reports/performance/external-corpus-audit.json`에 쓴다.
 
 `npm run eval`은 다음을 생성한다.
 
@@ -228,6 +239,32 @@ supported direct editable coverage: 78.76%
 - read-only의 주요 원인은 variable reference 20건, property access 10건, variant function 10건이다.
 - 이 corpus는 재현 가능한 로컬 benchmark이지만, 외부 프로젝트에서 독립 수집한 corpus는 아니다.
 
+## 6.2 External Corpus Import Harness
+
+외부 프로젝트 코드를 repo에 바로 커밋하지 않기 위해 `scripts/import-external-corpus.ts`를 추가했다.
+
+동작 방식:
+
+- 입력으로 받은 외부 React/Tailwind TSX/JSX 파일을 스캔한다.
+- `className`이 없는 파일, test/spec/story 파일, build output, `node_modules`는 기본 제외한다.
+- 선택된 파일 복사본을 `.intent/external-corpus/files/`에 저장한다.
+- 원본 경로, 복사본 경로, SHA-256 hash, byte 수, `className` 수를 manifest로 남긴다.
+- 같은 `analyzeClassNames` 기준으로 coverage를 계산하고 gate 결과를 JSON으로 저장한다.
+
+`npm run eval`의 작은 smoke 결과:
+
+```text
+selected files: 3
+files scanned: 3
+className occurrences: 6
+skipped story files: 1
+supported direct editable coverage: 75.76%
+gate: externalCorpusHarnessPass = true
+```
+
+이 smoke는 importer와 report/gate 형식이 동작함을 검증한다.
+실제 시장 검증용 수치는 아직 독립 외부 corpus 50-100개를 넣어 다시 측정해야 한다.
+
 ### 3.3 Simple cn/clsx literal segment support
 
 현재 MVP는 다음 패턴을 직접 patch할 수 있다.
@@ -272,6 +309,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - 실제 브라우저 click-to-panel, preview, apply, revert 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
 - 최신 브라우저 측정은 desktop 3회, mobile 390x844 viewport 3회로 반복했다.
 - Codex-generated 50개 React/Tailwind corpus에서는 supported direct editable coverage 78.76%를 기록했다.
+- 외부 corpus import/analyze harness는 `.intent/external-corpus/` 로컬 복사본, manifest, coverage gate를 생성할 수 있고, eval smoke에서 3개 샘플/75.76% coverage로 통과했다.
 - 현재 fixture에서는 warm transform 5ms 목표와 cold transform 10ms 목표를 만족했다.
 - 100개 카드/401개 binding을 가진 대형 TSX stress fixture는 20ms 목표를 만족했다.
 - 100개 카드/401개 binding 반복 transform fixture에서는 semantic graph fingerprint 기반 write throttling이 통과했다.
@@ -281,7 +319,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 우선순위:
 
-1. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
+1. `npm run import:external-corpus -- <path>`로 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개를 넣고 editable coverage를 다시 측정한다.
 2. package import, 다단계 import graph, cross-variable data flow에 대한 agent handoff 문맥을 보강한다.
 3. 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative를 재측정한다.
 4. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
