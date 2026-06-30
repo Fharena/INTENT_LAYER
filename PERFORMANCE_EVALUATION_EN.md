@@ -22,6 +22,7 @@ Measured inputs:
 - agent result artifact fixture
 - agent result source diff fixture
 - read-only binding handoff fixture
+- in-app browser click-to-panel measurement
 
 Important caveat:
 
@@ -87,8 +88,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 3.733ms / p95 5.986ms / max 5.986ms |
-| `src/main.tsx` | 0 | avg 0.003ms / p95 0.011ms / max 0.011ms |
+| `src/App.tsx` | 13 | avg 2.976ms / p95 5.897ms / max 5.897ms |
+| `src/main.tsx` | 0 | avg 0.002ms / p95 0.008ms / max 0.008ms |
 
 Summary:
 
@@ -96,12 +97,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 1.868ms |
-| Overall p95 transform time | 5.986ms |
-| Overall max transform time | 5.986ms |
-| Warm average transform time | 1.585ms |
-| Warm p95 transform time | 3.409ms |
-| Warm max transform time | 3.409ms |
+| Overall average transform time | 1.489ms |
+| Overall p95 transform time | 5.897ms |
+| Overall max transform time | 5.897ms |
+| Warm average transform time | 1.123ms |
+| Warm p95 transform time | 2.974ms |
+| Warm max transform time | 2.974ms |
 | Target | <= 5ms per warm transform |
 | Result | warm pass / cold fail |
 
@@ -118,13 +119,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.256ms |
-| Preview round trip | 1.703ms |
+| Preview time | 1.798ms |
+| Preview round trip | 2.06ms |
 | Apply success | true |
-| Static apply time | 15.126ms |
-| Simple `cn()` apply time | 6.023ms |
+| Static apply time | 10.038ms |
+| Simple `cn()` apply time | 7.328ms |
 | Revert success | true |
-| Revert time | 5.652ms |
+| Revert time | 6.988ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -144,21 +145,55 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.457ms |
-| Average lookup | 0.000457ms |
+| Total time | 0.77ms |
+| Average lookup | 0.00077ms |
 
 Caveat:
 
-This is not a full browser click measurement.
-It only measures the `intent id -> binding` Map lookup.
-A real click-to-panel measurement still needs to be captured in the dev server and browser.
+This remains an `intent id -> binding` Map lookup proxy.
+Real click-to-panel time is measured separately in the browser metric below.
 
-## 6. Agent Task Generation
+## 6. Browser Click-To-Panel
+
+Raw report:
+
+```text
+reports/performance/browser-click-metric.json
+```
+
+Method:
+
+```text
+Opened the Vite dev server in the in-app browser,
+clicked the overlay Pick element button,
+then clicked the visible Patch Preview heading.
+The overlay posted performance.now measurements to /__intent/client-metric.
+```
+
+| Metric | Value |
+| --- | ---: |
+| Test URL | `http://127.0.0.1:5179/` |
+| Binding selected | true |
+| Graph fetch time | 6.3ms |
+| Pick-to-panel time | 423.4ms |
+| Click-to-panel time | 1.6ms |
+| Binding lookup time | 0ms |
+| Panel render time | 1.5ms |
+| Click-to-panel target | <= 100ms |
+| Result | pass |
+
+Interpretation:
+
+- From the actual target-element click to the panel rendering the selected binding, latency was 1.6ms.
+- `pickToPanelMs` includes the time spent waiting for the user to click a target after entering pick mode, so it is not pure UI latency.
+- This is currently a single desktop viewport sample.
+
+## 7. Agent Task Generation
 
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 3.12ms |
+| Task generation time | 3.666ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -175,12 +210,12 @@ Files That Should Not Be Edited
 Required Checks
 ```
 
-## 7. Agent Result Generation
+## 8. Agent Result Generation
 
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 6.929ms |
+| Result generation time | 6.977ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -220,7 +255,7 @@ Interpretation:
 - Task creation stores a selected source-window snapshot, and result recording compares it with the current source window to write a line diff.
 - It does not yet infer full-file semantic changes automatically.
 
-## 8. Read-only Binding Handoff
+## 9. Read-only Binding Handoff
 
 | Metric | Value |
 | --- | ---: |
@@ -229,14 +264,14 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.848ms |
+| Agent task generation time | 1.965ms |
 
 Interpretation:
 
 - Elements such as `className={cardClass}` now receive `data-intent-id` and can be selected.
 - Direct token patch buttons are not shown; the flow degrades to an unsupported reason and agent handoff.
 
-## 9. Gate Results
+## 10. Gate Results
 
 | Gate | Threshold | Result |
 | --- | --- | --- |
@@ -245,6 +280,7 @@ Interpretation:
 | supported direct coverage | >= 50% | pass |
 | warm transform target | max <= 5ms | pass |
 | cold transform target | max <= 5ms | fail |
+| browser click-to-panel | click-to-panel <= 100ms | pass |
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
@@ -253,7 +289,7 @@ Interpretation:
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
-## 10. Conclusion
+## 11. Conclusion
 
 This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff.
 
@@ -268,6 +304,7 @@ What worked:
 - last-patch revert
 - agent handoff task markdown generation
 - agent result markdown and selected source-window diff generation
+- real browser click-to-panel measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
 - source hash stale rejection
@@ -278,7 +315,7 @@ What remains weak:
 
 - cold first transform exceeds the 5ms target
 - transform time still needs to be tested on larger TSX files
-- real browser click-to-panel time is not measured yet
+- real browser click-to-panel measurement is still a single desktop sample
 - real AI-generated 50-100 sample corpus audit is still missing
 - source-window diffs still need to become component-level semantic diffs
 - variant functions and runtime template literals remain unsupported
@@ -287,5 +324,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is real browser click-to-panel measurement, cold transform optimization, and a real corpus audit.
+The next priority is browser click-to-preview/apply round trip measurement, cold transform optimization, and a real corpus audit.
 ```

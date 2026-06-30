@@ -1,0 +1,36 @@
+﻿{
+    "generatedAt":  "2026-06-30T04:46:06.1631612Z",
+    "contextPackUsed":  true,
+    "targetUrl":  "http://127.0.0.1:5179/",
+    "measurement":  "real-browser-click-to-panel",
+    "method":  "In-app browser opened the Vite dev server, clicked the overlay Pick element button, then clicked the visible Patch Preview heading. The overlay posted its own performance.now measurements to /__intent/client-metric.",
+    "samples":  [
+                    {
+                        "kind":  "click-to-panel",
+                        "id":  "il_9e496b23d7",
+                        "status":  "selected",
+                        "createdAt":  "2026-06-30T04:45:32.670Z",
+                        "graphFetchMs":  6.3,
+                        "pickToPanelMs":  423.4,
+                        "clickToPanelMs":  1.6,
+                        "bindingLookupMs":  0,
+                        "renderMs":  1.5
+                    }
+                ],
+    "latest":  {
+                   "kind":  "click-to-panel",
+                   "id":  "il_9e496b23d7",
+                   "status":  "selected",
+                   "createdAt":  "2026-06-30T04:45:32.670Z",
+                   "graphFetchMs":  6.3,
+                   "pickToPanelMs":  423.4,
+                   "clickToPanelMs":  1.6,
+                   "bindingLookupMs":  0,
+                   "renderMs":  1.5
+               },
+    "gates":  {
+                  "clickToPanelUnder100ms":  true,
+                  "graphFetchUnder100ms":  true,
+                  "selectedBinding":  true
+              }
+}

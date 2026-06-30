@@ -37,6 +37,7 @@ Included:
 - structured agent handoff task generation
 - structured agent result artifact generation
 - agent handoff source snapshots and result source diffs
+- browser click-to-panel latency measurement
 - minimal intent operation/diff output
 - corpus analysis script
 - performance and safety evaluation script
@@ -209,7 +210,7 @@ Support model:
 - Restarting the dev server clears the in-memory undo state.
 - Agent handoff records a selected source-window snapshot plus task/result markdown and intent diffs.
 - Agent results record a before/after line diff for the selected source window, but they do not yet infer a full-file semantic diff automatically.
-- The current click-to-binding metric is only a graph lookup proxy, not a full browser click measurement.
+- Real browser click-to-panel time is measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
 - Warm transform meets the 5ms target, but cold first transform can exceed 5ms.
 - Larger TSX files are not tested yet.
 
@@ -218,10 +219,10 @@ Support model:
 Priority order:
 
 1. Measure whether transform time stays under 5ms on larger TSX files.
-2. Measure real browser click -> binding -> patch round trip time.
+2. Measure real browser click -> preview -> apply round trip time.
 3. Expand agent result source-window diffs into semantic intent diffs.
 4. Design an undo stack and operation-log-backed revert.
-5. Measure real browser click-to-panel time.
+5. Expand click-to-panel measurement to multiple samples and mobile viewport.
 6. Connect read-only source diffs to a wider source window.
 7. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
 
@@ -302,3 +303,28 @@ unsupported: variable-reference
 ```
 
 No direct token patch buttons are shown, but the agent handoff task/result flow remains available.
+
+## 10. Browser Metrics
+
+The overlay measures real interaction latency inside the browser.
+
+Current fields:
+
+```text
+graphFetchMs
+pickToPanelMs
+clickToPanelMs
+bindingLookupMs
+renderMs
+```
+
+Dev server endpoints:
+
+```text
+POST /__intent/client-metric
+GET /__intent/client-metrics
+DELETE /__intent/client-metrics
+```
+
+The first real browser measurement used the in-app browser to click `Pick element`, then click the visible `Patch Preview` heading.
+The result is stored in `reports/performance/browser-click-metric.json`.

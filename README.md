@@ -65,10 +65,12 @@ The demo currently supports:
 - source hash validation before patching
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply
 - source snapshot diff output for agent result review handoff
+- browser click-to-panel metric capture at `/__intent/client-metrics`
 
 The first evaluation result is stored in:
 
 ```text
 reports/performance/corpus-audit.json
 reports/performance/spike-evaluation.json
+reports/performance/browser-click-metric.json
 ```
