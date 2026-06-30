@@ -1,36 +1,61 @@
 ﻿{
-    "generatedAt":  "2026-06-30T04:46:06.1631612Z",
+    "generatedAt":  "2026-06-30T04:51:18.4022819Z",
     "contextPackUsed":  true,
-    "targetUrl":  "http://127.0.0.1:5179/",
-    "measurement":  "real-browser-click-to-panel",
-    "method":  "In-app browser opened the Vite dev server, clicked the overlay Pick element button, then clicked the visible Patch Preview heading. The overlay posted its own performance.now measurements to /__intent/client-metric.",
+    "targetUrl":  "http://127.0.0.1:5180/",
+    "measurement":  "real-browser-click-to-panel-and-preview",
+    "method":  "In-app browser opened the Vite dev server, clicked Pick element, clicked the visible Patch Preview heading, then clicked the first Preview button for the selected h2 token row. The overlay posted performance.now measurements to /__intent/client-metric.",
     "samples":  [
                     {
                         "kind":  "click-to-panel",
                         "id":  "il_9e496b23d7",
                         "status":  "selected",
-                        "createdAt":  "2026-06-30T04:45:32.670Z",
-                        "graphFetchMs":  6.3,
-                        "pickToPanelMs":  423.4,
-                        "clickToPanelMs":  1.6,
+                        "createdAt":  "2026-06-30T04:50:57.708Z",
+                        "graphFetchMs":  4.2,
+                        "pickToPanelMs":  374.3,
+                        "clickToPanelMs":  1.8,
                         "bindingLookupMs":  0,
-                        "renderMs":  1.5
+                        "renderMs":  1.8
+                    },
+                    {
+                        "kind":  "patch-preview",
+                        "id":  "il_9e496b23d7",
+                        "status":  "ok",
+                        "createdAt":  "2026-06-30T04:50:58.119Z",
+                        "oldToken":  "text-lg",
+                        "nextToken":  "text-lg",
+                        "roundTripMs":  6.1,
+                        "serverMs":  0.473,
+                        "renderMs":  2
                     }
                 ],
-    "latest":  {
-                   "kind":  "click-to-panel",
-                   "id":  "il_9e496b23d7",
-                   "status":  "selected",
-                   "createdAt":  "2026-06-30T04:45:32.670Z",
-                   "graphFetchMs":  6.3,
-                   "pickToPanelMs":  423.4,
-                   "clickToPanelMs":  1.6,
-                   "bindingLookupMs":  0,
-                   "renderMs":  1.5
-               },
+    "latestClickToPanel":  {
+                               "kind":  "click-to-panel",
+                               "id":  "il_9e496b23d7",
+                               "status":  "selected",
+                               "createdAt":  "2026-06-30T04:50:57.708Z",
+                               "graphFetchMs":  4.2,
+                               "pickToPanelMs":  374.3,
+                               "clickToPanelMs":  1.8,
+                               "bindingLookupMs":  0,
+                               "renderMs":  1.8
+                           },
+    "latestPreview":  {
+                          "kind":  "patch-preview",
+                          "id":  "il_9e496b23d7",
+                          "status":  "ok",
+                          "createdAt":  "2026-06-30T04:50:58.119Z",
+                          "oldToken":  "text-lg",
+                          "nextToken":  "text-lg",
+                          "roundTripMs":  6.1,
+                          "serverMs":  0.473,
+                          "renderMs":  2
+                      },
     "gates":  {
                   "clickToPanelUnder100ms":  true,
                   "graphFetchUnder100ms":  true,
-                  "selectedBinding":  true
+                  "previewRoundTripUnder50ms":  true,
+                  "previewServerUnder50ms":  true,
+                  "selectedBinding":  true,
+                  "previewOk":  true
               }
 }

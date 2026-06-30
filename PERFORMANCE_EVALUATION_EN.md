@@ -88,8 +88,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 2.976ms / p95 5.897ms / max 5.897ms |
-| `src/main.tsx` | 0 | avg 0.002ms / p95 0.008ms / max 0.008ms |
+| `src/App.tsx` | 13 | avg 3.133ms / p95 5.865ms / max 5.865ms |
+| `src/main.tsx` | 0 | avg 0.003ms / p95 0.009ms / max 0.009ms |
 
 Summary:
 
@@ -97,12 +97,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 1.489ms |
-| Overall p95 transform time | 5.897ms |
-| Overall max transform time | 5.897ms |
-| Warm average transform time | 1.123ms |
-| Warm p95 transform time | 2.974ms |
-| Warm max transform time | 2.974ms |
+| Overall average transform time | 1.568ms |
+| Overall p95 transform time | 5.865ms |
+| Overall max transform time | 5.865ms |
+| Warm average transform time | 1.225ms |
+| Warm p95 transform time | 2.883ms |
+| Warm max transform time | 2.883ms |
 | Target | <= 5ms per warm transform |
 | Result | warm pass / cold fail |
 
@@ -119,13 +119,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.798ms |
-| Preview round trip | 2.06ms |
+| Preview time | 0.769ms |
+| Preview round trip | 1.221ms |
 | Apply success | true |
-| Static apply time | 10.038ms |
-| Simple `cn()` apply time | 7.328ms |
+| Static apply time | 10.864ms |
+| Simple `cn()` apply time | 8.741ms |
 | Revert success | true |
-| Revert time | 6.988ms |
+| Revert time | 16.625ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -145,8 +145,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.77ms |
-| Average lookup | 0.00077ms |
+| Total time | 0.474ms |
+| Average lookup | 0.000474ms |
 
 Caveat:
 
@@ -172,20 +172,25 @@ The overlay posted performance.now measurements to /__intent/client-metric.
 
 | Metric | Value |
 | --- | ---: |
-| Test URL | `http://127.0.0.1:5179/` |
+| Test URL | `http://127.0.0.1:5180/` |
 | Binding selected | true |
-| Graph fetch time | 6.3ms |
-| Pick-to-panel time | 423.4ms |
-| Click-to-panel time | 1.6ms |
+| Graph fetch time | 4.2ms |
+| Pick-to-panel time | 374.3ms |
+| Click-to-panel time | 1.8ms |
 | Binding lookup time | 0ms |
-| Panel render time | 1.5ms |
+| Panel render time | 1.8ms |
+| Preview round trip | 6.1ms |
+| Preview server time | 0.473ms |
+| Preview render time | 2ms |
 | Click-to-panel target | <= 100ms |
+| Preview round trip target | <= 50ms |
 | Result | pass |
 
 Interpretation:
 
 - From the actual target-element click to the panel rendering the selected binding, latency was 1.6ms.
 - `pickToPanelMs` includes the time spent waiting for the user to click a target after entering pick mode, so it is not pure UI latency.
+- From the preview button click to preview-state rendering, real browser round trip was 6.1ms.
 - This is currently a single desktop viewport sample.
 
 ## 7. Agent Task Generation
@@ -193,7 +198,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 3.666ms |
+| Task generation time | 5.182ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -215,7 +220,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 6.977ms |
+| Result generation time | 11.593ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -264,7 +269,7 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.965ms |
+| Agent task generation time | 2.638ms |
 
 Interpretation:
 
@@ -281,6 +286,7 @@ Interpretation:
 | warm transform target | max <= 5ms | pass |
 | cold transform target | max <= 5ms | fail |
 | browser click-to-panel | click-to-panel <= 100ms | pass |
+| browser preview round trip | preview round trip <= 50ms | pass |
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
@@ -304,7 +310,7 @@ What worked:
 - last-patch revert
 - agent handoff task markdown generation
 - agent result markdown and selected source-window diff generation
-- real browser click-to-panel measurement
+- real browser click-to-panel and preview round-trip measurement
 - agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
 - source hash stale rejection
@@ -315,7 +321,7 @@ What remains weak:
 
 - cold first transform exceeds the 5ms target
 - transform time still needs to be tested on larger TSX files
-- real browser click-to-panel measurement is still a single desktop sample
+- real browser measurement is still a single desktop sample
 - real AI-generated 50-100 sample corpus audit is still missing
 - source-window diffs still need to become component-level semantic diffs
 - variant functions and runtime template literals remain unsupported
@@ -324,5 +330,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is browser click-to-preview/apply round trip measurement, cold transform optimization, and a real corpus audit.
+The next priority is browser apply/revert round trip measurement, cold transform optimization, and a real corpus audit.
 ```

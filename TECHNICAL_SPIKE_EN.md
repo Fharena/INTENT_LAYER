@@ -37,7 +37,7 @@ Included:
 - structured agent handoff task generation
 - structured agent result artifact generation
 - agent handoff source snapshots and result source diffs
-- browser click-to-panel latency measurement
+- browser click-to-panel and preview round-trip latency measurement
 - minimal intent operation/diff output
 - corpus analysis script
 - performance and safety evaluation script
@@ -219,10 +219,10 @@ Support model:
 Priority order:
 
 1. Measure whether transform time stays under 5ms on larger TSX files.
-2. Measure real browser click -> preview -> apply round trip time.
+2. Measure real browser preview -> apply round trip time.
 3. Expand agent result source-window diffs into semantic intent diffs.
 4. Design an undo stack and operation-log-backed revert.
-5. Expand click-to-panel measurement to multiple samples and mobile viewport.
+5. Expand browser metric measurement to multiple samples and mobile viewport.
 6. Connect read-only source diffs to a wider source window.
 7. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
 
@@ -316,6 +316,9 @@ pickToPanelMs
 clickToPanelMs
 bindingLookupMs
 renderMs
+preview roundTripMs
+preview serverMs
+preview renderMs
 ```
 
 Dev server endpoints:
@@ -326,5 +329,5 @@ GET /__intent/client-metrics
 DELETE /__intent/client-metrics
 ```
 
-The first real browser measurement used the in-app browser to click `Pick element`, then click the visible `Patch Preview` heading.
+The first real browser measurement used the in-app browser to click `Pick element`, the visible `Patch Preview` heading, and the first `Preview` button.
 The result is stored in `reports/performance/browser-click-metric.json`.

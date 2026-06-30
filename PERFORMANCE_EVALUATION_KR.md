@@ -88,8 +88,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 2.976ms / p95 5.897ms / max 5.897ms |
-| `src/main.tsx` | 0 | avg 0.002ms / p95 0.008ms / max 0.008ms |
+| `src/App.tsx` | 13 | avg 3.133ms / p95 5.865ms / max 5.865ms |
+| `src/main.tsx` | 0 | avg 0.003ms / p95 0.009ms / max 0.009ms |
 
 요약:
 
@@ -97,12 +97,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 1.489ms |
-| 전체 p95 transform time | 5.897ms |
-| 전체 최대 transform time | 5.897ms |
-| warm 평균 transform time | 1.123ms |
-| warm p95 transform time | 2.974ms |
-| warm 최대 transform time | 2.974ms |
+| 전체 평균 transform time | 1.568ms |
+| 전체 p95 transform time | 5.865ms |
+| 전체 최대 transform time | 5.865ms |
+| warm 평균 transform time | 1.225ms |
+| warm p95 transform time | 2.883ms |
+| warm 최대 transform time | 2.883ms |
 | 목표 | warm 파일당 5ms 이하 |
 | 결과 | warm 통과 / cold 미통과 |
 
@@ -119,13 +119,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 1.798ms |
-| preview round trip | 2.06ms |
+| preview time | 0.769ms |
+| preview round trip | 1.221ms |
 | apply 성공 | true |
-| static apply time | 10.038ms |
-| simple `cn()` apply time | 7.328ms |
+| static apply time | 10.864ms |
+| simple `cn()` apply time | 8.741ms |
 | revert 성공 | true |
-| revert time | 6.988ms |
+| revert time | 16.625ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -145,8 +145,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.77ms |
-| 평균 lookup | 0.00077ms |
+| 총 시간 | 0.474ms |
+| 평균 lookup | 0.000474ms |
 
 주의:
 
@@ -172,20 +172,25 @@ overlay가 performance.now()로 측정한 값을 /__intent/client-metric에 POST
 
 | 항목 | 값 |
 | --- | ---: |
-| 테스트 URL | `http://127.0.0.1:5179/` |
+| 테스트 URL | `http://127.0.0.1:5180/` |
 | binding 선택 성공 | true |
-| graph fetch time | 6.3ms |
-| pick-to-panel time | 423.4ms |
-| click-to-panel time | 1.6ms |
+| graph fetch time | 4.2ms |
+| pick-to-panel time | 374.3ms |
+| click-to-panel time | 1.8ms |
 | binding lookup time | 0ms |
-| panel render time | 1.5ms |
+| panel render time | 1.8ms |
+| preview round trip | 6.1ms |
+| preview server time | 0.473ms |
+| preview render time | 2ms |
 | click-to-panel 목표 | 100ms 이하 |
+| preview round trip 목표 | 50ms 이하 |
 | 결과 | 통과 |
 
 해석:
 
 - 사용자가 실제 대상 요소를 클릭한 순간부터 panel이 binding 상태로 렌더되기까지는 1.6ms였다.
 - `pickToPanelMs`는 사용자가 pick mode에 들어간 뒤 실제 대상을 클릭하기까지 머문 시간까지 포함하므로 UX latency가 아니라 사용자 대기 시간이 섞인 값이다.
+- preview 버튼 클릭부터 preview 상태 렌더까지의 실제 browser round trip은 6.1ms였다.
 - 현재 수치는 단일 desktop viewport 샘플이다.
 
 ## 7. Agent Task 생성
@@ -193,7 +198,7 @@ overlay가 performance.now()로 측정한 값을 /__intent/client-metric에 POST
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 3.666ms |
+| task 생성 시간 | 5.182ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -215,7 +220,7 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 6.977ms |
+| result 생성 시간 | 11.593ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
 | source hash changed | true |
@@ -264,7 +269,7 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 1.965ms |
+| agent task 생성 시간 | 2.638ms |
 
 해석:
 
@@ -281,6 +286,7 @@ dev server endpoint smoke test:
 | warm transform target | max <= 5ms | 통과 |
 | cold transform target | max <= 5ms | 미통과 |
 | browser click-to-panel | click-to-panel <= 100ms | 통과 |
+| browser preview round trip | preview round trip <= 50ms | 통과 |
 | supported static patch | apply 성공 + syntax error 0 | 통과 |
 | last patch revert | revert 성공 + syntax error 0 | 통과 |
 | agent task generation | task 생성 + 필수 섹션 포함 | 통과 |
@@ -304,7 +310,7 @@ dev server endpoint smoke test:
 - last-patch revert
 - agent handoff task markdown 생성
 - agent result markdown과 selected source-window diff 생성
-- 실제 브라우저 click-to-panel 측정
+- 실제 브라우저 click-to-panel 및 preview round-trip 측정
 - unsupported className의 agent handoff degrade
 - simple `cn()` literal segment patch
 - source hash stale rejection
@@ -315,7 +321,7 @@ dev server endpoint smoke test:
 
 - cold first transform 5ms 목표
 - 대형 TSX 파일에서 transform time 5ms 목표 유지
-- 실제 브라우저 click-to-panel 측정은 아직 단일 desktop 샘플이다.
+- 실제 브라우저 측정은 아직 단일 desktop 샘플이다.
 - 실제 AI 생성 코드 50-100개 corpus 검증
 - agent source-window diff를 component-level semantic diff로 확장
 - variant 함수와 runtime template literal 지원
@@ -324,5 +330,5 @@ dev server endpoint smoke test:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 browser click-to-preview/apply round trip 측정, cold transform 최적화, 실제 corpus audit이다.
+다음 우선순위는 browser apply/revert round trip 측정, cold transform 최적화, 실제 corpus audit이다.
 ```
