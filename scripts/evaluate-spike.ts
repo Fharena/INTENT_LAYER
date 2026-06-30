@@ -99,6 +99,9 @@ interface PackageSmokeResult {
   installedViteDevServerGraphAfterApplyStatus: number | null;
   installedViteDevServerGraphAfterApplyEntryCount: number;
   installedViteDevServerGraphAfterApplyFirstToken: string | null;
+  installedViteDevServerApplyRefreshMs: number;
+  installedViteDevServerApplyRefreshTargetMs: number;
+  installedViteDevServerApplyRefreshTargetPass: boolean;
   installedViteDevServerMultiFileOk: boolean;
   installedViteDevServerMultiFileInitialEntryCount: number;
   installedViteDevServerMultiFileAfterChangeEntryCount: number;
@@ -107,6 +110,9 @@ interface PackageSmokeResult {
   installedViteDevServerMultiFileUnchangedFilesRetained: boolean;
   installedViteDevServerMultiFileGraphGeneratedAtChanged: boolean;
   installedViteDevServerMultiFileModuleAfterChangeIncludesNextToken: boolean;
+  installedViteDevServerMultiFileRefreshMs: number;
+  installedViteDevServerMultiFileRefreshTargetMs: number;
+  installedViteDevServerMultiFileRefreshTargetPass: boolean;
   installedViteDevServerMultiFileMs: number;
   installedViteDevServerMs: number;
   dryRunMs: number;
@@ -506,8 +512,23 @@ function packageSmoke(): PackageSmokeResult {
       "  const preview = await postJson(`${baseUrl}/__intent/preview`, patchRequest);",
       "  const apply = await postJson(`${baseUrl}/__intent/apply`, patchRequest);",
       "  const sourceAfterApply = fs.readFileSync(path.join(root, \"src\", \"App.tsx\"), \"utf8\");",
-      "  const moduleAfterApply = await waitFetch(`${baseUrl}/src/App.tsx`, 10000);",
-      "  const graphAfterApply = await waitFetch(`${baseUrl}/__intent/graph`, 10000);",
+      "  const applyRefreshStarted = performance.now();",
+      "  const moduleAfterApply = await waitFetchMatch(",
+      "    `${baseUrl}/src/App.tsx`,",
+      "    10000,",
+      "    (result) => result.status === 200 && result.body.includes(\"gap-6\")",
+      "  );",
+      "  const graphAfterApply = await waitFetchMatch(",
+      "    `${baseUrl}/__intent/graph`,",
+      "    10000,",
+      "    (result) => {",
+      "      const parsed = parseGraphResponse(result);",
+      "      const firstAfterApplyEntry = entryForRelativeFile(parsed.entries, \"src/App.tsx\");",
+      "      return firstEditableTokenValue(firstAfterApplyEntry) === \"gap-6\";",
+      "    }",
+      "  );",
+      "  const applyRefreshMs = Number((performance.now() - applyRefreshStarted).toFixed(3));",
+      "  const refreshTargetMs = 500;",
       "  const parsedGraphAfterApply = graphAfterApply.status === 200 ? JSON.parse(graphAfterApply.body) : null;",
       "  const entriesAfterApply = parsedGraphAfterApply ? Object.values(parsedGraphAfterApply.entries ?? {}) : [];",
       "  const firstAfterApply = entriesAfterApply[0] ?? null;",
@@ -561,6 +582,7 @@ function packageSmoke(): PackageSmokeResult {
       "  const multiAppToken = firstEditableTokenValue(multiAppEntry);",
       "  const multiHeaderToken = firstEditableTokenValue(multiHeaderEntry);",
       "  const multiCardTokenBefore = firstEditableTokenValue(multiCardEntry);",
+      "  const multiFileRefreshStarted = performance.now();",
       "  fs.writeFileSync(",
       "    path.join(root, \"src\", \"Card.tsx\"),",
       "    fs.readFileSync(path.join(root, \"src\", \"Card.tsx\"), \"utf8\").replace(\"gap-4\", \"gap-8\")",
@@ -579,6 +601,7 @@ function packageSmoke(): PackageSmokeResult {
       "      return firstEditableTokenValue(card) === \"gap-8\";",
       "    }",
       "  );",
+      "  const multiFileRefreshMs = Number((performance.now() - multiFileRefreshStarted).toFixed(3));",
       "  const parsedMultiGraphAfterChange = parseGraphResponse(multiGraphAfterChange);",
       "  const multiAppAfterChangeEntry = entryForRelativeFile(parsedMultiGraphAfterChange.entries, \"src/App.tsx\");",
       "  const multiHeaderAfterChangeEntry = entryForRelativeFile(parsedMultiGraphAfterChange.entries, \"src/Header.tsx\");",
@@ -639,6 +662,9 @@ function packageSmoke(): PackageSmokeResult {
       "    graphAfterApplyStatus: graphAfterApply.status,",
       "    graphAfterApplyEntryCount: entriesAfterApply.length,",
       "    graphAfterApplyFirstToken: firstTokenAfterApply,",
+      "    applyRefreshMs,",
+      "    applyRefreshTargetMs: refreshTargetMs,",
+      "    applyRefreshTargetPass: applyRefreshMs <= refreshTargetMs,",
       "    multiFileOk,",
       "    multiFileInitialEntryCount: parsedMultiGraph.entries.length,",
       "    multiFileAfterChangeEntryCount: parsedMultiGraphAfterChange.entries.length,",
@@ -647,6 +673,9 @@ function packageSmoke(): PackageSmokeResult {
       "    multiFileUnchangedFilesRetained,",
       "    multiFileGraphGeneratedAtChanged,",
       "    multiFileModuleAfterChangeIncludesNextToken,",
+      "    multiFileRefreshMs,",
+      "    multiFileRefreshTargetMs: refreshTargetMs,",
+      "    multiFileRefreshTargetPass: multiFileRefreshMs <= refreshTargetMs,",
       "    multiFileMs,",
       "    ms: elapsedMs,",
       "    stdoutBytes: stdout.length,",
@@ -678,6 +707,9 @@ function packageSmoke(): PackageSmokeResult {
       "    graphAfterApplyStatus: null,",
       "    graphAfterApplyEntryCount: 0,",
       "    graphAfterApplyFirstToken: null,",
+      "    applyRefreshMs: 0,",
+      "    applyRefreshTargetMs: 500,",
+      "    applyRefreshTargetPass: false,",
       "    multiFileOk: false,",
       "    multiFileInitialEntryCount: 0,",
       "    multiFileAfterChangeEntryCount: 0,",
@@ -686,6 +718,9 @@ function packageSmoke(): PackageSmokeResult {
       "    multiFileUnchangedFilesRetained: false,",
       "    multiFileGraphGeneratedAtChanged: false,",
       "    multiFileModuleAfterChangeIncludesNextToken: false,",
+      "    multiFileRefreshMs: 0,",
+      "    multiFileRefreshTargetMs: 500,",
+      "    multiFileRefreshTargetPass: false,",
       "    multiFileMs: 0,",
       "    ms: Number((performance.now() - started).toFixed(3)),",
       "    error: error instanceof Error ? error.message : String(error),",
@@ -727,6 +762,9 @@ function packageSmoke(): PackageSmokeResult {
     graphAfterApplyStatus?: number | null;
     graphAfterApplyEntryCount?: number;
     graphAfterApplyFirstToken?: string | null;
+    applyRefreshMs?: number;
+    applyRefreshTargetMs?: number;
+    applyRefreshTargetPass?: boolean;
     multiFileOk?: boolean;
     multiFileInitialEntryCount?: number;
     multiFileAfterChangeEntryCount?: number;
@@ -735,6 +773,9 @@ function packageSmoke(): PackageSmokeResult {
     multiFileUnchangedFilesRetained?: boolean;
     multiFileGraphGeneratedAtChanged?: boolean;
     multiFileModuleAfterChangeIncludesNextToken?: boolean;
+    multiFileRefreshMs?: number;
+    multiFileRefreshTargetMs?: number;
+    multiFileRefreshTargetPass?: boolean;
     multiFileMs?: number;
     ms?: number;
   } = {};
@@ -812,6 +853,11 @@ function packageSmoke(): PackageSmokeResult {
       installedViteDevServerReport.graphAfterApplyEntryCount ?? 0,
     installedViteDevServerGraphAfterApplyFirstToken:
       installedViteDevServerReport.graphAfterApplyFirstToken ?? null,
+    installedViteDevServerApplyRefreshMs: installedViteDevServerReport.applyRefreshMs ?? 0,
+    installedViteDevServerApplyRefreshTargetMs:
+      installedViteDevServerReport.applyRefreshTargetMs ?? 500,
+    installedViteDevServerApplyRefreshTargetPass:
+      installedViteDevServerReport.applyRefreshTargetPass === true,
     installedViteDevServerMultiFileOk: installedViteDevServerReport.multiFileOk === true,
     installedViteDevServerMultiFileInitialEntryCount:
       installedViteDevServerReport.multiFileInitialEntryCount ?? 0,
@@ -827,6 +873,12 @@ function packageSmoke(): PackageSmokeResult {
       installedViteDevServerReport.multiFileGraphGeneratedAtChanged === true,
     installedViteDevServerMultiFileModuleAfterChangeIncludesNextToken:
       installedViteDevServerReport.multiFileModuleAfterChangeIncludesNextToken === true,
+    installedViteDevServerMultiFileRefreshMs:
+      installedViteDevServerReport.multiFileRefreshMs ?? 0,
+    installedViteDevServerMultiFileRefreshTargetMs:
+      installedViteDevServerReport.multiFileRefreshTargetMs ?? 500,
+    installedViteDevServerMultiFileRefreshTargetPass:
+      installedViteDevServerReport.multiFileRefreshTargetPass === true,
     installedViteDevServerMultiFileMs: installedViteDevServerReport.multiFileMs ?? 0,
     installedViteDevServerMs: installedViteDevServerReport.ms ?? 0,
     dryRunMs: dryRun.ms,
@@ -4766,6 +4818,7 @@ const report = {
       packageInstallSmoke.installedViteDevServerGraphAfterApplyStatus === 200 &&
       packageInstallSmoke.installedViteDevServerGraphAfterApplyEntryCount === 1 &&
       packageInstallSmoke.installedViteDevServerGraphAfterApplyFirstToken === "gap-6" &&
+      packageInstallSmoke.installedViteDevServerApplyRefreshTargetPass &&
       packageInstallSmoke.installedViteDevServerMultiFileOk &&
       packageInstallSmoke.installedViteDevServerMultiFileInitialEntryCount === 3 &&
       packageInstallSmoke.installedViteDevServerMultiFileAfterChangeEntryCount === 3 &&
@@ -4773,7 +4826,8 @@ const report = {
       packageInstallSmoke.installedViteDevServerMultiFileChangedFileTokenAfter === "gap-8" &&
       packageInstallSmoke.installedViteDevServerMultiFileUnchangedFilesRetained &&
       packageInstallSmoke.installedViteDevServerMultiFileGraphGeneratedAtChanged &&
-      packageInstallSmoke.installedViteDevServerMultiFileModuleAfterChangeIncludesNextToken,
+      packageInstallSmoke.installedViteDevServerMultiFileModuleAfterChangeIncludesNextToken &&
+      packageInstallSmoke.installedViteDevServerMultiFileRefreshTargetPass,
     cliScanPass:
       cliScan.exitCode === 0 &&
       cliScanReport?.command === "scan" &&
