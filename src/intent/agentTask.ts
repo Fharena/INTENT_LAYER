@@ -245,8 +245,11 @@ const dependencyIdentifierDenylist = new Set([
   "clsx",
   "cn",
   "const",
+  "export",
   "false",
+  "from",
   "function",
+  "import",
   "let",
   "null",
   "return",
@@ -852,22 +855,37 @@ function findRelatedDependencyRanges(
   }
 
   const dependencies: RelatedSourceRange[] = [];
+  const seen = new Set<string>();
   for (const identifier of identifiers) {
     const range = findVariableDeclarationRange(relatedRange.source, identifier);
-    if (!range || (range.start >= relatedRange.start && range.end <= relatedRange.end)) {
-      continue;
-    }
-
-    dependencies.push(
-      relatedRangeFromLocalDeclaration(
+    if (range && !(range.start >= relatedRange.start && range.end <= relatedRange.end)) {
+      const dependency = relatedRangeFromLocalDeclaration(
         rootDir,
         relatedRange.file,
         relatedRange.source,
         "variable-declaration",
         identifier,
         range
-      )
-    );
+      );
+      const key = `${dependency.relativeFile}:${dependency.start}:${dependency.end}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        dependencies.push(dependency);
+      }
+      continue;
+    }
+
+    const imported = importedNameForLocalIdentifier(relatedRange.source, identifier);
+    const importedFile = imported ? resolveImportFile(rootDir, relatedRange.file, imported.file) : null;
+    const dependency = imported && importedFile
+      ? findImportedVariableDeclaration(rootDir, importedFile, imported.importedName)
+      : null;
+    if (!dependency) continue;
+
+    const key = `${dependency.relativeFile}:${dependency.start}:${dependency.end}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    dependencies.push(dependency);
   }
 
   return dependencies.slice(0, 8);

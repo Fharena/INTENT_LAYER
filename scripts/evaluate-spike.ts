@@ -1967,6 +1967,143 @@ const importedVariableDependencyHandoffResult = recordAgentResult(
   }
 );
 
+const transitiveDependencyRoot = resetTmpSubdir("transitive-dependency-handoff");
+const transitiveDependencyStylesDir = path.join(transitiveDependencyRoot, "src", "styles");
+const transitiveDependencyTokensDir = path.join(transitiveDependencyRoot, "src", "tokens");
+const transitiveDependencyThemeDir = path.join(transitiveDependencyRoot, "src", "theme");
+const transitiveDependencyScreensDir = path.join(transitiveDependencyRoot, "src", "screens");
+fs.mkdirSync(transitiveDependencyStylesDir, { recursive: true });
+fs.mkdirSync(transitiveDependencyTokensDir, { recursive: true });
+fs.mkdirSync(transitiveDependencyThemeDir, { recursive: true });
+fs.mkdirSync(transitiveDependencyScreensDir, { recursive: true });
+fs.writeFileSync(
+  path.join(transitiveDependencyRoot, "tsconfig.json"),
+  `${JSON.stringify(
+    {
+      compilerOptions: {
+        baseUrl: ".",
+        paths: {
+          "@/*": ["src/*"]
+        }
+      }
+    },
+    null,
+    2
+  )}\n`
+);
+const transitiveDependencyTokensFixture = path.join(
+  transitiveDependencyTokensDir,
+  "cardTokens.ts"
+);
+fs.writeFileSync(
+  transitiveDependencyTokensFixture,
+  [
+    "export const baseCardClass = \"grid grid-cols-3 gap-4 rounded-lg p-6\";",
+    "export const toneClass = \"bg-white text-slate-700 shadow-sm\";",
+    ""
+  ].join("\n")
+);
+const transitiveDependencyDefinitionFixture = path.join(
+  transitiveDependencyStylesDir,
+  "cardClass.ts"
+);
+fs.writeFileSync(
+  transitiveDependencyDefinitionFixture,
+  [
+    "import { baseCardClass, toneClass as importedToneClass } from \"@/tokens/cardTokens\";",
+    "",
+    "export const cardClass = cn(baseCardClass, importedToneClass, \"border border-slate-200\");",
+    ""
+  ].join("\n")
+);
+const transitiveDependencyStylesIndexFixture = path.join(
+  transitiveDependencyStylesDir,
+  "index.ts"
+);
+fs.writeFileSync(transitiveDependencyStylesIndexFixture, "export { cardClass } from \"./cardClass\";\n");
+const transitiveDependencyThemeIndexFixture = path.join(
+  transitiveDependencyThemeDir,
+  "index.ts"
+);
+fs.writeFileSync(transitiveDependencyThemeIndexFixture, "export { cardClass } from \"../styles\";\n");
+const transitiveDependencyHandoffFixture = path.join(
+  transitiveDependencyScreensDir,
+  "TransitiveDependencyHandoffFixture.tsx"
+);
+fs.writeFileSync(
+  transitiveDependencyHandoffFixture,
+  [
+    "import { cardClass as shellClass } from \"@/theme\";",
+    "",
+    "export function TransitiveDependencyHandoffFixture() {",
+    "  return <article className={shellClass}>Transitive dependency handoff target</article>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const transitiveDependencyHandoffInstrument = instrumentSource({
+  code: fs.readFileSync(transitiveDependencyHandoffFixture, "utf8"),
+  file: transitiveDependencyHandoffFixture,
+  rootDir: transitiveDependencyRoot
+});
+const transitiveDependencyHandoffEntry = transitiveDependencyHandoffInstrument.entries[0];
+const transitiveDependencyHandoffTask = createAgentTask(
+  transitiveDependencyRoot,
+  transitiveDependencyHandoffEntry,
+  {
+    id:
+      transitiveDependencyHandoffEntry?.id ??
+      "missing-transitive-dependency-handoff-binding",
+    desiredChange:
+      "Change this imported className by editing dependency variables imported by its source declaration."
+  }
+);
+const transitiveDependencyRelatedSnapshot = transitiveDependencyHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedSourceSnapshot | null>(
+      transitiveDependencyHandoffTask.markdown,
+      "Related Source Snapshot"
+    )
+  : null;
+const transitiveDependencySnapshots = transitiveDependencyHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedDependencySnapshot[] | null>(
+      transitiveDependencyHandoffTask.markdown,
+      "Related Dependency Snapshots"
+    ) ?? []
+  : [];
+if (transitiveDependencyHandoffTask.ok) {
+  fs.writeFileSync(
+    transitiveDependencyTokensFixture,
+    fs
+      .readFileSync(transitiveDependencyTokensFixture, "utf8")
+      .replace("grid grid-cols-3 gap-4 rounded-lg p-6", "grid grid-cols-2 gap-6 rounded-xl p-8")
+      .replace("bg-white text-slate-700 shadow-sm", "bg-cyan-50 text-cyan-700 shadow-md")
+  );
+}
+const transitiveDependencySyntaxErrorsAfterResult =
+  parseSyntaxErrorCount(transitiveDependencyTokensFixture) +
+  parseSyntaxErrorCount(transitiveDependencyDefinitionFixture) +
+  parseSyntaxErrorCount(transitiveDependencyStylesIndexFixture) +
+  parseSyntaxErrorCount(transitiveDependencyThemeIndexFixture) +
+  parseSyntaxErrorCount(transitiveDependencyHandoffFixture);
+const transitiveDependencyHandoffResult = recordAgentResult(
+  transitiveDependencyRoot,
+  transitiveDependencyHandoffEntry,
+  {
+    id:
+      transitiveDependencyHandoffEntry?.id ??
+      "missing-transitive-dependency-handoff-binding",
+    taskFile: transitiveDependencyHandoffTask.ok
+      ? transitiveDependencyHandoffTask.taskFile
+      : undefined,
+    summary:
+      "Transitive dependency handoff fixture: updated imported token variables referenced by the related className declaration.",
+    changedFiles: ["src/tokens/cardTokens.ts"],
+    checks: ["npm run typecheck", "npm run eval", "npm run build"],
+    notes:
+      "Evaluation fixture for bounded cross-file dependency handoff context; no LLM call is made."
+  }
+);
+
 const propertyAccessRoot = resetTmpSubdir("property-access-handoff");
 const propertyAccessStylesDir = path.join(propertyAccessRoot, "src", "styles");
 const propertyAccessThemeDir = path.join(propertyAccessRoot, "src", "theme");
@@ -3815,6 +3952,87 @@ const report = {
       ? importedVariableDependencyHandoffResult.relatedDependencySemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  transitiveDependencyHandoffBinding: {
+    entryCreated: Boolean(transitiveDependencyHandoffEntry),
+    root: reportPath(transitiveDependencyRoot),
+    kind: transitiveDependencyHandoffEntry?.className.kind ?? null,
+    unsupportedReason: transitiveDependencyHandoffEntry?.className.unsupportedReason ?? null,
+    value: transitiveDependencyHandoffEntry?.className.value ?? null,
+    tokenCount: transitiveDependencyHandoffEntry?.tokens.length ?? 0,
+    taskOk: transitiveDependencyHandoffTask.ok,
+    taskMs: transitiveDependencyHandoffTask.ok
+      ? transitiveDependencyHandoffTask.metrics.taskMs
+      : transitiveDependencyHandoffTask.metrics?.taskMs,
+    relatedSnapshotAvailable: Boolean(transitiveDependencyRelatedSnapshot),
+    relatedSnapshotFile: transitiveDependencyRelatedSnapshot?.file ?? null,
+    relatedSnapshotKind: transitiveDependencyRelatedSnapshot?.kind ?? null,
+    relatedSnapshotIdentifier: transitiveDependencyRelatedSnapshot?.identifier ?? null,
+    relatedSnapshotIncludesImportedDependencyReferences: Boolean(
+      transitiveDependencyRelatedSnapshot?.excerpt.includes("baseCardClass") &&
+        transitiveDependencyRelatedSnapshot.excerpt.includes("importedToneClass")
+    ),
+    dependencySnapshotCount: transitiveDependencySnapshots.length,
+    dependencySnapshotFiles: transitiveDependencySnapshots.map((snapshot) => snapshot.file),
+    dependencySnapshotIdentifiers: transitiveDependencySnapshots.map(
+      (snapshot) => snapshot.identifier
+    ),
+    dependencySnapshotsReferenceCardClass: transitiveDependencySnapshots.every(
+      (snapshot) => snapshot.referencedBy === "cardClass"
+    ),
+    dependencySnapshotsAreImportedTokenSource: transitiveDependencySnapshots.every(
+      (snapshot) => snapshot.file === "src/tokens/cardTokens.ts"
+    ),
+    dependencySnapshotsIncludeClassTokens: transitiveDependencySnapshots.every((snapshot) =>
+      /grid|bg-|text-|shadow|gap-/.test(snapshot.excerpt)
+    ),
+    resultOk: transitiveDependencyHandoffResult.ok,
+    resultMs: transitiveDependencyHandoffResult.ok
+      ? transitiveDependencyHandoffResult.metrics.resultMs
+      : transitiveDependencyHandoffResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: transitiveDependencySyntaxErrorsAfterResult,
+    sourceDiffLineCount: transitiveDependencyHandoffResult.ok
+      ? transitiveDependencyHandoffResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: transitiveDependencyHandoffResult.ok
+      ? Boolean(transitiveDependencyHandoffResult.sourceDiff)
+      : false,
+    componentDiffLineCount: transitiveDependencyHandoffResult.ok
+      ? transitiveDependencyHandoffResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: transitiveDependencyHandoffResult.ok
+      ? Boolean(transitiveDependencyHandoffResult.componentSourceDiff)
+      : false,
+    relatedResultSnapshotAvailable: transitiveDependencyHandoffResult.ok
+      ? transitiveDependencyHandoffResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: transitiveDependencyHandoffResult.ok
+      ? transitiveDependencyHandoffResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: transitiveDependencyHandoffResult.ok
+      ? Boolean(transitiveDependencyHandoffResult.relatedSourceDiff)
+      : false,
+    relatedDependencySnapshotCount: transitiveDependencyHandoffResult.ok
+      ? transitiveDependencyHandoffResult.source.relatedDependencySnapshotCount
+      : 0,
+    relatedDependencyDiffLineCount: transitiveDependencyHandoffResult.ok
+      ? transitiveDependencyHandoffResult.source.relatedDependencyDiffLineCount
+      : 0,
+    relatedDependencySourceDiffPresent: transitiveDependencyHandoffResult.ok
+      ? Boolean(transitiveDependencyHandoffResult.relatedDependencySourceDiff)
+      : false,
+    relatedDependencySemanticChangeCount: transitiveDependencyHandoffResult.ok
+      ? transitiveDependencyHandoffResult.source.relatedDependencySemanticChangeCount
+      : 0,
+    relatedDependencySemanticDiffPresent: transitiveDependencyHandoffResult.ok
+      ? Boolean(transitiveDependencyHandoffResult.relatedDependencySemanticDiff)
+      : false,
+    relatedDependencySemanticTokenAddedCount: transitiveDependencyHandoffResult.ok
+      ? transitiveDependencyHandoffResult.relatedDependencySemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedDependencySemanticTokenRemovedCount: transitiveDependencyHandoffResult.ok
+      ? transitiveDependencyHandoffResult.relatedDependencySemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   propertyAccessHandoffBinding: {
     entryCreated: Boolean(propertyAccessHandoffEntry),
     root: reportPath(propertyAccessRoot),
@@ -4481,6 +4699,34 @@ const report = {
       (importedVariableDependencyHandoffResult.relatedDependencySemanticDiff?.tokenRemovedCount ??
         0) >= 5 &&
       importedVariableDependencySyntaxErrorsAfterResult === 0,
+    transitiveDependencyHandoffPass:
+      transitiveDependencyHandoffEntry?.className.kind === "read-only" &&
+      transitiveDependencyHandoffEntry.className.unsupportedReason === "variable-reference" &&
+      transitiveDependencyHandoffTask.ok &&
+      transitiveDependencyRelatedSnapshot?.kind === "variable-declaration" &&
+      transitiveDependencyRelatedSnapshot.identifier === "cardClass" &&
+      transitiveDependencyRelatedSnapshot.file === "src/styles/cardClass.ts" &&
+      transitiveDependencyRelatedSnapshot.excerpt.includes("baseCardClass") &&
+      transitiveDependencyRelatedSnapshot.excerpt.includes("importedToneClass") &&
+      transitiveDependencySnapshots.length === 2 &&
+      transitiveDependencySnapshots.some((snapshot) => snapshot.identifier === "baseCardClass") &&
+      transitiveDependencySnapshots.some((snapshot) => snapshot.identifier === "toneClass") &&
+      transitiveDependencySnapshots.every(
+        (snapshot) =>
+          snapshot.file === "src/tokens/cardTokens.ts" &&
+          snapshot.referencedBy === "cardClass"
+      ) &&
+      transitiveDependencyHandoffResult.ok &&
+      transitiveDependencyHandoffResult.source.relatedSnapshotAvailable &&
+      transitiveDependencyHandoffResult.source.relatedDependencySnapshotCount === 2 &&
+      transitiveDependencyHandoffResult.source.relatedDependencyDiffLineCount > 0 &&
+      Boolean(transitiveDependencyHandoffResult.relatedDependencySourceDiff) &&
+      transitiveDependencyHandoffResult.source.relatedDependencySemanticChangeCount >= 2 &&
+      (transitiveDependencyHandoffResult.relatedDependencySemanticDiff?.tokenAddedCount ?? 0) >=
+        5 &&
+      (transitiveDependencyHandoffResult.relatedDependencySemanticDiff?.tokenRemovedCount ?? 0) >=
+        5 &&
+      transitiveDependencySyntaxErrorsAfterResult === 0,
     propertyAccessHandoffPass:
       propertyAccessHandoffEntry?.className.kind === "read-only" &&
       propertyAccessHandoffEntry.className.unsupportedReason === "property-access-reference" &&
