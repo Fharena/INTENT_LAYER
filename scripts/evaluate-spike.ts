@@ -83,6 +83,19 @@ interface PackageSmokeResult {
   installedViteDevServerGraphBytes: number;
   installedViteDevServerFirstRelativeFile: string | null;
   installedViteDevServerFirstToken: string | null;
+  installedViteDevServerPreviewStatus: number | null;
+  installedViteDevServerPreviewOk: boolean;
+  installedViteDevServerApplyStatus: number | null;
+  installedViteDevServerApplyOk: boolean;
+  installedViteDevServerSourcePatched: boolean;
+  installedViteDevServerOperationFileExists: boolean;
+  installedViteDevServerDiffFileExists: boolean;
+  installedViteDevServerOperationLogExists: boolean;
+  installedViteDevServerModuleAfterApplyStatus: number | null;
+  installedViteDevServerModuleAfterApplyIncludesNextToken: boolean;
+  installedViteDevServerGraphAfterApplyStatus: number | null;
+  installedViteDevServerGraphAfterApplyEntryCount: number;
+  installedViteDevServerGraphAfterApplyFirstToken: string | null;
   installedViteDevServerMs: number;
   dryRunMs: number;
   packMs: number;
@@ -344,6 +357,22 @@ function packageSmoke(): PackageSmokeResult {
       "  throw lastError ?? new Error(`Timed out fetching ${url}`);",
       "}",
       "",
+      "async function postJson(url, body) {",
+      "  const response = await fetch(url, {",
+      "    method: \"POST\",",
+      "    headers: { \"content-type\": \"application/json\" },",
+      "    body: JSON.stringify(body)",
+      "  });",
+      "  const text = await response.text();",
+      "  let json = null;",
+      "  try {",
+      "    json = JSON.parse(text);",
+      "  } catch {",
+      "    json = null;",
+      "  }",
+      "  return { status: response.status, text, json };",
+      "}",
+      "",
       "async function stop(child) {",
       "  if (!child || child.exitCode !== null) return;",
       "  child.kill();",
@@ -411,11 +440,38 @@ function packageSmoke(): PackageSmokeResult {
       "  const parsedGraph = graph.status === 200 ? JSON.parse(graph.body) : null;",
       "  const entries = parsedGraph ? Object.values(parsedGraph.entries ?? {}) : [];",
       "  const first = entries[0] ?? null;",
-      "  const firstToken = first?.tokens?.find((token) => token.editable)?.token ?? null;",
+      "  const firstEditableToken = first?.tokens?.find((token) => token.editable) ?? null;",
+      "  const firstToken = firstEditableToken?.token ?? null;",
+      "  const patchRequest = {",
+      "    id: first?.id ?? \"missing-installed-dev-server-id\",",
+      "    oldToken: \"gap-4\",",
+      "    nextToken: \"gap-6\",",
+      "    sourceStart: firstEditableToken?.sourceStart,",
+      "    sourceEnd: firstEditableToken?.sourceEnd",
+      "  };",
+      "  const preview = await postJson(`${baseUrl}/__intent/preview`, patchRequest);",
+      "  const apply = await postJson(`${baseUrl}/__intent/apply`, patchRequest);",
+      "  const sourceAfterApply = fs.readFileSync(path.join(root, \"src\", \"App.tsx\"), \"utf8\");",
+      "  const moduleAfterApply = await waitFetch(`${baseUrl}/src/App.tsx`, 10000);",
+      "  const graphAfterApply = await waitFetch(`${baseUrl}/__intent/graph`, 10000);",
+      "  const parsedGraphAfterApply = graphAfterApply.status === 200 ? JSON.parse(graphAfterApply.body) : null;",
+      "  const entriesAfterApply = parsedGraphAfterApply ? Object.values(parsedGraphAfterApply.entries ?? {}) : [];",
+      "  const firstAfterApply = entriesAfterApply[0] ?? null;",
+      "  const firstTokenAfterApply = firstAfterApply?.tokens?.find((token) => token.editable)?.token ?? null;",
+      "  const operationFileExists = Boolean(apply.json?.operationFile) && fs.existsSync(apply.json.operationFile);",
+      "  const diffFileExists = Boolean(apply.json?.diffFile) && fs.existsSync(apply.json.diffFile);",
+      "  const operationLogExists = fs.existsSync(path.join(root, \".intent\", \"operations\", \"operation-log.json\"));",
       "  const elapsedMs = Number((performance.now() - started).toFixed(3));",
       "  const ok = home.status === 200 && module.status === 200 && graph.status === 200 &&",
       "    module.body.includes(\"data-intent-id\") && entries.length === 1 &&",
-      "    first?.relativeFile === \"src/App.tsx\" && firstToken === \"gap-4\";",
+      "    first?.relativeFile === \"src/App.tsx\" && firstToken === \"gap-4\" &&",
+      "    preview.status === 200 && preview.json?.ok === true &&",
+      "    apply.status === 200 && apply.json?.ok === true &&",
+      "    sourceAfterApply.includes(\"gap-6\") && !sourceAfterApply.includes(\"gap-4\") &&",
+      "    operationFileExists && diffFileExists && operationLogExists &&",
+      "    moduleAfterApply.status === 200 && moduleAfterApply.body.includes(\"gap-6\") &&",
+      "    graphAfterApply.status === 200 && entriesAfterApply.length === 1 &&",
+      "    firstAfterApply?.relativeFile === \"src/App.tsx\" && firstTokenAfterApply === \"gap-6\";",
       "  console.log(JSON.stringify({",
       "    ok,",
       "    port,",
@@ -427,6 +483,19 @@ function packageSmoke(): PackageSmokeResult {
       "    graphBytes: Buffer.byteLength(graph.body),",
       "    firstRelativeFile: first?.relativeFile ?? null,",
       "    firstToken,",
+      "    previewStatus: preview.status,",
+      "    previewOk: preview.json?.ok === true,",
+      "    applyStatus: apply.status,",
+      "    applyOk: apply.json?.ok === true,",
+      "    sourcePatched: sourceAfterApply.includes(\"gap-6\") && !sourceAfterApply.includes(\"gap-4\"),",
+      "    operationFileExists,",
+      "    diffFileExists,",
+      "    operationLogExists,",
+      "    moduleAfterApplyStatus: moduleAfterApply.status,",
+      "    moduleAfterApplyIncludesNextToken: moduleAfterApply.body.includes(\"gap-6\"),",
+      "    graphAfterApplyStatus: graphAfterApply.status,",
+      "    graphAfterApplyEntryCount: entriesAfterApply.length,",
+      "    graphAfterApplyFirstToken: firstTokenAfterApply,",
       "    ms: elapsedMs,",
       "    stdoutBytes: stdout.length,",
       "    stderrBytes: stderr.length",
@@ -444,6 +513,19 @@ function packageSmoke(): PackageSmokeResult {
       "    graphBytes: 0,",
       "    firstRelativeFile: null,",
       "    firstToken: null,",
+      "    previewStatus: null,",
+      "    previewOk: false,",
+      "    applyStatus: null,",
+      "    applyOk: false,",
+      "    sourcePatched: false,",
+      "    operationFileExists: false,",
+      "    diffFileExists: false,",
+      "    operationLogExists: false,",
+      "    moduleAfterApplyStatus: null,",
+      "    moduleAfterApplyIncludesNextToken: false,",
+      "    graphAfterApplyStatus: null,",
+      "    graphAfterApplyEntryCount: 0,",
+      "    graphAfterApplyFirstToken: null,",
       "    ms: Number((performance.now() - started).toFixed(3)),",
       "    error: error instanceof Error ? error.message : String(error),",
       "    stdout: truncate(stdout),",
@@ -471,6 +553,19 @@ function packageSmoke(): PackageSmokeResult {
     graphBytes?: number;
     firstRelativeFile?: string | null;
     firstToken?: string | null;
+    previewStatus?: number | null;
+    previewOk?: boolean;
+    applyStatus?: number | null;
+    applyOk?: boolean;
+    sourcePatched?: boolean;
+    operationFileExists?: boolean;
+    diffFileExists?: boolean;
+    operationLogExists?: boolean;
+    moduleAfterApplyStatus?: number | null;
+    moduleAfterApplyIncludesNextToken?: boolean;
+    graphAfterApplyStatus?: number | null;
+    graphAfterApplyEntryCount?: number;
+    graphAfterApplyFirstToken?: string | null;
     ms?: number;
   } = {};
   try {
@@ -527,6 +622,26 @@ function packageSmoke(): PackageSmokeResult {
     installedViteDevServerGraphBytes: installedViteDevServerReport.graphBytes ?? 0,
     installedViteDevServerFirstRelativeFile: installedViteDevServerReport.firstRelativeFile ?? null,
     installedViteDevServerFirstToken: installedViteDevServerReport.firstToken ?? null,
+    installedViteDevServerPreviewStatus: installedViteDevServerReport.previewStatus ?? null,
+    installedViteDevServerPreviewOk: installedViteDevServerReport.previewOk === true,
+    installedViteDevServerApplyStatus: installedViteDevServerReport.applyStatus ?? null,
+    installedViteDevServerApplyOk: installedViteDevServerReport.applyOk === true,
+    installedViteDevServerSourcePatched: installedViteDevServerReport.sourcePatched === true,
+    installedViteDevServerOperationFileExists:
+      installedViteDevServerReport.operationFileExists === true,
+    installedViteDevServerDiffFileExists: installedViteDevServerReport.diffFileExists === true,
+    installedViteDevServerOperationLogExists:
+      installedViteDevServerReport.operationLogExists === true,
+    installedViteDevServerModuleAfterApplyStatus:
+      installedViteDevServerReport.moduleAfterApplyStatus ?? null,
+    installedViteDevServerModuleAfterApplyIncludesNextToken:
+      installedViteDevServerReport.moduleAfterApplyIncludesNextToken === true,
+    installedViteDevServerGraphAfterApplyStatus:
+      installedViteDevServerReport.graphAfterApplyStatus ?? null,
+    installedViteDevServerGraphAfterApplyEntryCount:
+      installedViteDevServerReport.graphAfterApplyEntryCount ?? 0,
+    installedViteDevServerGraphAfterApplyFirstToken:
+      installedViteDevServerReport.graphAfterApplyFirstToken ?? null,
     installedViteDevServerMs: installedViteDevServerReport.ms ?? 0,
     dryRunMs: dryRun.ms,
     packMs: pack.ms,
@@ -2594,7 +2709,20 @@ const report = {
       packageInstallSmoke.installedViteDevServerModuleIncludesIntentId &&
       packageInstallSmoke.installedViteDevServerGraphEntryCount === 1 &&
       packageInstallSmoke.installedViteDevServerFirstRelativeFile === "src/App.tsx" &&
-      packageInstallSmoke.installedViteDevServerFirstToken === "gap-4",
+      packageInstallSmoke.installedViteDevServerFirstToken === "gap-4" &&
+      packageInstallSmoke.installedViteDevServerPreviewStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerPreviewOk &&
+      packageInstallSmoke.installedViteDevServerApplyStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerApplyOk &&
+      packageInstallSmoke.installedViteDevServerSourcePatched &&
+      packageInstallSmoke.installedViteDevServerOperationFileExists &&
+      packageInstallSmoke.installedViteDevServerDiffFileExists &&
+      packageInstallSmoke.installedViteDevServerOperationLogExists &&
+      packageInstallSmoke.installedViteDevServerModuleAfterApplyStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerModuleAfterApplyIncludesNextToken &&
+      packageInstallSmoke.installedViteDevServerGraphAfterApplyStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerGraphAfterApplyEntryCount === 1 &&
+      packageInstallSmoke.installedViteDevServerGraphAfterApplyFirstToken === "gap-6",
     cliScanPass:
       cliScan.exitCode === 0 &&
       cliScanReport?.command === "scan" &&
