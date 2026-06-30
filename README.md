@@ -59,6 +59,7 @@ The demo currently supports:
 - direct Tailwind token replacement for supported static tokens
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
 - undo for the last applied patch
+- structured agent handoff task generation at `.intent/agent/task_*.md`
 - source hash validation before patching
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply
 

@@ -18,6 +18,7 @@ Measured inputs:
 - static patch fixture
 - simple `cn()` patch fixture
 - last-patch revert fixture
+- agent handoff task fixture
 
 Important caveat:
 
@@ -83,8 +84,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 4.029ms / p95 8.491ms / max 8.491ms |
-| `src/main.tsx` | 0 | avg 1.246ms / p95 2.791ms / max 2.791ms |
+| `src/App.tsx` | 13 | avg 3.65ms / p95 6.458ms / max 6.458ms |
+| `src/main.tsx` | 0 | avg 1.039ms / p95 1.802ms / max 1.802ms |
 
 Summary:
 
@@ -92,12 +93,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 2.638ms |
-| Overall p95 transform time | 8.491ms |
-| Overall max transform time | 8.491ms |
-| Warm average transform time | 1.887ms |
-| Warm p95 transform time | 3.857ms |
-| Warm max transform time | 3.857ms |
+| Overall average transform time | 2.344ms |
+| Overall p95 transform time | 6.458ms |
+| Overall max transform time | 6.458ms |
+| Warm average transform time | 1.898ms |
+| Warm p95 transform time | 4.773ms |
+| Warm max transform time | 4.773ms |
 | Target | <= 5ms per warm transform |
 | Result | warm pass / cold fail |
 
@@ -113,13 +114,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 0.735ms |
-| Preview round trip | 1.069ms |
+| Preview time | 1.561ms |
+| Preview round trip | 2.062ms |
 | Apply success | true |
-| Static apply time | 3.742ms |
-| Simple `cn()` apply time | 3.812ms |
+| Static apply time | 4.302ms |
+| Simple `cn()` apply time | 13.227ms |
 | Revert success | true |
-| Revert time | 11.577ms |
+| Revert time | 3.458ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -139,8 +140,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.313ms |
-| Average lookup | 0.000313ms |
+| Total time | 0.334ms |
+| Average lookup | 0.000334ms |
 
 Caveat:
 
@@ -148,7 +149,28 @@ This is not a full browser click measurement.
 It only measures the `intent id -> binding` Map lookup.
 A real click-to-panel measurement still needs to be captured in the dev server and browser.
 
-## 6. Gate Results
+## 6. Agent Task Generation
+
+| Metric | Value |
+| --- | ---: |
+| Task generation success | true |
+| Task generation time | 1.376ms |
+| Required sections present | true |
+
+Required sections checked:
+
+```text
+Goal
+Selected Component
+Current Intent Document
+Desired Change
+Constraints
+Files That May Be Edited
+Files That Should Not Be Edited
+Required Checks
+```
+
+## 7. Gate Results
 
 | Gate | Threshold | Result |
 | --- | --- | --- |
@@ -159,10 +181,11 @@ A real click-to-panel measurement still needs to be captured in the dev server a
 | cold transform target | max <= 5ms | fail |
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
+| agent task generation | task created + required sections present | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
-## 7. Conclusion
+## 8. Conclusion
 
 This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments.
 
@@ -174,6 +197,7 @@ What worked:
 - source token range patching
 - patch preview before apply
 - last-patch revert
+- agent handoff task markdown generation
 - simple `cn()` literal segment patching
 - source hash stale rejection
 - minimal intent operation/diff output
@@ -185,6 +209,7 @@ What remains weak:
 - transform time still needs to be tested on larger TSX files
 - real browser click-to-panel time is not measured yet
 - real AI-generated 50-100 sample corpus audit is still missing
+- agent result patch analysis and result document generation are not implemented yet
 - variant functions and runtime template literals remain unsupported
 
 Current decision:

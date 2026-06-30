@@ -33,6 +33,7 @@ Included:
 - old token validation
 - range patch apply
 - undo for the last patch
+- structured agent handoff task generation
 - minimal intent operation/diff output
 - corpus analysis script
 - performance and safety evaluation script
@@ -197,6 +198,8 @@ Support model:
 - Variant functions and props forwarding are read-only.
 - Undo supports only the last patch.
 - Restarting the dev server clears the in-memory undo state.
+- Agent handoff only creates task markdown.
+- Agent result patch analysis and result documents are not implemented yet.
 - The current click-to-binding metric is only a graph lookup proxy, not a full browser click measurement.
 - Warm transform meets the 5ms target, but cold first transform can exceed 5ms.
 - Larger TSX files are not tested yet.
@@ -207,7 +210,36 @@ Priority order:
 
 1. Measure whether transform time stays under 5ms on larger TSX files.
 2. Measure real browser click -> binding -> patch round trip time.
-3. Design an undo stack and operation-log-backed revert.
-4. Measure real browser click-to-panel time.
-5. Show read-only reasons clearly in the UI.
-6. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
+3. Add agent result analysis and `.intent/agent/result_*.md` generation.
+4. Design an undo stack and operation-log-backed revert.
+5. Measure real browser click-to-panel time.
+6. Show read-only reasons clearly in the UI.
+7. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
+
+## 9. Agent Handoff
+
+Unsupported or structural edits can be delegated as structured agent tasks from the overlay.
+
+Current flow:
+
+1. The user selects an element.
+2. The user describes the desired change in the `Agent handoff` field.
+3. The `/__intent/agent-task` endpoint looks up the selected source binding.
+4. A `.intent/agent/task_*.md` file is generated.
+
+The task document includes:
+
+```text
+Goal
+Selected Component
+Current Intent Document
+Desired Change
+Constraints
+Files That May Be Edited
+Files That Should Not Be Edited
+Required Checks
+Expected Result
+```
+
+This implementation does not call an LLM.
+It only turns the selected source binding and desired change into markdown that can be handed to Codex, Cursor, Claude, or another agent.

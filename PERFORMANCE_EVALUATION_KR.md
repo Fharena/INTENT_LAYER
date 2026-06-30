@@ -18,6 +18,7 @@ npm run build
 - static patch fixture
 - simple `cn()` patch fixture
 - last-patch revert fixture
+- agent handoff task fixture
 
 주의:
 
@@ -83,8 +84,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 4.029ms / p95 8.491ms / max 8.491ms |
-| `src/main.tsx` | 0 | avg 1.246ms / p95 2.791ms / max 2.791ms |
+| `src/App.tsx` | 13 | avg 3.65ms / p95 6.458ms / max 6.458ms |
+| `src/main.tsx` | 0 | avg 1.039ms / p95 1.802ms / max 1.802ms |
 
 요약:
 
@@ -92,12 +93,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 2.638ms |
-| 전체 p95 transform time | 8.491ms |
-| 전체 최대 transform time | 8.491ms |
-| warm 평균 transform time | 1.887ms |
-| warm p95 transform time | 3.857ms |
-| warm 최대 transform time | 3.857ms |
+| 전체 평균 transform time | 2.344ms |
+| 전체 p95 transform time | 6.458ms |
+| 전체 최대 transform time | 6.458ms |
+| warm 평균 transform time | 1.898ms |
+| warm p95 transform time | 4.773ms |
+| warm 최대 transform time | 4.773ms |
 | 목표 | warm 파일당 5ms 이하 |
 | 결과 | warm 통과 / cold 미통과 |
 
@@ -113,13 +114,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 0.735ms |
-| preview round trip | 1.069ms |
+| preview time | 1.561ms |
+| preview round trip | 2.062ms |
 | apply 성공 | true |
-| static apply time | 3.742ms |
-| simple `cn()` apply time | 3.812ms |
+| static apply time | 4.302ms |
+| simple `cn()` apply time | 13.227ms |
 | revert 성공 | true |
-| revert time | 11.577ms |
+| revert time | 3.458ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -139,8 +140,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.313ms |
-| 평균 lookup | 0.000313ms |
+| 총 시간 | 0.334ms |
+| 평균 lookup | 0.000334ms |
 
 주의:
 
@@ -148,7 +149,28 @@ reports/performance/spike-evaluation.json
 현재는 `intent id -> binding` Map lookup만 측정했다.
 실제 click-to-panel 시간은 dev server와 브라우저에서 별도로 측정해야 한다.
 
-## 6. Gate 결과
+## 6. Agent Task 생성
+
+| 항목 | 값 |
+| --- | ---: |
+| task 생성 성공 | true |
+| task 생성 시간 | 1.376ms |
+| 필수 섹션 포함 | true |
+
+검증한 필수 섹션:
+
+```text
+Goal
+Selected Component
+Current Intent Document
+Desired Change
+Constraints
+Files That May Be Edited
+Files That Should Not Be Edited
+Required Checks
+```
+
+## 7. Gate 결과
 
 | Gate | 기준 | 결과 |
 | --- | --- | --- |
@@ -159,10 +181,11 @@ reports/performance/spike-evaluation.json
 | cold transform target | max <= 5ms | 미통과 |
 | supported static patch | apply 성공 + syntax error 0 | 통과 |
 | last patch revert | revert 성공 + syntax error 0 | 통과 |
+| agent task generation | task 생성 + 필수 섹션 포함 | 통과 |
 | simple `cn()` / `clsx()` patch | apply 성공 + syntax error 0 | 통과 |
 | stale rejection | source mismatch 거부 | 통과 |
 
-## 7. 결론
+## 8. 결론
 
 이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했다.
 
@@ -174,6 +197,7 @@ reports/performance/spike-evaluation.json
 - source token range 기반 patch
 - apply 전 patch preview
 - last-patch revert
+- agent handoff task markdown 생성
 - simple `cn()` literal segment patch
 - source hash stale rejection
 - intent operation/diff 최소 출력
@@ -185,6 +209,7 @@ reports/performance/spike-evaluation.json
 - 대형 TSX 파일에서 transform time 5ms 목표 유지
 - 실제 브라우저 click-to-panel 시간 측정
 - 실제 AI 생성 코드 50-100개 corpus 검증
+- agent 결과 patch 분석과 result 문서 생성
 - variant 함수와 runtime template literal 지원
 
 다음 판단:

@@ -32,6 +32,7 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 - old token 검증
 - range patch 적용
 - 마지막 patch 되돌리기
+- 구조화된 agent handoff task 생성
 - 최소 intent operation/diff 파일 생성
 - corpus 분석 스크립트
 - 성능/안전성 평가 스크립트
@@ -196,6 +197,8 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - variant 함수와 props forwarding은 read-only다.
 - undo는 마지막 patch 1개만 지원한다.
 - dev server 재시작 후에는 in-memory undo 상태가 사라진다.
+- agent handoff는 task markdown 생성까지만 지원한다.
+- agent 결과 patch 분석과 result 문서 생성은 아직 없다.
 - 현재 click-to-binding 시간은 실제 브라우저 클릭 전체 시간이 아니라 graph lookup proxy만 측정했다.
 - warm transform은 5ms 목표를 만족했지만, cold first transform은 5ms를 넘을 수 있다.
 - 대형 TSX 파일에서는 아직 검증하지 않았다.
@@ -206,7 +209,36 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 1. 대형 TSX 파일에서도 transform time을 5ms 이하로 유지할 수 있는지 측정한다.
 2. 실제 브라우저 click -> binding -> patch round trip 시간을 측정한다.
-3. undo stack과 operation log 기반 revert를 설계한다.
-4. 실제 브라우저 click-to-panel 시간을 측정한다.
-5. read-only 이유를 UI에 더 명확히 표시한다.
-6. fixture를 nested component, map render, conditional render, fragment로 확장한다.
+3. agent result 분석과 `.intent/agent/result_*.md` 생성을 추가한다.
+4. undo stack과 operation log 기반 revert를 설계한다.
+5. 실제 브라우저 click-to-panel 시간을 측정한다.
+6. read-only 이유를 UI에 더 명확히 표시한다.
+7. fixture를 nested component, map render, conditional render, fragment로 확장한다.
+
+## 9. Agent Handoff
+
+직접 편집이 어렵거나 구조 변경이 필요한 작업은 overlay에서 agent task로 넘길 수 있다.
+
+현재 흐름:
+
+1. 사용자가 요소를 선택한다.
+2. overlay의 `Agent handoff` 입력칸에 원하는 변경을 적는다.
+3. `/__intent/agent-task` endpoint가 선택된 source binding을 조회한다.
+4. `.intent/agent/task_*.md` 파일을 생성한다.
+
+task 문서에는 다음 항목을 포함한다.
+
+```text
+Goal
+Selected Component
+Current Intent Document
+Desired Change
+Constraints
+Files That May Be Edited
+Files That Should Not Be Edited
+Required Checks
+Expected Result
+```
+
+이번 구현은 LLM을 호출하지 않는다.
+작업을 Codex/Cursor/Claude 같은 외부 agent에게 넘기기 좋은 markdown으로 구조화하는 것만 담당한다.
