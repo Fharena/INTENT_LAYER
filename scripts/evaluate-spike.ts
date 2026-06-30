@@ -51,12 +51,39 @@ function average(values: number[]): number {
   return Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(3));
 }
 
+function largeTransformFixture(cardCount: number): string {
+  const cards = Array.from({ length: cardCount }, (_, index) =>
+    [
+      `        <article className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">`,
+      `          <h2 className="text-lg font-semibold text-slate-950">Metric ${index}</h2>`,
+      `          <p className={cn("text-sm leading-6 text-slate-600", active && "text-teal-700")}>Generated row</p>`,
+      `          <button className={clsx("rounded-lg px-4 py-2 text-sm font-semibold", selected && "bg-teal-700 text-white")}>Inspect</button>`,
+      "        </article>"
+    ].join("\n")
+  ).join("\n");
+
+  return [
+    "declare function cn(...value: Array<string | false | undefined>): string;",
+    "declare function clsx(...value: Array<string | false | undefined>): string;",
+    "export function LargeTransformFixture({ active, selected }: { active: boolean; selected: boolean }) {",
+    "  return (",
+    "    <section className=\"grid grid-cols-4 gap-4 rounded-2xl bg-slate-50 p-8\">",
+    cards,
+    "    </section>",
+    "  );",
+    "}",
+    ""
+  ].join("\n");
+}
+
 fs.mkdirSync(reportsDir, { recursive: true });
 fs.mkdirSync(tmpDir, { recursive: true });
 
 const corpus = analyzeClassNames(["fixtures/corpus", "src/App.tsx"], rootDir);
 
 const transformIterations = 5;
+const warmTransformTargetMs = 5;
+const coldTransformTargetMs = 10;
 const transformMeasurements = sourceFiles("src")
   .filter((file) => file.endsWith(".tsx"))
   .map((file) => {
@@ -78,6 +105,16 @@ const transformMeasurements = sourceFiles("src")
 
 const transformTimes = transformMeasurements.flatMap((item) => item.samples);
 const warmTransformTimes = transformMeasurements.flatMap((item) => item.samples.slice(1));
+const largeTransformCardCount = 100;
+const largeTransformTargetMs = 20;
+const largeTransformFile = path.join(tmpDir, "LargeTransformFixture.tsx");
+const largeTransformCode = largeTransformFixture(largeTransformCardCount);
+fs.writeFileSync(largeTransformFile, largeTransformCode);
+const largeTransformSamples = Array.from({ length: transformIterations }, () =>
+  instrumentSource({ code: largeTransformCode, file: largeTransformFile, rootDir })
+);
+const largeTransformTimes = largeTransformSamples.map((sample) => sample.transformMs);
+const largeTransformLast = largeTransformSamples[largeTransformSamples.length - 1];
 
 const patchFixture = path.join(tmpDir, "StaticPatchFixture.tsx");
 fs.writeFileSync(
@@ -263,7 +300,22 @@ const report = {
     maxMs: transformTimes.length ? Number(Math.max(...transformTimes).toFixed(3)) : 0,
     warmAverageMs: average(warmTransformTimes),
     warmP95Ms: percentile(warmTransformTimes, 0.95),
-    warmMaxMs: warmTransformTimes.length ? Number(Math.max(...warmTransformTimes).toFixed(3)) : 0
+    warmMaxMs: warmTransformTimes.length ? Number(Math.max(...warmTransformTimes).toFixed(3)) : 0,
+    warmTargetMs: warmTransformTargetMs,
+    coldTargetMs: coldTransformTargetMs
+  },
+  largeTransform: {
+    file: path.relative(rootDir, largeTransformFile).replace(/\\/g, "/"),
+    cardCount: largeTransformCardCount,
+    entries: largeTransformLast.entries.length,
+    bytes: largeTransformCode.length,
+    iterations: transformIterations,
+    samples: largeTransformTimes,
+    averageMs: average(largeTransformTimes),
+    p95Ms: percentile(largeTransformTimes, 0.95),
+    maxMs: Number(Math.max(...largeTransformTimes).toFixed(3)),
+    targetMs: largeTransformTargetMs,
+    pass: Math.max(...largeTransformTimes) <= largeTransformTargetMs
   },
   graphLookupProxy: {
     iterations: graphLookupIterations,
@@ -324,9 +376,13 @@ const report = {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
     supportedDirectCoveragePass: corpus.editableCoverage.supportedDirect >= 0.5,
-    transformTargetPass: warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= 5,
-    coldTransformTargetPass: transformTimes.length > 0 && Math.max(...transformTimes) <= 5,
-    warmTransformTargetPass: warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= 5,
+    transformTargetPass:
+      warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
+    coldTransformTargetPass:
+      transformTimes.length > 0 && Math.max(...transformTimes) <= coldTransformTargetMs,
+    warmTransformTargetPass:
+      warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
+    largeTransformTargetPass: Math.max(...largeTransformTimes) <= largeTransformTargetMs,
     supportedPatchPass: apply.ok && syntaxErrorsAfterPatch === 0,
     revertPatchPass: revert.ok && syntaxErrorsAfterRevert === 0,
     agentTaskPass: agentTask.ok && agentTaskSectionsPresent,

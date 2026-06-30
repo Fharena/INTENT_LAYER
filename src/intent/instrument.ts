@@ -204,17 +204,16 @@ function tokensFromSegments(segments: SourceSegment[]): { value: string; tokens:
 function insertText(code: string, insertions: Insertion[]): string {
   if (insertions.length === 0) return code;
 
-  const sorted = [...insertions].sort((left, right) => left.position - right.position);
-  let result = "";
+  const parts: string[] = [];
   let cursor = 0;
 
-  for (const insertion of sorted) {
-    result += code.slice(cursor, insertion.position);
-    result += insertion.text;
+  for (const insertion of insertions) {
+    parts.push(code.slice(cursor, insertion.position), insertion.text);
     cursor = insertion.position;
   }
 
-  return `${result}${code.slice(cursor)}`;
+  parts.push(code.slice(cursor));
+  return parts.join("");
 }
 
 function isTagNameStart(character: string): boolean {
@@ -661,8 +660,13 @@ function instrumentSourceFast(params: {
     const tagEnd = scanJsxTagEnd(params.code, tagNameEnd);
     if (tagEnd < 0) return null;
 
-    const classNameAttribute = findAttributeFast(params.code, tagNameEnd, tagEnd - 1, "className");
-    const existingIntentId = findAttributeFast(params.code, tagNameEnd, tagEnd - 1, "data-intent-id");
+    const attributesEnd = tagEnd - 1;
+    const classNameAttribute = findAttributeFast(params.code, tagNameEnd, attributesEnd, "className");
+    const existingIntentId = params.code
+      .slice(tagNameEnd, attributesEnd)
+      .includes("data-intent-id")
+      ? findAttributeFast(params.code, tagNameEnd, attributesEnd, "data-intent-id")
+      : null;
     if (!classNameAttribute || existingIntentId) {
       index = tagEnd - 1;
       continue;
