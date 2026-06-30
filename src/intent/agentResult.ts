@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { sha256 } from "./hash";
+import { sourceHash } from "./hash";
 import type {
   AgentResultArtifact,
   AgentResultRequest,
@@ -185,7 +185,7 @@ export function recordAgentResult(
   let currentSource: string | null = null;
   try {
     currentSource = fs.readFileSync(binding.file, "utf8");
-    sourceHashAfter = sha256(currentSource);
+    sourceHashAfter = sourceHash(currentSource);
   } catch {
     sourceHashAfter = null;
   }

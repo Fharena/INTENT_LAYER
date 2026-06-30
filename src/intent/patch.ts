@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { sha256 } from "./hash";
+import { sourceHash } from "./hash";
 import type {
   IntentBinding,
   IntentToken,
@@ -48,7 +48,7 @@ export function planTokenPatch(
   }
 
   const source = fs.readFileSync(entry.file, "utf8");
-  const currentHash = sha256(source);
+  const currentHash = sourceHash(source);
   if (currentHash !== entry.sourceHash) {
     return {
       ok: false,
