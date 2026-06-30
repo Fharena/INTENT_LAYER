@@ -213,6 +213,26 @@ interface RelatedSourceRange {
   end: number;
 }
 
+interface ExternalImportReference {
+  kind: "external-package-import";
+  usageKind:
+    | "variable-reference"
+    | "property-access-reference"
+    | "variant-function"
+    | "unsupported-call-expression";
+  specifier: string;
+  packageName: string;
+  subpath: string;
+  importKind: "named" | "default" | "namespace";
+  importedName: string;
+  localName: string;
+  referencedName: string;
+  usage: string;
+  editable: false;
+  reason: "external-package-source-unresolved";
+  guidance: string[];
+}
+
 const dependencyIdentifierDenylist = new Set([
   "Array",
   "Boolean",
@@ -472,6 +492,89 @@ function importedNameForLocalIdentifier(source: string, localIdentifier: string)
   }
 
   return null;
+}
+
+interface ImportReference {
+  importedName: string;
+  localName: string;
+  file: string;
+  importKind: "named" | "default" | "namespace";
+}
+
+function importReferenceForLocalIdentifier(
+  source: string,
+  localIdentifier: string
+): ImportReference | null {
+  const namedImportPattern = /import\s+{([\s\S]*?)}\s+from\s+["']([^"']+)["']/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = namedImportPattern.exec(source)) !== null) {
+    const specifiers = match[1].split(",");
+    for (const rawSpecifier of specifiers) {
+      const specifier = rawSpecifier.trim();
+      if (!specifier) continue;
+
+      const aliasMatch = /^([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)$/.exec(specifier);
+      const importedName = aliasMatch?.[1] ?? specifier;
+      const localName = aliasMatch?.[2] ?? specifier;
+      if (localName === localIdentifier && /^[A-Za-z_$][\w$]*$/.test(importedName)) {
+        return { importedName, localName, file: match[2], importKind: "named" };
+      }
+    }
+  }
+
+  const namespaceImportPattern = /import\s+\*\s+as\s+([A-Za-z_$][\w$]*)\s+from\s+["']([^"']+)["']/g;
+  while ((match = namespaceImportPattern.exec(source)) !== null) {
+    if (match[1] === localIdentifier) {
+      return {
+        importedName: "*",
+        localName: match[1],
+        file: match[2],
+        importKind: "namespace"
+      };
+    }
+  }
+
+  const defaultImportPattern =
+    /import\s+([A-Za-z_$][\w$]*)\s*(?:,\s*(?:{[\s\S]*?}|\*\s+as\s+[A-Za-z_$][\w$]*))?\s+from\s+["']([^"']+)["']/g;
+  while ((match = defaultImportPattern.exec(source)) !== null) {
+    if (match[1] === localIdentifier) {
+      return {
+        importedName: "default",
+        localName: match[1],
+        file: match[2],
+        importKind: "default"
+      };
+    }
+  }
+
+  return null;
+}
+
+function externalPackageImportForLocalIdentifier(
+  rootDir: string,
+  fromFile: string,
+  source: string,
+  localIdentifier: string
+): (ImportReference & PackageSpecifier & { specifier: string }) | null {
+  const reference = importReferenceForLocalIdentifier(source, localIdentifier);
+  if (!reference) return null;
+
+  const parts = packageSpecifierParts(reference.file);
+  if (!parts || reference.file.startsWith("#") || parts.packageName.startsWith("@/")) {
+    return null;
+  }
+
+  if (resolveImportFile(rootDir, fromFile, reference.file)) {
+    return null;
+  }
+
+  return {
+    ...reference,
+    specifier: reference.file,
+    packageName: parts.packageName,
+    subpath: parts.subpath
+  };
 }
 
 function reExportForIdentifier(
@@ -984,6 +1087,79 @@ function findRelatedSourceRange(
   return findImportedVariantDeclaration(rootDir, importedFile, imported.importedName);
 }
 
+function externalImportReferenceForBinding(
+  rootDir: string,
+  source: string,
+  binding: IntentBinding
+): ExternalImportReference | null {
+  if (binding.className.kind !== "read-only") return null;
+
+  const unsupportedReason = binding.className.unsupportedReason;
+  let localIdentifier: string | null = null;
+  let usageKind: ExternalImportReference["usageKind"] | null = null;
+  let referencedName: string | null = null;
+
+  if (unsupportedReason === "variable-reference") {
+    const identifier = binding.className.value.trim();
+    if (/^[A-Za-z_$][\w$]*$/.test(identifier)) {
+      localIdentifier = identifier;
+      usageKind = "variable-reference";
+      referencedName = identifier;
+    }
+  } else if (unsupportedReason === "property-access-reference") {
+    const reference = propertyAccessReference(binding.className.value);
+    if (reference) {
+      localIdentifier = reference.objectName;
+      usageKind = "property-access-reference";
+      referencedName = `${reference.objectName}.${reference.propertyName}`;
+    }
+  } else if (unsupportedReason === "variant-function") {
+    const calleeMatch = /^\s*([A-Za-z_$][\w$]*)\s*\(/.exec(binding.className.value);
+    if (calleeMatch) {
+      localIdentifier = calleeMatch[1];
+      usageKind = "variant-function";
+      referencedName = localIdentifier;
+    }
+  } else if (unsupportedReason === "unsupported-call-expression") {
+    const calleeMatch = /^\s*([A-Za-z_$][\w$]*)\s*\(/.exec(binding.className.value);
+    if (calleeMatch) {
+      localIdentifier = calleeMatch[1];
+      usageKind = "unsupported-call-expression";
+      referencedName = localIdentifier;
+    }
+  }
+
+  if (!localIdentifier || !usageKind || !referencedName) return null;
+
+  const importReference = externalPackageImportForLocalIdentifier(
+    rootDir,
+    binding.file,
+    source,
+    localIdentifier
+  );
+  if (!importReference) return null;
+
+  return {
+    kind: "external-package-import",
+    usageKind,
+    specifier: importReference.specifier,
+    packageName: importReference.packageName,
+    subpath: importReference.subpath,
+    importKind: importReference.importKind,
+    importedName: importReference.importedName,
+    localName: importReference.localName,
+    referencedName,
+    usage: binding.className.value,
+    editable: false,
+    reason: "external-package-source-unresolved",
+    guidance: [
+      "Do not patch node_modules or third-party package source directly.",
+      "Prefer a small local wrapper, prop, or local className override in the selected component.",
+      "If the external package must change, create a separate upstream/package task instead of a direct patch."
+    ]
+  };
+}
+
 function sourceRange(binding: IntentBinding) {
   const tokenStarts = binding.tokens.map((token) => token.sourceStart);
   const tokenEnds = binding.tokens.map((token) => token.sourceEnd);
@@ -1040,6 +1216,9 @@ export function createAgentTask(
       }
     : null;
   const relatedRange = findRelatedSourceRange(rootDir, currentSource, binding);
+  const externalImportReference = relatedRange
+    ? null
+    : externalImportReferenceForBinding(rootDir, currentSource, binding);
   const relatedSnapshot = relatedRange
     ? {
         file: relatedRange.relativeFile,
@@ -1116,6 +1295,10 @@ export function createAgentTask(
     "",
     codeFence(relatedSnapshot),
     "",
+    "## External Import Reference",
+    "",
+    codeFence(externalImportReference),
+    "",
     "## Related Dependency Snapshots",
     "",
     codeFence(relatedDependencySnapshots),
@@ -1147,6 +1330,9 @@ export function createAgentTask(
     "- unrelated source files",
     "- generated build output",
     "- `node_modules/`",
+    ...(externalImportReference
+      ? [`- external package source for \`${externalImportReference.specifier}\` unless explicitly vendored`]
+      : []),
     "",
     "## Required Checks",
     "",

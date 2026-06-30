@@ -1095,6 +1095,22 @@ interface TaskRelatedDependencySnapshot extends TaskRelatedSourceSnapshot {
   referencedBy?: string;
 }
 
+interface TaskExternalImportReference {
+  kind: string;
+  usageKind: string;
+  specifier: string;
+  packageName: string;
+  subpath: string;
+  importKind: string;
+  importedName: string;
+  localName: string;
+  referencedName: string;
+  usage: string;
+  editable: boolean;
+  reason: string;
+  guidance: string[];
+}
+
 function parseTaskJsonSection<T>(markdown: string, heading: string): T | null {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(new RegExp(`## ${escapedHeading}\\s+\`\`\`json\\s+([\\s\\S]*?)\\s+\`\`\``));
@@ -1300,6 +1316,7 @@ const agentTaskRequiredSections = [
   "## Current Intent Document",
   "## Component Snapshot",
   "## Related Source Snapshot",
+  "## External Import Reference",
   "## Source Snapshot",
   "## Desired Change",
   "## Constraints",
@@ -2051,6 +2068,83 @@ const propertyAccessHandoffResult = recordAgentResult(
     checks: ["npm run typecheck", "npm run eval", "npm run build"],
     notes:
       "Evaluation fixture for property-access related source handoff context; no LLM call is made."
+  }
+);
+
+const externalPackageImportRoot = resetTmpSubdir("external-package-import-handoff");
+const externalPackageImportScreensDir = path.join(externalPackageImportRoot, "src", "screens");
+fs.mkdirSync(externalPackageImportScreensDir, { recursive: true });
+const externalPackageImportFixture = path.join(
+  externalPackageImportScreensDir,
+  "ExternalPackageImportHandoffFixture.tsx"
+);
+fs.writeFileSync(
+  externalPackageImportFixture,
+  [
+    "import { buttonVariants } from \"@external-ui/react\";",
+    "",
+    "export function ExternalPackageImportHandoffFixture() {",
+    "  return <button className={buttonVariants({ variant: \"primary\" })}>External package handoff target</button>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const externalPackageImportInstrument = instrumentSource({
+  code: fs.readFileSync(externalPackageImportFixture, "utf8"),
+  file: externalPackageImportFixture,
+  rootDir: externalPackageImportRoot
+});
+const externalPackageImportEntry = externalPackageImportInstrument.entries[0];
+const externalPackageImportTask = createAgentTask(
+  externalPackageImportRoot,
+  externalPackageImportEntry,
+  {
+    id:
+      externalPackageImportEntry?.id ??
+      "missing-external-package-import-handoff-binding",
+    desiredChange:
+      "Change this external package variant-backed className without editing node_modules."
+  }
+);
+const externalPackageImportRelatedSnapshot = externalPackageImportTask.ok
+  ? parseTaskJsonSection<TaskRelatedSourceSnapshot | null>(
+      externalPackageImportTask.markdown,
+      "Related Source Snapshot"
+    )
+  : null;
+const externalPackageImportReference = externalPackageImportTask.ok
+  ? parseTaskJsonSection<TaskExternalImportReference | null>(
+      externalPackageImportTask.markdown,
+      "External Import Reference"
+    )
+  : null;
+if (externalPackageImportTask.ok) {
+  fs.writeFileSync(
+    externalPackageImportFixture,
+    fs
+      .readFileSync(externalPackageImportFixture, "utf8")
+      .replace(
+        "className={buttonVariants({ variant: \"primary\" })}",
+        "className={`${buttonVariants({ variant: \"primary\" })} rounded-xl px-6 ring-1 ring-cyan-200`}"
+      )
+  );
+}
+const externalPackageImportSyntaxErrorsAfterResult =
+  parseSyntaxErrorCount(externalPackageImportFixture);
+const externalPackageImportResult = recordAgentResult(
+  externalPackageImportRoot,
+  externalPackageImportEntry,
+  {
+    id:
+      externalPackageImportEntry?.id ??
+      "missing-external-package-import-handoff-binding",
+    taskFile: externalPackageImportTask.ok ? externalPackageImportTask.taskFile : undefined,
+    summary:
+      "External package import handoff fixture: kept third-party package source read-only and added a local className override in the selected component.",
+    changedFiles: ["src/screens/ExternalPackageImportHandoffFixture.tsx"],
+    checks: ["npm run typecheck", "npm run eval", "npm run build"],
+    notes:
+      "Evaluation fixture for external npm package import handoff context; no LLM call is made."
   }
 );
 
@@ -3780,6 +3874,67 @@ const report = {
       ? propertyAccessHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  externalPackageImportHandoffBinding: {
+    entryCreated: Boolean(externalPackageImportEntry),
+    root: reportPath(externalPackageImportRoot),
+    kind: externalPackageImportEntry?.className.kind ?? null,
+    unsupportedReason: externalPackageImportEntry?.className.unsupportedReason ?? null,
+    value: externalPackageImportEntry?.className.value ?? null,
+    tokenCount: externalPackageImportEntry?.tokens.length ?? 0,
+    taskOk: externalPackageImportTask.ok,
+    taskMs: externalPackageImportTask.ok
+      ? externalPackageImportTask.metrics.taskMs
+      : externalPackageImportTask.metrics?.taskMs,
+    relatedSnapshotAvailable: Boolean(externalPackageImportRelatedSnapshot),
+    externalReferenceAvailable: Boolean(externalPackageImportReference),
+    externalReferenceKind: externalPackageImportReference?.kind ?? null,
+    externalReferenceUsageKind: externalPackageImportReference?.usageKind ?? null,
+    externalReferenceSpecifier: externalPackageImportReference?.specifier ?? null,
+    externalReferencePackageName: externalPackageImportReference?.packageName ?? null,
+    externalReferenceSubpath: externalPackageImportReference?.subpath ?? null,
+    externalReferenceImportKind: externalPackageImportReference?.importKind ?? null,
+    externalReferenceImportedName: externalPackageImportReference?.importedName ?? null,
+    externalReferenceLocalName: externalPackageImportReference?.localName ?? null,
+    externalReferenceReferencedName: externalPackageImportReference?.referencedName ?? null,
+    externalReferenceEditable: externalPackageImportReference?.editable ?? null,
+    externalReferenceReason: externalPackageImportReference?.reason ?? null,
+    externalReferenceGuidanceCount: externalPackageImportReference?.guidance.length ?? 0,
+    taskMentionsNodeModules: externalPackageImportTask.ok
+      ? externalPackageImportTask.markdown.includes("node_modules/")
+      : false,
+    taskMentionsExternalEditGuard: externalPackageImportTask.ok
+      ? externalPackageImportTask.markdown.includes("external package source for `@external-ui/react`")
+      : false,
+    resultOk: externalPackageImportResult.ok,
+    resultMs: externalPackageImportResult.ok
+      ? externalPackageImportResult.metrics.resultMs
+      : externalPackageImportResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: externalPackageImportSyntaxErrorsAfterResult,
+    sourceDiffLineCount: externalPackageImportResult.ok
+      ? externalPackageImportResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: externalPackageImportResult.ok
+      ? Boolean(externalPackageImportResult.sourceDiff)
+      : false,
+    semanticChangeCount: externalPackageImportResult.ok
+      ? externalPackageImportResult.source.semanticChangeCount
+      : 0,
+    semanticDiffPresent: externalPackageImportResult.ok
+      ? Boolean(externalPackageImportResult.semanticDiff)
+      : false,
+    semanticTokenAddedCount: externalPackageImportResult.ok
+      ? externalPackageImportResult.semanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    semanticTokenRemovedCount: externalPackageImportResult.ok
+      ? externalPackageImportResult.semanticDiff?.tokenRemovedCount ?? 0
+      : 0,
+    componentDiffLineCount: externalPackageImportResult.ok
+      ? externalPackageImportResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: externalPackageImportResult.ok
+      ? Boolean(externalPackageImportResult.componentSourceDiff)
+      : false
+  },
   packageImportHandoffBinding: {
     entryCreated: Boolean(packageImportHandoffEntry),
     root: reportPath(packageImportRoot),
@@ -4344,6 +4499,33 @@ const report = {
       (propertyAccessHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 4 &&
       (propertyAccessHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 3 &&
       propertyAccessHandoffSyntaxErrorsAfterResult === 0,
+    externalPackageImportHandoffPass:
+      externalPackageImportEntry?.className.kind === "read-only" &&
+      externalPackageImportEntry.className.unsupportedReason === "variant-function" &&
+      externalPackageImportTask.ok &&
+      !externalPackageImportRelatedSnapshot &&
+      externalPackageImportReference?.kind === "external-package-import" &&
+      externalPackageImportReference.usageKind === "variant-function" &&
+      externalPackageImportReference.specifier === "@external-ui/react" &&
+      externalPackageImportReference.packageName === "@external-ui/react" &&
+      externalPackageImportReference.subpath === "." &&
+      externalPackageImportReference.importKind === "named" &&
+      externalPackageImportReference.importedName === "buttonVariants" &&
+      externalPackageImportReference.localName === "buttonVariants" &&
+      externalPackageImportReference.referencedName === "buttonVariants" &&
+      externalPackageImportReference.editable === false &&
+      externalPackageImportReference.reason === "external-package-source-unresolved" &&
+      externalPackageImportReference.guidance.length >= 3 &&
+      externalPackageImportTask.markdown.includes("node_modules/") &&
+      externalPackageImportTask.markdown.includes(
+        "external package source for `@external-ui/react`"
+      ) &&
+      externalPackageImportResult.ok &&
+      externalPackageImportResult.source.diffLineCount > 0 &&
+      Boolean(externalPackageImportResult.sourceDiff) &&
+      externalPackageImportResult.source.semanticChangeCount >= 1 &&
+      (externalPackageImportResult.semanticDiff?.tokenAddedCount ?? 0) >= 3 &&
+      externalPackageImportSyntaxErrorsAfterResult === 0,
     workspacePackageImportHandoffPass:
       packageImportHandoffEntry?.className.kind === "read-only" &&
       packageImportHandoffEntry.className.unsupportedReason === "variable-reference" &&
