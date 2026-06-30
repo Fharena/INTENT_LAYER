@@ -748,6 +748,49 @@ const pendingAfterSecondRevert = pendingUndoStackFromOperationLog(rootDir);
 const historyAfterSecondRevert = pendingUndoHistoryFromOperationLog(rootDir);
 const syntaxErrorsAfterOperationStack = parseSyntaxErrorCount(operationStackFixture);
 
+const operationConflictFixture = path.join(tmpDir, "OperationConflictFixture.tsx");
+fs.writeFileSync(
+  operationConflictFixture,
+  [
+    "export function OperationConflictFixture() {",
+    "  return <div className=\"grid grid-cols-3 gap-4 rounded-lg p-6\">Conflict target</div>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const operationConflictInstrument = instrumentSource({
+  code: fs.readFileSync(operationConflictFixture, "utf8"),
+  file: operationConflictFixture,
+  rootDir
+});
+const operationConflictEntry = operationConflictInstrument.entries[0];
+const operationConflictApply = applyTokenPatch(rootDir, operationConflictEntry, {
+  id: operationConflictEntry.id,
+  oldToken: "gap-4",
+  nextToken: "gap-6",
+  sourceStart: operationConflictEntry.tokens.find((token) => token.token === "gap-4")?.sourceStart,
+  sourceEnd: operationConflictEntry.tokens.find((token) => token.token === "gap-4")?.sourceEnd
+});
+if (operationConflictApply.ok) {
+  fs.writeFileSync(
+    operationConflictFixture,
+    fs.readFileSync(operationConflictFixture, "utf8").replace("gap-6", "gap-8")
+  );
+}
+const operationConflictRevert = revertTokenPatch(
+  rootDir,
+  operationConflictApply.ok ? operationConflictApply : null,
+  operationConflictEntry
+);
+const operationConflictFile = !operationConflictRevert.ok
+  ? operationConflictRevert.conflictFile
+  : undefined;
+const operationConflictArtifact =
+  operationConflictFile && fs.existsSync(operationConflictFile)
+    ? JSON.parse(fs.readFileSync(operationConflictFile, "utf8"))
+    : null;
+const syntaxErrorsAfterOperationConflict = parseSyntaxErrorCount(operationConflictFixture);
+
 const graphLookupIterations = 1000;
 const graphLookup = new Map(patchInstrument.entries.map((entry) => [entry.id, entry]));
 const lookupStarted = performance.now();
@@ -846,6 +889,23 @@ const report = {
     pendingAfterSecondRevert: pendingAfterSecondRevert.length,
     historyAfterSecondRevertCount: historyAfterSecondRevert.pendingCount,
     syntaxErrorsAfterRevert: syntaxErrorsAfterOperationStack
+  },
+  operationConflict: {
+    applyOk: operationConflictApply.ok,
+    revertOk: operationConflictRevert.ok,
+    revertReason: operationConflictRevert.ok ? null : operationConflictRevert.reason,
+    conflictFile: operationConflictFile
+      ? path.relative(rootDir, operationConflictFile).replace(/\\/g, "/")
+      : null,
+    conflictFileExists: operationConflictFile ? fs.existsSync(operationConflictFile) : false,
+    conflictKind: operationConflictArtifact?.kind ?? null,
+    conflictExpectedToken: operationConflictArtifact?.expectedToken ?? null,
+    conflictActualToken: operationConflictArtifact?.actualToken ?? null,
+    conflictRestoreToken: operationConflictArtifact?.restoreToken ?? null,
+    conflictGuidanceCount: Array.isArray(operationConflictArtifact?.guidance)
+      ? operationConflictArtifact.guidance.length
+      : 0,
+    syntaxErrorsAfterConflict: syntaxErrorsAfterOperationConflict
   },
   agentTask: {
     ok: agentTask.ok,
@@ -1161,7 +1221,20 @@ const report = {
       operationRevertTwo.ok &&
       pendingAfterSecondRevert.length === 0 &&
       historyAfterSecondRevert.pendingCount === 0 &&
-      syntaxErrorsAfterOperationStack === 0
+      syntaxErrorsAfterOperationStack === 0,
+    operationConflictArtifactPass:
+      operationConflictApply.ok &&
+      !operationConflictRevert.ok &&
+      operationConflictRevert.reason === "revert-token-mismatch" &&
+      Boolean(operationConflictRevert.conflictFile) &&
+      Boolean(operationConflictArtifact) &&
+      operationConflictArtifact.kind === "revert-conflict" &&
+      operationConflictArtifact.expectedToken === "gap-6" &&
+      operationConflictArtifact.actualToken === "gap-8" &&
+      operationConflictArtifact.restoreToken === "gap-4" &&
+      Array.isArray(operationConflictArtifact.guidance) &&
+      operationConflictArtifact.guidance.length >= 3 &&
+      syntaxErrorsAfterOperationConflict === 0
   }
 };
 

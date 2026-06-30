@@ -105,6 +105,8 @@ export interface PatchFailure {
   id?: string;
   reason: string;
   detail?: string;
+  conflictFile?: string;
+  conflictArtifact?: PatchConflictArtifact;
   metrics?: {
     previewMs?: number;
     applyMs?: number;
@@ -112,6 +114,27 @@ export interface PatchFailure {
     taskMs?: number;
     resultMs?: number;
   };
+}
+
+export interface PatchConflictArtifact {
+  version: 1;
+  kind: "revert-conflict";
+  createdAt: string;
+  reason: string;
+  id: string;
+  file: string;
+  relativeFile: string;
+  range: {
+    start: number;
+    end: number;
+  };
+  expectedToken: string;
+  actualToken: string;
+  restoreToken: string;
+  beforeLine: string;
+  operationFile: string;
+  diffFile: string;
+  guidance: string[];
 }
 
 export interface PatchApplyResult extends PatchPreview {

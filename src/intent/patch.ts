@@ -5,6 +5,7 @@ import type {
   IntentBinding,
   IntentToken,
   PatchApplyResult,
+  PatchConflictArtifact,
   PatchFailure,
   PatchOperationLog,
   PatchPreview,
@@ -290,6 +291,48 @@ function writeIntentArtifacts(params: {
   return { operationFile, diffFile };
 }
 
+function writeRevertConflictArtifact(params: {
+  rootDir: string;
+  lastPatch: PatchApplyResult;
+  source: string;
+  actualToken: string;
+  reason: string;
+}): { conflictFile: string; conflictArtifact: PatchConflictArtifact } {
+  const { rootDir, lastPatch, source, actualToken, reason } = params;
+  const timestamp = timestampSlug();
+  const conflictsDir = path.join(rootDir, ".intent", "conflicts");
+  fs.mkdirSync(conflictsDir, { recursive: true });
+
+  const conflictFile = path.join(conflictsDir, `${timestamp}.intent-conflict.json`);
+  const conflictArtifact: PatchConflictArtifact = {
+    version: 1,
+    kind: "revert-conflict",
+    createdAt: new Date().toISOString(),
+    reason,
+    id: lastPatch.id,
+    file: lastPatch.file,
+    relativeFile: lastPatch.relativeFile,
+    range: {
+      start: lastPatch.range.start,
+      end: lastPatch.range.start + lastPatch.nextToken.length
+    },
+    expectedToken: lastPatch.nextToken,
+    actualToken,
+    restoreToken: lastPatch.oldToken,
+    beforeLine: lineSnippet(source, lastPatch.range.start),
+    operationFile: lastPatch.operationFile,
+    diffFile: lastPatch.diffFile,
+    guidance: [
+      "Do not auto-revert this patch because the expected token is no longer present at the stored range.",
+      "Re-select the element or review this conflict artifact before creating a manual or agent handoff fix.",
+      "Keep the pending undo entry until a human resolves the conflict or intentionally discards it."
+    ]
+  };
+
+  fs.writeFileSync(conflictFile, `${JSON.stringify(conflictArtifact, null, 2)}\n`);
+  return { conflictFile, conflictArtifact };
+}
+
 export function applyTokenPatch(
   rootDir: string,
   entry: IntentBinding | undefined,
@@ -359,11 +402,20 @@ export function revertTokenPatch(
   const currentToken = source.slice(start, end);
 
   if (currentToken !== lastPatch.nextToken) {
+    const conflict = writeRevertConflictArtifact({
+      rootDir,
+      lastPatch,
+      source,
+      actualToken: currentToken,
+      reason: "revert-token-mismatch"
+    });
     return {
       ok: false,
       id: lastPatch.id,
       reason: "revert-token-mismatch",
       detail: `Expected "${lastPatch.nextToken}" at the last patch range, found "${currentToken}".`,
+      conflictFile: conflict.conflictFile,
+      conflictArtifact: conflict.conflictArtifact,
       metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
     };
   }

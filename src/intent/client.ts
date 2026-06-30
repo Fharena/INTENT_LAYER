@@ -381,7 +381,8 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
         `Reverted ${result.oldToken} -> ${result.restoredToken} in ${result.metrics.revertMs}ms`
       );
     } else {
-      renderBinding(panel, binding, `Undo rejected: ${result.reason}`);
+      const conflict = result.conflictFile ? ` (${result.conflictFile})` : "";
+      renderBinding(panel, binding, `Undo rejected: ${result.reason}${conflict}`);
     }
     const renderedAt = performance.now();
     recordClientMetric({
