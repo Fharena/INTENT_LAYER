@@ -7,6 +7,7 @@ import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
 import {
   applyTokenPatch,
+  discardPendingUndo,
   pendingUndoHistoryFromOperationLog,
   pendingUndoStackFromOperationLog,
   planTokenPatch,
@@ -26,7 +27,8 @@ import type {
   IntentGraph,
   PatchApplyResult,
   PatchConflictResolveRequest,
-  PatchRequest
+  PatchRequest,
+  PatchUndoDiscardRequest
 } from "./types";
 
 interface IntentState {
@@ -245,6 +247,24 @@ export function intentLayerSpike(): Plugin {
           try {
             const body = JSON.parse(await readBody(request)) as PatchConflictResolveRequest;
             const result = resolvePatchConflict(state.rootDir, body);
+            if (result.ok) {
+              state.undoStack = removeDiscardedPatchFromStack(state.undoStack, result.discardedPatch);
+            }
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/discard-undo" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as PatchUndoDiscardRequest;
+            const result = discardPendingUndo(state.rootDir, body);
             if (result.ok) {
               state.undoStack = removeDiscardedPatchFromStack(state.undoStack, result.discardedPatch);
             }

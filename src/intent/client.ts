@@ -13,6 +13,7 @@ import type {
   PatchFailure,
   PatchPreview,
   PatchRevertResult,
+  PatchUndoDiscardResult,
   UndoHistoryReport
 } from "./types";
 
@@ -24,6 +25,7 @@ type AgentResultResponse = AgentResultArtifact | PatchFailure;
 type UndoHistoryResponse = UndoHistoryReport;
 type ConflictReportResponse = PatchConflictReport;
 type ConflictResolveResponse = PatchConflictResolveResult | PatchFailure;
+type UndoDiscardResponse = PatchUndoDiscardResult | PatchFailure;
 
 const lastAgentTaskFileByIntentId = new Map<string, string>();
 
@@ -297,7 +299,7 @@ function renderAgentTaskForm(
   root.appendChild(wrapper);
 }
 
-function renderUndoHistory(root: HTMLElement) {
+function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => void) {
   const wrapper = document.createElement("div");
   wrapper.style.marginTop = "12px";
   wrapper.style.paddingTop = "10px";
@@ -334,9 +336,38 @@ function renderUndoHistory(root: HTMLElement) {
 
       for (const item of history.entries.slice().reverse().slice(0, 5)) {
         const entry = document.createElement("li");
-        entry.textContent = `${item.next ? "next: " : ""}${item.oldToken} -> ${item.nextToken} (${item.relativeFile})`;
         entry.style.lineHeight = "1.35";
         entry.style.fontWeight = item.next ? "800" : "500";
+
+        const text = document.createElement("span");
+        text.textContent = `${item.next ? "next: " : ""}${item.oldToken} -> ${item.nextToken} (${item.relativeFile})`;
+
+        const discard = createButton("Discard");
+        discard.style.marginLeft = "6px";
+        discard.style.padding = "3px 6px";
+        discard.style.fontSize = "10px";
+        discard.addEventListener("click", async () => {
+          discard.disabled = true;
+          discard.style.cursor = "default";
+          const response = await fetch("/__intent/discard-undo", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              operationFile: item.operationFile,
+              note: "Discarded from overlay undo history."
+            })
+          });
+          const result = (await response.json()) as UndoDiscardResponse;
+          if (result.ok) {
+            setStatus(`Undo discarded: ${item.nextToken}, ${result.pendingCount} pending`);
+          } else {
+            discard.disabled = false;
+            discard.style.cursor = "pointer";
+            setStatus(`Undo discard rejected: ${result.reason}`);
+          }
+        });
+
+        entry.append(text, discard);
         list.appendChild(entry);
       }
 
@@ -490,7 +521,9 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     });
   });
   panel.appendChild(undo);
-  renderUndoHistory(panel);
+  renderUndoHistory(panel, (message) => {
+    renderBinding(panel, binding, message);
+  });
   renderConflictPanel(panel, (message) => {
     renderBinding(panel, binding, message);
   });

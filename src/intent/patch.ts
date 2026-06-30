@@ -16,6 +16,8 @@ import type {
   PatchRequest,
   PatchRevertResult,
   PatchUndoDiscardReference,
+  PatchUndoDiscardRequest,
+  PatchUndoDiscardResult,
   UndoHistoryReport
 } from "./types";
 
@@ -151,6 +153,27 @@ function patchMatchesDiscard(patch: PatchApplyResult, discard: PatchUndoDiscardR
     patch.nextToken === discard.nextToken &&
     patch.range.start === discard.range.start
   );
+}
+
+function patchMatchesOperationFile(rootDir: string, patch: PatchApplyResult, operationFile: string): boolean {
+  const requested = toSlashPath(operationFile);
+  const absoluteRequested = toSlashPath(path.resolve(rootDir, operationFile));
+  return (
+    toSlashPath(patch.operationFile) === requested ||
+    toSlashPath(patch.operationFile) === absoluteRequested ||
+    relativeFromRoot(rootDir, patch.operationFile) === requested
+  );
+}
+
+function discardReferenceFromApply(patch: PatchApplyResult): PatchUndoDiscardReference {
+  return {
+    id: patch.id,
+    file: patch.file,
+    relativeFile: patch.relativeFile,
+    oldToken: patch.oldToken,
+    nextToken: patch.nextToken,
+    range: patch.range
+  };
 }
 
 function readOperationLog(rootDir: string): PatchOperationLog {
@@ -428,8 +451,11 @@ export function readPatchConflictReport(rootDir: string): PatchConflictReport {
 
 function recordPatchDiscardInOperationLog(
   rootDir: string,
-  conflictFile: string,
-  patch: PatchUndoDiscardReference
+  patch: PatchUndoDiscardReference,
+  options: {
+    conflictFile?: string;
+    note?: string;
+  } = {}
 ): string {
   const log = readOperationLog(rootDir);
   const now = new Date().toISOString();
@@ -437,10 +463,47 @@ function recordPatchDiscardInOperationLog(
   log.entries.push({
     action: "discard",
     createdAt: now,
-    conflictFile,
+    conflictFile: options.conflictFile,
+    note: options.note,
     patch
   });
   return writeOperationLog(rootDir, log);
+}
+
+export function discardPendingUndo(
+  rootDir: string,
+  request: PatchUndoDiscardRequest
+): PatchUndoDiscardResult | PatchFailure {
+  const started = performance.now();
+  const pending = pendingUndoStackFromOperationLog(rootDir);
+  const patch = pending.find((item) => patchMatchesOperationFile(rootDir, item, request.operationFile));
+
+  if (!patch) {
+    return {
+      ok: false,
+      reason: "missing-pending-undo",
+      detail: "No pending undo entry matches the requested operation file.",
+      metrics: { discardMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
+  const discardPatch = discardReferenceFromApply(patch);
+  const operationLogFile = recordPatchDiscardInOperationLog(rootDir, discardPatch, {
+    note: request.note
+  });
+  const pendingCount = pendingUndoStackFromOperationLog(rootDir).length;
+
+  return {
+    ok: true,
+    discarded: true,
+    operationFile: patch.operationFile,
+    discardedPatch: discardPatch,
+    pendingCount,
+    operationLogFile,
+    metrics: {
+      discardMs: Number((performance.now() - started).toFixed(3))
+    }
+  };
 }
 
 export function resolvePatchConflict(
@@ -498,7 +561,10 @@ export function resolvePatchConflict(
     nextToken: artifact.expectedToken,
     range: artifact.range
   };
-  const operationLogFile = recordPatchDiscardInOperationLog(rootDir, conflictFile, discardPatch);
+  const operationLogFile = recordPatchDiscardInOperationLog(rootDir, discardPatch, {
+    conflictFile,
+    note: request.note
+  });
   const resolvedArtifact: PatchConflictArtifact = {
     ...artifact,
     resolvedAt: new Date().toISOString(),

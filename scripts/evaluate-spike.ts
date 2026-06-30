@@ -7,6 +7,7 @@ import { createAgentTask } from "../src/intent/agentTask";
 import { instrumentSource } from "../src/intent/instrument";
 import {
   applyTokenPatch,
+  discardPendingUndo,
   pendingUndoHistoryFromOperationLog,
   pendingUndoStackFromOperationLog,
   planTokenPatch,
@@ -754,6 +755,82 @@ const pendingAfterSecondRevert = pendingUndoStackFromOperationLog(rootDir);
 const historyAfterSecondRevert = pendingUndoHistoryFromOperationLog(rootDir);
 const syntaxErrorsAfterOperationStack = parseSyntaxErrorCount(operationStackFixture);
 
+const operationBranchDiscardFixture = path.join(tmpDir, "OperationBranchDiscardFixture.tsx");
+fs.writeFileSync(
+  operationBranchDiscardFixture,
+  [
+    "export function OperationBranchDiscardFixture() {",
+    "  return <div className=\"grid grid-cols-3 gap-4 rounded-lg p-6\">Branch discard target</div>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const operationBranchDiscardInstrument = instrumentSource({
+  code: fs.readFileSync(operationBranchDiscardFixture, "utf8"),
+  file: operationBranchDiscardFixture,
+  rootDir
+});
+const operationBranchDiscardEntry = operationBranchDiscardInstrument.entries[0];
+const operationBranchDiscardGap = operationBranchDiscardEntry.tokens.find((token) => token.token === "gap-4");
+const operationBranchApplyOne = applyTokenPatch(rootDir, operationBranchDiscardEntry, {
+  id: operationBranchDiscardEntry.id,
+  oldToken: "gap-4",
+  nextToken: "gap-6",
+  sourceStart: operationBranchDiscardGap?.sourceStart,
+  sourceEnd: operationBranchDiscardGap?.sourceEnd
+});
+if (operationBranchApplyOne.ok) {
+  recordPatchApplyInOperationLog(rootDir, operationBranchApplyOne);
+}
+const operationBranchDiscardAfterOne = instrumentSource({
+  code: fs.readFileSync(operationBranchDiscardFixture, "utf8"),
+  file: operationBranchDiscardFixture,
+  rootDir
+});
+const operationBranchDiscardEntryAfterOne = operationBranchDiscardAfterOne.entries[0];
+const operationBranchDiscardPadding = operationBranchDiscardEntryAfterOne.tokens.find((token) => token.token === "p-6");
+const operationBranchApplyTwo = applyTokenPatch(rootDir, operationBranchDiscardEntryAfterOne, {
+  id: operationBranchDiscardEntryAfterOne.id,
+  oldToken: "p-6",
+  nextToken: "p-8",
+  sourceStart: operationBranchDiscardPadding?.sourceStart,
+  sourceEnd: operationBranchDiscardPadding?.sourceEnd
+});
+if (operationBranchApplyTwo.ok) {
+  recordPatchApplyInOperationLog(rootDir, operationBranchApplyTwo);
+}
+const pendingAfterBranchApply = pendingUndoStackFromOperationLog(rootDir);
+const historyAfterBranchApply = pendingUndoHistoryFromOperationLog(rootDir);
+const operationBranchDiscard = operationBranchApplyOne.ok
+  ? discardPendingUndo(rootDir, {
+      operationFile: operationBranchApplyOne.operationFile,
+      note: "Evaluation fixture discarded a non-top pending undo."
+    })
+  : {
+      ok: false as const,
+      reason: "missing-branch-apply",
+      detail: "The first branch discard apply failed."
+    };
+const pendingAfterBranchDiscard = pendingUndoStackFromOperationLog(rootDir);
+const historyAfterBranchDiscard = pendingUndoHistoryFromOperationLog(rootDir);
+const operationBranchDiscardAfterTwo = instrumentSource({
+  code: fs.readFileSync(operationBranchDiscardFixture, "utf8"),
+  file: operationBranchDiscardFixture,
+  rootDir
+});
+const operationBranchDiscardEntryAfterTwo = operationBranchDiscardAfterTwo.entries[0];
+const operationBranchRevert = revertTokenPatch(
+  rootDir,
+  pendingAfterBranchDiscard[pendingAfterBranchDiscard.length - 1],
+  operationBranchDiscardEntryAfterTwo
+);
+if (operationBranchRevert.ok) {
+  recordPatchRevertInOperationLog(rootDir, operationBranchRevert);
+}
+const pendingAfterBranchRevert = pendingUndoStackFromOperationLog(rootDir);
+const historyAfterBranchRevert = pendingUndoHistoryFromOperationLog(rootDir);
+const syntaxErrorsAfterBranchDiscard = parseSyntaxErrorCount(operationBranchDiscardFixture);
+
 const operationConflictFixture = path.join(tmpDir, "OperationConflictFixture.tsx");
 fs.writeFileSync(
   operationConflictFixture,
@@ -916,6 +993,22 @@ const report = {
     pendingAfterSecondRevert: pendingAfterSecondRevert.length,
     historyAfterSecondRevertCount: historyAfterSecondRevert.pendingCount,
     syntaxErrorsAfterRevert: syntaxErrorsAfterOperationStack
+  },
+  operationBranchUndo: {
+    firstApplyOk: operationBranchApplyOne.ok,
+    secondApplyOk: operationBranchApplyTwo.ok,
+    pendingAfterApply: pendingAfterBranchApply.length,
+    historyAfterApplyCount: historyAfterBranchApply.pendingCount,
+    discardOk: operationBranchDiscard.ok,
+    discardMs: operationBranchDiscard.ok ? operationBranchDiscard.metrics.discardMs : null,
+    discardedToken: operationBranchDiscard.ok ? operationBranchDiscard.discardedPatch.nextToken : null,
+    pendingAfterDiscard: pendingAfterBranchDiscard.length,
+    historyAfterDiscardCount: historyAfterBranchDiscard.pendingCount,
+    historyAfterDiscardNextToken: historyAfterBranchDiscard.entries.find((entry) => entry.next)?.nextToken ?? null,
+    revertAfterDiscardOk: operationBranchRevert.ok,
+    pendingAfterRevert: pendingAfterBranchRevert.length,
+    historyAfterRevertCount: historyAfterBranchRevert.pendingCount,
+    syntaxErrorsAfterDiscard: syntaxErrorsAfterBranchDiscard
   },
   operationConflict: {
     applyOk: operationConflictApply.ok,
@@ -1258,6 +1351,20 @@ const report = {
       pendingAfterSecondRevert.length === 0 &&
       historyAfterSecondRevert.pendingCount === 0 &&
       syntaxErrorsAfterOperationStack === 0,
+    operationBranchUndoDiscardPass:
+      operationBranchApplyOne.ok &&
+      operationBranchApplyTwo.ok &&
+      pendingAfterBranchApply.length === 2 &&
+      historyAfterBranchApply.pendingCount === 2 &&
+      operationBranchDiscard.ok &&
+      operationBranchDiscard.discardedPatch.nextToken === "gap-6" &&
+      pendingAfterBranchDiscard.length === 1 &&
+      historyAfterBranchDiscard.pendingCount === 1 &&
+      historyAfterBranchDiscard.entries.some((entry) => entry.next && entry.nextToken === "p-8") &&
+      operationBranchRevert.ok &&
+      pendingAfterBranchRevert.length === 0 &&
+      historyAfterBranchRevert.pendingCount === 0 &&
+      syntaxErrorsAfterBranchDiscard === 0,
     operationConflictArtifactPass:
       operationConflictApply.ok &&
       !operationConflictRevert.ok &&

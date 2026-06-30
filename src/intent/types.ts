@@ -112,6 +112,7 @@ export interface PatchFailure {
     applyMs?: number;
     revertMs?: number;
     resolveMs?: number;
+    discardMs?: number;
     taskMs?: number;
     resultMs?: number;
   };
@@ -180,7 +181,8 @@ export type PatchOperationLogEntry =
   | {
       action: "discard";
       createdAt: string;
-      conflictFile: string;
+      conflictFile?: string;
+      note?: string;
       patch: PatchUndoDiscardReference;
     };
 
@@ -264,6 +266,23 @@ export interface PatchConflictResolveResult {
   operationLogFile: string;
   metrics: {
     resolveMs: number;
+  };
+}
+
+export interface PatchUndoDiscardRequest {
+  operationFile: string;
+  note?: string;
+}
+
+export interface PatchUndoDiscardResult {
+  ok: true;
+  discarded: true;
+  operationFile: string;
+  discardedPatch: PatchUndoDiscardReference;
+  pendingCount: number;
+  operationLogFile: string;
+  metrics: {
+    discardMs: number;
   };
 }
 
