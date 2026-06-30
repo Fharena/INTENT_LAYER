@@ -186,13 +186,18 @@ Purpose:
 - skip story/test/spec files, build output, and `node_modules` by default
 - write a manifest with original path, copied path, SHA-256 hash, byte count, and `className` count
 - calculate editable coverage and gates through the same `analyzeClassNames` path
+- record `sample.sourceKind`, read-only ratio, top unsupported reasons, `gateFailures`, and `mvpEvidence`
+- `mvpEvidence.usableAsMvpEvidence` becomes true only when gates pass on at least 50 independent external samples
 
 `npm run eval` smoke summary:
 
 | Metric | Value |
 | --- | ---: |
 | import exit code | 0 |
-| import time | 1,781.406ms |
+| import time | 2,239.309ms |
+| sample label | `eval-external-corpus-harness` |
+| sample source | `local-smoke-fixture` |
+| independent sample | false |
 | selected files | 3 |
 | files scanned | 3 |
 | `className` occurrences | 6 |
@@ -200,12 +205,18 @@ Purpose:
 | static + simple editable coverage | 75.76% |
 | supported direct editable coverage | 75.76% |
 | all observed editable coverage | 75.76% |
+| read-only `className` ratio | 16.67% |
+| top unsupported reason | `variable-reference`: 1 |
+| gate failures | 0 |
+| `mvpEvidence.usableAsMvpEvidence` | false |
+| `mvpEvidence.decision` | `measurement-smoke-only` |
 | gate | pass |
 
 Interpretation:
 
 - There is now a repeatable loop for importing local external corpus copies and measuring them with the same coverage criteria.
 - This smoke verifies the importer/report/gate format with a small fixture.
+- The coverage gate passes, but `sample.sourceKind = local-smoke-fixture`, so the report explicitly prevents treating this run as MVP evidence.
 - A market-validation number still requires running the harness against an independently collected external 50-100 file React/Tailwind corpus.
 
 ## 3. Transform Performance
@@ -220,8 +231,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.494ms / p95 5.137ms / max 5.137ms |
-| `src/main.tsx` | 0 | avg 0.006ms / p95 0.011ms / max 0.011ms |
+| `src/App.tsx` | 13 | avg 1.872ms / p95 6.442ms / max 6.442ms |
+| `src/main.tsx` | 0 | avg 0.004ms / p95 0.007ms / max 0.007ms |
 
 Summary:
 
@@ -229,12 +240,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.75ms |
-| Overall p95 transform time | 5.137ms |
-| Overall max transform time | 5.137ms |
-| Warm average transform time | 0.294ms |
-| Warm p95 transform time | 0.722ms |
-| Warm max transform time | 0.722ms |
+| Overall average transform time | 0.938ms |
+| Overall p95 transform time | 6.442ms |
+| Overall max transform time | 6.442ms |
+| Warm average transform time | 0.366ms |
+| Warm p95 transform time | 1.059ms |
+| Warm max transform time | 1.059ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -259,9 +270,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 12.33ms |
-| p95 transform time | 17.853ms |
-| Max transform time | 17.853ms |
+| Average transform time | 13.616ms |
+| p95 transform time | 18.904ms |
+| Max transform time | 18.904ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -283,10 +294,10 @@ Interpretation:
 | Bindings | 401 |
 | Input size | 45,352 bytes |
 | Same-input repeats | 4 |
-| Initial transform | 33.268ms |
-| Same-input repeat transforms | 14.291ms / 13.281ms / 18.055ms / 13.789ms |
-| Changed-token transform | 19.947ms |
-| Changed-token repeat transform | 11.591ms |
+| Initial transform | 35.797ms |
+| Same-input repeat transforms | 23.891ms / 20.224ms / 22.321ms / 14.609ms |
+| Changed-token transform | 23.177ms |
+| Changed-token repeat transform | 15.233ms |
 | Inferred write count | 2 |
 | Inferred skipped write count | 5 |
 | Same-code generatedAt stable | true |
@@ -313,7 +324,7 @@ Interpretation:
 | Same-input repeat graph entries | 624 |
 | Post-change graph entries | 624 |
 | Post-change repeat graph entries | 624 |
-| Graph size | 1,160,383 bytes |
+| Graph size | 1,160,279 bytes |
 | Changed file | `src/screens/ProductScreen07.tsx` |
 | Token before change | `gap-4` |
 | Token after change | `gap-8` |
@@ -323,10 +334,10 @@ Interpretation:
 | Changed-input generatedAt update | true |
 | Post-change repeat generatedAt stable | true |
 | Entry count stable | true |
-| Initial full transform time | 483.648ms |
-| Same-input full repeat time | 549.593ms |
-| Changed-file transform time | 21.253ms |
-| Changed-file repeat transform time | 13.53ms |
+| Initial full transform time | 557.288ms |
+| Same-input full repeat time | 585.372ms |
+| Changed-file transform time | 23.043ms |
+| Changed-file repeat transform time | 12.265ms |
 | Changed-file target | <= 50ms |
 | Result | pass |
 
@@ -1346,8 +1357,8 @@ Package install smoke gate:
 | Installed plugin transform exit code | 0 |
 | Installed Vite dev server exit code | 0 |
 | Package file count | 15 |
-| Package size | 46960 bytes |
-| Unpacked size | 232256 bytes |
+| Package size | 47058 bytes |
+| Unpacked size | 232537 bytes |
 | Includes bin wrapper | true |
 | Includes CLI source | true |
 | Includes Vite plugin source | true |
@@ -1365,7 +1376,7 @@ Package install smoke gate:
 | Installed transform graph size | 1664 bytes |
 | Installed transform first relative file | `src/App.tsx` |
 | Installed transform first editable token | `gap-4` |
-| Installed transform hook time | 7.353ms |
+| Installed transform hook time | 5.839ms |
 | Installed Vite dev server ok | true |
 | Installed Vite dev server home status | 200 |
 | Installed Vite dev server module status | 200 |
@@ -1388,7 +1399,7 @@ Package install smoke gate:
 | Installed Vite dev server post-apply graph status | 200 |
 | Installed Vite dev server post-apply graph entries | 1 |
 | Installed Vite dev server post-apply first editable token | `gap-6` |
-| Installed Vite dev server apply refresh time | 83.219ms |
+| Installed Vite dev server apply refresh time | 73.595ms |
 | Installed Vite dev server apply refresh target | <= 500ms |
 | Installed Vite dev server apply refresh result | pass |
 | Installed Vite dev server multi-file ok | true |
@@ -1399,10 +1410,10 @@ Package install smoke gate:
 | Installed Vite dev server multi-file unchanged files retained | true |
 | Installed Vite dev server multi-file graph generatedAt changed | true |
 | Installed Vite dev server multi-file changed module includes `gap-8` | true |
-| Installed Vite dev server multi-file refresh time | 126.136ms |
+| Installed Vite dev server multi-file refresh time | 113.718ms |
 | Installed Vite dev server multi-file refresh target | <= 500ms |
 | Installed Vite dev server multi-file refresh result | pass |
-| Installed Vite dev server multi-file total time | 305.695ms |
+| Installed Vite dev server multi-file total time | 263.481ms |
 | Installed Vite dev server smoke time | 2134.232ms |
 | Dry-run time | 3325.237ms |
 | Pack time | 2898.646ms |
@@ -1418,8 +1429,8 @@ Interpretation:
 - The package smoke creates the tarball in an OS temp folder, installs it into a separate temp install folder, then runs installed `intent-layer --help` and imports `intent-layer/vite`.
 - In the same temp install folder, it creates an external fixture `src/App.tsx`, calls the installed plugin's `configResolved` and `transform` hooks, and verifies `data-intent-id` injection plus `.intent/graph.intent.json` output.
 - In the same temp install folder, it also starts a real Vite dev server and fetches/calls `/`, `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, and `/__intent/apply` over HTTP to verify the module transform, server middleware, and safe patch apply together.
-- The installed Vite dev server smoke verifies that a `gap-4 -> gap-6` patch reaches source, writes operation/diff/log artifacts, and updates `/src/App.tsx` plus `/__intent/graph` within 83.219ms after apply.
-- In the same Vite dev server session, it also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4 -> gap-8`, then verifies the graph keeps three entries, updates the changed-file token, retains unchanged files, changes graph `generatedAt`, and refreshes the module/graph in 126.136ms.
+- The installed Vite dev server smoke verifies that a `gap-4 -> gap-6` patch reaches source, writes operation/diff/log artifacts, and updates `/src/App.tsx` plus `/__intent/graph` within 73.595ms after apply.
+- In the same Vite dev server session, it also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4 -> gap-8`, then verifies the graph keeps three entries, updates the changed-file token, retains unchanged files, changes graph `generatedAt`, and refreshes the module/graph in 113.718ms.
 - The verified package export is currently `intent-layer/vite`. External install-guide copy remains launch-polish work.
 
 ## 10. Gate Results
@@ -1483,7 +1494,7 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures one-hop dependency declarations in same-file and imported-source contexts as related dependency handoff context. It captures imported variable declarations behind tsconfig paths aliases, import aliases, multi-hop barrel re-exports, workspace package imports, and one extra named-import dependency hop inside the related declaration as dependency snapshot/diff context. It also captures `styles.title`-style object properties as related source handoff context. External npm package imports are recorded as `External Import Reference` task context instead of chasing package source or patching `node_modules`. It also captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop/multi-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `intent-layer/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, 83.219ms apply refresh, and 126.136ms 3-file graph refresh. This update also aligns the package/plugin name to `intent-layer`, passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, passes a 24-file/624-binding generated product-sized multi-file graph refresh gate, and passes an external corpus import/report/gate harness smoke.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures one-hop dependency declarations in same-file and imported-source contexts as related dependency handoff context. It captures imported variable declarations behind tsconfig paths aliases, import aliases, multi-hop barrel re-exports, workspace package imports, and one extra named-import dependency hop inside the related declaration as dependency snapshot/diff context. It also captures `styles.title`-style object properties as related source handoff context. External npm package imports are recorded as `External Import Reference` task context instead of chasing package source or patching `node_modules`. It also captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop/multi-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `intent-layer/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, 73.595ms apply refresh, and 113.718ms 3-file graph refresh. This update also aligns the package/plugin name to `intent-layer`, passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, passes a 24-file/624-binding generated product-sized multi-file graph refresh gate, and passes an external corpus import/report/gate harness smoke.
 
 What worked:
 
@@ -1532,7 +1543,7 @@ What worked:
 - CLI `scan`/`check` JSON report and gate pass
 - CLI `init` workspace/schema creation and gate pass
 - CLI `dev --dry-run` local Vite command plan creation and gate pass
-- package tarball dry-run, real pack, temp install, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph, and installed Vite dev server HTTP graph/preview/apply source patch plus 83.219ms apply refresh and 126.136ms 3-file graph refresh gate pass
+- package tarball dry-run, real pack, temp install, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph, and installed Vite dev server HTTP graph/preview/apply source patch plus 73.595ms apply refresh and 113.718ms 3-file graph refresh gate pass
 - CLI `apply` safe patch execution from `.intent-op.json` plus operation/diff/log output
 - CLI `diff` `.intent-diff.yml` JSON summary and gate pass
 - CLI `agent-context` AI-ready graph/binding context markdown generation and required-section gate pass

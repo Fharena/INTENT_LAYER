@@ -186,13 +186,18 @@ npm run analyze:external-corpus
 - story/test/spec, build output, `node_modules`는 기본 제외한다.
 - manifest에 원본 경로, 복사본 경로, SHA-256 hash, byte 수, `className` 수를 남긴다.
 - 같은 `analyzeClassNames` 기준으로 editable coverage와 gate 결과를 계산한다.
+- report에 `sample.sourceKind`, read-only 비율, 상위 unsupported reason, `gateFailures`, `mvpEvidence`를 기록한다.
+- `mvpEvidence.usableAsMvpEvidence`는 독립 외부 sample 50개 이상에서 gate가 통과해야 true가 된다.
 
 `npm run eval` smoke 요약:
 
 | 항목 | 값 |
 | --- | ---: |
 | import exit code | 0 |
-| import 시간 | 1,781.406ms |
+| import 시간 | 2,239.309ms |
+| sample label | `eval-external-corpus-harness` |
+| sample source | `local-smoke-fixture` |
+| independent sample | false |
 | 선택 파일 수 | 3 |
 | 스캔 파일 수 | 3 |
 | `className` 발생 수 | 6 |
@@ -200,12 +205,18 @@ npm run analyze:external-corpus
 | static + simple editable coverage | 75.76% |
 | supported direct editable coverage | 75.76% |
 | 전체 observed editable coverage | 75.76% |
+| read-only `className` 비율 | 16.67% |
+| top unsupported reason | `variable-reference`: 1 |
+| gate failure 수 | 0 |
+| `mvpEvidence.usableAsMvpEvidence` | false |
+| `mvpEvidence.decision` | `measurement-smoke-only` |
 | gate | 통과 |
 
 해석:
 
 - 외부 corpus를 로컬 `.intent/` artifact로 가져와 같은 coverage 기준으로 측정하는 루프가 생겼다.
 - 이 smoke는 importer/report/gate 형식을 검증하는 작은 fixture다.
+- coverage gate는 통과했지만 `sample.sourceKind = local-smoke-fixture`이므로 MVP evidence로 쓰지 않도록 report가 명시한다.
 - 실제 시장 검증 수치로 쓰려면 독립 수집한 외부 React/Tailwind 샘플 50-100개로 다시 실행해야 한다.
 
 ## 3. Transform 성능
@@ -220,8 +231,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.494ms / p95 5.137ms / max 5.137ms |
-| `src/main.tsx` | 0 | avg 0.006ms / p95 0.011ms / max 0.011ms |
+| `src/App.tsx` | 13 | avg 1.872ms / p95 6.442ms / max 6.442ms |
+| `src/main.tsx` | 0 | avg 0.004ms / p95 0.007ms / max 0.007ms |
 
 요약:
 
@@ -229,12 +240,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 0.75ms |
-| 전체 p95 transform time | 5.137ms |
-| 전체 최대 transform time | 5.137ms |
-| warm 평균 transform time | 0.294ms |
-| warm p95 transform time | 0.722ms |
-| warm 최대 transform time | 0.722ms |
+| 전체 평균 transform time | 0.938ms |
+| 전체 p95 transform time | 6.442ms |
+| 전체 최대 transform time | 6.442ms |
+| warm 평균 transform time | 0.366ms |
+| warm p95 transform time | 1.059ms |
+| warm 최대 transform time | 1.059ms |
 | warm 목표 | 5ms 이하 |
 | cold 목표 | 10ms 이하 |
 | 결과 | warm 통과 / cold 통과 |
@@ -259,9 +270,9 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 파일 크기 | 45,352 bytes |
 | 반복 측정 | 5 |
-| average transform time | 12.33ms |
-| p95 transform time | 17.853ms |
-| max transform time | 17.853ms |
+| average transform time | 13.616ms |
+| p95 transform time | 18.904ms |
+| max transform time | 18.904ms |
 | stress 목표 | 20ms 이하 |
 | 결과 | 통과 |
 
@@ -283,10 +294,10 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 입력 크기 | 45,352 bytes |
 | 동일 입력 반복 수 | 4 |
-| initial transform | 33.268ms |
-| 동일 입력 반복 transform | 14.291ms / 13.281ms / 18.055ms / 13.789ms |
-| changed-token transform | 19.947ms |
-| changed-token repeat transform | 11.591ms |
+| initial transform | 35.797ms |
+| 동일 입력 반복 transform | 23.891ms / 20.224ms / 22.321ms / 14.609ms |
+| changed-token transform | 23.177ms |
+| changed-token repeat transform | 15.233ms |
 | inferred write count | 2 |
 | inferred skipped write count | 5 |
 | same-code generatedAt stable | true |
@@ -313,7 +324,7 @@ reports/performance/spike-evaluation.json
 | 동일 입력 반복 graph entry 수 | 624 |
 | 변경 후 graph entry 수 | 624 |
 | 변경 후 반복 graph entry 수 | 624 |
-| graph 크기 | 1,160,383 bytes |
+| graph 크기 | 1,160,279 bytes |
 | 변경 파일 | `src/screens/ProductScreen07.tsx` |
 | 변경 전 token | `gap-4` |
 | 변경 후 token | `gap-8` |
@@ -323,10 +334,10 @@ reports/performance/spike-evaluation.json
 | 변경 입력 generatedAt update | true |
 | 변경 후 반복 generatedAt stable | true |
 | entry count stable | true |
-| 초기 전체 transform 시간 | 483.648ms |
-| 동일 입력 전체 반복 시간 | 549.593ms |
-| 변경 파일 transform 시간 | 21.253ms |
-| 변경 파일 반복 transform 시간 | 13.53ms |
+| 초기 전체 transform 시간 | 557.288ms |
+| 동일 입력 전체 반복 시간 | 585.372ms |
+| 변경 파일 transform 시간 | 23.043ms |
+| 변경 파일 반복 transform 시간 | 12.265ms |
 | 변경 파일 목표 | 50ms 이하 |
 | 결과 | 통과 |
 
@@ -1345,8 +1356,8 @@ package install smoke gate:
 | installed plugin transform exit code | 0 |
 | installed Vite dev server exit code | 0 |
 | package file 수 | 15 |
-| package size | 46960 bytes |
-| unpacked size | 232256 bytes |
+| package size | 47058 bytes |
+| unpacked size | 232537 bytes |
 | bin wrapper 포함 | true |
 | CLI source 포함 | true |
 | Vite plugin source 포함 | true |
@@ -1364,7 +1375,7 @@ package install smoke gate:
 | installed transform graph size | 1664 bytes |
 | installed transform 첫 relative file | `src/App.tsx` |
 | installed transform 첫 editable token | `gap-4` |
-| installed transform hook 시간 | 7.353ms |
+| installed transform hook 시간 | 5.839ms |
 | installed Vite dev server 성공 | true |
 | installed Vite dev server home status | 200 |
 | installed Vite dev server module status | 200 |
@@ -1387,7 +1398,7 @@ package install smoke gate:
 | installed Vite dev server apply 후 graph status | 200 |
 | installed Vite dev server apply 후 graph entry 수 | 1 |
 | installed Vite dev server apply 후 첫 editable token | `gap-6` |
-| installed Vite dev server apply refresh 시간 | 83.219ms |
+| installed Vite dev server apply refresh 시간 | 73.595ms |
 | installed Vite dev server apply refresh 목표 | 500ms 이하 |
 | installed Vite dev server apply refresh 결과 | 통과 |
 | installed Vite dev server multi-file 성공 | true |
@@ -1398,10 +1409,10 @@ package install smoke gate:
 | installed Vite dev server multi-file 미변경 파일 유지 | true |
 | installed Vite dev server multi-file graph generatedAt 변경 | true |
 | installed Vite dev server multi-file 변경 module `gap-8` 포함 | true |
-| installed Vite dev server multi-file refresh 시간 | 126.136ms |
+| installed Vite dev server multi-file refresh 시간 | 113.718ms |
 | installed Vite dev server multi-file refresh 목표 | 500ms 이하 |
 | installed Vite dev server multi-file refresh 결과 | 통과 |
-| installed Vite dev server multi-file 전체 시간 | 305.695ms |
+| installed Vite dev server multi-file 전체 시간 | 263.481ms |
 | installed Vite dev server smoke 시간 | 2134.232ms |
 | dry-run 시간 | 3325.237ms |
 | pack 시간 | 2898.646ms |
@@ -1417,8 +1428,8 @@ package install smoke gate:
 - package smoke는 OS temp 폴더에 tarball을 만들고, 별도 temp install 폴더에서 `npm install` 후 설치된 `intent-layer --help`와 `intent-layer/vite` import를 실행한다.
 - 같은 temp install 폴더에서 외부 fixture `src/App.tsx`를 만들고, 설치된 plugin의 `configResolved`/`transform` hook을 직접 호출해 `data-intent-id` 주입과 `.intent/graph.intent.json` 생성까지 확인한다.
 - 같은 temp install 폴더에서 실제 Vite dev server도 띄우고, HTTP로 `/`, `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`를 조회/호출해 module transform, server middleware, safe patch apply가 같이 동작하는지 확인한다.
-- installed Vite dev server smoke는 `gap-4 -> gap-6` patch가 source에 반영되는지, operation/diff/log artifact가 생성되는지, apply 후 `/src/App.tsx`와 `/__intent/graph`가 83.219ms 안에 갱신되는지 확인한다.
-- 같은 Vite dev server 세션에서 App/Header/Card 3개 TSX 파일을 graph에 올리고, Card만 `gap-4 -> gap-8`로 바꾼 뒤 entry 수 3 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경, module/graph refresh 126.136ms를 확인한다.
+- installed Vite dev server smoke는 `gap-4 -> gap-6` patch가 source에 반영되는지, operation/diff/log artifact가 생성되는지, apply 후 `/src/App.tsx`와 `/__intent/graph`가 73.595ms 안에 갱신되는지 확인한다.
+- 같은 Vite dev server 세션에서 App/Header/Card 3개 TSX 파일을 graph에 올리고, Card만 `gap-4 -> gap-8`로 바꾼 뒤 entry 수 3 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경, module/graph refresh 113.718ms를 확인한다.
 - 현재 검증된 package export는 `intent-layer/vite`다. 외부 사용자용 install guide 문구는 아직 launch polish로 남겨둔다.
 
 ## 10. Gate 결과
@@ -1482,7 +1493,7 @@ package install smoke gate:
 
 ## 11. 결론
 
-이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, 같은 파일 및 imported source 내부 one-hop dependency 선언도 related dependency handoff 문맥으로 잡는다. imported 변수 선언도 tsconfig paths alias/import alias/다단계 barrel re-export 및 workspace package import 뒤에서 related source handoff 문맥으로 잡고, related 선언 내부의 named import dependency도 한 단계 더 따라가 dependency snapshot/diff로 기록한다. `styles.title` 같은 object property도 related source handoff 문맥으로 잡는다. external npm package import는 source를 추적하거나 `node_modules`를 직접 patch하지 않고 `External Import Reference`로 task에 기록한다. local/one-hop relative import/tsconfig paths alias + one-hop/multi-hop named barrel 뒤의 variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 package smoke도 tarball install, 설치된 bin 실행, `intent-layer/vite` wrapper export import, 외부 temp fixture transform/graph 생성, 실제 Vite dev server HTTP graph/preview/apply, source patch artifact, apply refresh 83.219ms, 3-file graph refresh 126.136ms까지 통과했다. 이번 갱신에서는 package/plugin 이름을 `intent-layer`로 맞추고, 401-binding TSX 반복 transform에서 semantic fingerprint가 같으면 sidecar graph write를 건너뛰는 gate, 24-file/624-binding product-sized generated multi-file graph refresh gate, 외부 corpus import/report/gate harness smoke가 모두 통과했다.
+이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, 같은 파일 및 imported source 내부 one-hop dependency 선언도 related dependency handoff 문맥으로 잡는다. imported 변수 선언도 tsconfig paths alias/import alias/다단계 barrel re-export 및 workspace package import 뒤에서 related source handoff 문맥으로 잡고, related 선언 내부의 named import dependency도 한 단계 더 따라가 dependency snapshot/diff로 기록한다. `styles.title` 같은 object property도 related source handoff 문맥으로 잡는다. external npm package import는 source를 추적하거나 `node_modules`를 직접 patch하지 않고 `External Import Reference`로 task에 기록한다. local/one-hop relative import/tsconfig paths alias + one-hop/multi-hop named barrel 뒤의 variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 package smoke도 tarball install, 설치된 bin 실행, `intent-layer/vite` wrapper export import, 외부 temp fixture transform/graph 생성, 실제 Vite dev server HTTP graph/preview/apply, source patch artifact, apply refresh 73.595ms, 3-file graph refresh 113.718ms까지 통과했다. 이번 갱신에서는 package/plugin 이름을 `intent-layer`로 맞추고, 401-binding TSX 반복 transform에서 semantic fingerprint가 같으면 sidecar graph write를 건너뛰는 gate, 24-file/624-binding product-sized generated multi-file graph refresh gate, 외부 corpus import/report/gate harness smoke가 모두 통과했다.
 
 성공한 것:
 
@@ -1531,7 +1542,7 @@ package install smoke gate:
 - CLI `scan`/`check` JSON report와 gate 통과
 - CLI `init` workspace/schema 생성과 gate 통과
 - CLI `dev --dry-run` local Vite command plan 생성과 gate 통과
-- package tarball dry-run, 실제 pack, temp install, 설치된 `intent-layer --help`, 설치된 `intent-layer/vite` import, 설치된 plugin transform/graph, 설치된 Vite dev server HTTP graph/preview/apply source patch, apply refresh 83.219ms, 3-file graph refresh 126.136ms gate 통과
+- package tarball dry-run, 실제 pack, temp install, 설치된 `intent-layer --help`, 설치된 `intent-layer/vite` import, 설치된 plugin transform/graph, 설치된 Vite dev server HTTP graph/preview/apply source patch, apply refresh 73.595ms, 3-file graph refresh 113.718ms gate 통과
 - CLI `apply` `.intent-op.json` 기반 safe patch 적용과 operation/diff/log 생성
 - CLI `diff` `.intent-diff.yml` JSON summary와 gate 통과
 - CLI `agent-context` AI용 graph/binding context markdown 생성과 필수 섹션 검증 통과

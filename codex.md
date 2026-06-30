@@ -126,6 +126,9 @@ copy local samples under .intent/external-corpus/
 write a manifest with original path, copied path, hash, byte count, and className count
 write numeric coverage gates to reports/performance/external-corpus-audit.json
 record whether the sample set is independently collected or only a local smoke fixture
+record sample.sourceKind as independent-external, local-smoke-fixture, or generated-fixture
+record gateFailures, read-only ratio, top unsupported reasons, and mvpEvidence.usableAsMvpEvidence
+do not treat local-smoke-fixture or generated-fixture runs as market/MVP evidence even when coverage gates pass
 ```
 
 For product-sized graph validation:

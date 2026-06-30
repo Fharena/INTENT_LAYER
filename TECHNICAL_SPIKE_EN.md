@@ -251,20 +251,29 @@ Behavior:
 - stores selected file copies under `.intent/external-corpus/files/`
 - records original path, copied path, SHA-256 hash, byte count, and `className` count in a manifest
 - computes coverage with the same `analyzeClassNames` path and writes JSON gate results
+- records `sample.sourceKind`, read-only ratio, top unsupported reasons, `gateFailures`, and `mvpEvidence.usableAsMvpEvidence` in the report
+- `sample.sourceKind` is one of `independent-external`, `local-smoke-fixture`, or `generated-fixture`
 
 Small `npm run eval` smoke result:
 
 ```text
+sample source: local-smoke-fixture
 selected files: 3
 files scanned: 3
 className occurrences: 6
 skipped story files: 1
 supported direct editable coverage: 75.76%
+read-only className ratio: 16.67%
+top unsupported reason: variable-reference 1
+gate failures: 0
+mvp evidence usable: false
+mvp evidence decision: measurement-smoke-only
 gate: externalCorpusHarnessPass = true
 ```
 
 This smoke verifies the importer/report/gate format.
-The market-validation number still requires running the harness against an independently collected external 50-100 file corpus.
+The coverage gate passes, but `sample.sourceKind` is `local-smoke-fixture`, so it is not treated as MVP evidence.
+The market-validation number still requires running the harness with `--sample-source independent-external` against an independently collected external 50-100 file corpus.
 
 ### 3.3 Simple cn/clsx literal segment support
 
@@ -306,8 +315,8 @@ Support model:
 - Variant-function read-only bindings store same-file local `function` / `const` variant declarations, one-hop relative named imports, and variant declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports as related source snapshots, then record related source and semantic diffs on result.
 - The package smoke now transforms an external temp fixture through the installed `vite.cjs` wrapper-backed `/vite` export after tarball install and verifies `data-intent-id` plus `.intent/graph.intent.json` output.
 - In the same install folder, it starts a real Vite dev server and verifies the `/src/App.tsx` transform response plus the `/__intent/graph`, `/__intent/preview`, and `/__intent/apply` endpoints over HTTP.
-- The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts plus post-apply module/graph refresh in 83.219ms.
-- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4` to `gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, graph `generatedAt` changes, and module/graph refresh completes in 126.136ms.
+- The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts plus post-apply module/graph refresh in 73.595ms.
+- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4` to `gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, graph `generatedAt` changes, and module/graph refresh completes in 113.718ms.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
 - Component snapshot fixtures cover 8 cases: function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens, memo, forwardRef, HOC, and namespace object export.
 - They still do not infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
@@ -318,7 +327,7 @@ Support model:
 - Current fixtures now meet the 5ms warm transform target and the 10ms cold transform target.
 - The large TSX stress fixture with 100 cards and 401 bindings meets the 20ms stress target.
 - The repeated-transform fixture with 100 cards and 401 bindings now passes semantic graph fingerprint based write throttling.
-- A generated product-sized fixture with 24 TSX files and 624 bindings now verifies that changing only one file from `gap-4` to `gap-8` preserves graph entry count, updates the changed-file token, retains unchanged-file tokens, keeps same-input `generatedAt` stable, and completes the changed-file transform in 21.253ms.
+- A generated product-sized fixture with 24 TSX files and 624 bindings now verifies that changing only one file from `gap-4` to `gap-8` preserves graph entry count, updates the changed-file token, retains unchanged-file tokens, keeps same-input `generatedAt` stable, and completes the changed-file transform in 23.043ms.
 - Real external-project product-sized multi-file HMR sessions still need cache, changed-file filtering, and graph write throttling re-measurement with real import graphs.
 
 ## 8. Next Work

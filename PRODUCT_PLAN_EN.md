@@ -272,7 +272,7 @@ npm run dev
 npx intent-layer
 ```
 
-The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper and package `/vite` export. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph, real Vite dev server graph/preview/apply, 83.219ms apply refresh, 126.136ms 3-file graph refresh, and a generated 24-file/624-binding product-sized graph refresh as package/performance smoke gates. The public package name is now aligned to `intent-layer`; external install-guide wording remains launch-polish work.
+The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper and package `/vite` export. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph, real Vite dev server graph/preview/apply, 73.595ms apply refresh, 113.718ms 3-file graph refresh, and a generated 24-file/624-binding product-sized graph refresh as package/performance smoke gates. The public package name is now aligned to `intent-layer`; external install-guide wording remains launch-polish work.
 
 ### 8.2 Basic Flow
 
@@ -613,10 +613,10 @@ Vite transform overhead: under 5ms per file
 element select -> panel display: under 100ms
 simple patch write: under 50ms
 HMR update: preserve existing Vite speed
-installed Vite smoke HMR refresh: apply 83.219ms, 3-file change 126.136ms, smoke target <= 500ms
+installed Vite smoke HMR refresh: apply 73.595ms, 3-file change 113.718ms, smoke target <= 500ms
 DOM id overhead: roughly under 20 bytes per node
 sidecar graph write: only when the semantic fingerprint changes
-external corpus validation: measure external source only through local `.intent/external-corpus/` copies and manifests
+external corpus validation: measure external source only through local `.intent/external-corpus/` copies and manifests, with `sample.sourceKind` and `mvpEvidence` separating smoke fixtures from independent external evidence
 product-sized graph refresh: generated 24-file/624-binding fixture passes, but real external-project HMR still needs re-measurement
 ```
 
