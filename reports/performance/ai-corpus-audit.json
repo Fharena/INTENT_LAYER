@@ -1,0 +1,4280 @@
+{
+  "generatedAt": "2026-06-30T05:34:29.699Z",
+  "filesScanned": 50,
+  "classNameOccurrences": 390,
+  "classification": {
+    "static": 320,
+    "simple-cn-clsx": 20,
+    "partial-cn-clsx": 10,
+    "read-only": 40
+  },
+  "classificationRatio": {
+    "static": 0.8205,
+    "simple-cn-clsx": 0.0513,
+    "partial-cn-clsx": 0.0256,
+    "read-only": 0.1026
+  },
+  "tokenTotals": {
+    "static": 1770,
+    "staticEditable": 1430,
+    "staticAndSimple": 1890,
+    "staticAndSimpleEditable": 1500,
+    "supportedDirect": 1930,
+    "supportedDirectEditable": 1520,
+    "all": 1930,
+    "allEditable": 1520
+  },
+  "editableCoverage": {
+    "staticOnly": 0.8079,
+    "staticAndSimpleCnClsx": 0.7937,
+    "supportedDirect": 0.7876,
+    "allObservedTokens": 0.7876
+  },
+  "unsupportedReasons": {
+    "variable-reference": 20,
+    "property-access-reference": 10,
+    "variant-function": 10
+  },
+  "records": [
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl bg-slate-50 p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 17,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 19,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
+      "line": 20,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl bg-slate-50 p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 17,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 19,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
+      "line": 20,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl bg-slate-50 p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 17,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 19,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
+      "line": 20,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl bg-slate-50 p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 17,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 19,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
+      "line": 20,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl bg-slate-50 p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 17,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 19,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
+      "line": 20,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl bg-slate-50 p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 17,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 19,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
+      "line": 20,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl bg-slate-50 p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 17,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 19,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
+      "line": 20,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl bg-slate-50 p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 17,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 19,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
+      "line": 20,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl bg-slate-50 p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 17,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-teal-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 19,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
+      "line": 20,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "grid grid-cols-3 gap-4 rounded-2xl bg-slate-50 p-6"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 17,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      ],
+      "tokenCount": 9,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-xs font-semibold uppercase tracking-wide text-emerald-700"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 19,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-2xl font-bold text-slate-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
+      "line": 20,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-slate-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-02.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-zinc-950 px-8 py-10 text-white"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-02.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
+      ],
+      "tokenCount": 11,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-02.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-sky-200"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-02.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-3xl text-5xl font-bold leading-tight"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-02.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-zinc-200"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-02.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-wrap gap-3"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-02.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-sky-400 px-5 py-3 text-sm font-semibold text-zinc-950"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-02.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-07.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-zinc-950 px-8 py-10 text-white"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-07.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
+      ],
+      "tokenCount": 11,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-07.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-indigo-200"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-07.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-3xl text-5xl font-bold leading-tight"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-07.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-zinc-200"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-07.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-wrap gap-3"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-07.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-indigo-400 px-5 py-3 text-sm font-semibold text-zinc-950"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-07.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-12.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-zinc-950 px-8 py-10 text-white"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-12.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
+      ],
+      "tokenCount": 11,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-12.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-sky-200"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-12.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-3xl text-5xl font-bold leading-tight"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-12.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-zinc-200"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-12.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-wrap gap-3"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-12.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-sky-400 px-5 py-3 text-sm font-semibold text-zinc-950"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-12.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-17.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-zinc-950 px-8 py-10 text-white"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-17.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
+      ],
+      "tokenCount": 11,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-17.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-indigo-200"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-17.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-3xl text-5xl font-bold leading-tight"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-17.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-zinc-200"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-17.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-wrap gap-3"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-17.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-indigo-400 px-5 py-3 text-sm font-semibold text-zinc-950"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-17.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-22.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-zinc-950 px-8 py-10 text-white"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-22.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
+      ],
+      "tokenCount": 11,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-22.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-sky-200"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-22.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-3xl text-5xl font-bold leading-tight"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-22.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-zinc-200"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-22.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-wrap gap-3"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-22.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-sky-400 px-5 py-3 text-sm font-semibold text-zinc-950"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-22.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-27.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-zinc-950 px-8 py-10 text-white"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-27.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
+      ],
+      "tokenCount": 11,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-27.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-indigo-200"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-27.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-3xl text-5xl font-bold leading-tight"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-27.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-zinc-200"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-27.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-wrap gap-3"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-27.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-indigo-400 px-5 py-3 text-sm font-semibold text-zinc-950"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-27.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-32.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-zinc-950 px-8 py-10 text-white"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-32.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
+      ],
+      "tokenCount": 11,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-32.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-sky-200"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-32.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-3xl text-5xl font-bold leading-tight"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-32.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-zinc-200"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-32.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-wrap gap-3"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-32.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-sky-400 px-5 py-3 text-sm font-semibold text-zinc-950"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-32.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-37.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-zinc-950 px-8 py-10 text-white"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-37.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
+      ],
+      "tokenCount": 11,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-37.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-indigo-200"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-37.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-3xl text-5xl font-bold leading-tight"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-37.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-zinc-200"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-37.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-wrap gap-3"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-37.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-indigo-400 px-5 py-3 text-sm font-semibold text-zinc-950"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-37.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-42.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-zinc-950 px-8 py-10 text-white"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-42.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
+      ],
+      "tokenCount": 11,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-42.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-sky-200"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-42.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-3xl text-5xl font-bold leading-tight"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-42.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-zinc-200"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-42.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-wrap gap-3"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-42.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-sky-400 px-5 py-3 text-sm font-semibold text-zinc-950"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-42.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-47.tsx",
+      "line": 6,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "min-h-screen bg-zinc-950 px-8 py-10 text-white"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-47.tsx",
+      "line": 7,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
+      ],
+      "tokenCount": 11,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-47.tsx",
+      "line": 8,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm font-semibold uppercase tracking-wide text-indigo-200"
+      ],
+      "tokenCount": 5,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-47.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-3xl text-5xl font-bold leading-tight"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-47.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "max-w-2xl text-base leading-7 text-zinc-200"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-47.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-wrap gap-3"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-47.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-indigo-400 px-5 py-3 text-sm font-semibold text-zinc-950"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-landing-47.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-05.tsx",
+      "line": 13,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-05.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl bg-gray-50 p-5"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-05.tsx",
+      "line": 15,
+      "classification": "read-only",
+      "reason": "property-access-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-05.tsx",
+      "line": 16,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-05.tsx",
+      "line": 17,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-05.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-gray-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-10.tsx",
+      "line": 13,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-10.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl bg-gray-50 p-5"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-10.tsx",
+      "line": 15,
+      "classification": "read-only",
+      "reason": "property-access-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-10.tsx",
+      "line": 16,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-10.tsx",
+      "line": 17,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-10.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-gray-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-15.tsx",
+      "line": 13,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-15.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl bg-gray-50 p-5"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-15.tsx",
+      "line": 15,
+      "classification": "read-only",
+      "reason": "property-access-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-15.tsx",
+      "line": 16,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-15.tsx",
+      "line": 17,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-15.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-gray-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-20.tsx",
+      "line": 13,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-20.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl bg-gray-50 p-5"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-20.tsx",
+      "line": 15,
+      "classification": "read-only",
+      "reason": "property-access-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-20.tsx",
+      "line": 16,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-20.tsx",
+      "line": 17,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-20.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-gray-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-25.tsx",
+      "line": 13,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-25.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl bg-gray-50 p-5"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-25.tsx",
+      "line": 15,
+      "classification": "read-only",
+      "reason": "property-access-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-25.tsx",
+      "line": 16,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-25.tsx",
+      "line": 17,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-25.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-gray-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-30.tsx",
+      "line": 13,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-30.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl bg-gray-50 p-5"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-30.tsx",
+      "line": 15,
+      "classification": "read-only",
+      "reason": "property-access-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-30.tsx",
+      "line": 16,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-30.tsx",
+      "line": 17,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-30.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-gray-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-35.tsx",
+      "line": 13,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-35.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl bg-gray-50 p-5"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-35.tsx",
+      "line": 15,
+      "classification": "read-only",
+      "reason": "property-access-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-35.tsx",
+      "line": 16,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-35.tsx",
+      "line": 17,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-35.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-gray-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-40.tsx",
+      "line": 13,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-40.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl bg-gray-50 p-5"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-40.tsx",
+      "line": 15,
+      "classification": "read-only",
+      "reason": "property-access-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-40.tsx",
+      "line": 16,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-40.tsx",
+      "line": 17,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-40.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-gray-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-45.tsx",
+      "line": 13,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-45.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl bg-gray-50 p-5"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-45.tsx",
+      "line": 15,
+      "classification": "read-only",
+      "reason": "property-access-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-45.tsx",
+      "line": 16,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-45.tsx",
+      "line": 17,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-45.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-gray-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-50.tsx",
+      "line": 13,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-50.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-xl bg-gray-50 p-5"
+      ],
+      "tokenCount": 6,
+      "editableTokenCount": 5
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-50.tsx",
+      "line": 15,
+      "classification": "read-only",
+      "reason": "property-access-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-50.tsx",
+      "line": 16,
+      "classification": "read-only",
+      "reason": "variable-reference",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-50.tsx",
+      "line": 17,
+      "classification": "read-only",
+      "reason": "variant-function",
+      "stringValues": [],
+      "tokenCount": 0,
+      "editableTokenCount": 0
+    },
+    {
+      "file": "fixtures/ai-generated/ai-readonly-50.tsx",
+      "line": 18,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-sm leading-6 text-gray-600"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-03.tsx",
+      "line": 9,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "rounded-xl border border-neutral-200 bg-white p-6 shadow-sm",
+        "ring-2 ring-violet-300"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-03.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-start justify-between gap-4"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-03.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-03.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-neutral-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-03.tsx",
+      "line": 13,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "text-sm leading-6 text-neutral-600",
+        "opacity-70"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-03.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-08.tsx",
+      "line": 9,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "rounded-xl border border-neutral-200 bg-white p-6 shadow-sm",
+        "ring-2 ring-cyan-300"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-08.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-start justify-between gap-4"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-08.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-08.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-neutral-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-08.tsx",
+      "line": 13,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "text-sm leading-6 text-neutral-600",
+        "opacity-70"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-08.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-13.tsx",
+      "line": 9,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "rounded-xl border border-neutral-200 bg-white p-6 shadow-sm",
+        "ring-2 ring-violet-300"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-13.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-start justify-between gap-4"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-13.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-13.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-neutral-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-13.tsx",
+      "line": 13,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "text-sm leading-6 text-neutral-600",
+        "opacity-70"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-13.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-18.tsx",
+      "line": 9,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "rounded-xl border border-neutral-200 bg-white p-6 shadow-sm",
+        "ring-2 ring-cyan-300"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-18.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-start justify-between gap-4"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-18.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-18.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-neutral-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-18.tsx",
+      "line": 13,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "text-sm leading-6 text-neutral-600",
+        "opacity-70"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-18.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-23.tsx",
+      "line": 9,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "rounded-xl border border-neutral-200 bg-white p-6 shadow-sm",
+        "ring-2 ring-violet-300"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-23.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-start justify-between gap-4"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-23.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-23.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-neutral-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-23.tsx",
+      "line": 13,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "text-sm leading-6 text-neutral-600",
+        "opacity-70"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-23.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-28.tsx",
+      "line": 9,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "rounded-xl border border-neutral-200 bg-white p-6 shadow-sm",
+        "ring-2 ring-cyan-300"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-28.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-start justify-between gap-4"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-28.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-28.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-neutral-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-28.tsx",
+      "line": 13,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "text-sm leading-6 text-neutral-600",
+        "opacity-70"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-28.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-33.tsx",
+      "line": 9,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "rounded-xl border border-neutral-200 bg-white p-6 shadow-sm",
+        "ring-2 ring-violet-300"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-33.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-start justify-between gap-4"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-33.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-33.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-neutral-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-33.tsx",
+      "line": 13,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "text-sm leading-6 text-neutral-600",
+        "opacity-70"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-33.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-38.tsx",
+      "line": 9,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "rounded-xl border border-neutral-200 bg-white p-6 shadow-sm",
+        "ring-2 ring-cyan-300"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-38.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-start justify-between gap-4"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-38.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-38.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-neutral-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-38.tsx",
+      "line": 13,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "text-sm leading-6 text-neutral-600",
+        "opacity-70"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-38.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-43.tsx",
+      "line": 9,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "rounded-xl border border-neutral-200 bg-white p-6 shadow-sm",
+        "ring-2 ring-violet-300"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-43.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-start justify-between gap-4"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-43.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-43.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-neutral-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-43.tsx",
+      "line": 13,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "text-sm leading-6 text-neutral-600",
+        "opacity-70"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-43.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-48.tsx",
+      "line": 9,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
+      "stringValues": [
+        "rounded-xl border border-neutral-200 bg-white p-6 shadow-sm",
+        "ring-2 ring-cyan-300"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 4
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-48.tsx",
+      "line": 10,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex items-start justify-between gap-4"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-48.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-2"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-48.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "text-lg font-semibold text-neutral-950"
+      ],
+      "tokenCount": 3,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-48.tsx",
+      "line": 13,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
+      "stringValues": [
+        "text-sm leading-6 text-neutral-600",
+        "opacity-70"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 3
+    },
+    {
+      "file": "fixtures/ai-generated/ai-shadcn-48.tsx",
+      "line": 15,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-04.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-6"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-04.tsx",
+      "line": 10,
+      "classification": "partial-cn-clsx",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "grid grid-cols-4 gap-3",
+        "opacity-60"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-04.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-04.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-04.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-04.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-rose-100 px-4 py-2 text-sm font-semibold text-rose-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-09.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-6"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-09.tsx",
+      "line": 10,
+      "classification": "partial-cn-clsx",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "grid grid-cols-4 gap-3",
+        "opacity-60"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-09.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-09.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-09.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-09.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-fuchsia-100 px-4 py-2 text-sm font-semibold text-fuchsia-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-14.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-6"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-14.tsx",
+      "line": 10,
+      "classification": "partial-cn-clsx",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "grid grid-cols-4 gap-3",
+        "opacity-60"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-14.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-14.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-14.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-14.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-rose-100 px-4 py-2 text-sm font-semibold text-rose-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-19.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-6"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-19.tsx",
+      "line": 10,
+      "classification": "partial-cn-clsx",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "grid grid-cols-4 gap-3",
+        "opacity-60"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-19.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-19.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-19.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-19.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-fuchsia-100 px-4 py-2 text-sm font-semibold text-fuchsia-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-24.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-6"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-24.tsx",
+      "line": 10,
+      "classification": "partial-cn-clsx",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "grid grid-cols-4 gap-3",
+        "opacity-60"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-24.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-24.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-24.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-24.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-rose-100 px-4 py-2 text-sm font-semibold text-rose-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-29.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-6"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-29.tsx",
+      "line": 10,
+      "classification": "partial-cn-clsx",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "grid grid-cols-4 gap-3",
+        "opacity-60"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-29.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-29.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-29.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-29.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-fuchsia-100 px-4 py-2 text-sm font-semibold text-fuchsia-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-34.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-6"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-34.tsx",
+      "line": 10,
+      "classification": "partial-cn-clsx",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "grid grid-cols-4 gap-3",
+        "opacity-60"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-34.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-34.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-34.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-34.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-rose-100 px-4 py-2 text-sm font-semibold text-rose-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-39.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-6"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-39.tsx",
+      "line": 10,
+      "classification": "partial-cn-clsx",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "grid grid-cols-4 gap-3",
+        "opacity-60"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-39.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-39.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-39.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-39.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-fuchsia-100 px-4 py-2 text-sm font-semibold text-fuchsia-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-44.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-6"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-44.tsx",
+      "line": 10,
+      "classification": "partial-cn-clsx",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "grid grid-cols-4 gap-3",
+        "opacity-60"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-44.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-44.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-44.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-44.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-rose-100 px-4 py-2 text-sm font-semibold text-rose-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-49.tsx",
+      "line": 9,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-6"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 6
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-49.tsx",
+      "line": 10,
+      "classification": "partial-cn-clsx",
+      "reason": "complex-cn-variable-reference",
+      "stringValues": [
+        "grid grid-cols-4 gap-3",
+        "opacity-60"
+      ],
+      "tokenCount": 4,
+      "editableTokenCount": 2
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-49.tsx",
+      "line": 11,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-49.tsx",
+      "line": 12,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-49.tsx",
+      "line": 13,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700"
+      ],
+      "tokenCount": 8,
+      "editableTokenCount": 7
+    },
+    {
+      "file": "fixtures/ai-generated/ai-workflow-49.tsx",
+      "line": 14,
+      "classification": "static",
+      "reason": "static-jsx-string",
+      "stringValues": [
+        "rounded-lg bg-fuchsia-100 px-4 py-2 text-sm font-semibold text-fuchsia-800"
+      ],
+      "tokenCount": 7,
+      "editableTokenCount": 7
+    }
+  ]
+}

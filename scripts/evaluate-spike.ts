@@ -10,6 +10,8 @@ import { applyTokenPatch, planTokenPatch, revertTokenPatch } from "../src/intent
 const rootDir = process.cwd();
 const reportsDir = path.join(rootDir, "reports", "performance");
 const tmpDir = path.join(rootDir, ".intent", "tmp");
+const aiCorpusMinFiles = 50;
+const aiCorpusCoverageTarget = 0.5;
 
 function sourceFiles(input: string): string[] {
   const full = path.resolve(rootDir, input);
@@ -80,6 +82,8 @@ fs.mkdirSync(reportsDir, { recursive: true });
 fs.mkdirSync(tmpDir, { recursive: true });
 
 const corpus = analyzeClassNames(["fixtures/corpus", "src/App.tsx"], rootDir);
+const aiGeneratedCorpus = analyzeClassNames(["fixtures/ai-generated"], rootDir);
+const { records: _aiGeneratedCorpusRecords, ...aiGeneratedCorpusSummary } = aiGeneratedCorpus;
 
 const transformIterations = 5;
 const warmTransformTargetMs = 5;
@@ -291,6 +295,24 @@ const report = {
   generatedAt: new Date().toISOString(),
   contextPackUsed: true,
   corpus,
+  aiGeneratedCorpus: {
+    ...aiGeneratedCorpusSummary,
+    gates: {
+      minFilesPass: aiGeneratedCorpus.filesScanned >= aiCorpusMinFiles,
+      staticAndSimpleCoveragePass:
+        aiGeneratedCorpus.editableCoverage.staticAndSimpleCnClsx >= aiCorpusCoverageTarget,
+      supportedDirectCoveragePass:
+        aiGeneratedCorpus.editableCoverage.supportedDirect >= aiCorpusCoverageTarget,
+      allObservedCoveragePass:
+        aiGeneratedCorpus.editableCoverage.allObservedTokens >= aiCorpusCoverageTarget
+    },
+    targets: {
+      minFiles: aiCorpusMinFiles,
+      editableCoverage: aiCorpusCoverageTarget
+    },
+    caveat:
+      "This is a committed Codex-generated React/Tailwind corpus for reproducible MVP coverage auditing, not an independently sourced external benchmark."
+  },
   transform: {
     filesMeasured: transformMeasurements.length,
     iterationsPerFile: transformIterations,
@@ -376,6 +398,13 @@ const report = {
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
     supportedDirectCoveragePass: corpus.editableCoverage.supportedDirect >= 0.5,
+    aiGeneratedCorpusMinFilesPass: aiGeneratedCorpus.filesScanned >= aiCorpusMinFiles,
+    aiGeneratedStaticAndSimpleCoveragePass:
+      aiGeneratedCorpus.editableCoverage.staticAndSimpleCnClsx >= aiCorpusCoverageTarget,
+    aiGeneratedSupportedDirectCoveragePass:
+      aiGeneratedCorpus.editableCoverage.supportedDirect >= aiCorpusCoverageTarget,
+    aiGeneratedAllObservedCoveragePass:
+      aiGeneratedCorpus.editableCoverage.allObservedTokens >= aiCorpusCoverageTarget,
     transformTargetPass:
       warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
     coldTransformTargetPass:
@@ -403,6 +432,10 @@ const report = {
 };
 
 fs.writeFileSync(path.join(reportsDir, "corpus-audit.json"), `${JSON.stringify(corpus, null, 2)}\n`);
+fs.writeFileSync(
+  path.join(reportsDir, "ai-corpus-audit.json"),
+  `${JSON.stringify(aiGeneratedCorpus, null, 2)}\n`
+);
 fs.writeFileSync(path.join(reportsDir, "spike-evaluation.json"), `${JSON.stringify(report, null, 2)}\n`);
 
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
