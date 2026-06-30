@@ -1,0 +1,202 @@
+import { candidatesForToken } from "./tailwind";
+import type { IntentBinding, IntentGraph, IntentToken, PatchApplyResult, PatchFailure } from "./types";
+
+type PatchResponse = PatchApplyResult | PatchFailure;
+
+function createButton(label: string): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.textContent = label;
+  button.style.border = "1px solid #cbd5e1";
+  button.style.background = "#ffffff";
+  button.style.color = "#0f172a";
+  button.style.borderRadius = "6px";
+  button.style.padding = "6px 9px";
+  button.style.fontSize = "12px";
+  button.style.fontWeight = "700";
+  button.style.cursor = "pointer";
+  return button;
+}
+
+function createPanel() {
+  const panel = document.createElement("div");
+  panel.style.position = "fixed";
+  panel.style.right = "16px";
+  panel.style.bottom = "16px";
+  panel.style.zIndex = "999999";
+  panel.style.width = "360px";
+  panel.style.maxHeight = "70vh";
+  panel.style.overflow = "auto";
+  panel.style.background = "#ffffff";
+  panel.style.border = "1px solid #cbd5e1";
+  panel.style.borderRadius = "8px";
+  panel.style.boxShadow = "0 20px 50px rgba(15, 23, 42, 0.18)";
+  panel.style.fontFamily =
+    "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+  panel.style.color = "#0f172a";
+  panel.style.padding = "12px";
+  return panel;
+}
+
+function renderTokenRow(
+  root: HTMLElement,
+  binding: IntentBinding,
+  token: IntentToken,
+  setStatus: (message: string) => void
+) {
+  const row = document.createElement("div");
+  row.style.display = "grid";
+  row.style.gridTemplateColumns = "1fr 1fr auto";
+  row.style.gap = "8px";
+  row.style.alignItems = "center";
+  row.style.marginTop = "8px";
+
+  const label = document.createElement("div");
+  label.textContent = `${token.category}: ${token.token}`;
+  label.style.fontSize = "12px";
+  label.style.fontWeight = "700";
+
+  const select = document.createElement("select");
+  select.style.width = "100%";
+  select.style.border = "1px solid #cbd5e1";
+  select.style.borderRadius = "6px";
+  select.style.padding = "6px";
+  select.style.fontSize = "12px";
+
+  for (const candidate of candidatesForToken(token.token)) {
+    const option = document.createElement("option");
+    option.value = candidate;
+    option.textContent = candidate;
+    option.selected = candidate === token.token;
+    select.appendChild(option);
+  }
+
+  const apply = createButton("Apply");
+  apply.addEventListener("click", async () => {
+    const response = await fetch("/__intent/apply", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        id: binding.id,
+        oldToken: token.token,
+        nextToken: select.value
+      })
+    });
+    const result = (await response.json()) as PatchResponse;
+    if (result.ok) {
+      setStatus(`Applied ${result.oldToken} -> ${result.nextToken} in ${result.metrics.applyMs}ms`);
+    } else {
+      setStatus(`Rejected: ${result.reason}`);
+    }
+  });
+
+  row.append(label, select, apply);
+  root.appendChild(row);
+}
+
+function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status: string) {
+  panel.innerHTML = "";
+
+  const title = document.createElement("div");
+  title.textContent = "Intent Layer Spike";
+  title.style.fontSize = "14px";
+  title.style.fontWeight = "800";
+  panel.appendChild(title);
+
+  const statusLine = document.createElement("div");
+  statusLine.textContent = status;
+  statusLine.style.marginTop = "6px";
+  statusLine.style.fontSize = "12px";
+  statusLine.style.color = "#475569";
+  panel.appendChild(statusLine);
+
+  const pick = createButton("Pick element");
+  pick.style.marginTop = "10px";
+  panel.appendChild(pick);
+
+  if (!binding) {
+    const hint = document.createElement("p");
+    hint.textContent = "Pick a visible element with a static className binding.";
+    hint.style.fontSize = "12px";
+    hint.style.lineHeight = "1.5";
+    panel.appendChild(hint);
+  } else {
+    const meta = document.createElement("pre");
+    meta.textContent = `${binding.componentName ?? "Unknown"} <${binding.tagName}>\n${
+      binding.relativeFile
+    }\n${binding.id}`;
+    meta.style.marginTop = "10px";
+    meta.style.padding = "8px";
+    meta.style.borderRadius = "6px";
+    meta.style.background = "#f1f5f9";
+    meta.style.fontSize = "11px";
+    meta.style.whiteSpace = "pre-wrap";
+    panel.appendChild(meta);
+
+    for (const token of binding.tokens.filter((item) => item.editable)) {
+      renderTokenRow(panel, binding, token, (message) => {
+        renderBinding(panel, binding, message);
+      });
+    }
+  }
+
+  pick.addEventListener("click", () => {
+    panel.dispatchEvent(new CustomEvent("intent:start-pick"));
+  });
+}
+
+export function initIntentOverlay() {
+  if (typeof window === "undefined") return;
+  if (document.querySelector("[data-intent-overlay-root]")) return;
+
+  const panel = createPanel();
+  panel.dataset.intentOverlayRoot = "true";
+  document.body.appendChild(panel);
+
+  let graph: IntentGraph | null = null;
+  let selectedElement: HTMLElement | null = null;
+  let selectedBinding: IntentBinding | null = null;
+  let pickMode = false;
+
+  function setStatus(message: string) {
+    renderBinding(panel, selectedBinding, message);
+  }
+
+  renderBinding(panel, null, "Ready");
+
+  panel.addEventListener("intent:start-pick", async () => {
+    const response = await fetch("/__intent/graph");
+    graph = (await response.json()) as IntentGraph;
+    pickMode = true;
+    setStatus("Pick mode active");
+  });
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (!pickMode) return;
+
+      const target = event.target as HTMLElement | null;
+      if (!target || panel.contains(target)) return;
+
+      const element = target.closest("[data-intent-id]") as HTMLElement | null;
+      event.preventDefault();
+      event.stopPropagation();
+      pickMode = false;
+
+      if (!element || !graph) {
+        setStatus("No intent binding on this element");
+        return;
+      }
+
+      if (selectedElement) {
+        selectedElement.removeAttribute("data-intent-selected");
+      }
+
+      selectedElement = element;
+      selectedElement.setAttribute("data-intent-selected", "true");
+      selectedBinding = graph.entries[element.dataset.intentId ?? ""] ?? null;
+      renderBinding(panel, selectedBinding, selectedBinding ? "Binding selected" : "Binding missing");
+    },
+    true
+  );
+}
