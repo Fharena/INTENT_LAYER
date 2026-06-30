@@ -37,6 +37,8 @@ interface IntentState {
   entriesById: Map<string, IntentBinding>;
   undoStack: PatchApplyResult[];
   clientMetrics: ClientMetric[];
+  lastPublishedEntriesJson: string | null;
+  lastPublishedGeneratedAt: string | null;
 }
 
 function writeJson(response: ServerResponse, statusCode: number, value: unknown) {
@@ -56,25 +58,70 @@ function readBody(request: IncomingMessage): Promise<string> {
   });
 }
 
-function toGraph(state: IntentState): IntentGraph {
+function graphOutputPath(state: IntentState): string {
+  return path.join(state.rootDir, ".intent", "graph.intent.json");
+}
+
+function graphEntries(state: IntentState): Record<string, IntentBinding> {
   const entries: Record<string, IntentBinding> = {};
 
-  for (const [id, entry] of state.entriesById.entries()) {
-    entries[id] = entry;
+  for (const id of [...state.entriesById.keys()].sort()) {
+    const entry = state.entriesById.get(id);
+    if (entry) {
+      entries[id] = entry;
+    }
   }
 
+  return entries;
+}
+
+function toGraph(state: IntentState): IntentGraph {
   return {
     version: 1,
-    generatedAt: new Date().toISOString(),
-    entries
+    generatedAt: state.lastPublishedGeneratedAt ?? new Date().toISOString(),
+    entries: graphEntries(state)
   };
 }
 
+function nextGraphGeneratedAt(state: IntentState): string {
+  const next = new Date();
+  const previousMs = state.lastPublishedGeneratedAt ? Date.parse(state.lastPublishedGeneratedAt) : Number.NaN;
+
+  if (Number.isFinite(previousMs) && next.getTime() <= previousMs) {
+    next.setTime(previousMs + 1);
+  }
+
+  return next.toISOString();
+}
+
+function graphPublishFingerprint(entries: Record<string, IntentBinding>): string {
+  return JSON.stringify(entries, (key, value) => (key === "transformMs" ? 0 : value));
+}
+
 function publishGraph(state: IntentState) {
-  const graph = toGraph(state);
-  const output = path.join(state.rootDir, ".intent", "graph.intent.json");
+  const entries = graphEntries(state);
+  const entriesJson = graphPublishFingerprint(entries);
+  const output = graphOutputPath(state);
+
+  if (
+    state.lastPublishedEntriesJson === entriesJson &&
+    state.lastPublishedGeneratedAt &&
+    fs.existsSync(output)
+  ) {
+    return;
+  }
+
+  const generatedAt = nextGraphGeneratedAt(state);
+  const graph: IntentGraph = {
+    version: 1,
+    generatedAt,
+    entries
+  };
+
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, `${JSON.stringify(graph, null, 2)}\n`);
+  state.lastPublishedEntriesJson = entriesJson;
+  state.lastPublishedGeneratedAt = generatedAt;
 }
 
 function replaceFileEntries(state: IntentState, file: string, entries: IntentBinding[]) {
@@ -99,7 +146,9 @@ export function intentLayerSpike(): Plugin {
     entriesByFile: new Map(),
     entriesById: new Map(),
     undoStack: [],
-    clientMetrics: []
+    clientMetrics: [],
+    lastPublishedEntriesJson: null,
+    lastPublishedGeneratedAt: null
   };
 
   return {

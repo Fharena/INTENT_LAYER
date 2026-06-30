@@ -21,6 +21,7 @@ import {
   resolvePatchConflict
 } from "../src/intent/patch";
 import type { IntentGraph } from "../src/intent/types";
+import { intentLayer } from "../src/intent/vitePlugin";
 
 const rootDir = process.cwd();
 const reportsDir = path.join(rootDir, "reports", "performance");
@@ -297,6 +298,157 @@ function largeTransformFixture(cardCount: number): string {
   ].join("\n");
 }
 
+interface ProductGraphWriteThrottleSample {
+  label: string;
+  transformMs: number;
+  transformReturnedCode: boolean;
+  generatedAt: string | null;
+  entries: number;
+  graphBytes: number;
+}
+
+interface ProductGraphWriteThrottleReport {
+  file: string;
+  graphFile: string;
+  cardCount: number;
+  inputBytes: number;
+  changedInputBytes: number;
+  repeatCount: number;
+  samples: ProductGraphWriteThrottleSample[];
+  firstGeneratedAt: string | null;
+  repeatedGeneratedAt: string[];
+  changedGeneratedAt: string | null;
+  changedRepeatGeneratedAt: string | null;
+  sameCodeStable: boolean;
+  changedCodeUpdates: boolean;
+  changedRepeatStable: boolean;
+  entriesStable: boolean;
+  inferredWriteCount: number;
+  inferredSkippedWriteCount: number;
+  pass: boolean;
+}
+
+function resetTmpSubdir(name: string): string {
+  const target = path.resolve(tmpDir, name);
+  const tmpRoot = path.resolve(tmpDir);
+
+  if (target !== tmpRoot && !target.startsWith(`${tmpRoot}${path.sep}`)) {
+    throw new Error(`Refusing to reset temp path outside ${tmpRoot}: ${target}`);
+  }
+
+  fs.rmSync(target, { recursive: true, force: true });
+  fs.mkdirSync(target, { recursive: true });
+  return target;
+}
+
+function measureProductGraphWriteThrottle(
+  code: string,
+  cardCount: number
+): ProductGraphWriteThrottleReport {
+  const throttleRoot = resetTmpSubdir("vite-graph-write-throttle");
+  const fixtureFile = path.join(throttleRoot, "ProductGraphWriteThrottleFixture.tsx");
+  const graphFile = path.join(throttleRoot, ".intent", "graph.intent.json");
+  const plugin = intentLayer();
+  const configResolved = plugin.configResolved as unknown;
+
+  if (typeof configResolved === "function") {
+    (configResolved as (config: { root: string }) => void)({ root: throttleRoot });
+  }
+
+  const transformSource = plugin.transform as unknown;
+  const transform =
+    typeof transformSource === "function"
+      ? transformSource
+      : transformSource &&
+          typeof transformSource === "object" &&
+          "handler" in transformSource &&
+          typeof (transformSource as { handler?: unknown }).handler === "function"
+        ? (transformSource as { handler: unknown }).handler
+        : null;
+
+  if (!transform) {
+    throw new Error("intentLayer plugin did not expose a callable transform hook");
+  }
+
+  function sample(label: string, inputCode: string): ProductGraphWriteThrottleSample {
+    fs.writeFileSync(fixtureFile, inputCode);
+    const started = performance.now();
+    const transformed = (transform as (code: string, id: string) => unknown)(inputCode, fixtureFile);
+    const transformMs = Number((performance.now() - started).toFixed(3));
+
+    if (transformed && typeof (transformed as PromiseLike<unknown>).then === "function") {
+      throw new Error("Product graph write throttle fixture expected a synchronous transform");
+    }
+
+    const graph = fs.existsSync(graphFile)
+      ? (JSON.parse(fs.readFileSync(graphFile, "utf8")) as IntentGraph)
+      : null;
+
+    return {
+      label,
+      transformMs,
+      transformReturnedCode: transformed !== null,
+      generatedAt: graph?.generatedAt ?? null,
+      entries: graph ? Object.keys(graph.entries).length : 0,
+      graphBytes: fs.existsSync(graphFile) ? fs.statSync(graphFile).size : 0
+    };
+  }
+
+  const changedCode = code.replace("grid grid-cols-4 gap-4", "grid grid-cols-4 gap-6");
+  const repeatCount = 4;
+  const first = sample("initial", code);
+  const repeats = Array.from({ length: repeatCount }, (_, index) =>
+    sample(`repeat-${index + 1}`, code)
+  );
+  const changed = sample("changed-token", changedCode);
+  const changedRepeat = sample("changed-token-repeat", changedCode);
+  const allSamples = [first, ...repeats, changed, changedRepeat];
+  const sameCodeStable = repeats.every((item) => item.generatedAt === first.generatedAt);
+  const changedCodeUpdates = Boolean(
+    first.generatedAt &&
+      changed.generatedAt &&
+      changed.generatedAt !== first.generatedAt &&
+      changedCode !== code
+  );
+  const changedRepeatStable = changedRepeat.generatedAt === changed.generatedAt;
+  const entriesStable = allSamples.every((item) => item.entries === first.entries);
+  const uniqueGeneratedAt = new Set(
+    allSamples.map((item) => item.generatedAt).filter((value): value is string => Boolean(value))
+  );
+  const inferredSkippedWriteCount =
+    repeats.filter((item) => item.generatedAt === first.generatedAt).length +
+    (changedRepeat.generatedAt === changed.generatedAt ? 1 : 0);
+
+  return {
+    file: reportPath(fixtureFile),
+    graphFile: reportPath(graphFile),
+    cardCount,
+    inputBytes: code.length,
+    changedInputBytes: changedCode.length,
+    repeatCount,
+    samples: allSamples,
+    firstGeneratedAt: first.generatedAt,
+    repeatedGeneratedAt: repeats
+      .map((item) => item.generatedAt)
+      .filter((value): value is string => Boolean(value)),
+    changedGeneratedAt: changed.generatedAt,
+    changedRepeatGeneratedAt: changedRepeat.generatedAt,
+    sameCodeStable,
+    changedCodeUpdates,
+    changedRepeatStable,
+    entriesStable,
+    inferredWriteCount: uniqueGeneratedAt.size,
+    inferredSkippedWriteCount,
+    pass:
+      sameCodeStable &&
+      changedCodeUpdates &&
+      changedRepeatStable &&
+      entriesStable &&
+      uniqueGeneratedAt.size === 2 &&
+      inferredSkippedWriteCount === repeatCount + 1
+  };
+}
+
 interface TaskComponentSnapshot {
   file: string;
   componentName: string | null;
@@ -371,6 +523,10 @@ const largeTransformSamples = Array.from({ length: transformIterations }, () =>
 );
 const largeTransformTimes = largeTransformSamples.map((sample) => sample.transformMs);
 const largeTransformLast = largeTransformSamples[largeTransformSamples.length - 1];
+const productGraphWriteThrottle = measureProductGraphWriteThrottle(
+  largeTransformCode,
+  largeTransformCardCount
+);
 
 const patchFixture = path.join(tmpDir, "StaticPatchFixture.tsx");
 fs.writeFileSync(
@@ -1436,6 +1592,7 @@ const report = {
     targetMs: largeTransformTargetMs,
     pass: Math.max(...largeTransformTimes) <= largeTransformTargetMs
   },
+  productGraphWriteThrottle,
   graphLookupProxy: {
     iterations: graphLookupIterations,
     totalMs: Number(graphLookupTotalMs.toFixed(3)),
@@ -1910,6 +2067,7 @@ const report = {
     warmTransformTargetPass:
       warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
     largeTransformTargetPass: Math.max(...largeTransformTimes) <= largeTransformTargetMs,
+    productGraphWriteThrottlePass: productGraphWriteThrottle.pass,
     cliInitPass:
       cliInit.exitCode === 0 &&
       cliInitReport?.command === "init" &&

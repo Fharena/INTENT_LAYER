@@ -104,6 +104,7 @@ The demo currently supports:
 - component snapshot discovery fixture reporting for function, nested/map/conditional/fragment, arrow, memo, forwardRef, HOC, and namespace-object component patterns
 - browser click-to-panel, preview, apply, and revert round-trip metric capture with desktop/mobile sample summaries at `/__intent/client-metrics`
 - large TSX transform stress reporting for a generated 401-binding fixture
+- product-sized Vite graph write throttling measurement for repeated 401-binding transforms
 
 The first evaluation result is stored in:
 
