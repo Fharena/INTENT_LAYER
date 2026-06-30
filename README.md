@@ -69,6 +69,7 @@ The demo currently supports:
 - read-only bindings for unsupported `className` expressions so agent handoff still works
 - Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
 - operation-log-backed undo stack and pending undo history display for applied patches
+- non-destructive pending undo discard controls for minimal branch undo handling
 - revert conflict artifact output at `.intent/conflicts/*.intent-conflict.json` when undo cannot safely restore the stored token
 - undo conflict list and discard-pending-undo resolution flow in the overlay
 - structured agent handoff task generation at `.intent/agent/task_*.md`

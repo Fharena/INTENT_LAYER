@@ -33,6 +33,7 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 - old token 검증
 - range patch 적용
 - operation log 기반 undo stack과 patch 되돌리기
+- pending undo 항목 비파괴 폐기
 - undo 충돌 시 `.intent/conflicts/*.intent-conflict.json` 기록
 - undo conflict 목록 조회와 pending undo 폐기 처리
 - 구조화된 agent handoff task 생성
@@ -118,11 +119,12 @@ AST code generation으로 파일을 다시 출력하지 않는다.
 5. revert operation/diff 파일을 생성하고 operation log에 revert entry를 append한다.
 6. dev server 메모리 stack이 비어 있으면 operation log에서 아직 revert되지 않은 apply stack을 복원한다.
 7. `/__intent/undo-history`가 pending undo stack을 JSON으로 반환하고 overlay가 최근 pending undo 항목을 표시한다.
-8. stored range의 `nextToken`이 이미 다른 token으로 바뀌었으면 revert를 거부하고 `.intent/conflicts/*.intent-conflict.json`에 expected/actual/restore token과 검토 가이드를 기록한다.
-9. `/__intent/conflicts`가 미해결 conflict artifact를 반환하고, `/__intent/resolve-conflict`가 사람이 확인한 conflict를 `discard-pending-undo`로 해결 처리한다.
+8. `/__intent/discard-undo`는 사용자가 선택한 pending undo 항목을 소스 변경 없이 operation log에서 폐기 처리한다.
+9. stored range의 `nextToken`이 이미 다른 token으로 바뀌었으면 revert를 거부하고 `.intent/conflicts/*.intent-conflict.json`에 expected/actual/restore token과 검토 가이드를 기록한다.
+10. `/__intent/conflicts`가 미해결 conflict artifact를 반환하고, `/__intent/resolve-conflict`가 사람이 확인한 conflict를 `discard-pending-undo`로 해결 처리한다.
 
 이 방식은 MVP용 LIFO undo stack이다.
-브랜치 히스토리 UI는 아직 만들지 않았다.
+브랜치 히스토리는 현재 pending undo 폐기까지만 지원한다.
 
 source hash가 다르면 patch를 거부한다.
 old token이 없으면 patch를 거부한다.
@@ -250,10 +252,10 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - variant 함수와 props forwarding은 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
 - undo는 operation log 기반 LIFO stack으로 여러 direct patch를 순서대로 되돌릴 수 있다.
 - dev server 재시작 후에도 graph binding이 다시 준비되면 operation log에서 pending undo stack을 복원할 수 있다.
-- overlay는 pending undo history를 최근 5개까지 표시하고 다음 revert 대상을 강조한다.
+- overlay는 pending undo history를 최근 5개까지 표시하고 다음 revert 대상을 강조하며, 각 pending undo를 비파괴적으로 폐기할 수 있다.
 - stored range의 `nextToken`이 바뀐 undo 충돌은 직접 되돌리기를 거부하고 `.intent/conflicts/*.intent-conflict.json`에 기록한다.
 - overlay는 미해결 undo conflict를 표시하고, 사용자가 확인한 pending undo를 폐기 처리할 수 있다.
-- branch undo UI는 아직 없다.
+- branch undo는 현재 pending undo 폐기까지만 지원하며, 임의 non-top patch를 소스에서 되돌리지는 않는다.
 - agent handoff는 선택 source window snapshot, component snapshot, related source snapshot, task/result markdown, intent diff 기록을 지원한다.
 - agent result는 선택 source window와 선택 component snapshot의 before/after line diff를 기록한다.
 - agent result는 단순 변수 참조 read-only binding의 related source diff와 related semantic token diff를 기록한다.
@@ -274,7 +276,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 우선순위:
 
 1. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
-2. branch undo UI와 conflict artifact 해결 흐름을 더 다듬는다.
+2. branch undo UI를 pending undo 폐기에서 임의 non-top revert/시각화까지 확장할지 판단한다.
 3. imported variant 함수와 cross-variable data flow에 대한 agent handoff 문맥을 보강한다.
 4. 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative를 재측정한다.
 5. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.

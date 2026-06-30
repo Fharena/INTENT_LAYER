@@ -20,6 +20,7 @@ Measured inputs:
 - simple `cn()` patch fixture
 - last-patch revert fixture
 - operation-log undo stack fixture
+- operation branch undo discard fixture
 - operation conflict artifact fixture
 - operation conflict resolution fixture
 - pending undo history fixture
@@ -159,8 +160,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 0.86ms / p95 2.772ms / max 2.772ms |
-| `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
+| `src/App.tsx` | 13 | avg 1.13ms / p95 3.813ms / max 3.813ms |
+| `src/main.tsx` | 0 | avg 0.005ms / p95 0.009ms / max 0.009ms |
 
 Summary:
 
@@ -168,12 +169,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.432ms |
-| Overall p95 transform time | 2.772ms |
-| Overall max transform time | 2.772ms |
-| Warm average transform time | 0.192ms |
-| Warm p95 transform time | 0.484ms |
-| Warm max transform time | 0.484ms |
+| Overall average transform time | 0.567ms |
+| Overall p95 transform time | 3.813ms |
+| Overall max transform time | 3.813ms |
+| Warm average transform time | 0.232ms |
+| Warm p95 transform time | 0.618ms |
+| Warm max transform time | 0.618ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -198,9 +199,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 6.48ms |
-| p95 transform time | 9.151ms |
-| Max transform time | 9.151ms |
+| Average transform time | 9.593ms |
+| p95 transform time | 12.087ms |
+| Max transform time | 12.087ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -215,13 +216,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 0.57ms |
-| Preview round trip | 0.844ms |
+| Preview time | 0.834ms |
+| Preview round trip | 1.243ms |
 | Apply success | true |
-| Static apply time | 3.065ms |
-| Simple `cn()` apply time | 2.236ms |
+| Static apply time | 3.692ms |
+| Simple `cn()` apply time | 2.117ms |
 | Revert success | true |
-| Revert time | 2.467ms |
+| Revert time | 2.458ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -261,14 +262,39 @@ Interpretation:
 - This verifies the same LIFO flow used by `/__intent/revert-last`.
 - The operation log is an append-only JSON file for apply/revert entries and does not require a database or external service.
 
-## 4.2 Operation Conflict Artifact And Resolution
+## 4.2 Branch Undo Discard
+
+| Metric | Value |
+| --- | ---: |
+| First apply success | true |
+| Second apply success | true |
+| Pending undo count after apply | 2 |
+| History pending count after apply | 2 |
+| Discard success | true |
+| Discard time | 3.483ms |
+| Discarded token | `gap-6` |
+| Pending undo count after discard | 1 |
+| History pending count after discard | 1 |
+| Next undo token after discard | `p-8` |
+| Revert after discard success | true |
+| Pending undo count after revert | 0 |
+| History pending count after revert | 0 |
+| Syntax errors after discard | 0 |
+
+Interpretation:
+
+- The overlay can discard a selected pending undo entry without changing source.
+- This fixture discards the older `gap-6` undo, then still reverts the newer `p-8` undo.
+- Branch undo currently supports non-destructive discard only; it does not directly revert arbitrary non-top patches from source.
+
+## 4.3 Operation Conflict Artifact And Resolution
 
 | Metric | Value |
 | --- | ---: |
 | Apply success | true |
 | Revert success | false |
 | Revert rejection reason | `revert-token-mismatch` |
-| Conflict file | `.intent/conflicts/2026-06-30T07-27-32-695Z.intent-conflict.json` |
+| Conflict file | `.intent/conflicts/2026-06-30T09-37-15-348Z.intent-conflict.json` |
 | Conflict file exists | true |
 | Conflict kind | `revert-conflict` |
 | Expected token | `gap-6` |
@@ -279,7 +305,7 @@ Interpretation:
 | Active conflict count before resolve | 1 |
 | Resolve success | true |
 | Resolve action | `discard-pending-undo` |
-| Resolve time | 2.63ms |
+| Resolve time | 4.84ms |
 | resolvedAt present | true |
 | Pending undo count after resolve | 0 |
 | Active conflict count after resolve | 0 |
@@ -297,8 +323,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.051ms |
-| Average lookup | 0.000051ms |
+| Total time | 0.06ms |
+| Average lookup | 0.00006ms |
 
 Caveat:
 
@@ -380,7 +406,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 2.381ms |
+| Task generation time | 2.3ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -404,7 +430,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 5.941ms |
+| Result generation time | 5.179ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -477,14 +503,14 @@ Cases checked:
 
 | Case | Component | Bindings | Task time | Result |
 | --- | --- | ---: | ---: | --- |
-| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 1.502ms | pass |
-| arrow block | `ComponentSnapshotArrowBlock` | 2 | 1.674ms | pass |
-| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 1.383ms | pass |
-| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 1.556ms | pass |
-| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 1.602ms | pass |
-| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 1.408ms | pass |
-| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 1.596ms | pass |
-| namespace object export | `ComponentSnapshotNamespace` | 1 | 9.686ms | pass |
+| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 1.205ms | pass |
+| arrow block | `ComponentSnapshotArrowBlock` | 2 | 1.42ms | pass |
+| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 1.627ms | pass |
+| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 1.416ms | pass |
+| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 1.416ms | pass |
+| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 1.366ms | pass |
+| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 1.127ms | pass |
+| namespace object export | `ComponentSnapshotNamespace` | 1 | 1.37ms | pass |
 
 Interpretation:
 
@@ -503,9 +529,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.609ms |
+| Agent task generation time | 1.287ms |
 | Agent result created | true |
-| Agent result generation time | 4.696ms |
+| Agent result generation time | 4.763ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 0 |
@@ -533,9 +559,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.315ms |
+| Agent task generation time | 1.486ms |
 | Agent result created | true |
-| Agent result generation time | 4.114ms |
+| Agent result generation time | 3.756ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 2 |
@@ -563,9 +589,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.087ms |
+| Agent task generation time | 1.224ms |
 | Agent result created | true |
-| Agent result generation time | 4.954ms |
+| Agent result generation time | 4.136ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 14 |
@@ -594,13 +620,13 @@ Interpretation:
 | ClassName value | `buttonVariants({ variant: "primary" })` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.343ms |
+| Agent task generation time | 1.193ms |
 | Related snapshot available | true |
 | Related snapshot kind | `variant-function` |
 | Related snapshot identifier | `buttonVariants` |
 | Related snapshot includes cva | true |
 | Agent result created | true |
-| Agent result generation time | 3.903ms |
+| Agent result generation time | 3.991ms |
 | Syntax errors after result | 0 |
 | Selected source diff line count | 0 |
 | Component source diff line count | 0 |
@@ -639,6 +665,7 @@ Interpretation:
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
 | operation log undo stack/history | 2 applies + history next token `p-8` + 2 reverts + pending stack 0 + syntax error 0 | pass |
+| operation branch undo discard | non-top pending undo discarded + next undo token `p-8` preserved + pending stack 0 after revert + syntax error 0 | pass |
 | operation conflict artifact | `revert-token-mismatch` rejection + conflict artifact created + expected/actual/restore tokens recorded + syntax error 0 | pass |
 | operation conflict resolution | active conflict 1 + `discard-pending-undo` resolve + pending stack 0 + active conflict 0 + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
@@ -668,6 +695,7 @@ What worked:
 - operation-log-backed undo stack
 - pending undo history endpoint and overlay display
 - LIFO stack behavior through the last-patch revert endpoint
+- non-destructive pending undo discard for minimal branch undo handling
 - undo conflict artifact generation with expected/actual/restore token records
 - undo conflict listing and `discard-pending-undo` resolution
 - source hash/className tokenization caches for repeated transforms
@@ -691,7 +719,7 @@ What remains weak:
 
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
-- branch undo UI is still missing
+- branch undo currently supports pending undo discard only; arbitrary non-top patches are not directly reverted from source
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
 - automatic semantic analysis for imported variant functions and cross-variable data flow is still missing
@@ -701,5 +729,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, branch undo UI polish, imported variant/cross-variable handoff context, and component snapshot false-positive/false-negative measurement on product-sized TSX files.
+The next priority is independent external corpus validation, deciding whether to expand branch undo into arbitrary non-top revert, imported variant/cross-variable handoff context, and component snapshot false-positive/false-negative measurement on product-sized TSX files.
 ```

@@ -34,6 +34,7 @@ Included:
 - old token validation
 - range patch apply
 - operation-log-backed undo stack and patch revert
+- non-destructive pending undo discard
 - undo conflict artifact output at `.intent/conflicts/*.intent-conflict.json`
 - undo conflict listing and discard-pending-undo resolution
 - structured agent handoff task generation
@@ -119,11 +120,12 @@ Revert flow:
 5. Revert operation/diff artifacts are written and a revert entry is appended to the operation log.
 6. If the in-memory stack is empty, pending apply entries are restored from the operation log.
 7. `/__intent/undo-history` returns the pending undo stack as JSON, and the overlay displays recent pending undo entries.
-8. If the stored range no longer contains `nextToken`, revert is rejected and `.intent/conflicts/*.intent-conflict.json` records the expected, actual, and restore tokens with review guidance.
-9. `/__intent/conflicts` returns unresolved conflict artifacts, and `/__intent/resolve-conflict` lets a reviewed conflict discard the matching pending undo entry.
+8. `/__intent/discard-undo` discards a selected pending undo entry from the operation log without changing source.
+9. If the stored range no longer contains `nextToken`, revert is rejected and `.intent/conflicts/*.intent-conflict.json` records the expected, actual, and restore tokens with review guidance.
+10. `/__intent/conflicts` returns unresolved conflict artifacts, and `/__intent/resolve-conflict` lets a reviewed conflict discard the matching pending undo entry.
 
 This is a LIFO undo stack for the MVP.
-Branching history UI is not implemented yet.
+Branching history currently supports pending undo discard only.
 
 If the source hash changed, the patch is rejected.
 If the old token is missing, the patch is rejected.
@@ -251,10 +253,10 @@ Support model:
 - Variant functions and props forwarding degrade to read-only bindings and agent handoff.
 - Undo uses an operation-log-backed LIFO stack and can revert multiple direct patches in order.
 - After a dev server restart, the pending undo stack can be restored from the operation log once graph bindings are available again.
-- The overlay displays up to 5 pending undo entries and highlights the next revert target.
+- The overlay displays up to 5 pending undo entries, highlights the next revert target, and can discard pending undo entries without changing source.
 - Undo conflicts where the stored `nextToken` changed reject direct revert and write `.intent/conflicts/*.intent-conflict.json`.
 - The overlay displays unresolved undo conflicts and can discard a reviewed pending undo entry.
-- Branch undo UI is not implemented yet.
+- Branch undo currently supports pending undo discard only; arbitrary non-top patches are not reverted from source.
 - Agent handoff records a selected source-window snapshot, component snapshot, related source snapshot, task/result markdown, and intent diffs.
 - Agent results record before/after line diffs for both the selected source window and the selected component snapshot.
 - Agent results record related source diffs and related semantic token diffs for simple variable-reference read-only bindings.
@@ -275,7 +277,7 @@ Support model:
 Priority order:
 
 1. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
-2. Further polish branch undo UI and the conflict artifact resolution workflow.
+2. Decide whether to expand branch undo UI beyond pending undo discard into arbitrary non-top revert/visualization.
 3. Improve agent handoff context for imported variant functions and cross-variable data flow.
 4. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
 5. Validate caching and graph write throttling on product-sized TSX files.
