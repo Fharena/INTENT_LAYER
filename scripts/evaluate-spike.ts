@@ -1809,6 +1809,147 @@ const importedVariableHandoffResult = recordAgentResult(
   }
 );
 
+const importedVariableDependencyRoot = resetTmpSubdir("imported-variable-dependency-handoff");
+const importedVariableDependencyStylesDir = path.join(
+  importedVariableDependencyRoot,
+  "src",
+  "styles"
+);
+const importedVariableDependencyThemeDir = path.join(
+  importedVariableDependencyRoot,
+  "src",
+  "theme"
+);
+const importedVariableDependencyScreensDir = path.join(
+  importedVariableDependencyRoot,
+  "src",
+  "screens"
+);
+fs.mkdirSync(importedVariableDependencyStylesDir, { recursive: true });
+fs.mkdirSync(importedVariableDependencyThemeDir, { recursive: true });
+fs.mkdirSync(importedVariableDependencyScreensDir, { recursive: true });
+fs.writeFileSync(
+  path.join(importedVariableDependencyRoot, "tsconfig.json"),
+  `${JSON.stringify(
+    {
+      compilerOptions: {
+        baseUrl: ".",
+        paths: {
+          "@/*": ["src/*"]
+        }
+      }
+    },
+    null,
+    2
+  )}\n`
+);
+const importedVariableDependencyDefinitionFixture = path.join(
+  importedVariableDependencyStylesDir,
+  "cardClass.ts"
+);
+fs.writeFileSync(
+  importedVariableDependencyDefinitionFixture,
+  [
+    "export const baseCardClass = \"grid grid-cols-3 gap-4 rounded-lg p-6\";",
+    "export const toneClass = \"bg-white text-slate-700 shadow-sm\";",
+    "export const cardClass = cn(baseCardClass, toneClass, \"border border-slate-200\");",
+    ""
+  ].join("\n")
+);
+const importedVariableDependencyStylesIndexFixture = path.join(
+  importedVariableDependencyStylesDir,
+  "index.ts"
+);
+fs.writeFileSync(
+  importedVariableDependencyStylesIndexFixture,
+  "export { cardClass } from \"./cardClass\";\n"
+);
+const importedVariableDependencyThemeIndexFixture = path.join(
+  importedVariableDependencyThemeDir,
+  "index.ts"
+);
+fs.writeFileSync(
+  importedVariableDependencyThemeIndexFixture,
+  "export { cardClass } from \"../styles\";\n"
+);
+const importedVariableDependencyHandoffFixture = path.join(
+  importedVariableDependencyScreensDir,
+  "ImportedVariableDependencyHandoffFixture.tsx"
+);
+fs.writeFileSync(
+  importedVariableDependencyHandoffFixture,
+  [
+    "import { cardClass as shellClass } from \"@/theme\";",
+    "",
+    "export function ImportedVariableDependencyHandoffFixture() {",
+    "  return <article className={shellClass}>Imported variable dependency handoff target</article>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const importedVariableDependencyHandoffInstrument = instrumentSource({
+  code: fs.readFileSync(importedVariableDependencyHandoffFixture, "utf8"),
+  file: importedVariableDependencyHandoffFixture,
+  rootDir: importedVariableDependencyRoot
+});
+const importedVariableDependencyHandoffEntry =
+  importedVariableDependencyHandoffInstrument.entries[0];
+const importedVariableDependencyHandoffTask = createAgentTask(
+  importedVariableDependencyRoot,
+  importedVariableDependencyHandoffEntry,
+  {
+    id:
+      importedVariableDependencyHandoffEntry?.id ??
+      "missing-imported-variable-dependency-handoff-binding",
+    desiredChange:
+      "Change this imported variable-backed className by editing its source dependency variables."
+  }
+);
+const importedVariableDependencyRelatedSnapshot = importedVariableDependencyHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedSourceSnapshot | null>(
+      importedVariableDependencyHandoffTask.markdown,
+      "Related Source Snapshot"
+    )
+  : null;
+const importedVariableDependencySnapshots = importedVariableDependencyHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedDependencySnapshot[] | null>(
+      importedVariableDependencyHandoffTask.markdown,
+      "Related Dependency Snapshots"
+    ) ?? []
+  : [];
+if (importedVariableDependencyHandoffTask.ok) {
+  fs.writeFileSync(
+    importedVariableDependencyDefinitionFixture,
+    fs
+      .readFileSync(importedVariableDependencyDefinitionFixture, "utf8")
+      .replace("grid grid-cols-3 gap-4 rounded-lg p-6", "grid grid-cols-2 gap-6 rounded-xl p-8")
+      .replace("bg-white text-slate-700 shadow-sm", "bg-cyan-50 text-cyan-700 shadow-md")
+  );
+}
+const importedVariableDependencySyntaxErrorsAfterResult =
+  parseSyntaxErrorCount(importedVariableDependencyDefinitionFixture) +
+  parseSyntaxErrorCount(importedVariableDependencyStylesIndexFixture) +
+  parseSyntaxErrorCount(importedVariableDependencyThemeIndexFixture) +
+  parseSyntaxErrorCount(importedVariableDependencyHandoffFixture);
+const importedVariableDependencyHandoffResult = recordAgentResult(
+  importedVariableDependencyRoot,
+  importedVariableDependencyHandoffEntry,
+  {
+    id:
+      importedVariableDependencyHandoffEntry?.id ??
+      "missing-imported-variable-dependency-handoff-binding",
+    taskFile: importedVariableDependencyHandoffTask.ok
+      ? importedVariableDependencyHandoffTask.taskFile
+      : undefined,
+    summary:
+      "Imported variable dependency handoff fixture: updated dependency variables behind an imported related className declaration.",
+    changedFiles: ["src/styles/cardClass.ts"],
+    checks: ["npm run typecheck", "npm run eval", "npm run build"],
+    notes:
+      "Evaluation fixture for imported variable one-hop dependency handoff context; no LLM call is made."
+  }
+);
+
 const packageImportRoot = resetTmpSubdir("workspace-package-import-handoff");
 const packageImportUiDir = path.join(packageImportRoot, "packages", "ui");
 const packageImportUiSrcDir = path.join(packageImportUiDir, "src");
@@ -3391,6 +3532,91 @@ const report = {
       ? importedVariableHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  importedVariableDependencyHandoffBinding: {
+    entryCreated: Boolean(importedVariableDependencyHandoffEntry),
+    root: reportPath(importedVariableDependencyRoot),
+    kind: importedVariableDependencyHandoffEntry?.className.kind ?? null,
+    unsupportedReason:
+      importedVariableDependencyHandoffEntry?.className.unsupportedReason ?? null,
+    value: importedVariableDependencyHandoffEntry?.className.value ?? null,
+    tokenCount: importedVariableDependencyHandoffEntry?.tokens.length ?? 0,
+    taskOk: importedVariableDependencyHandoffTask.ok,
+    taskMs: importedVariableDependencyHandoffTask.ok
+      ? importedVariableDependencyHandoffTask.metrics.taskMs
+      : importedVariableDependencyHandoffTask.metrics?.taskMs,
+    relatedSnapshotAvailable: Boolean(importedVariableDependencyRelatedSnapshot),
+    relatedSnapshotFile: importedVariableDependencyRelatedSnapshot?.file ?? null,
+    relatedSnapshotKind: importedVariableDependencyRelatedSnapshot?.kind ?? null,
+    relatedSnapshotIdentifier: importedVariableDependencyRelatedSnapshot?.identifier ?? null,
+    relatedSnapshotIncludesDependencyReferences: Boolean(
+      importedVariableDependencyRelatedSnapshot?.excerpt.includes("baseCardClass") &&
+        importedVariableDependencyRelatedSnapshot.excerpt.includes("toneClass")
+    ),
+    dependencySnapshotCount: importedVariableDependencySnapshots.length,
+    dependencySnapshotFiles: importedVariableDependencySnapshots.map((snapshot) => snapshot.file),
+    dependencySnapshotIdentifiers: importedVariableDependencySnapshots.map(
+      (snapshot) => snapshot.identifier
+    ),
+    dependencySnapshotsReferenceCardClass: importedVariableDependencySnapshots.every(
+      (snapshot) => snapshot.referencedBy === "cardClass"
+    ),
+    dependencySnapshotsAreImportedSource: importedVariableDependencySnapshots.every(
+      (snapshot) => snapshot.file === "src/styles/cardClass.ts"
+    ),
+    dependencySnapshotsIncludeClassTokens: importedVariableDependencySnapshots.every((snapshot) =>
+      /grid|bg-|text-|shadow|gap-/.test(snapshot.excerpt)
+    ),
+    resultOk: importedVariableDependencyHandoffResult.ok,
+    resultMs: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.metrics.resultMs
+      : importedVariableDependencyHandoffResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: importedVariableDependencySyntaxErrorsAfterResult,
+    sourceDiffLineCount: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: importedVariableDependencyHandoffResult.ok
+      ? Boolean(importedVariableDependencyHandoffResult.sourceDiff)
+      : false,
+    componentDiffLineCount: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: importedVariableDependencyHandoffResult.ok
+      ? Boolean(importedVariableDependencyHandoffResult.componentSourceDiff)
+      : false,
+    relatedResultSnapshotAvailable: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: importedVariableDependencyHandoffResult.ok
+      ? Boolean(importedVariableDependencyHandoffResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedDependencySnapshotCount: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.source.relatedDependencySnapshotCount
+      : 0,
+    relatedDependencyDiffLineCount: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.source.relatedDependencyDiffLineCount
+      : 0,
+    relatedDependencySourceDiffPresent: importedVariableDependencyHandoffResult.ok
+      ? Boolean(importedVariableDependencyHandoffResult.relatedDependencySourceDiff)
+      : false,
+    relatedDependencySemanticChangeCount: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.source.relatedDependencySemanticChangeCount
+      : 0,
+    relatedDependencySemanticDiffPresent: importedVariableDependencyHandoffResult.ok
+      ? Boolean(importedVariableDependencyHandoffResult.relatedDependencySemanticDiff)
+      : false,
+    relatedDependencySemanticTokenAddedCount: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.relatedDependencySemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedDependencySemanticTokenRemovedCount: importedVariableDependencyHandoffResult.ok
+      ? importedVariableDependencyHandoffResult.relatedDependencySemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   packageImportHandoffBinding: {
     entryCreated: Boolean(packageImportHandoffEntry),
     root: reportPath(packageImportRoot),
@@ -3907,6 +4133,36 @@ const report = {
       (importedVariableHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
       (importedVariableHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
       importedVariableHandoffSyntaxErrorsAfterResult === 0,
+    importedVariableDependencyHandoffPass:
+      importedVariableDependencyHandoffEntry?.className.kind === "read-only" &&
+      importedVariableDependencyHandoffEntry.className.unsupportedReason ===
+        "variable-reference" &&
+      importedVariableDependencyHandoffTask.ok &&
+      importedVariableDependencyRelatedSnapshot?.kind === "variable-declaration" &&
+      importedVariableDependencyRelatedSnapshot.identifier === "cardClass" &&
+      importedVariableDependencyRelatedSnapshot.file === "src/styles/cardClass.ts" &&
+      importedVariableDependencyRelatedSnapshot.excerpt.includes("baseCardClass") &&
+      importedVariableDependencyRelatedSnapshot.excerpt.includes("toneClass") &&
+      importedVariableDependencySnapshots.length === 2 &&
+      importedVariableDependencySnapshots.some(
+        (snapshot) => snapshot.identifier === "baseCardClass"
+      ) &&
+      importedVariableDependencySnapshots.some((snapshot) => snapshot.identifier === "toneClass") &&
+      importedVariableDependencySnapshots.every(
+        (snapshot) =>
+          snapshot.file === "src/styles/cardClass.ts" && snapshot.referencedBy === "cardClass"
+      ) &&
+      importedVariableDependencyHandoffResult.ok &&
+      importedVariableDependencyHandoffResult.source.relatedSnapshotAvailable &&
+      importedVariableDependencyHandoffResult.source.relatedDependencySnapshotCount === 2 &&
+      importedVariableDependencyHandoffResult.source.relatedDependencyDiffLineCount > 0 &&
+      Boolean(importedVariableDependencyHandoffResult.relatedDependencySourceDiff) &&
+      importedVariableDependencyHandoffResult.source.relatedDependencySemanticChangeCount >= 2 &&
+      (importedVariableDependencyHandoffResult.relatedDependencySemanticDiff?.tokenAddedCount ??
+        0) >= 5 &&
+      (importedVariableDependencyHandoffResult.relatedDependencySemanticDiff?.tokenRemovedCount ??
+        0) >= 5 &&
+      importedVariableDependencySyntaxErrorsAfterResult === 0,
     workspacePackageImportHandoffPass:
       packageImportHandoffEntry?.className.kind === "read-only" &&
       packageImportHandoffEntry.className.unsupportedReason === "variable-reference" &&
