@@ -27,6 +27,7 @@ Included:
 - element pick -> intent binding display
 - static `className` token display
 - simple `cn()` / `clsx()` literal segment token display
+- read-only bindings for unsupported `className` expressions
 - supported Tailwind token candidate selection
 - patch preview before apply
 - source hash validation
@@ -84,6 +85,10 @@ token list
 source hash
 transform time
 ```
+
+Unsupported cases such as `className={someVariable}`, runtime template literals, and variant functions are still recorded as `read-only` bindings.
+Those bindings have no editable tokens and keep an `unsupportedReason`.
+The user can still select the element and create an agent handoff task instead of applying a direct patch.
 
 ### 3.2 Range patch only
 
@@ -194,11 +199,11 @@ Support model:
 
 ## 7. Current Limitations
 
-- Patch support is limited to static `className`.
+- Direct patch support covers static `className` and simple/partial `cn()` / `clsx()` string literal segments.
 - `cn()` / `clsx()` patching is limited to string literal segments.
-- `className={someVariable}` is read-only.
-- Template literals are read-only.
-- Variant functions and props forwarding are read-only.
+- `className={someVariable}` degrades to a read-only binding and agent handoff.
+- Template literals degrade to read-only bindings and agent handoff.
+- Variant functions and props forwarding degrade to read-only bindings and agent handoff.
 - Undo supports only the last patch.
 - Restarting the dev server clears the in-memory undo state.
 - Agent handoff currently records task/result markdown and intent diffs only.
@@ -216,7 +221,7 @@ Priority order:
 3. Connect agent results to actual before/after source diffs.
 4. Design an undo stack and operation-log-backed revert.
 5. Measure real browser click-to-panel time.
-6. Show read-only reasons clearly in the UI.
+6. Connect read-only source diffs to agent results.
 7. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
 
 ## 9. Agent Handoff And Result
@@ -268,3 +273,27 @@ Intent Diff
 
 At this stage, result recording is a deterministic audit log.
 It rereads the source file to record `sourceHashChanged`, but it does not yet infer the semantic meaning of the agent patch automatically.
+
+### 9.1 Read-only Handoff
+
+Unsupported `className` expressions are still selectable source bindings.
+
+Example:
+
+```tsx
+const cardClass = "grid grid-cols-3 gap-4 rounded-lg p-6";
+
+export function Card() {
+  return <div className={cardClass}>Card</div>;
+}
+```
+
+The overlay shows:
+
+```text
+className: read-only
+dynamic args read-only: 1
+unsupported: variable-reference
+```
+
+No direct token patch buttons are shown, but the agent handoff task/result flow remains available.

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-30T04:23:48.227Z",
+  "generatedAt": "2026-06-30T04:29:15.173Z",
   "contextPackUsed": true,
   "corpus": {
-    "generatedAt": "2026-06-30T04:23:48.102Z",
+    "generatedAt": "2026-06-30T04:29:15.028Z",
     "filesScanned": 8,
     "classNameOccurrences": 40,
     "classification": {
@@ -487,59 +487,59 @@
         "file": "src/App.tsx",
         "entries": 13,
         "samples": [
-          5.392,
-          2.542,
-          1.988,
-          1.752,
-          1.688
+          5.812,
+          3.851,
+          2.641,
+          1.781,
+          2.236
         ],
-        "averageMs": 2.672,
-        "p95Ms": 5.392,
-        "maxMs": 5.392
+        "averageMs": 3.264,
+        "p95Ms": 5.812,
+        "maxMs": 5.812
       },
       {
         "file": "src/main.tsx",
         "entries": 0,
         "samples": [
-          1.571,
-          0.519,
-          0.471,
-          0.413,
-          0.542
+          0.009,
+          0.001,
+          0.001,
+          0.001,
+          0.001
         ],
-        "averageMs": 0.703,
-        "p95Ms": 1.571,
-        "maxMs": 1.571
+        "averageMs": 0.003,
+        "p95Ms": 0.009,
+        "maxMs": 0.009
       }
     ],
-    "averageMs": 1.688,
-    "p95Ms": 5.392,
-    "maxMs": 5.392,
-    "warmAverageMs": 1.239,
-    "warmP95Ms": 2.542,
-    "warmMaxMs": 2.542
+    "averageMs": 1.633,
+    "p95Ms": 5.812,
+    "maxMs": 5.812,
+    "warmAverageMs": 1.314,
+    "warmP95Ms": 3.851,
+    "warmMaxMs": 3.851
   },
   "graphLookupProxy": {
     "iterations": 1000,
-    "totalMs": 0.382,
-    "averageMs": 0.000382,
+    "totalMs": 0.36,
+    "averageMs": 0.00036,
     "note": "This measures id-to-binding graph lookup only, not a real browser click event."
   },
   "patch": {
     "previewOk": true,
-    "previewMs": 1.008,
-    "previewRoundTripMs": 1.279,
+    "previewMs": 1.281,
+    "previewRoundTripMs": 1.741,
     "applyOk": true,
-    "applyMs": 4.19,
+    "applyMs": 5.771,
     "syntaxErrorsAfterPatch": 0,
     "revertOk": true,
-    "revertMs": 3.355,
+    "revertMs": 12.313,
     "syntaxErrorsAfterRevert": 0,
     "staleRejectionOk": true,
     "staleRejectionReason": "source-hash-mismatch",
     "simpleCnClsx": {
       "applyOk": true,
-      "applyMs": 4.368,
+      "applyMs": 4.89,
       "syntaxErrorsAfterPatch": 0,
       "bindingKind": "call-literals",
       "callee": "cn",
@@ -548,18 +548,26 @@
   },
   "agentTask": {
     "ok": true,
-    "taskMs": 9.167,
+    "taskMs": 1.264,
     "sectionsPresent": true,
-    "taskFile": ".intent/agent/task_2026-06-30T04-23-48-190Z.md"
+    "taskFile": ".intent/agent/task_2026-06-30T04-29-15-136Z.md"
   },
   "agentResult": {
     "ok": true,
-    "resultMs": 3.312,
+    "resultMs": 3.222,
     "sectionsPresent": true,
     "filesExist": true,
-    "resultFile": ".intent/agent/result_2026-06-30T04-23-48-200Z.md",
-    "diffFile": ".intent/diffs/2026-06-30T04-23-48-200Z_agent.intent-diff.yml",
+    "resultFile": ".intent/agent/result_2026-06-30T04-29-15-138Z.md",
+    "diffFile": ".intent/diffs/2026-06-30T04-29-15-138Z_agent.intent-diff.yml",
     "sourceHashChanged": false
+  },
+  "readOnlyBinding": {
+    "entryCreated": true,
+    "kind": "read-only",
+    "unsupportedReason": "variable-reference",
+    "tokenCount": 0,
+    "taskOk": true,
+    "taskMs": 1.071
   },
   "gates": {
     "staticEditableTokenCoveragePass": true,
@@ -572,6 +580,7 @@
     "revertPatchPass": true,
     "agentTaskPass": true,
     "agentResultPass": true,
+    "readOnlyHandoffPass": true,
     "simpleCnClsxPatchPass": true,
     "staleRejectionPass": true
   }

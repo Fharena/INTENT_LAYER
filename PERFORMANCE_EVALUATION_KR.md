@@ -20,6 +20,7 @@ npm run build
 - last-patch revert fixture
 - agent handoff task fixture
 - agent result artifact fixture
+- read-only binding handoff fixture
 
 주의:
 
@@ -85,8 +86,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 2.672ms / p95 5.392ms / max 5.392ms |
-| `src/main.tsx` | 0 | avg 0.703ms / p95 1.571ms / max 1.571ms |
+| `src/App.tsx` | 13 | avg 3.264ms / p95 5.812ms / max 5.812ms |
+| `src/main.tsx` | 0 | avg 0.003ms / p95 0.009ms / max 0.009ms |
 
 요약:
 
@@ -94,12 +95,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 1.688ms |
-| 전체 p95 transform time | 5.392ms |
-| 전체 최대 transform time | 5.392ms |
-| warm 평균 transform time | 1.239ms |
-| warm p95 transform time | 2.542ms |
-| warm 최대 transform time | 2.542ms |
+| 전체 평균 transform time | 1.633ms |
+| 전체 p95 transform time | 5.812ms |
+| 전체 최대 transform time | 5.812ms |
+| warm 평균 transform time | 1.314ms |
+| warm p95 transform time | 3.851ms |
+| warm 최대 transform time | 3.851ms |
 | 목표 | warm 파일당 5ms 이하 |
 | 결과 | warm 통과 / cold 미통과 |
 
@@ -107,7 +108,8 @@ reports/performance/spike-evaluation.json
 
 - 5회 반복 측정에서 첫 cold transform은 5ms를 넘었다.
 - 첫 샘플을 제외한 warm transform은 평균, p95, 최대값 모두 5ms 아래다.
-- 현재는 TypeScript AST parse와 instrumentation을 한 번에 수행한다.
+- `className` 문자열이 없는 파일은 AST parse 없이 fast path로 건너뛴다.
+- `className`이 있는 파일은 TypeScript AST parse와 instrumentation을 한 번에 수행한다.
 - 대형 파일에서는 target filtering, cache, graph write throttling이 필요하다.
 
 ## 4. Patch 성능과 안전성
@@ -115,13 +117,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 1.008ms |
-| preview round trip | 1.279ms |
+| preview time | 1.281ms |
+| preview round trip | 1.741ms |
 | apply 성공 | true |
-| static apply time | 4.19ms |
-| simple `cn()` apply time | 4.368ms |
+| static apply time | 5.771ms |
+| simple `cn()` apply time | 4.89ms |
 | revert 성공 | true |
-| revert time | 3.355ms |
+| revert time | 12.313ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -141,8 +143,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.382ms |
-| 평균 lookup | 0.000382ms |
+| 총 시간 | 0.36ms |
+| 평균 lookup | 0.00036ms |
 
 주의:
 
@@ -155,7 +157,7 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 9.167ms |
+| task 생성 시간 | 1.264ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -176,7 +178,7 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 3.312ms |
+| result 생성 시간 | 3.222ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
 | source hash changed | false |
@@ -196,9 +198,9 @@ dev server endpoint smoke test:
 
 | 항목 | 값 |
 | --- | ---: |
-| 테스트 URL | `http://127.0.0.1:5176/__intent/agent-result` |
+| 테스트 URL | `http://127.0.0.1:5177/__intent/agent-result` |
 | result 생성 성공 | true |
-| endpoint result time | 12.559ms |
+| endpoint result time | 3.528ms |
 | result 파일 반환 | true |
 | diff 파일 반환 | true |
 
@@ -208,7 +210,23 @@ dev server endpoint smoke test:
 - 이번 단계는 사용자가 입력한 결과 요약을 구조화해 `.intent/agent/result_*.md`와 `.intent/diffs/*_agent.intent-diff.yml`로 남긴다.
 - 실제 agent patch의 의미를 자동 분석하는 단계는 아직 아니다.
 
-## 8. Gate 결과
+## 8. Read-only Binding Handoff
+
+| 항목 | 값 |
+| --- | ---: |
+| read-only entry 생성 | true |
+| binding kind | `read-only` |
+| unsupported reason | `variable-reference` |
+| editable token 수 | 0 |
+| agent task 생성 | true |
+| agent task 생성 시간 | 1.071ms |
+
+해석:
+
+- `className={cardClass}`처럼 직접 patch하기 어려운 요소도 `data-intent-id`를 받아 선택 가능해졌다.
+- 직접 token patch 버튼은 표시하지 않고, unsupported reason과 agent handoff로 degrade한다.
+
+## 9. Gate 결과
 
 | Gate | 기준 | 결과 |
 | --- | --- | --- |
@@ -221,23 +239,26 @@ dev server endpoint smoke test:
 | last patch revert | revert 성공 + syntax error 0 | 통과 |
 | agent task generation | task 생성 + 필수 섹션 포함 | 통과 |
 | agent result generation | result/diff 생성 + 필수 섹션 포함 | 통과 |
+| read-only handoff | read-only binding 생성 + agent task 생성 | 통과 |
 | simple `cn()` / `clsx()` patch | apply 성공 + syntax error 0 | 통과 |
 | stale rejection | source mismatch 거부 | 통과 |
 
-## 9. 결론
+## 10. 결론
 
-이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했다.
+이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다.
 
 성공한 것:
 
 - static `className` token 분석
 - simple/partial `cn()` / `clsx()` literal segment 분석
 - compile-time source binding 생성
+- read-only source binding 생성
 - source token range 기반 patch
 - apply 전 patch preview
 - last-patch revert
 - agent handoff task markdown 생성
 - agent result markdown과 agent intent diff 생성
+- unsupported className의 agent handoff degrade
 - simple `cn()` literal segment patch
 - source hash stale rejection
 - intent operation/diff 최소 출력

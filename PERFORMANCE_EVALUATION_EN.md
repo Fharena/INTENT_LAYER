@@ -20,6 +20,7 @@ Measured inputs:
 - last-patch revert fixture
 - agent handoff task fixture
 - agent result artifact fixture
+- read-only binding handoff fixture
 
 Important caveat:
 
@@ -85,8 +86,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 2.672ms / p95 5.392ms / max 5.392ms |
-| `src/main.tsx` | 0 | avg 0.703ms / p95 1.571ms / max 1.571ms |
+| `src/App.tsx` | 13 | avg 3.264ms / p95 5.812ms / max 5.812ms |
+| `src/main.tsx` | 0 | avg 0.003ms / p95 0.009ms / max 0.009ms |
 
 Summary:
 
@@ -94,12 +95,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 1.688ms |
-| Overall p95 transform time | 5.392ms |
-| Overall max transform time | 5.392ms |
-| Warm average transform time | 1.239ms |
-| Warm p95 transform time | 2.542ms |
-| Warm max transform time | 2.542ms |
+| Overall average transform time | 1.633ms |
+| Overall p95 transform time | 5.812ms |
+| Overall max transform time | 5.812ms |
+| Warm average transform time | 1.314ms |
+| Warm p95 transform time | 3.851ms |
+| Warm max transform time | 3.851ms |
 | Target | <= 5ms per warm transform |
 | Result | warm pass / cold fail |
 
@@ -107,7 +108,8 @@ Interpretation:
 
 - In the 5-iteration run, the first cold transform exceeded 5ms.
 - Excluding the first sample, warm average, p95, and max transform time are under 5ms.
-- The current implementation performs TypeScript AST parse and instrumentation in one pass.
+- Files without the literal `className` string now use a fast path and skip AST parsing.
+- Files with `className` still perform TypeScript AST parse and instrumentation in one pass.
 - Larger TSX files will still need file filtering, caching, and graph write throttling.
 
 ## 4. Patch Performance and Safety
@@ -115,13 +117,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.008ms |
-| Preview round trip | 1.279ms |
+| Preview time | 1.281ms |
+| Preview round trip | 1.741ms |
 | Apply success | true |
-| Static apply time | 4.19ms |
-| Simple `cn()` apply time | 4.368ms |
+| Static apply time | 5.771ms |
+| Simple `cn()` apply time | 4.89ms |
 | Revert success | true |
-| Revert time | 3.355ms |
+| Revert time | 12.313ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -141,8 +143,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.382ms |
-| Average lookup | 0.000382ms |
+| Total time | 0.36ms |
+| Average lookup | 0.00036ms |
 
 Caveat:
 
@@ -155,7 +157,7 @@ A real click-to-panel measurement still needs to be captured in the dev server a
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 9.167ms |
+| Task generation time | 1.264ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -176,7 +178,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 3.312ms |
+| Result generation time | 3.222ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | false |
@@ -196,9 +198,9 @@ Dev server endpoint smoke test:
 
 | Metric | Value |
 | --- | ---: |
-| Test URL | `http://127.0.0.1:5176/__intent/agent-result` |
+| Test URL | `http://127.0.0.1:5177/__intent/agent-result` |
 | Result generation success | true |
-| Endpoint result time | 12.559ms |
+| Endpoint result time | 3.528ms |
 | Result file returned | true |
 | Diff file returned | true |
 
@@ -208,7 +210,23 @@ Interpretation:
 - This step structures the user's result summary into `.intent/agent/result_*.md` and `.intent/diffs/*_agent.intent-diff.yml`.
 - It does not yet infer the semantic meaning of the actual agent patch automatically.
 
-## 8. Gate Results
+## 8. Read-only Binding Handoff
+
+| Metric | Value |
+| --- | ---: |
+| Read-only entry created | true |
+| Binding kind | `read-only` |
+| Unsupported reason | `variable-reference` |
+| Editable token count | 0 |
+| Agent task created | true |
+| Agent task generation time | 1.071ms |
+
+Interpretation:
+
+- Elements such as `className={cardClass}` now receive `data-intent-id` and can be selected.
+- Direct token patch buttons are not shown; the flow degrades to an unsupported reason and agent handoff.
+
+## 9. Gate Results
 
 | Gate | Threshold | Result |
 | --- | --- | --- |
@@ -221,23 +239,26 @@ Interpretation:
 | last patch revert | revert success + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
 | agent result generation | result/diff created + required sections present | pass |
+| read-only handoff | read-only binding created + agent task created | pass |
 | simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
-## 9. Conclusion
+## 10. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff.
 
 What worked:
 
 - static `className` token analysis
 - simple/partial `cn()` / `clsx()` literal segment analysis
 - compile-time source binding generation
+- read-only source binding generation
 - source token range patching
 - patch preview before apply
 - last-patch revert
 - agent handoff task markdown generation
 - agent result markdown and agent intent diff generation
+- agent handoff degradation for unsupported className expressions
 - simple `cn()` literal segment patching
 - source hash stale rejection
 - minimal intent operation/diff output

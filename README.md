@@ -52,12 +52,13 @@ npm run build
 The demo currently supports:
 
 - React + Vite + Tailwind demo UI
-- compile-time `data-intent-id` injection for intrinsic JSX elements with static `className`
+- compile-time `data-intent-id` injection for intrinsic JSX elements with supported or read-only `className`
 - source sidecar graph generation at `.intent/graph.intent.json`
 - floating browser overlay
 - patch preview before apply
 - direct Tailwind token replacement for supported static tokens
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
+- read-only bindings for unsupported `className` expressions so agent handoff still works
 - undo for the last applied patch
 - structured agent handoff task generation at `.intent/agent/task_*.md`
 - structured agent result artifact generation at `.intent/agent/result_*.md`

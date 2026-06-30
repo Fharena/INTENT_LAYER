@@ -26,6 +26,7 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 - element pick -> intent binding 표시
 - static `className` token 목록 표시
 - simple `cn()` / `clsx()` literal segment token 표시
+- unsupported `className` 표현식의 read-only binding 생성
 - 지원 가능한 Tailwind token 후보 선택
 - apply 전 patch preview
 - source hash 검증
@@ -83,6 +84,10 @@ token list
 source hash
 transform time
 ```
+
+`className={someVariable}`, runtime template literal, variant 함수처럼 직접 patch하기 어려운 경우도 `read-only` binding으로 기록한다.
+이 경우 token 목록은 비어 있고 `unsupportedReason`만 남긴다.
+사용자는 해당 요소를 선택한 뒤 직접 patch 대신 agent handoff task를 만들 수 있다.
 
 ### 3.2 Range patch only
 
@@ -193,11 +198,11 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 ## 7. 현재 한계
 
-- patch 대상은 static `className`만이다.
+- 직접 patch 대상은 static `className`과 simple/partial `cn()` / `clsx()` 문자열 literal segment다.
 - `cn()` / `clsx()`는 문자열 literal segment만 patch한다.
-- `className={someVariable}`는 read-only다.
-- template literal은 read-only다.
-- variant 함수와 props forwarding은 read-only다.
+- `className={someVariable}`는 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
+- template literal은 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
+- variant 함수와 props forwarding은 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
 - undo는 마지막 patch 1개만 지원한다.
 - dev server 재시작 후에는 in-memory undo 상태가 사라진다.
 - agent handoff는 task/result markdown과 intent diff 기록까지만 지원한다.
@@ -215,7 +220,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 3. agent result를 실제 before/after source diff와 연결한다.
 4. undo stack과 operation log 기반 revert를 설계한다.
 5. 실제 브라우저 click-to-panel 시간을 측정한다.
-6. read-only 이유를 UI에 더 명확히 표시한다.
+6. read-only source diff를 agent result와 연결한다.
 7. fixture를 nested component, map render, conditional render, fragment로 확장한다.
 
 ## 9. Agent Handoff와 Result
@@ -267,3 +272,27 @@ Intent Diff
 
 이번 단계의 result 기록은 결정론적 감사 로그다.
 소스 파일의 현재 hash를 다시 읽어 `sourceHashChanged`를 기록하지만, 아직 실제 agent patch의 의미를 자동 분석하지는 않는다.
+
+### 9.1 Read-only Handoff
+
+직접 patch할 수 없는 `className`도 선택 가능한 binding으로 남긴다.
+
+예:
+
+```tsx
+const cardClass = "grid grid-cols-3 gap-4 rounded-lg p-6";
+
+export function Card() {
+  return <div className={cardClass}>Card</div>;
+}
+```
+
+이 경우 overlay에는 다음처럼 표시된다.
+
+```text
+className: read-only
+dynamic args read-only: 1
+unsupported: variable-reference
+```
+
+직접 token patch 버튼은 표시되지 않고, agent handoff task/result 기록만 사용할 수 있다.
