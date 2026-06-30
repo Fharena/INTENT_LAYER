@@ -25,6 +25,7 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 - 브라우저 floating overlay
 - element pick -> intent binding 표시
 - static `className` token 목록 표시
+- simple `cn()` / `clsx()` literal segment token 표시
 - 지원 가능한 Tailwind token 후보 선택
 - source hash 검증
 - old token 검증
@@ -36,7 +37,7 @@ Tailwind token 하나를 작은 range patch로 바꿀 수 있는가?
 제외:
 
 - 완성형 제품 UI
-- full `cn()` / `clsx()` patch
+- full dynamic `cn()` / `clsx()` patch
 - shadcn/ui 전체 패턴 직접 편집
 - Next.js
 - portal mapping
@@ -88,7 +89,7 @@ AST code generation으로 파일을 다시 출력하지 않는다.
 1. 선택된 `intent id`로 source binding 조회
 2. 파일을 다시 읽음
 3. 저장된 `sourceHash`와 현재 파일 hash 비교
-4. 저장된 `className` range 안에서 old token 검색
+4. 저장된 token source range에서 old token 검증
 5. old token이 정확히 있으면 해당 token range만 교체
 6. operation/diff 파일 생성
 
@@ -158,15 +159,32 @@ https://github.com/Fharena/context-pack
 이번 작업에서 context-pack은 전체 repo를 무작정 읽지 않고 `docs`, `overview` 영역을 먼저 보도록 라우팅했다.
 생성된 `.context-pack/packs/CONTEXT_PACK.md`는 임시 파일이므로 커밋하지 않는다.
 
+### 3.3 Simple cn/clsx literal segment support
+
+현재 MVP는 다음 패턴을 직접 patch할 수 있다.
+
+```tsx
+className={cn("grid gap-4 p-6", active && "bg-teal-50")}
+className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
+```
+
+지원 방식:
+
+- `cn()` / `clsx()` 호출 안의 문자열 literal segment만 source range로 저장한다.
+- 조건 자체는 해석하지 않는다.
+- `className` 변수 전달, variant 함수, runtime template literal은 read-only로 둔다.
+- 동적 인자가 섞여 있어도 문자열 literal segment는 partial direct-edit 대상으로 삼는다.
+
 ## 7. 현재 한계
 
 - patch 대상은 static `className`만이다.
-- `cn()` / `clsx()`는 corpus 분석에서만 분류하고, 실제 patch는 아직 하지 않는다.
+- `cn()` / `clsx()`는 문자열 literal segment만 patch한다.
 - `className={someVariable}`는 read-only다.
 - template literal은 read-only다.
 - variant 함수와 props forwarding은 read-only다.
 - 현재 click-to-binding 시간은 실제 브라우저 클릭 전체 시간이 아니라 graph lookup proxy만 측정했다.
-- 현재 작은 fixture에서는 transform 시간 5ms 목표를 만족했지만, 대형 TSX 파일에서는 아직 검증하지 않았다.
+- warm transform은 5ms 목표를 만족했지만, cold first transform은 5ms를 넘을 수 있다.
+- 대형 TSX 파일에서는 아직 검증하지 않았다.
 
 ## 8. 다음 작업
 
@@ -174,6 +192,6 @@ https://github.com/Fharena/context-pack
 
 1. 대형 TSX 파일에서도 transform time을 5ms 이하로 유지할 수 있는지 측정한다.
 2. 실제 브라우저 click -> binding -> patch round trip 시간을 측정한다.
-3. simple `cn()` / `clsx()` 문자열 literal patch를 추가한다.
+3. 실제 브라우저 click-to-panel 시간을 측정한다.
 4. read-only 이유를 UI에 더 명확히 표시한다.
 5. fixture를 nested component, map render, conditional render, fragment로 확장한다.

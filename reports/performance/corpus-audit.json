@@ -1,35 +1,38 @@
 {
-  "generatedAt": "2026-06-30T03:52:10.313Z",
+  "generatedAt": "2026-06-30T04:03:25.614Z",
   "filesScanned": 8,
   "classNameOccurrences": 40,
   "classification": {
-    "static": 30,
-    "simple-cn-clsx": 3,
-    "read-only": 7
+    "static": 28,
+    "simple-cn-clsx": 5,
+    "partial-cn-clsx": 2,
+    "read-only": 5
   },
   "classificationRatio": {
-    "static": 0.75,
-    "simple-cn-clsx": 0.075,
-    "read-only": 0.175
+    "static": 0.7,
+    "simple-cn-clsx": 0.125,
+    "partial-cn-clsx": 0.05,
+    "read-only": 0.125
   },
   "tokenTotals": {
-    "static": 154,
-    "staticEditable": 126,
-    "staticAndSimple": 172,
-    "staticAndSimpleEditable": 143,
-    "all": 182,
-    "allEditable": 149
+    "static": 137,
+    "staticEditable": 112,
+    "staticAndSimple": 175,
+    "staticAndSimpleEditable": 144,
+    "supportedDirect": 185,
+    "supportedDirectEditable": 150,
+    "all": 185,
+    "allEditable": 150
   },
   "editableCoverage": {
-    "staticOnly": 0.8182,
-    "staticAndSimpleCnClsx": 0.8314,
-    "allObservedTokens": 0.8187
+    "staticOnly": 0.8175,
+    "staticAndSimpleCnClsx": 0.8229,
+    "supportedDirect": 0.8108,
+    "allObservedTokens": 0.8108
   },
   "unsupportedReasons": {
     "variable-reference": 2,
     "template-expression": 1,
-    "complex-cn-variable-reference": 1,
-    "complex-cn-runtime-expression": 1,
     "variant-function": 1,
     "unsupported-expression": 1
   },
@@ -119,7 +122,7 @@
     {
       "file": "fixtures/corpus/ShadcnLikeCard.tsx",
       "line": 10,
-      "classification": "read-only",
+      "classification": "partial-cn-clsx",
       "reason": "complex-cn-variable-reference",
       "stringValues": [
         "rounded-xl border bg-card p-6 text-card-foreground shadow",
@@ -300,7 +303,7 @@
     {
       "file": "fixtures/corpus/VariantPatterns.tsx",
       "line": 6,
-      "classification": "read-only",
+      "classification": "partial-cn-clsx",
       "reason": "complex-cn-runtime-expression",
       "stringValues": [
         "flex gap-4 p-6"
@@ -328,7 +331,7 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 21,
+      "line": 27,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -339,7 +342,7 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 22,
+      "line": 28,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -350,7 +353,7 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 23,
+      "line": 29,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -361,7 +364,7 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 24,
+      "line": 30,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -372,7 +375,7 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 27,
+      "line": 33,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -383,7 +386,7 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 30,
+      "line": 36,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -394,7 +397,7 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 36,
+      "line": 42,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -405,18 +408,19 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 40,
-      "classification": "static",
-      "reason": "static-jsx-string",
+      "line": 46,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-cn",
       "stringValues": [
-        "flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm"
+        "flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm",
+        "ring-2 ring-teal-200"
       ],
-      "tokenCount": 9,
+      "tokenCount": 11,
       "editableTokenCount": 6
     },
     {
       "file": "src/App.tsx",
-      "line": 42,
+      "line": 51,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -427,7 +431,7 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 43,
+      "line": 52,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -438,7 +442,7 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 44,
+      "line": 53,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -449,7 +453,7 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 48,
+      "line": 57,
       "classification": "static",
       "reason": "static-jsx-string",
       "stringValues": [
@@ -460,14 +464,15 @@
     },
     {
       "file": "src/App.tsx",
-      "line": 49,
-      "classification": "static",
-      "reason": "static-jsx-string",
+      "line": 59,
+      "classification": "simple-cn-clsx",
+      "reason": "simple-clsx",
       "stringValues": [
-        "mt-auto rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+        "mt-auto rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white",
+        "bg-teal-700"
       ],
-      "tokenCount": 8,
-      "editableTokenCount": 8
+      "tokenCount": 9,
+      "editableTokenCount": 9
     }
   ]
 }

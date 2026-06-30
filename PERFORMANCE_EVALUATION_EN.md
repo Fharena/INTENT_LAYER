@@ -15,7 +15,8 @@ Measured inputs:
 - `fixtures/corpus/*.tsx`
 - `src/App.tsx`
 - `src/**/*.tsx` instrumentation transform
-- temporary patch fixture
+- static patch fixture
+- simple `cn()` patch fixture
 
 Important caveat:
 
@@ -37,18 +38,22 @@ Summary:
 | --- | ---: |
 | Files scanned | 8 |
 | `className` occurrences | 40 |
-| static `className` | 30 / 40 = 75.0% |
-| simple `cn()` / `clsx()` | 3 / 40 = 7.5% |
-| read-only | 7 / 40 = 17.5% |
-| static token count | 154 |
-| static editable token count | 126 |
-| static editable coverage | 81.82% |
-| static + simple token count | 172 |
-| static + simple editable token count | 143 |
-| static + simple editable coverage | 83.14% |
-| all observed token count | 182 |
-| all editable token count | 149 |
-| all editable coverage | 81.87% |
+| static `className` | 28 / 40 = 70.0% |
+| simple `cn()` / `clsx()` | 5 / 40 = 12.5% |
+| partial `cn()` / `clsx()` | 2 / 40 = 5.0% |
+| read-only | 5 / 40 = 12.5% |
+| static token count | 137 |
+| static editable token count | 112 |
+| static editable coverage | 81.75% |
+| static + simple token count | 175 |
+| static + simple editable token count | 144 |
+| static + simple editable coverage | 82.29% |
+| supported direct token count | 185 |
+| supported direct editable token count | 150 |
+| supported direct editable coverage | 81.08% |
+| all observed token count | 185 |
+| all editable token count | 150 |
+| all editable coverage | 81.08% |
 
 Unsupported reasons:
 
@@ -56,16 +61,14 @@ Unsupported reasons:
 | --- | ---: |
 | variable-reference | 2 |
 | template-expression | 1 |
-| complex-cn-variable-reference | 1 |
-| complex-cn-runtime-expression | 1 |
 | variant-function | 1 |
 | unsupported-expression | 1 |
 
 Interpretation:
 
 - In the fixture corpus, static `className` gives enough direct-edit surface area to keep moving.
-- Adding simple `cn()` / `clsx()` increases coverage only slightly because the current fixture corpus is static-heavy.
-- Read-only cases cluster around variables, template literals, variant functions, and props forwarding.
+- Simple/partial `cn()` / `clsx()` literal segments are now included in the direct-patch surface.
+- Read-only cases now cluster around variables, template literals, and variant functions.
 
 ## 3. Transform Performance
 
@@ -79,8 +82,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 2.571ms / p95 4.309ms / max 4.309ms |
-| `src/main.tsx` | 0 | avg 0.714ms / p95 1.665ms / max 1.665ms |
+| `src/App.tsx` | 13 | avg 3.234ms / p95 6.862ms / max 6.862ms |
+| `src/main.tsx` | 0 | avg 1.008ms / p95 1.726ms / max 1.726ms |
 
 Summary:
 
@@ -88,16 +91,20 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Average transform time | 1.642ms |
-| p95 transform time | 4.309ms |
-| Max transform time | 4.309ms |
-| Target | <= 5ms per file |
-| Result | passed |
+| Overall average transform time | 2.121ms |
+| Overall p95 transform time | 6.862ms |
+| Overall max transform time | 6.862ms |
+| Warm average transform time | 1.577ms |
+| Warm p95 transform time | 3.196ms |
+| Warm max transform time | 3.196ms |
+| Target | <= 5ms per warm transform |
+| Result | warm pass / cold fail |
 
 Interpretation:
 
-- In the 5-iteration run, average, p95, and max transform time are all under 5ms.
-- The current implementation performs AST parse and instrumentation in one pass.
+- In the 5-iteration run, the first cold transform exceeded 5ms.
+- Excluding the first sample, warm average, p95, and max transform time are under 5ms.
+- The current implementation performs TypeScript AST parse and instrumentation in one pass.
 - Larger TSX files will still need file filtering, caching, and graph write throttling.
 
 ## 4. Patch Performance and Safety
@@ -105,27 +112,30 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 0.824ms |
-| Preview round trip | 1.193ms |
+| Preview time | 0.788ms |
+| Preview round trip | 1.156ms |
 | Apply success | true |
-| Apply time | 11.435ms |
+| Static apply time | 3.771ms |
+| Simple `cn()` apply time | 3.376ms |
 | Syntax errors after patch | 0 |
+| Simple `cn()` syntax errors after patch | 0 |
 | Stale source rejection | true |
 | Stale rejection reason | `source-hash-mismatch` |
 
 Interpretation:
 
 - Patch preview and apply are far below the 50ms target.
+- Simple `cn()` literal segment patching also succeeds.
 - Patches are rejected when the source hash does not match.
-- No syntax error was produced after the supported static token patch.
+- No syntax error was produced after supported static/simple token patches.
 
 ## 5. Graph Lookup Proxy
 
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.26ms |
-| Average lookup | 0.00026ms |
+| Total time | 0.482ms |
+| Average lookup | 0.000482ms |
 
 Caveat:
 
@@ -139,33 +149,39 @@ A real click-to-panel measurement still needs to be captured in the dev server a
 | --- | --- | --- |
 | static editable token coverage | >= 30% | pass |
 | static + simple `cn()` / `clsx()` coverage | >= 50% | pass |
-| transform target | max <= 5ms | pass |
-| supported patch | apply success + syntax error 0 | pass |
+| supported direct coverage | >= 50% | pass |
+| warm transform target | max <= 5ms | pass |
+| cold transform target | max <= 5ms | fail |
+| supported static patch | apply success + syntax error 0 | pass |
+| simple `cn()` / `clsx()` patch | apply success + syntax error 0 | pass |
 | stale rejection | reject source mismatch | pass |
 
 ## 7. Conclusion
 
-The spike passes the core patch-safety assumption.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments.
 
 What worked:
 
 - static `className` token analysis
+- simple/partial `cn()` / `clsx()` literal segment analysis
 - compile-time source binding generation
-- range patching
+- source token range patching
+- simple `cn()` literal segment patching
 - source hash stale rejection
 - minimal intent operation/diff output
 - numeric report generation
 
 What remains weak:
 
+- cold first transform exceeds the 5ms target
 - transform time still needs to be tested on larger TSX files
-- real browser click-to-binding time is not measured yet
+- real browser click-to-panel time is not measured yet
 - real AI-generated 50-100 sample corpus audit is still missing
-- simple `cn()` / `clsx()` patching is not implemented yet
+- variant functions and runtime template literals remain unsupported
 
 Current decision:
 
 ```text
-The M1 vertical slice is worth continuing.
-The next priority is larger-file transform testing and a real corpus audit.
+The MVP direct-edit surface is worth expanding.
+The next priority is cold transform optimization, a real corpus audit, and real browser click-to-panel measurement.
 ```

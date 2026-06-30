@@ -56,6 +56,7 @@ The demo currently supports:
 - source sidecar graph generation at `.intent/graph.intent.json`
 - floating browser overlay
 - direct Tailwind token replacement for supported static tokens
+- direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
 - source hash validation before patching
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply
 

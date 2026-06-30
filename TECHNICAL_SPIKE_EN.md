@@ -26,6 +26,7 @@ Included:
 - floating browser overlay
 - element pick -> intent binding display
 - static `className` token display
+- simple `cn()` / `clsx()` literal segment token display
 - supported Tailwind token candidate selection
 - source hash validation
 - old token validation
@@ -37,7 +38,7 @@ Included:
 Excluded:
 
 - polished product UI
-- full `cn()` / `clsx()` patching
+- full dynamic `cn()` / `clsx()` patching
 - full shadcn/ui direct editing
 - Next.js
 - portal mapping
@@ -89,7 +90,7 @@ Patch flow:
 1. Look up the source binding by `intent id`.
 2. Read the file from disk.
 3. Compare the stored `sourceHash` with the current file hash.
-4. Search for the old token inside the stored `className` range.
+4. Validate the old token at the stored token source range.
 5. Replace only the exact token range.
 6. Write minimal operation/diff artifacts.
 
@@ -159,15 +160,32 @@ Applied flow:
 For this task, context-pack routed the work toward the `docs` and `overview` areas instead of encouraging a broad repo scan.
 Generated `.context-pack/packs/CONTEXT_PACK.md` files are temporary and are not committed.
 
+### 3.3 Simple cn/clsx literal segment support
+
+The current MVP can patch these patterns directly:
+
+```tsx
+className={cn("grid gap-4 p-6", active && "bg-teal-50")}
+className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
+```
+
+Support model:
+
+- Only string literal segments inside `cn()` / `clsx()` calls are stored as source ranges.
+- Conditions themselves are not interpreted.
+- `className` variables, variant functions, and runtime template literals remain read-only.
+- If dynamic arguments are mixed in, literal string segments can still be direct-edited as partial bindings.
+
 ## 7. Current Limitations
 
 - Patch support is limited to static `className`.
-- `cn()` / `clsx()` are classified in corpus analysis, but not patched yet.
+- `cn()` / `clsx()` patching is limited to string literal segments.
 - `className={someVariable}` is read-only.
 - Template literals are read-only.
 - Variant functions and props forwarding are read-only.
 - The current click-to-binding metric is only a graph lookup proxy, not a full browser click measurement.
-- Transform time meets the 5ms target on the small fixture, but larger TSX files are not tested yet.
+- Warm transform meets the 5ms target, but cold first transform can exceed 5ms.
+- Larger TSX files are not tested yet.
 
 ## 8. Next Work
 
@@ -175,6 +193,6 @@ Priority order:
 
 1. Measure whether transform time stays under 5ms on larger TSX files.
 2. Measure real browser click -> binding -> patch round trip time.
-3. Add simple `cn()` / `clsx()` literal patching.
+3. Measure real browser click-to-panel time.
 4. Show read-only reasons clearly in the UI.
 5. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
