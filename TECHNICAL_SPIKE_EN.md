@@ -247,8 +247,9 @@ Support model:
 - Undo uses an operation-log-backed LIFO stack and can revert multiple direct patches in order.
 - After a dev server restart, the pending undo stack can be restored from the operation log once graph bindings are available again.
 - Undo history UI, branch undo, and conflict-resolution UI are not implemented yet.
-- Agent handoff records a selected source-window snapshot, component snapshot, task/result markdown, and intent diffs.
+- Agent handoff records a selected source-window snapshot, component snapshot, related source snapshot, task/result markdown, and intent diffs.
 - Agent results record before/after line diffs for both the selected source window and the selected component snapshot.
+- Agent results record related source diffs for simple variable-reference read-only bindings.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
 - Component snapshot fixtures cover 4 cases: function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, and arrow JSX no-parens.
 - They still do not infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
@@ -264,10 +265,10 @@ Support model:
 Priority order:
 
 1. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
-2. Connect read-only source diffs to a wider source window.
-3. Add component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports.
-4. Validate caching and graph write throttling on product-sized TSX files.
-5. Design undo history UI and conflict-resolution UX.
+2. Design undo history UI and conflict-resolution UX.
+3. Extend related source semantic diffs so variable declaration strings are re-analyzed as tokens.
+4. Add component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports.
+5. Validate caching and graph write throttling on product-sized TSX files.
 
 ## 9. Agent Handoff And Result
 
@@ -287,6 +288,7 @@ Goal
 Selected Component
 Current Intent Document
 Component Snapshot
+Related Source Snapshot
 Source Snapshot
 Desired Change
 Constraints
@@ -317,6 +319,7 @@ Checks
 Notes
 Source Diff
 Semantic Intent Diff
+Related Source Diff
 Component Source Diff
 Component Semantic Intent Diff
 Intent Diff
@@ -324,9 +327,11 @@ Intent Diff
 
 At this stage, result recording is a deterministic audit log.
 Task creation stores both a selected source-window snapshot and a selected component snapshot, and result recording compares both with the current source to write line diffs.
+Simple variable-reference read-only bindings store the related variable declaration as a related source snapshot, and result recording writes a related source diff.
 `className` values inside the selected source window and selected component range are also re-analyzed into before/after tokens so the intent diff records added/removed tokens and categories.
 It also rereads the source file to record `sourceHashChanged`.
 Component-level semantic diffing is currently limited to `className` tokens.
+Related source semantic diffing does not yet re-analyze variable declaration strings as tokens.
 It does not yet infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 
 ### 9.1 Read-only Handoff
@@ -352,6 +357,7 @@ unsupported: variable-reference
 ```
 
 No direct token patch buttons are shown, but the agent handoff task/result flow remains available.
+For simple variable references, the task includes a related source snapshot for the variable declaration, and the result records a line diff for that declaration.
 
 ## 10. Browser Metrics
 
