@@ -21,6 +21,7 @@ Measured inputs:
 - last-patch revert fixture
 - operation-log undo stack fixture
 - operation conflict artifact fixture
+- operation conflict resolution fixture
 - pending undo history fixture
 - agent handoff task fixture
 - agent result artifact fixture
@@ -158,8 +159,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.494ms / p95 3.378ms / max 3.378ms |
-| `src/main.tsx` | 0 | avg 0.012ms / p95 0.044ms / max 0.044ms |
+| `src/App.tsx` | 13 | avg 0.86ms / p95 2.772ms / max 2.772ms |
+| `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
 
 Summary:
 
@@ -167,12 +168,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.753ms |
-| Overall p95 transform time | 3.378ms |
-| Overall max transform time | 3.378ms |
-| Warm average transform time | 0.513ms |
-| Warm p95 transform time | 1.345ms |
-| Warm max transform time | 1.345ms |
+| Overall average transform time | 0.432ms |
+| Overall p95 transform time | 2.772ms |
+| Overall max transform time | 2.772ms |
+| Warm average transform time | 0.192ms |
+| Warm p95 transform time | 0.484ms |
+| Warm max transform time | 0.484ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -185,6 +186,7 @@ Interpretation:
 - The AST path remains as a fallback for patterns the scanner cannot handle.
 - Files without the literal `className` string now use a fast path and skip AST parsing.
 - Files with `className` still perform TypeScript AST parse and instrumentation in one pass.
+- Repeated transforms cache source hashes and className tokenization results to stabilize the warm path.
 - Larger files are measured separately with the stress fixture below.
 
 ## 3.1 Large TSX Transform Stress
@@ -196,9 +198,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 8.829ms |
-| p95 transform time | 13.239ms |
-| Max transform time | 13.239ms |
+| Average transform time | 6.48ms |
+| p95 transform time | 9.151ms |
+| Max transform time | 9.151ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -213,13 +215,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.053ms |
-| Preview round trip | 1.454ms |
+| Preview time | 0.57ms |
+| Preview round trip | 0.844ms |
 | Apply success | true |
-| Static apply time | 38.68ms |
-| Simple `cn()` apply time | 9.406ms |
+| Static apply time | 3.065ms |
+| Simple `cn()` apply time | 2.236ms |
 | Revert success | true |
-| Revert time | 8.295ms |
+| Revert time | 2.467ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -259,35 +261,44 @@ Interpretation:
 - This verifies the same LIFO flow used by `/__intent/revert-last`.
 - The operation log is an append-only JSON file for apply/revert entries and does not require a database or external service.
 
-## 4.2 Operation Conflict Artifact
+## 4.2 Operation Conflict Artifact And Resolution
 
 | Metric | Value |
 | --- | ---: |
 | Apply success | true |
 | Revert success | false |
 | Revert rejection reason | `revert-token-mismatch` |
-| Conflict file | `.intent/conflicts/2026-06-30T07-05-11-875Z.intent-conflict.json` |
+| Conflict file | `.intent/conflicts/2026-06-30T07-27-32-695Z.intent-conflict.json` |
 | Conflict file exists | true |
 | Conflict kind | `revert-conflict` |
 | Expected token | `gap-6` |
 | Actual token | `gap-8` |
 | Restore token | `gap-4` |
 | Guidance count | 3 |
+| Pending undo count after conflict | 1 |
+| Active conflict count before resolve | 1 |
+| Resolve success | true |
+| Resolve action | `discard-pending-undo` |
+| Resolve time | 2.63ms |
+| resolvedAt present | true |
+| Pending undo count after resolve | 0 |
+| Active conflict count after resolve | 0 |
 | Syntax errors after conflict | 0 |
 
 Interpretation:
 
 - Direct revert is rejected when the stored patch range no longer contains the expected `nextToken`.
 - The conflict artifact records expected, actual, and restore tokens plus review guidance.
-- The pending undo entry should remain until a human resolves the conflict or intentionally discards it.
+- `/__intent/conflicts` returns only unresolved conflict artifacts.
+- `/__intent/resolve-conflict` resolves a reviewed conflict as `discard-pending-undo` and removes the matching pending undo from the operation log.
 
 ## 5. Graph Lookup Proxy
 
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.05ms |
-| Average lookup | 0.00005ms |
+| Total time | 0.051ms |
+| Average lookup | 0.000051ms |
 
 Caveat:
 
@@ -369,7 +380,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 21.23ms |
+| Task generation time | 2.381ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -393,7 +404,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 16.756ms |
+| Result generation time | 5.941ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -466,14 +477,14 @@ Cases checked:
 
 | Case | Component | Bindings | Task time | Result |
 | --- | --- | ---: | ---: | --- |
-| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 2.326ms | pass |
-| arrow block | `ComponentSnapshotArrowBlock` | 2 | 2.39ms | pass |
-| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 2.602ms | pass |
-| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.441ms | pass |
-| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 1.944ms | pass |
-| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 2.152ms | pass |
-| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 2.1ms | pass |
-| namespace object export | `ComponentSnapshotNamespace` | 1 | 2.214ms | pass |
+| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 1.502ms | pass |
+| arrow block | `ComponentSnapshotArrowBlock` | 2 | 1.674ms | pass |
+| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 1.383ms | pass |
+| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 1.556ms | pass |
+| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 1.602ms | pass |
+| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 1.408ms | pass |
+| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 1.596ms | pass |
+| namespace object export | `ComponentSnapshotNamespace` | 1 | 9.686ms | pass |
 
 Interpretation:
 
@@ -492,9 +503,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.9ms |
+| Agent task generation time | 1.609ms |
 | Agent result created | true |
-| Agent result generation time | 6.894ms |
+| Agent result generation time | 4.696ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 0 |
@@ -522,9 +533,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.966ms |
+| Agent task generation time | 1.315ms |
 | Agent result created | true |
-| Agent result generation time | 7.443ms |
+| Agent result generation time | 4.114ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 2 |
@@ -552,9 +563,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.011ms |
+| Agent task generation time | 1.087ms |
 | Agent result created | true |
-| Agent result generation time | 11.253ms |
+| Agent result generation time | 4.954ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 14 |
@@ -583,13 +594,13 @@ Interpretation:
 | ClassName value | `buttonVariants({ variant: "primary" })` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.899ms |
+| Agent task generation time | 1.343ms |
 | Related snapshot available | true |
 | Related snapshot kind | `variant-function` |
 | Related snapshot identifier | `buttonVariants` |
 | Related snapshot includes cva | true |
 | Agent result created | true |
-| Agent result generation time | 14.912ms |
+| Agent result generation time | 3.903ms |
 | Syntax errors after result | 0 |
 | Selected source diff line count | 0 |
 | Component source diff line count | 0 |
@@ -629,6 +640,7 @@ Interpretation:
 | last patch revert | revert success + syntax error 0 | pass |
 | operation log undo stack/history | 2 applies + history next token `p-8` + 2 reverts + pending stack 0 + syntax error 0 | pass |
 | operation conflict artifact | `revert-token-mismatch` rejection + conflict artifact created + expected/actual/restore tokens recorded + syntax error 0 | pass |
+| operation conflict resolution | active conflict 1 + `discard-pending-undo` resolve + pending stack 0 + active conflict 0 + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
 | agent result generation | result/diff created + source diff + selected/component/related semantic diff section present | pass |
 | component snapshot discovery | all 8 fixture cases pass | pass |
@@ -657,6 +669,8 @@ What worked:
 - pending undo history endpoint and overlay display
 - LIFO stack behavior through the last-patch revert endpoint
 - undo conflict artifact generation with expected/actual/restore token records
+- undo conflict listing and `discard-pending-undo` resolution
+- source hash/className tokenization caches for repeated transforms
 - agent handoff task markdown generation
 - agent result markdown, selected source-window diff, component source diff, and selected/component/related `className` semantic diff generation
 - component snapshot discovery fixture pass 8/8
@@ -677,7 +691,7 @@ What remains weak:
 
 - cache/write throttling still needs to be validated on product-sized TSX files
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
-- branch undo UI and the workflow that turns conflict artifacts into resolved changes are still missing
+- branch undo UI is still missing
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
 - component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
 - automatic semantic analysis for imported variant functions and cross-variable data flow is still missing
@@ -687,5 +701,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, branch undo UI/conflict artifact workflow polish, imported variant/cross-variable handoff context, and component snapshot false-positive/false-negative measurement on product-sized TSX files.
+The next priority is independent external corpus validation, branch undo UI polish, imported variant/cross-variable handoff context, and component snapshot false-positive/false-negative measurement on product-sized TSX files.
 ```

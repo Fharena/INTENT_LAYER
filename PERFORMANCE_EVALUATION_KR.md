@@ -21,6 +21,7 @@ npm run build
 - last-patch revert fixture
 - operation-log undo stack fixture
 - operation conflict artifact fixture
+- operation conflict resolution fixture
 - pending undo history fixture
 - agent handoff task fixture
 - agent result artifact fixture
@@ -158,8 +159,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.494ms / p95 3.378ms / max 3.378ms |
-| `src/main.tsx` | 0 | avg 0.012ms / p95 0.044ms / max 0.044ms |
+| `src/App.tsx` | 13 | avg 0.86ms / p95 2.772ms / max 2.772ms |
+| `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
 
 요약:
 
@@ -167,12 +168,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 0.753ms |
-| 전체 p95 transform time | 3.378ms |
-| 전체 최대 transform time | 3.378ms |
-| warm 평균 transform time | 0.513ms |
-| warm p95 transform time | 1.345ms |
-| warm 최대 transform time | 1.345ms |
+| 전체 평균 transform time | 0.432ms |
+| 전체 p95 transform time | 2.772ms |
+| 전체 최대 transform time | 2.772ms |
+| warm 평균 transform time | 0.192ms |
+| warm p95 transform time | 0.484ms |
+| warm 최대 transform time | 0.484ms |
 | warm 목표 | 5ms 이하 |
 | cold 목표 | 10ms 이하 |
 | 결과 | warm 통과 / cold 통과 |
@@ -185,6 +186,7 @@ reports/performance/spike-evaluation.json
 - scanner가 처리하지 못하는 복잡한 패턴은 기존 AST 경로로 fallback할 수 있게 남겼다.
 - `className` 문자열이 없는 파일은 AST parse 없이 fast path로 건너뛴다.
 - `className`이 있는 파일은 TypeScript AST parse와 instrumentation을 한 번에 수행한다.
+- 반복 transform에서 source hash와 className tokenization 결과를 캐시해 warm path를 안정화한다.
 - 대형 파일은 아래 stress fixture로 별도 측정한다.
 
 ## 3.1 Large TSX Transform Stress
@@ -196,9 +198,9 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 파일 크기 | 45,352 bytes |
 | 반복 측정 | 5 |
-| average transform time | 8.829ms |
-| p95 transform time | 13.239ms |
-| max transform time | 13.239ms |
+| average transform time | 6.48ms |
+| p95 transform time | 9.151ms |
+| max transform time | 9.151ms |
 | stress 목표 | 20ms 이하 |
 | 결과 | 통과 |
 
@@ -213,13 +215,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 1.053ms |
-| preview round trip | 1.454ms |
+| preview time | 0.57ms |
+| preview round trip | 0.844ms |
 | apply 성공 | true |
-| static apply time | 38.68ms |
-| simple `cn()` apply time | 9.406ms |
+| static apply time | 3.065ms |
+| simple `cn()` apply time | 2.236ms |
 | revert 성공 | true |
-| revert time | 8.295ms |
+| revert time | 2.467ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -259,35 +261,44 @@ reports/performance/spike-evaluation.json
 - `/__intent/revert-last`와 같은 LIFO 흐름으로 2개 patch를 순서대로 되돌릴 수 있음을 fixture에서 검증했다.
 - operation log는 apply/revert entry를 append하는 JSON 파일이며, 별도 DB나 외부 서비스 없이 동작한다.
 
-## 4.2 Operation Conflict Artifact
+## 4.2 Operation Conflict Artifact And Resolution
 
 | 항목 | 값 |
 | --- | ---: |
 | apply 성공 | true |
 | revert 성공 | false |
 | revert 거부 이유 | `revert-token-mismatch` |
-| conflict 파일 | `.intent/conflicts/2026-06-30T07-05-11-875Z.intent-conflict.json` |
+| conflict 파일 | `.intent/conflicts/2026-06-30T07-27-32-695Z.intent-conflict.json` |
 | conflict 파일 존재 | true |
 | conflict kind | `revert-conflict` |
 | expected token | `gap-6` |
 | actual token | `gap-8` |
 | restore token | `gap-4` |
 | guidance 수 | 3 |
+| conflict 후 pending undo 수 | 1 |
+| resolve 전 active conflict 수 | 1 |
+| resolve 성공 | true |
+| resolve action | `discard-pending-undo` |
+| resolve time | 2.63ms |
+| resolvedAt 존재 | true |
+| resolve 후 pending undo 수 | 0 |
+| resolve 후 active conflict 수 | 0 |
 | conflict 후 syntax error | 0 |
 
 해석:
 
 - 저장된 patch range에 더 이상 expected `nextToken`이 없으면 직접 되돌리기를 거부한다.
 - conflict artifact는 expected/actual/restore token과 검토 가이드를 남긴다.
-- pending undo entry는 사람이 conflict를 해결하거나 의도적으로 폐기할 때까지 보존되어야 한다.
+- `/__intent/conflicts`는 미해결 conflict artifact만 반환한다.
+- `/__intent/resolve-conflict`는 사람이 확인한 conflict를 `discard-pending-undo`로 해결하고 matching pending undo를 operation log에서 제거한다.
 
 ## 5. Graph Lookup Proxy
 
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.05ms |
-| 평균 lookup | 0.00005ms |
+| 총 시간 | 0.051ms |
+| 평균 lookup | 0.000051ms |
 
 주의:
 
@@ -368,7 +379,7 @@ Viewport별 최대값:
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 21.23ms |
+| task 생성 시간 | 2.381ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -392,7 +403,7 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 16.756ms |
+| result 생성 시간 | 5.941ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
 | source hash changed | true |
@@ -465,14 +476,14 @@ dev server endpoint smoke test:
 
 | case | component | binding 수 | task time | 결과 |
 | --- | --- | ---: | ---: | --- |
-| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 2.326ms | 통과 |
-| arrow block | `ComponentSnapshotArrowBlock` | 2 | 2.39ms | 통과 |
-| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 2.602ms | 통과 |
-| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.441ms | 통과 |
-| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 1.944ms | 통과 |
-| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 2.152ms | 통과 |
-| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 2.1ms | 통과 |
-| namespace object export | `ComponentSnapshotNamespace` | 1 | 2.214ms | 통과 |
+| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 1.502ms | 통과 |
+| arrow block | `ComponentSnapshotArrowBlock` | 2 | 1.674ms | 통과 |
+| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 1.383ms | 통과 |
+| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 1.556ms | 통과 |
+| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 1.602ms | 통과 |
+| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 1.408ms | 통과 |
+| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 1.596ms | 통과 |
+| namespace object export | `ComponentSnapshotNamespace` | 1 | 9.686ms | 통과 |
 
 해석:
 
@@ -491,9 +502,9 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 1.9ms |
+| agent task 생성 시간 | 1.609ms |
 | agent result 생성 | true |
-| agent result 생성 시간 | 6.894ms |
+| agent result 생성 시간 | 4.696ms |
 | result 후 syntax error | 0 |
 | source diff line 수 | 2 |
 | component source diff line 수 | 0 |
@@ -521,9 +532,9 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 1.966ms |
+| agent task 생성 시간 | 1.315ms |
 | agent result 생성 | true |
-| agent result 생성 시간 | 7.443ms |
+| agent result 생성 시간 | 4.114ms |
 | result 후 syntax error | 0 |
 | source diff line 수 | 2 |
 | component source diff line 수 | 2 |
@@ -551,9 +562,9 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 2.011ms |
+| agent task 생성 시간 | 1.087ms |
 | agent result 생성 | true |
-| agent result 생성 시간 | 11.253ms |
+| agent result 생성 시간 | 4.954ms |
 | result 후 syntax error | 0 |
 | source diff line 수 | 2 |
 | component source diff line 수 | 14 |
@@ -582,13 +593,13 @@ dev server endpoint smoke test:
 | className value | `buttonVariants({ variant: "primary" })` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 2.899ms |
+| agent task 생성 시간 | 1.343ms |
 | related snapshot 사용 가능 | true |
 | related snapshot kind | `variant-function` |
 | related snapshot identifier | `buttonVariants` |
 | related snapshot cva 포함 | true |
 | agent result 생성 | true |
-| agent result 생성 시간 | 14.912ms |
+| agent result 생성 시간 | 3.903ms |
 | result 후 syntax error | 0 |
 | selected source diff line 수 | 0 |
 | component source diff line 수 | 0 |
@@ -628,6 +639,7 @@ dev server endpoint smoke test:
 | last patch revert | revert 성공 + syntax error 0 | 통과 |
 | operation log undo stack/history | 2 apply + history next token `p-8` + 2 revert + pending stack 0 + syntax error 0 | 통과 |
 | operation conflict artifact | `revert-token-mismatch` 거부 + conflict artifact 생성 + expected/actual/restore token 기록 + syntax error 0 | 통과 |
+| operation conflict resolution | active conflict 1 + `discard-pending-undo` resolve + pending stack 0 + active conflict 0 + syntax error 0 | 통과 |
 | agent task generation | task 생성 + 필수 섹션 포함 | 통과 |
 | agent result generation | result/diff 생성 + source diff + selected/component/related semantic diff section 포함 | 통과 |
 | component snapshot discovery | 8 fixture case 모두 통과 | 통과 |
@@ -656,6 +668,8 @@ dev server endpoint smoke test:
 - pending undo history endpoint와 overlay 표시
 - last-patch revert endpoint의 LIFO stack 동작
 - undo conflict artifact 생성과 expected/actual/restore token 기록
+- undo conflict 목록 조회와 `discard-pending-undo` 해결 처리
+- 반복 transform을 위한 source hash/className tokenization 캐시
 - agent handoff task markdown 생성
 - agent result markdown, selected source-window diff, component source diff, selected/component/related `className` semantic diff 생성
 - component snapshot discovery fixture 8/8 통과
@@ -676,7 +690,7 @@ dev server endpoint smoke test:
 
 - 실제 제품급 대형 TSX 파일에서 cache/write throttling 검증
 - 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
-- branch undo UI와 conflict artifact를 실제 해결로 이어주는 흐름은 아직 없다.
+- branch undo UI는 아직 없다.
 - 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
 - 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
 - imported variant 함수와 cross-variable data flow 자동 분석
@@ -686,5 +700,5 @@ dev server endpoint smoke test:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 외부 독립 corpus 검증, branch undo UI와 conflict artifact 해결 흐름 다듬기, imported variant 함수/cross-variable handoff 문맥 보강, 제품급 TSX 파일에서 component snapshot 오탐/미탐 재측정이다.
+다음 우선순위는 외부 독립 corpus 검증, branch undo UI 다듬기, imported variant 함수/cross-variable handoff 문맥 보강, 제품급 TSX 파일에서 component snapshot 오탐/미탐 재측정이다.
 ```

@@ -70,6 +70,7 @@ The demo currently supports:
 - Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
 - operation-log-backed undo stack and pending undo history display for applied patches
 - revert conflict artifact output at `.intent/conflicts/*.intent-conflict.json` when undo cannot safely restore the stored token
+- undo conflict list and discard-pending-undo resolution flow in the overlay
 - structured agent handoff task generation at `.intent/agent/task_*.md`
 - structured agent result artifact generation at `.intent/agent/result_*.md`
 - source hash validation before patching
