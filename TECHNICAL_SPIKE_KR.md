@@ -253,7 +253,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - agent result는 단순 변수 참조 read-only binding의 related source diff와 related semantic token diff를 기록한다.
 - related semantic token diff는 단순 quoted 변수 선언, simple `cn()` / `clsx()` 변수 선언, 배열/object map/template literal literal segment를 fixture로 검증한다.
 - agent result는 선택 source window와 선택 component 범위에서 `className` semantic token diff를 기록한다.
-- component snapshot fixture는 function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens 4개 case를 검증한다.
+- component snapshot fixture는 function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens, memo, forwardRef, HOC, namespace object export 8개 case를 검증한다.
 - 아직 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 추론하지는 않는다.
 - 실제 브라우저 click-to-panel, preview, apply, revert 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
 - 최신 브라우저 측정은 desktop 3회, mobile 390x844 viewport 3회로 반복했다.
@@ -268,8 +268,8 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 1. 외부 프로젝트에서 독립 수집한 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
 2. branch undo와 충돌 해결 UX를 설계한다.
-3. HOC-wrapped component, memo/forwardRef, namespace export에 대한 component snapshot fixture를 추가한다.
-4. variant 함수와 cross-variable data flow에 대한 agent handoff 문맥을 보강한다.
+3. variant 함수와 cross-variable data flow에 대한 agent handoff 문맥을 보강한다.
+4. 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative를 재측정한다.
 5. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
 
 ## 9. Agent Handoff와 Result

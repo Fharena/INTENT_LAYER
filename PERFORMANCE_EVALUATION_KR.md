@@ -156,7 +156,7 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.159ms / p95 2.701ms / max 2.701ms |
+| `src/App.tsx` | 13 | avg 1.106ms / p95 2.89ms / max 2.89ms |
 | `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
 
 요약:
@@ -165,12 +165,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 0.581ms |
-| 전체 p95 transform time | 2.701ms |
-| 전체 최대 transform time | 2.701ms |
-| warm 평균 transform time | 0.388ms |
-| warm p95 transform time | 0.892ms |
-| warm 최대 transform time | 0.892ms |
+| 전체 평균 transform time | 0.554ms |
+| 전체 p95 transform time | 2.89ms |
+| 전체 최대 transform time | 2.89ms |
+| warm 평균 transform time | 0.331ms |
+| warm p95 transform time | 0.781ms |
+| warm 최대 transform time | 0.781ms |
 | warm 목표 | 5ms 이하 |
 | cold 목표 | 10ms 이하 |
 | 결과 | warm 통과 / cold 통과 |
@@ -194,9 +194,9 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 파일 크기 | 45,352 bytes |
 | 반복 측정 | 5 |
-| average transform time | 7.351ms |
-| p95 transform time | 12.502ms |
-| max transform time | 12.502ms |
+| average transform time | 10.41ms |
+| p95 transform time | 18.88ms |
+| max transform time | 18.88ms |
 | stress 목표 | 20ms 이하 |
 | 결과 | 통과 |
 
@@ -211,13 +211,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 0.676ms |
-| preview round trip | 1.098ms |
+| preview time | 0.997ms |
+| preview round trip | 1.774ms |
 | apply 성공 | true |
-| static apply time | 33.355ms |
-| simple `cn()` apply time | 11.684ms |
+| static apply time | 35.589ms |
+| simple `cn()` apply time | 12.665ms |
 | revert 성공 | true |
-| revert time | 18.74ms |
+| revert time | 8.282ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -262,8 +262,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.088ms |
-| 평균 lookup | 0.000088ms |
+| 총 시간 | 0.05ms |
+| 평균 lookup | 0.00005ms |
 
 주의:
 
@@ -344,7 +344,7 @@ Viewport별 최대값:
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 11.125ms |
+| task 생성 시간 | 12.109ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -368,7 +368,7 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 10.05ms |
+| result 생성 시간 | 18.284ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
 | source hash changed | true |
@@ -432,8 +432,8 @@ dev server endpoint smoke test:
 
 | 항목 | 값 |
 | --- | ---: |
-| fixture case 수 | 4 |
-| 통과 case 수 | 4 |
+| fixture case 수 | 8 |
+| 통과 case 수 | 8 |
 | 통과율 | 100% |
 | gate | 통과 |
 
@@ -441,17 +441,22 @@ dev server endpoint smoke test:
 
 | case | component | binding 수 | task time | 결과 |
 | --- | --- | ---: | ---: | --- |
-| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 3.543ms | 통과 |
-| arrow block | `ComponentSnapshotArrowBlock` | 2 | 4.019ms | 통과 |
-| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 2.796ms | 통과 |
-| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 3.042ms | 통과 |
+| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 2.405ms | 통과 |
+| arrow block | `ComponentSnapshotArrowBlock` | 2 | 2.043ms | 통과 |
+| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 1.643ms | 통과 |
+| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.068ms | 통과 |
+| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 1.942ms | 통과 |
+| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 2.614ms | 통과 |
+| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 2.108ms | 통과 |
+| namespace object export | `ComponentSnapshotNamespace` | 1 | 2.404ms | 통과 |
 
 해석:
 
 - function component의 parameter destructuring/type annotation에서 body `{` 탐색이 잘못 짧게 끝나는 버그를 fixture가 잡았다.
 - body range 탐색은 이제 function parameter list를 먼저 balance한 뒤 component body를 찾는다.
 - arrow component는 block body, parenthesized expression body, no-parens JSX expression body를 모두 snapshot으로 잡는다.
-- 아직 HOC-wrapped component, memo/forwardRef, namespace component export는 별도 fixture가 없다.
+- memo, forwardRef, HOC wrapper 안의 inner function 이름보다 export된 wrapper 변수명을 component identity로 우선한다.
+- namespace object export는 object statement 전체를 component snapshot으로 잡는다.
 
 ## 9. Read-only Binding Handoff
 
@@ -462,9 +467,9 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 2.135ms |
+| agent task 생성 시간 | 2.042ms |
 | agent result 생성 | true |
-| agent result 생성 시간 | 9.936ms |
+| agent result 생성 시간 | 8.571ms |
 | result 후 syntax error | 0 |
 | source diff line 수 | 2 |
 | component source diff line 수 | 0 |
@@ -492,9 +497,9 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 1.933ms |
+| agent task 생성 시간 | 2.56ms |
 | agent result 생성 | true |
-| agent result 생성 시간 | 7.823ms |
+| agent result 생성 시간 | 7.597ms |
 | result 후 syntax error | 0 |
 | source diff line 수 | 2 |
 | component source diff line 수 | 2 |
@@ -522,9 +527,9 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 2.192ms |
+| agent task 생성 시간 | 3.017ms |
 | agent result 생성 | true |
-| agent result 생성 시간 | 16.96ms |
+| agent result 생성 시간 | 14.491ms |
 | result 후 syntax error | 0 |
 | source diff line 수 | 2 |
 | component source diff line 수 | 14 |
@@ -567,7 +572,7 @@ dev server endpoint smoke test:
 | operation log undo stack/history | 2 apply + history next token `p-8` + 2 revert + pending stack 0 + syntax error 0 | 통과 |
 | agent task generation | task 생성 + 필수 섹션 포함 | 통과 |
 | agent result generation | result/diff 생성 + source diff + selected/component/related semantic diff section 포함 | 통과 |
-| component snapshot discovery | 4 fixture case 모두 통과 | 통과 |
+| component snapshot discovery | 8 fixture case 모두 통과 | 통과 |
 | read-only handoff | read-only binding 생성 + agent task 생성 | 통과 |
 | read-only related source/semantic diff | related snapshot + related source diff + related semantic diff + syntax error 0 | 통과 |
 | read-only `cn()` variable related semantic diff | related source diff + related semantic change >= 2 + token added/removed >= 4 + syntax error 0 | 통과 |
@@ -593,7 +598,7 @@ dev server endpoint smoke test:
 - last-patch revert endpoint의 LIFO stack 동작
 - agent handoff task markdown 생성
 - agent result markdown, selected source-window diff, component source diff, selected/component/related `className` semantic diff 생성
-- component snapshot discovery fixture 4/4 통과
+- component snapshot discovery fixture 8/8 통과
 - read-only variable reference의 related source diff와 semantic token diff 생성
 - read-only `cn()` variable reference의 related source diff와 semantic token diff 생성
 - read-only composite variable의 배열/object map/template literal related semantic token diff 생성
@@ -612,7 +617,7 @@ dev server endpoint smoke test:
 - 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
 - branch undo와 충돌 해결 UX는 아직 없다.
 - 외부 프로젝트에서 독립 수집한 AI 생성 코드 50-100개 corpus 검증
-- HOC-wrapped component, memo/forwardRef, namespace export에 대한 component snapshot fixture
+- 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative 재측정
 - variant 함수 의미와 cross-variable data flow 자동 분석
 - variant 함수와 runtime template literal 직접 patch 지원
 
@@ -620,5 +625,5 @@ dev server endpoint smoke test:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 외부 독립 corpus 검증, branch undo/충돌 해결 UX 설계, HOC/memo/forwardRef component snapshot fixture, variant 함수 handoff 문맥 보강이다.
+다음 우선순위는 외부 독립 corpus 검증, branch undo/충돌 해결 UX 설계, variant 함수 handoff 문맥 보강, 제품급 TSX 파일에서 component snapshot 오탐/미탐 재측정이다.
 ```

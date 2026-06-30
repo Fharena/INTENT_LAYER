@@ -156,7 +156,7 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.159ms / p95 2.701ms / max 2.701ms |
+| `src/App.tsx` | 13 | avg 1.106ms / p95 2.89ms / max 2.89ms |
 | `src/main.tsx` | 0 | avg 0.003ms / p95 0.006ms / max 0.006ms |
 
 Summary:
@@ -165,12 +165,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.581ms |
-| Overall p95 transform time | 2.701ms |
-| Overall max transform time | 2.701ms |
-| Warm average transform time | 0.388ms |
-| Warm p95 transform time | 0.892ms |
-| Warm max transform time | 0.892ms |
+| Overall average transform time | 0.554ms |
+| Overall p95 transform time | 2.89ms |
+| Overall max transform time | 2.89ms |
+| Warm average transform time | 0.331ms |
+| Warm p95 transform time | 0.781ms |
+| Warm max transform time | 0.781ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -194,9 +194,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 7.351ms |
-| p95 transform time | 12.502ms |
-| Max transform time | 12.502ms |
+| Average transform time | 10.41ms |
+| p95 transform time | 18.88ms |
+| Max transform time | 18.88ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -211,13 +211,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 0.676ms |
-| Preview round trip | 1.098ms |
+| Preview time | 0.997ms |
+| Preview round trip | 1.774ms |
 | Apply success | true |
-| Static apply time | 33.355ms |
-| Simple `cn()` apply time | 11.684ms |
+| Static apply time | 35.589ms |
+| Simple `cn()` apply time | 12.665ms |
 | Revert success | true |
-| Revert time | 18.74ms |
+| Revert time | 8.282ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -262,8 +262,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.088ms |
-| Average lookup | 0.000088ms |
+| Total time | 0.05ms |
+| Average lookup | 0.00005ms |
 
 Caveat:
 
@@ -345,7 +345,7 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 11.125ms |
+| Task generation time | 12.109ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -369,7 +369,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 10.05ms |
+| Result generation time | 18.284ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -433,8 +433,8 @@ Interpretation:
 
 | Metric | Value |
 | --- | ---: |
-| Fixture cases | 4 |
-| Passing cases | 4 |
+| Fixture cases | 8 |
+| Passing cases | 8 |
 | Pass rate | 100% |
 | Gate | pass |
 
@@ -442,17 +442,22 @@ Cases checked:
 
 | Case | Component | Bindings | Task time | Result |
 | --- | --- | ---: | ---: | --- |
-| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 3.543ms | pass |
-| arrow block | `ComponentSnapshotArrowBlock` | 2 | 4.019ms | pass |
-| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 2.796ms | pass |
-| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 3.042ms | pass |
+| function + nested/map/conditional/fragment | `ComponentSnapshotFunction` | 3 | 2.405ms | pass |
+| arrow block | `ComponentSnapshotArrowBlock` | 2 | 2.043ms | pass |
+| arrow parenthesized expression | `ComponentSnapshotArrowParen` | 2 | 1.643ms | pass |
+| arrow JSX no-parens | `ComponentSnapshotArrowJsx` | 1 | 2.068ms | pass |
+| memo-wrapped function | `ComponentSnapshotMemo` | 1 | 1.942ms | pass |
+| forwardRef-wrapped function | `ComponentSnapshotForwardRef` | 1 | 2.614ms | pass |
+| HOC-wrapped function | `ComponentSnapshotHoc` | 2 | 2.108ms | pass |
+| namespace object export | `ComponentSnapshotNamespace` | 1 | 2.404ms | pass |
 
 Interpretation:
 
 - The fixture caught a real bug where function component parameter destructuring/type annotation made body `{` detection stop too early.
 - Body range discovery now balances the function parameter list before looking for the component body.
 - Arrow components are covered for block body, parenthesized expression body, and no-parens JSX expression body.
-- HOC-wrapped components, memo/forwardRef, and namespace component exports still need separate fixtures.
+- For memo, forwardRef, and HOC wrappers, the exported wrapper variable is preferred over the inner function name as the component identity.
+- Namespace object exports are captured as the full object statement for component snapshots.
 
 ## 9. Read-only Binding Handoff
 
@@ -463,9 +468,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.135ms |
+| Agent task generation time | 2.042ms |
 | Agent result created | true |
-| Agent result generation time | 9.936ms |
+| Agent result generation time | 8.571ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 0 |
@@ -493,9 +498,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 1.933ms |
+| Agent task generation time | 2.56ms |
 | Agent result created | true |
-| Agent result generation time | 7.823ms |
+| Agent result generation time | 7.597ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 2 |
@@ -523,9 +528,9 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.192ms |
+| Agent task generation time | 3.017ms |
 | Agent result created | true |
-| Agent result generation time | 16.96ms |
+| Agent result generation time | 14.491ms |
 | Syntax errors after result | 0 |
 | Source diff line count | 2 |
 | Component source diff line count | 14 |
@@ -568,7 +573,7 @@ Interpretation:
 | operation log undo stack/history | 2 applies + history next token `p-8` + 2 reverts + pending stack 0 + syntax error 0 | pass |
 | agent task generation | task created + required sections present | pass |
 | agent result generation | result/diff created + source diff + selected/component/related semantic diff section present | pass |
-| component snapshot discovery | all 4 fixture cases pass | pass |
+| component snapshot discovery | all 8 fixture cases pass | pass |
 | read-only handoff | read-only binding created + agent task created | pass |
 | read-only related source/semantic diff | related snapshot + related source diff + related semantic diff + syntax error 0 | pass |
 | read-only `cn()` variable related semantic diff | related source diff + related semantic change >= 2 + token added/removed >= 4 + syntax error 0 | pass |
@@ -594,7 +599,7 @@ What worked:
 - LIFO stack behavior through the last-patch revert endpoint
 - agent handoff task markdown generation
 - agent result markdown, selected source-window diff, component source diff, and selected/component/related `className` semantic diff generation
-- component snapshot discovery fixture pass 4/4
+- component snapshot discovery fixture pass 8/8
 - related source diff and semantic token diff generation for read-only variable references
 - related source diff and semantic token diff generation for read-only `cn()` variable references
 - related semantic token diff generation for read-only composite variables using array/object-map/template-literal declarations
@@ -613,7 +618,7 @@ What remains weak:
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - branch undo and conflict-resolution UX are still missing
 - independently collected external 50-100 sample AI-generated corpus audit is still missing
-- component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports are still missing
+- component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
 - automatic semantic analysis for variant-function meaning and cross-variable data flow is still missing
 - variant functions and runtime template literals remain unsupported for direct patching
 
@@ -621,5 +626,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, branch undo/conflict-resolution UX design, HOC/memo/forwardRef component snapshot fixtures, and stronger variant-function handoff context.
+The next priority is independent external corpus validation, branch undo/conflict-resolution UX design, stronger variant-function handoff context, and component snapshot false-positive/false-negative measurement on product-sized TSX files.
 ```

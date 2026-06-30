@@ -254,7 +254,7 @@ Support model:
 - Agent results record related source diffs and related semantic token diffs for simple variable-reference read-only bindings.
 - Related semantic token diffing is covered by fixtures for simple quoted variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal declaration segments.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
-- Component snapshot fixtures cover 4 cases: function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, and arrow JSX no-parens.
+- Component snapshot fixtures cover 8 cases: function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens, memo, forwardRef, HOC, and namespace object export.
 - They still do not infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
 - The latest browser measurement repeats 3 desktop samples and 3 mobile 390x844 viewport samples.
@@ -269,8 +269,8 @@ Priority order:
 
 1. Re-measure editable coverage on an independently collected external 50-100 sample React/Tailwind corpus.
 2. Design branch undo and conflict-resolution UX.
-3. Add component snapshot fixtures for HOC-wrapped components, memo/forwardRef, and namespace exports.
-4. Improve agent handoff context for variant functions and cross-variable data flow.
+3. Improve agent handoff context for variant functions and cross-variable data flow.
+4. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
 5. Validate caching and graph write throttling on product-sized TSX files.
 
 ## 9. Agent Handoff And Result
