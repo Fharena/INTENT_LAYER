@@ -971,6 +971,12 @@ const syntaxErrorsAfterOperationConflict = parseSyntaxErrorCount(operationConfli
 
 const cliScan = runCli(["scan", "fixtures/corpus", "src/App.tsx"], rootDir);
 const cliScanReport = cliScan.report?.command === "scan" ? cliScan.report : null;
+const cliInit = runCli(["init"], rootDir);
+const cliInitReport = cliInit.report?.command === "init" ? cliInit.report : null;
+const cliInitSchemaExists =
+  fs.existsSync(path.join(rootDir, ".intent", "schema", "intent-op.schema.json")) &&
+  fs.existsSync(path.join(rootDir, ".intent", "schema", "intent-diff.schema.json")) &&
+  fs.existsSync(path.join(rootDir, ".intent", "schema", "graph.intent.schema.json"));
 const cliCheck = runCli(
   [
     "check",
@@ -1088,6 +1094,60 @@ const cliAgentResultSectionsPresent = [
 ].every((section) => cliAgentResultMarkdown.includes(section));
 const cliAgentResultSyntaxErrors = parseSyntaxErrorCount(cliAgentResultFixture);
 
+const cliApplyFixture = path.join(tmpDir, "CliApplyFixture.tsx");
+fs.writeFileSync(
+  cliApplyFixture,
+  [
+    "export function CliApplyFixture() {",
+    "  return <section className=\"grid grid-cols-3 gap-4 rounded-lg p-6\">CLI apply target</section>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const cliApplyFixtureRelative = path.relative(rootDir, cliApplyFixture).replace(/\\/g, "/");
+const cliApplyGraphScan = runCli(["scan", cliApplyFixtureRelative, "--write-graph"], rootDir);
+const cliApplyGraph = fs.existsSync(cliGraphFile)
+  ? (JSON.parse(fs.readFileSync(cliGraphFile, "utf8")) as IntentGraph)
+  : null;
+const cliApplyBinding =
+  cliApplyGraph &&
+  Object.values(cliApplyGraph.entries).find((entry) => entry.relativeFile === cliApplyFixtureRelative);
+const cliApplyToken = cliApplyBinding?.tokens.find((token) => token.token === "gap-4");
+const cliApplyOpFile = path.join(tmpDir, "cli-apply.intent-op.json");
+fs.writeFileSync(
+  cliApplyOpFile,
+  `${JSON.stringify(
+    {
+      version: 1,
+      kind: "tailwind-token-replace",
+      target: {
+        id: cliApplyBinding?.id ?? "missing-cli-apply-id",
+        file: cliApplyFixtureRelative,
+        range: cliApplyToken
+          ? {
+              start: cliApplyToken.sourceStart,
+              end: cliApplyToken.sourceEnd
+            }
+          : undefined
+      },
+      change: {
+        from: "gap-4",
+        to: "gap-6"
+      }
+    },
+    null,
+    2
+  )}\n`
+);
+const cliApply = runCli(["apply", "--op", path.relative(rootDir, cliApplyOpFile).replace(/\\/g, "/")], rootDir);
+const cliApplyReport = cliApply.report?.command === "apply" ? cliApply.report : null;
+const cliDiff = runCli(
+  ["diff", "--diff", cliApplyReport?.diffFile ?? ".intent/diffs/missing-cli-apply.intent-diff.yml"],
+  rootDir
+);
+const cliDiffReport = cliDiff.report?.command === "diff" ? cliDiff.report : null;
+const cliApplySyntaxErrors = parseSyntaxErrorCount(cliApplyFixture);
+
 const graphLookupIterations = 1000;
 const graphLookup = new Map(patchInstrument.entries.map((entry) => [entry.id, entry]));
 const lookupStarted = performance.now();
@@ -1151,15 +1211,26 @@ const report = {
     note: "This measures id-to-binding graph lookup only, not a real browser click event."
   },
   cli: {
+    initExitCode: cliInit.exitCode,
     scanExitCode: cliScan.exitCode,
     checkExitCode: cliCheck.exitCode,
     graphScanExitCode: cliGraphScan.exitCode,
+    applyGraphScanExitCode: cliApplyGraphScan.exitCode,
+    applyExitCode: cliApply.exitCode,
+    diffExitCode: cliDiff.exitCode,
     agentTaskExitCode: cliAgentTask.exitCode,
     agentResultExitCode: cliAgentResult.exitCode,
+    initCommand: cliInitReport?.command ?? null,
     scanCommand: cliScanReport?.command ?? null,
     checkCommand: cliCheckReport?.command ?? null,
+    applyCommand: cliApplyReport?.command ?? null,
+    diffCommand: cliDiffReport?.command ?? null,
     agentTaskCommand: cliAgentTaskReport?.command ?? null,
     agentResultCommand: cliAgentResultReport?.command ?? null,
+    initOk: cliInitReport?.ok ?? false,
+    initCreatedPathCount: cliInitReport?.createdPaths.length ?? 0,
+    initExistingPathCount: cliInitReport?.existingPaths.length ?? 0,
+    initSchemaExists: cliInitSchemaExists,
     filesScanned: cliCheckReport?.summary.filesScanned ?? 0,
     bindingCount: cliCheckReport?.summary.bindingCount ?? 0,
     directEditBindingCount: cliCheckReport?.summary.directEditBindingCount ?? 0,
@@ -1190,8 +1261,23 @@ const report = {
     agentResultSemanticChangeCount: cliAgentResultReport?.semanticChangeCount ?? 0,
     agentResultSectionsPresent: cliAgentResultSectionsPresent,
     agentResultSyntaxErrors: cliAgentResultSyntaxErrors,
+    applyBindingId: cliApplyBinding?.id ?? null,
+    applyOk: cliApplyReport?.ok ?? false,
+    applyRelativeFile: cliApplyReport?.relativeFile ?? null,
+    applyOperationFile: cliApplyReport?.operationFile ?? null,
+    applyDiffFile: cliApplyReport?.diffFile ?? null,
+    applyOperationLogFile: cliApplyReport?.operationLogFile ?? null,
+    applyMs: cliApplyReport?.applyMs ?? null,
+    applySyntaxErrors: cliApplySyntaxErrors,
+    diffOk: cliDiffReport?.ok ?? false,
+    diffFile: cliDiffReport?.diffFile ?? null,
+    diffBytes: cliDiffReport?.bytes ?? 0,
+    diffChangeCount: cliDiffReport?.changeCount ?? 0,
+    initStdoutBytes: cliInit.stdout.length,
     scanStdoutBytes: cliScan.stdout.length,
     checkStdoutBytes: cliCheck.stdout.length,
+    applyStdoutBytes: cliApply.stdout.length,
+    diffStdoutBytes: cliDiff.stdout.length,
     agentTaskStdoutBytes: cliAgentTask.stdout.length,
     agentResultStdoutBytes: cliAgentResult.stdout.length
   },
@@ -1564,6 +1650,11 @@ const report = {
     warmTransformTargetPass:
       warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
     largeTransformTargetPass: Math.max(...largeTransformTimes) <= largeTransformTargetMs,
+    cliInitPass:
+      cliInit.exitCode === 0 &&
+      cliInitReport?.command === "init" &&
+      cliInitReport.ok &&
+      cliInitSchemaExists,
     cliScanPass:
       cliScan.exitCode === 0 &&
       cliScanReport?.command === "scan" &&
@@ -1578,6 +1669,21 @@ const report = {
       cliCheckReport.gates.syntaxClean.pass &&
       cliCheckReport.gates.supportedDirectCoverage.pass &&
       cliCheckReport.gates.maxFileTransformMs.pass,
+    cliApplyDiffPass:
+      cliApplyGraphScan.exitCode === 0 &&
+      Boolean(cliApplyBinding) &&
+      cliApply.exitCode === 0 &&
+      cliApplyReport?.command === "apply" &&
+      cliApplyReport.ok &&
+      Boolean(cliApplyReport.operationFile) &&
+      Boolean(cliApplyReport.diffFile) &&
+      Boolean(cliApplyReport.operationLogFile) &&
+      cliApplySyntaxErrors === 0 &&
+      cliDiff.exitCode === 0 &&
+      cliDiffReport?.command === "diff" &&
+      cliDiffReport.ok &&
+      cliDiffReport.changeCount > 0 &&
+      cliDiffReport.bytes > 0,
     cliAgentTaskPass:
       cliGraphScan.exitCode === 0 &&
       fs.existsSync(cliGraphFile) &&
