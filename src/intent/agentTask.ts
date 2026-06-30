@@ -373,6 +373,70 @@ function findVariantDeclarationRange(
   };
 }
 
+function findVariableDeclarationRange(
+  source: string,
+  identifier: string
+): { start: number; end: number } | null {
+  const match = new RegExp(`\\b(?:const|let|var)\\s+${escapeRegExp(identifier)}\\b`).exec(source);
+  if (!match) return null;
+
+  return {
+    start: match.index,
+    end: scanExpressionStatementEnd(source, match.index)
+  };
+}
+
+function relatedRangeFromLocalDeclaration(
+  rootDir: string,
+  file: string,
+  source: string,
+  kind: RelatedSourceRange["kind"],
+  identifier: string,
+  range: { start: number; end: number }
+): RelatedSourceRange {
+  return {
+    file,
+    relativeFile: path.relative(rootDir, file).replace(/\\/g, "/"),
+    sourceHash: sourceHash(source),
+    source,
+    kind,
+    identifier,
+    start: range.start,
+    end: range.end
+  };
+}
+
+function findImportedVariableDeclaration(
+  rootDir: string,
+  file: string,
+  identifier: string,
+  visited = new Set<string>()
+): RelatedSourceRange | null {
+  const normalizedFile = path.resolve(file);
+  const visitKey = `${normalizedFile}:${identifier}`;
+  if (visited.has(visitKey) || visited.size > 6) return null;
+  visited.add(visitKey);
+
+  const source = fs.readFileSync(normalizedFile, "utf8");
+  const localRange = findVariableDeclarationRange(source, identifier);
+  if (localRange) {
+    return relatedRangeFromLocalDeclaration(
+      rootDir,
+      normalizedFile,
+      source,
+      "variable-declaration",
+      identifier,
+      localRange
+    );
+  }
+
+  const reExport = reExportForIdentifier(source, identifier);
+  const reExportFile = reExport ? resolveImportFile(rootDir, normalizedFile, reExport.file) : null;
+  if (!reExport || !reExportFile) return null;
+
+  return findImportedVariableDeclaration(rootDir, reExportFile, reExport.importedName, visited);
+}
+
 function findImportedVariantDeclaration(
   rootDir: string,
   file: string,
@@ -387,16 +451,14 @@ function findImportedVariantDeclaration(
   const source = fs.readFileSync(normalizedFile, "utf8");
   const localRange = findVariantDeclarationRange(source, identifier);
   if (localRange) {
-    return {
-      file: normalizedFile,
-      relativeFile: path.relative(rootDir, normalizedFile).replace(/\\/g, "/"),
-      sourceHash: sourceHash(source),
+    return relatedRangeFromLocalDeclaration(
+      rootDir,
+      normalizedFile,
       source,
-      kind: "variant-function",
+      "variant-function",
       identifier,
-      start: localRange.start,
-      end: localRange.end
-    };
+      localRange
+    );
   }
 
   const reExport = reExportForIdentifier(source, identifier);
@@ -417,19 +479,25 @@ function findRelatedSourceRange(
     const identifier = binding.className.value.trim();
     if (!/^[A-Za-z_$][\w$]*$/.test(identifier)) return null;
 
-    const match = new RegExp(`\\b(?:const|let|var)\\s+${escapeRegExp(identifier)}\\b`).exec(source);
-    if (!match) return null;
+    const localRange = findVariableDeclarationRange(source, identifier);
+    if (localRange) {
+      return {
+        file: binding.file,
+        relativeFile: binding.relativeFile,
+        sourceHash: binding.sourceHash,
+        source,
+        kind: "variable-declaration",
+        identifier,
+        start: localRange.start,
+        end: localRange.end
+      };
+    }
 
-    return {
-      file: binding.file,
-      relativeFile: binding.relativeFile,
-      sourceHash: binding.sourceHash,
-      source,
-      kind: "variable-declaration",
-      identifier,
-      start: match.index,
-      end: scanExpressionStatementEnd(source, match.index)
-    };
+    const imported = importedNameForLocalIdentifier(source, identifier);
+    const importedFile = imported ? resolveImportFile(rootDir, binding.file, imported.file) : null;
+    if (!imported || !importedFile) return null;
+
+    return findImportedVariableDeclaration(rootDir, importedFile, imported.importedName);
   }
 
   if (binding.className.unsupportedReason !== "variant-function") return null;

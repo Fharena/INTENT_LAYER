@@ -1649,6 +1649,106 @@ const readOnlyCompositeVariableResult = recordAgentResult(rootDir, readOnlyCompo
     "Evaluation fixture for related source semantic diff across arrays, object maps, and template literals; no LLM call is made."
 });
 
+const importedVariableRoot = resetTmpSubdir("imported-variable-handoff");
+const importedVariableStylesDir = path.join(importedVariableRoot, "src", "styles");
+const importedVariableThemeDir = path.join(importedVariableRoot, "src", "theme");
+const importedVariableScreensDir = path.join(importedVariableRoot, "src", "screens");
+fs.mkdirSync(importedVariableStylesDir, { recursive: true });
+fs.mkdirSync(importedVariableThemeDir, { recursive: true });
+fs.mkdirSync(importedVariableScreensDir, { recursive: true });
+fs.writeFileSync(
+  path.join(importedVariableRoot, "tsconfig.json"),
+  `${JSON.stringify(
+    {
+      compilerOptions: {
+        baseUrl: ".",
+        paths: {
+          "@/*": ["src/*"]
+        }
+      }
+    },
+    null,
+    2
+  )}\n`
+);
+const importedVariableDefinitionFixture = path.join(importedVariableStylesDir, "cardClass.ts");
+fs.writeFileSync(
+  importedVariableDefinitionFixture,
+  [
+    "export const cardClass = \"grid grid-cols-3 gap-4 rounded-lg bg-white p-6 shadow-sm\";",
+    ""
+  ].join("\n")
+);
+const importedVariableStylesIndexFixture = path.join(importedVariableStylesDir, "index.ts");
+fs.writeFileSync(importedVariableStylesIndexFixture, "export { cardClass } from \"./cardClass\";\n");
+const importedVariableThemeIndexFixture = path.join(importedVariableThemeDir, "index.ts");
+fs.writeFileSync(importedVariableThemeIndexFixture, "export { cardClass } from \"../styles\";\n");
+const importedVariableHandoffFixture = path.join(
+  importedVariableScreensDir,
+  "ImportedVariableHandoffFixture.tsx"
+);
+fs.writeFileSync(
+  importedVariableHandoffFixture,
+  [
+    "import { cardClass as shellClass } from \"@/theme\";",
+    "",
+    "export function ImportedVariableHandoffFixture() {",
+    "  return <article className={shellClass}>Imported variable handoff target</article>;",
+    "}",
+    ""
+  ].join("\n")
+);
+const importedVariableHandoffInstrument = instrumentSource({
+  code: fs.readFileSync(importedVariableHandoffFixture, "utf8"),
+  file: importedVariableHandoffFixture,
+  rootDir: importedVariableRoot
+});
+const importedVariableHandoffEntry = importedVariableHandoffInstrument.entries[0];
+const importedVariableHandoffTask = createAgentTask(
+  importedVariableRoot,
+  importedVariableHandoffEntry,
+  {
+    id: importedVariableHandoffEntry?.id ?? "missing-imported-variable-handoff-binding",
+    desiredChange: "Change this imported variable-backed className through an agent handoff."
+  }
+);
+const importedVariableHandoffRelatedSnapshot = importedVariableHandoffTask.ok
+  ? parseTaskJsonSection<TaskRelatedSourceSnapshot | null>(
+      importedVariableHandoffTask.markdown,
+      "Related Source Snapshot"
+    )
+  : null;
+if (importedVariableHandoffTask.ok) {
+  fs.writeFileSync(
+    importedVariableDefinitionFixture,
+    fs
+      .readFileSync(importedVariableDefinitionFixture, "utf8")
+      .replace(
+        "grid grid-cols-3 gap-4 rounded-lg bg-white p-6 shadow-sm",
+        "grid grid-cols-2 gap-6 rounded-xl bg-slate-50 p-8 shadow-md"
+      )
+  );
+}
+const importedVariableHandoffSyntaxErrorsAfterResult =
+  parseSyntaxErrorCount(importedVariableDefinitionFixture) +
+  parseSyntaxErrorCount(importedVariableStylesIndexFixture) +
+  parseSyntaxErrorCount(importedVariableThemeIndexFixture) +
+  parseSyntaxErrorCount(importedVariableHandoffFixture);
+const importedVariableHandoffResult = recordAgentResult(
+  importedVariableRoot,
+  importedVariableHandoffEntry,
+  {
+    id: importedVariableHandoffEntry?.id ?? "missing-imported-variable-handoff-binding",
+    taskFile: importedVariableHandoffTask.ok ? importedVariableHandoffTask.taskFile : undefined,
+    summary:
+      "Imported variable handoff fixture: updated the related className variable behind an alias and multi-hop barrel chain.",
+    changedFiles: ["src/styles/cardClass.ts"],
+    checks: ["npm run typecheck", "npm run eval", "npm run build"],
+    notes:
+      "Evaluation fixture for imported variable related source handoff context; no LLM call is made."
+  }
+);
+
 const variantHandoffFixture = path.join(tmpDir, "VariantHandoffFixture.tsx");
 fs.writeFileSync(
   variantHandoffFixture,
@@ -2896,6 +2996,63 @@ const report = {
       ? readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  importedVariableHandoffBinding: {
+    entryCreated: Boolean(importedVariableHandoffEntry),
+    root: reportPath(importedVariableRoot),
+    kind: importedVariableHandoffEntry?.className.kind ?? null,
+    unsupportedReason: importedVariableHandoffEntry?.className.unsupportedReason ?? null,
+    value: importedVariableHandoffEntry?.className.value ?? null,
+    tokenCount: importedVariableHandoffEntry?.tokens.length ?? 0,
+    taskOk: importedVariableHandoffTask.ok,
+    taskMs: importedVariableHandoffTask.ok
+      ? importedVariableHandoffTask.metrics.taskMs
+      : importedVariableHandoffTask.metrics?.taskMs,
+    relatedSnapshotAvailable: Boolean(importedVariableHandoffRelatedSnapshot),
+    relatedSnapshotFile: importedVariableHandoffRelatedSnapshot?.file ?? null,
+    relatedSnapshotKind: importedVariableHandoffRelatedSnapshot?.kind ?? null,
+    relatedSnapshotIdentifier: importedVariableHandoffRelatedSnapshot?.identifier ?? null,
+    relatedSnapshotIncludesClass: Boolean(
+      importedVariableHandoffRelatedSnapshot?.excerpt.includes("grid grid-cols-3")
+    ),
+    resultOk: importedVariableHandoffResult.ok,
+    resultMs: importedVariableHandoffResult.ok
+      ? importedVariableHandoffResult.metrics.resultMs
+      : importedVariableHandoffResult.metrics?.resultMs,
+    syntaxErrorsAfterResult: importedVariableHandoffSyntaxErrorsAfterResult,
+    sourceDiffLineCount: importedVariableHandoffResult.ok
+      ? importedVariableHandoffResult.source.diffLineCount
+      : 0,
+    sourceDiffPresent: importedVariableHandoffResult.ok
+      ? Boolean(importedVariableHandoffResult.sourceDiff)
+      : false,
+    componentDiffLineCount: importedVariableHandoffResult.ok
+      ? importedVariableHandoffResult.source.componentDiffLineCount
+      : 0,
+    componentSourceDiffPresent: importedVariableHandoffResult.ok
+      ? Boolean(importedVariableHandoffResult.componentSourceDiff)
+      : false,
+    relatedResultSnapshotAvailable: importedVariableHandoffResult.ok
+      ? importedVariableHandoffResult.source.relatedSnapshotAvailable
+      : false,
+    relatedDiffLineCount: importedVariableHandoffResult.ok
+      ? importedVariableHandoffResult.source.relatedDiffLineCount
+      : 0,
+    relatedSourceDiffPresent: importedVariableHandoffResult.ok
+      ? Boolean(importedVariableHandoffResult.relatedSourceDiff)
+      : false,
+    relatedSemanticChangeCount: importedVariableHandoffResult.ok
+      ? importedVariableHandoffResult.source.relatedSemanticChangeCount
+      : 0,
+    relatedSemanticDiffPresent: importedVariableHandoffResult.ok
+      ? Boolean(importedVariableHandoffResult.relatedSemanticDiff)
+      : false,
+    relatedSemanticTokenAddedCount: importedVariableHandoffResult.ok
+      ? importedVariableHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0
+      : 0,
+    relatedSemanticTokenRemovedCount: importedVariableHandoffResult.ok
+      ? importedVariableHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0
+      : 0
+  },
   variantHandoffBinding: {
     entryCreated: Boolean(variantHandoffEntry),
     kind: variantHandoffEntry?.className.kind ?? null,
@@ -3266,6 +3423,22 @@ const report = {
       (readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 6 &&
       (readOnlyCompositeVariableResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 6 &&
       readOnlyCompositeVariableSyntaxErrorsAfterResult === 0,
+    importedVariableRelatedSourcePass:
+      importedVariableHandoffEntry?.className.kind === "read-only" &&
+      importedVariableHandoffEntry.className.unsupportedReason === "variable-reference" &&
+      importedVariableHandoffTask.ok &&
+      importedVariableHandoffRelatedSnapshot?.kind === "variable-declaration" &&
+      importedVariableHandoffRelatedSnapshot.identifier === "cardClass" &&
+      importedVariableHandoffRelatedSnapshot.file === "src/styles/cardClass.ts" &&
+      importedVariableHandoffRelatedSnapshot.excerpt.includes("grid grid-cols-3") &&
+      importedVariableHandoffResult.ok &&
+      importedVariableHandoffResult.source.relatedSnapshotAvailable &&
+      importedVariableHandoffResult.source.relatedDiffLineCount > 0 &&
+      Boolean(importedVariableHandoffResult.relatedSourceDiff) &&
+      importedVariableHandoffResult.source.relatedSemanticChangeCount >= 1 &&
+      (importedVariableHandoffResult.relatedSemanticDiff?.tokenAddedCount ?? 0) >= 5 &&
+      (importedVariableHandoffResult.relatedSemanticDiff?.tokenRemovedCount ?? 0) >= 5 &&
+      importedVariableHandoffSyntaxErrorsAfterResult === 0,
     variantHandoffRelatedSourcePass:
       variantHandoffEntry?.className.kind === "read-only" &&
       variantHandoffEntry.className.unsupportedReason === "variant-function" &&
