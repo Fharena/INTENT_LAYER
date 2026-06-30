@@ -298,6 +298,7 @@ Support model:
 - Agent handoff records a selected source-window snapshot, component snapshot, related source snapshot, related dependency snapshots, task/result markdown, and intent diffs.
 - Agent results record before/after line diffs for both the selected source window and the selected component snapshot.
 - Agent results record related source diffs and related semantic token diffs for same-file and imported variable-reference read-only bindings.
+- Agent results follow object-property read-only bindings such as `styles.title` to local/imported object literal properties and record related source plus semantic token diffs.
 - Agent results record one-hop dependency source diffs and dependency semantic token diffs when a variable declaration references sibling variable declarations in the same file or imported source file.
 - Workspace package imports follow root `package.json` `workspaces` plus package `exports` and store the local package source as a related source snapshot.
 - Related semantic token diffing is covered by fixtures for simple quoted variable declarations, imported variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal declaration segments.
@@ -389,6 +390,7 @@ Intent Diff
 At this stage, result recording is a deterministic audit log.
 Task creation stores both a selected source-window snapshot and a selected component snapshot, and result recording compares both with the current source to write line diffs.
 Simple variable-reference read-only bindings store the related variable declaration as a related source snapshot, and result recording writes both a related source diff and a related semantic token diff.
+Object-property read-only bindings such as `styles.title` store the matching top-level object literal property from a local or imported object as a related source snapshot, and result recording writes related source and semantic token diffs for that property.
 When that related declaration references sibling variable declarations in the same file or imported source file, task creation stores one-hop related dependency snapshots and result recording writes dependency source and semantic token diffs separately.
 Variable declarations can be found in the same file or behind imported tsconfig path aliases plus multi-hop barrel re-exports.
 Workspace package imports can be resolved through root `package.json` `workspaces` and package `exports` into local package source declarations.
@@ -424,6 +426,7 @@ unsupported: variable-reference
 
 No direct token patch buttons are shown, but the agent handoff task/result flow remains available.
 For simple variable references, the task includes a related source snapshot for the variable declaration, and the result records both a line diff and a semantic token diff for that declaration.
+For object property references, the task includes a related source snapshot for the top-level object property, and the result records both a line diff and a semantic token diff for that property.
 Imported variable declarations can also resolve through tsconfig paths aliases and barrel re-exports to the final declaration file.
 
 ## 10. Browser Metrics

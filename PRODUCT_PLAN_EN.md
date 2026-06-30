@@ -176,6 +176,7 @@ CSS variables
 simple CSS modules
 same-file one-hop variable dependency handoff context
 one-hop dependency handoff context inside imported variable declarations
+object-property className handoff context
 workspace package import variable handoff context
 local and one-hop relative-import variant/cva handoff context
 tsconfig paths alias plus one-hop/multi-hop named barrel re-export variant/cva handoff context

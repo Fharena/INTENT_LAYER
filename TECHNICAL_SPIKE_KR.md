@@ -297,6 +297,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - agent handoff는 선택 source window snapshot, component snapshot, related source snapshot, related dependency snapshots, task/result markdown, intent diff 기록을 지원한다.
 - agent result는 선택 source window와 선택 component snapshot의 before/after line diff를 기록한다.
 - agent result는 단순 변수 참조 read-only binding의 same-file/imported related source diff와 related semantic token diff를 기록한다.
+- agent result는 `styles.title` 같은 object property read-only binding을 local/imported object literal property까지 따라가 related source diff와 semantic token diff로 기록한다.
 - agent result는 변수 선언이 같은 파일 또는 imported source 파일의 다른 변수 선언을 참조하는 경우 one-hop dependency source diff와 dependency semantic token diff를 기록한다.
 - workspace package import는 root `package.json`의 `workspaces`와 package `exports`를 따라 local package source를 related source snapshot으로 기록한다.
 - related semantic token diff는 단순 quoted 변수 선언, imported 변수 선언, simple `cn()` / `clsx()` 변수 선언, 배열/object map/template literal literal segment를 fixture로 검증한다.
@@ -388,6 +389,7 @@ Intent Diff
 이번 단계의 result 기록은 결정론적 감사 로그다.
 task 생성 시 선택 source window snapshot과 선택 component snapshot을 저장하고, result 기록 시 현재 source와 비교해 각각 line diff를 남긴다.
 단순 변수 참조 read-only binding은 관련 변수 선언을 related source snapshot으로 저장하고, result 기록 시 related source diff와 related semantic token diff를 남긴다.
+`styles.title` 같은 object property read-only binding은 local 또는 imported object literal의 top-level property를 related source snapshot으로 저장하고, result 기록 시 해당 property의 source diff와 semantic token diff를 남긴다.
 관련 변수 선언이 같은 파일 또는 imported source 파일의 다른 변수 선언을 참조하면 task에 one-hop related dependency snapshots를 저장하고, result 기록 시 dependency source diff와 dependency semantic token diff를 별도로 남긴다.
 변수 선언은 같은 파일뿐 아니라 tsconfig paths alias와 다단계 barrel re-export 뒤의 imported 선언까지 따라갈 수 있다.
 workspace package import는 root `package.json`의 `workspaces`와 package `exports`를 따라 local package source 선언까지 따라갈 수 있다.
@@ -423,6 +425,7 @@ unsupported: variable-reference
 
 직접 token patch 버튼은 표시되지 않고, agent handoff task/result 기록만 사용할 수 있다.
 단순 변수 참조인 경우 task에는 변수 선언 related source snapshot이 포함되고, result에는 해당 선언의 line diff와 semantic token diff가 기록된다.
+object property 참조인 경우 task에는 top-level object property related source snapshot이 포함되고, result에는 해당 property의 line diff와 semantic token diff가 기록된다.
 imported 변수 선언도 tsconfig paths alias와 barrel re-export를 거쳐 최종 선언 파일을 snapshot 대상으로 삼을 수 있다.
 
 ## 10. Browser Metrics

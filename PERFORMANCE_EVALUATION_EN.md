@@ -36,6 +36,7 @@ Measured inputs:
 - read-only same-file cross-variable dependency handoff fixture
 - imported variable related source handoff fixture
 - imported variable dependency handoff fixture
+- property access related source handoff fixture
 - workspace package import related source handoff fixture
 - variant/cva related source handoff fixture
 - imported variant/cva related source handoff fixture
@@ -842,7 +843,43 @@ Interpretation:
 - Related dependency source and semantic token diffs are produced even when only the dependency variable declarations change and the selected JSX file does not.
 - This fixture validates MVP-scoped imported-source one-hop dependency handoff context. Full deeper cross-file/transitive variable data-flow analysis remains unsupported.
 
-## 9.6 Workspace Package Import Handoff
+## 9.6 Property Access Handoff
+
+| Metric | Value |
+| --- | ---: |
+| Fixture root | `.intent/tmp/property-access-handoff` |
+| Read-only entry created | true |
+| Binding kind | `read-only` |
+| Unsupported reason | `property-access-reference` |
+| ClassName value | `cardStyles.title` |
+| Editable token count | 0 |
+| Agent task created | true |
+| Agent task generation time | 11.108ms |
+| Related snapshot available | true |
+| Related snapshot file | `src/styles/titleStyles.ts` |
+| Related snapshot kind | `object-property` |
+| Related snapshot identifier | `styles.title` |
+| Related snapshot includes property class | true |
+| Agent result created | true |
+| Agent result generation time | 11.039ms |
+| Syntax errors after result | 0 |
+| Selected source diff line count | 0 |
+| Component source diff line count | 0 |
+| Related source diff line count | 2 |
+| Related source diff present | true |
+| Related semantic className change count | 1 |
+| Related semantic diff present | true |
+| Related semantic token added count | 4 |
+| Related semantic token removed count | 3 |
+
+Interpretation:
+
+- A property-access read-only binding such as `className={cardStyles.title}` is classified as `property-access-reference`.
+- When `cardStyles` comes from `import { styles as cardStyles } from "@/theme"`, the resolver follows `@/theme -> src/theme/index.ts -> ../styles -> src/styles/index.ts -> ./titleStyles` and records the final object literal property, `styles.title`, as the related source snapshot.
+- Related source and semantic token diffs are produced even when only the object property string changes and the selected JSX file does not.
+- This fixture proves `styles.title`-style AI-generated code can degrade into structured agent handoff instead of direct patching.
+
+## 9.7 Workspace Package Import Handoff
 
 | Metric | Value |
 | --- | ---: |
@@ -880,7 +917,7 @@ Interpretation:
 - This fixture validates MVP-scoped local workspace package import handoff context.
 - External npm package imports, variant-function meaning analysis, and deeper cross-file/transitive variable data flow are still out of scope.
 
-## 9.7 Variant Function Handoff
+## 9.8 Variant Function Handoff
 
 | Metric | Value |
 | --- | ---: |
@@ -913,7 +950,7 @@ Interpretation:
 - The same-file local `const buttonVariants = cva(...)` declaration is stored as the related source snapshot.
 - Result recording preserves changes to the variant declaration as related source diff and literal-token semantic diff even when the selected JSX call does not change.
 
-## 9.8 Imported Variant Function Handoff
+## 9.9 Imported Variant Function Handoff
 
 | Metric | Value |
 | --- | ---: |
@@ -949,7 +986,7 @@ Interpretation:
 - tsconfig paths aliases and one-hop named barrel re-exports are verified in the fixture below.
 - Imported variable alias/barrel chains, imported-source one-hop dependencies, and workspace package variable imports are supported, but external npm package imports, variant-function meaning analysis, and deeper cross-file/transitive variable data flow are still out of scope.
 
-## 9.9 Path Alias + Barrel Variant Function Handoff
+## 9.10 Path Alias + Barrel Variant Function Handoff
 
 | Metric | Value |
 | --- | ---: |
@@ -985,7 +1022,7 @@ Interpretation:
 - Agent task/result artifacts record the final declaration file, `src/ui/buttonVariants.ts`, as the related source snapshot/diff target.
 - Imported variable multi-hop barrel chains, imported-source one-hop dependencies, and workspace package variable imports are supported, but external npm package imports, variant-function meaning analysis, and deeper cross-file/transitive variable data flow are still out of scope.
 
-## 9.10 Path Alias + Multi-hop Barrel Variant Function Handoff
+## 9.11 Path Alias + Multi-hop Barrel Variant Function Handoff
 
 | Metric | Value |
 | --- | ---: |
@@ -1022,7 +1059,7 @@ Interpretation:
 - This fixture proves variant/cva handoff context works beyond one-hop barrels for local multi-hop barrel re-exports.
 - Workspace package variable imports and imported-source one-hop dependencies are supported, but external npm package imports, variant-function meaning analysis, and deeper cross-file/transitive variable data flow are still out of scope.
 
-## 9.11 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
+## 9.12 CLI Init/Dev/Scan/Check/Apply/Diff/Handoff
 
 | Metric | Value |
 | --- | ---: |
@@ -1178,8 +1215,8 @@ Package install smoke gate:
 | Installed plugin transform exit code | 0 |
 | Installed Vite dev server exit code | 0 |
 | Package file count | 15 |
-| Package size | 44411 bytes |
-| Unpacked size | 218337 bytes |
+| Package size | 45673 bytes |
+| Unpacked size | 225048 bytes |
 | Includes bin wrapper | true |
 | Includes CLI source | true |
 | Includes Vite plugin source | true |
@@ -1295,6 +1332,7 @@ Interpretation:
 | read-only cross-variable dependency handoff | same-file dependency snapshots 2 + dependency source diff + dependency semantic token added/removed >= 5 + syntax error 0 | pass |
 | imported variable related source handoff | tsconfig paths alias + import alias + multi-hop barrel snapshot + related semantic token added/removed >= 5 + syntax error 0 | pass |
 | imported variable dependency handoff | tsconfig paths alias + import alias + multi-hop barrel snapshot + dependency snapshots 2 + dependency semantic token added/removed >= 5 + syntax error 0 | pass |
+| property access handoff | object-property snapshot + related semantic token added >= 4 + removed >= 3 + syntax error 0 | pass |
 | workspace package import handoff | package workspaces + package exports + related semantic token added/removed >= 5 + syntax error 0 | pass |
 | variant/cva related source handoff | local variant declaration snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
 | imported variant/cva related source handoff | one-hop relative named import snapshot + related source diff + semantic token added/removed >= 5 + syntax error 0 | pass |
@@ -1305,7 +1343,7 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures one-hop dependency declarations in same-file and imported-source contexts as related dependency handoff context. It captures imported variable declarations behind tsconfig paths aliases, import aliases, multi-hop barrel re-exports, and workspace package imports as related source handoff context. It also captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop/multi-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, and 3-file graph refresh verification. This update also adds and passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, plus an external corpus import/report/gate harness smoke.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures one-hop dependency declarations in same-file and imported-source contexts as related dependency handoff context. It captures imported variable declarations behind tsconfig paths aliases, import aliases, multi-hop barrel re-exports, workspace package imports, and `styles.title`-style object properties as related source handoff context. It also captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop/multi-hop named barrel re-exports as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, and 3-file graph refresh verification. This update also adds and passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, plus an external corpus import/report/gate harness smoke.
 
 What worked:
 
@@ -1334,6 +1372,7 @@ What worked:
 - related dependency source diff and semantic token diff generation for one-hop same-file variable dependencies
 - related source diff and semantic token diff generation for imported variable declarations behind tsconfig paths aliases, import aliases, and multi-hop barrel re-exports
 - related dependency source diff and semantic token diff generation for one-hop dependencies inside imported variable declarations behind tsconfig paths aliases, import aliases, and multi-hop barrel re-exports
+- related source diff and semantic token diff generation for object-property classNames behind tsconfig paths aliases, import aliases, and multi-hop barrel re-exports
 - related source diff and semantic token diff generation for variable declarations behind workspace package imports
 - related source diff and semantic token diff generation for local variant/cva read-only bindings
 - related source diff and semantic token diff generation for one-hop relative named-import variant/cva read-only bindings
