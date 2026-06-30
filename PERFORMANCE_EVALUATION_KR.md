@@ -37,6 +37,7 @@ npm run build
 - imported variant/cva related source handoff fixture
 - CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
 - package install smoke fixture
+- product-sized Vite graph write throttle fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, revert 측정
 
@@ -163,8 +164,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.13ms / p95 3.813ms / max 3.813ms |
-| `src/main.tsx` | 0 | avg 0.005ms / p95 0.009ms / max 0.009ms |
+| `src/App.tsx` | 13 | avg 1.419ms / p95 2.918ms / max 2.918ms |
+| `src/main.tsx` | 0 | avg 0.007ms / p95 0.013ms / max 0.013ms |
 
 요약:
 
@@ -172,12 +173,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 0.567ms |
-| 전체 p95 transform time | 3.813ms |
-| 전체 최대 transform time | 3.813ms |
-| warm 평균 transform time | 0.232ms |
-| warm p95 transform time | 0.618ms |
-| warm 최대 transform time | 0.618ms |
+| 전체 평균 transform time | 0.713ms |
+| 전체 p95 transform time | 2.918ms |
+| 전체 최대 transform time | 2.918ms |
+| warm 평균 transform time | 0.525ms |
+| warm p95 transform time | 1.936ms |
+| warm 최대 transform time | 1.936ms |
 | warm 목표 | 5ms 이하 |
 | cold 목표 | 10ms 이하 |
 | 결과 | warm 통과 / cold 통과 |
@@ -202,9 +203,9 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 파일 크기 | 45,352 bytes |
 | 반복 측정 | 5 |
-| average transform time | 9.593ms |
-| p95 transform time | 12.087ms |
-| max transform time | 12.087ms |
+| average transform time | 12.635ms |
+| p95 transform time | 17.019ms |
+| max transform time | 17.019ms |
 | stress 목표 | 20ms 이하 |
 | 결과 | 통과 |
 
@@ -212,7 +213,36 @@ reports/performance/spike-evaluation.json
 
 - 일반 `src` 파일의 5ms gate와 별도로, 401개 binding이 있는 stress fixture를 20ms 이하 목표로 측정했다.
 - 이 수치는 MVP scanner가 큰 AI 생성 화면에서도 즉시 깨지는 수준은 아니라는 신호다.
-- 실제 대형 제품 파일에서는 cache, changed-file filtering, graph write throttling이 여전히 필요하다.
+- graph write throttling은 아래 product-sized fixture에서 별도로 검증한다.
+- 실제 대형 제품에서는 multi-file HMR과 changed-file filtering을 추가로 재측정해야 한다.
+
+## 3.2 Product-sized Graph Write Throttle
+
+| 항목 | 값 |
+| --- | ---: |
+| fixture 파일 | `.intent/tmp/vite-graph-write-throttle/ProductGraphWriteThrottleFixture.tsx` |
+| graph 파일 | `.intent/tmp/vite-graph-write-throttle/.intent/graph.intent.json` |
+| 반복 카드 수 | 100 |
+| binding 수 | 401 |
+| 입력 크기 | 45,352 bytes |
+| 동일 입력 반복 수 | 4 |
+| initial transform | 28.229ms |
+| 동일 입력 반복 transform | 12.475ms / 12.02ms / 20.171ms / 12.397ms |
+| changed-token transform | 19.753ms |
+| changed-token repeat transform | 9.388ms |
+| inferred write count | 2 |
+| inferred skipped write count | 5 |
+| same-code generatedAt stable | true |
+| changed-code generatedAt update | true |
+| changed-repeat generatedAt stable | true |
+| 결과 | 통과 |
+
+해석:
+
+- Vite plugin transform을 직접 호출해 401개 binding이 있는 TSX를 반복 측정했다.
+- `transformMs`는 매번 바뀌는 진단값이므로 graph publish fingerprint에서 제외했다.
+- 동일 입력 4회와 변경 후 동일 입력 1회는 `.intent/graph.intent.json`의 `generatedAt`이 유지되어 write skip으로 추론된다.
+- 실제 semantic token 변경(`gap-4` -> `gap-6`)에서는 `generatedAt`이 한 번 갱신된다.
 
 ## 4. Patch 성능과 안전성
 
@@ -834,8 +864,8 @@ package install smoke gate:
 | installed help exit code | 0 |
 | installed `/vite` import exit code | 0 |
 | package file 수 | 14 |
-| package size | 39642 bytes |
-| unpacked size | 192888 bytes |
+| package size | 39979 bytes |
+| unpacked size | 194403 bytes |
 | bin wrapper 포함 | true |
 | CLI source 포함 | true |
 | Vite plugin source 포함 | true |
@@ -846,11 +876,11 @@ package install smoke gate:
 | `/vite` plugin name | `intent-layer-spike` |
 | `/vite` plugin enforce | `pre` |
 | legacy plugin name | `intent-layer-spike` |
-| dry-run 시간 | 2336.144ms |
-| pack 시간 | 2298.76ms |
-| install 시간 | 3906.928ms |
-| installed help 시간 | 2590.179ms |
-| `/vite` import 시간 | 1546.674ms |
+| dry-run 시간 | 2741.303ms |
+| pack 시간 | 2743.63ms |
+| install 시간 | 4135.405ms |
+| installed help 시간 | 2735.207ms |
+| `/vite` import 시간 | 1633.83ms |
 
 해석:
 
@@ -872,6 +902,7 @@ package install smoke gate:
 | warm transform target | max <= 5ms | 통과 |
 | cold transform target | max <= 10ms | 통과 |
 | large transform stress | 401 bindings max <= 20ms | 통과 |
+| product graph write throttle | 401 bindings, 동일 입력 stable, 변경 입력 update, inferred writes = 2, inferred skipped writes = 5 | 통과 |
 | CLI init | `.intent` folders/schema 생성 또는 존재 확인 + exit code 0 | 통과 |
 | CLI dev dry-run | local Vite command plan 생성 + host/port 검증 + exit code 0 | 통과 |
 | package install smoke | pack dry-run + tarball install + installed `intent-layer --help` + installed `/vite` import + context-pack 제외 | 통과 |
@@ -906,7 +937,7 @@ package install smoke gate:
 
 ## 11. 결론
 
-이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local 및 one-hop relative imported variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 package smoke도 tarball install, 설치된 bin 실행, `/vite` export import까지 통과했다.
+이번 단계는 MVP direct-edit 표면적을 static `className`에서 simple/partial `cn()` / `clsx()` literal segment까지 확장했고, 직접 patch가 어려운 `className`은 read-only handoff로 선택 가능하게 만들었다. 또한 read-only 변수 선언의 related semantic diff를 배열, object map, template literal 조합까지 넓히고, local 및 one-hop relative imported variant/cva 선언도 related source handoff 문맥으로 잡는다. 최소 CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`도 추가해 local dev server 실행, repo 상태 확인, deterministic patch 적용, intent diff 확인, AI용 context 생성, agent handoff 문서 생성, result/diff 기록까지 할 수 있게 했다. 설치형 package smoke도 tarball install, 설치된 bin 실행, `/vite` export import까지 통과했다. 이번 갱신에서는 401-binding TSX 반복 transform에서 semantic fingerprint가 같으면 sidecar graph write를 건너뛰는 gate도 추가로 통과했다.
 
 성공한 것:
 
@@ -924,6 +955,7 @@ package install smoke gate:
 - undo conflict artifact 생성과 expected/actual/restore token 기록
 - undo conflict 목록 조회와 `discard-pending-undo` 해결 처리
 - 반복 transform을 위한 source hash/className tokenization 캐시
+- 반복 Vite transform에서 semantic graph fingerprint 기반 sidecar write throttling
 - agent handoff task markdown 생성
 - agent result markdown, selected source-window diff, component source diff, selected/component/related `className` semantic diff 생성
 - component snapshot discovery fixture 8/8 통과
@@ -938,6 +970,7 @@ package install smoke gate:
 - source hash stale rejection
 - low-level scanner 기반 cold transform 5ms gate 통과
 - 401-binding large TSX transform stress gate 통과
+- 401-binding product graph write throttle gate 통과
 - CLI `scan`/`check` JSON report와 gate 통과
 - CLI `init` workspace/schema 생성과 gate 통과
 - CLI `dev --dry-run` local Vite command plan 생성과 gate 통과
@@ -952,7 +985,7 @@ package install smoke gate:
 
 아직 부족한 것:
 
-- 실제 제품급 대형 TSX 파일에서 cache/write throttling 검증
+- 실제 multi-file HMR 세션에서 graph write throttle과 changed-file filtering 재측정
 - 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
 - branch undo는 현재 pending undo 폐기까지만 지원하며, 임의 non-top patch를 소스에서 직접 되돌리지는 않는다.
 - CLI tarball install과 package `/vite` export smoke는 통과했지만, public npm package 이름과 외부 사용자용 install guide copy는 출시 polish로 남아 있다.
@@ -965,5 +998,5 @@ package install smoke gate:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 외부 독립 corpus 검증, branch undo를 임의 non-top revert로 확장할지 판단, path alias/barrel/cross-variable handoff 문맥 보강, 제품급 TSX 파일에서 component snapshot 오탐/미탐 재측정이다.
+다음 우선순위는 외부 독립 corpus 검증, branch undo를 임의 non-top revert로 확장할지 판단, path alias/barrel/cross-variable handoff 문맥 보강, 실제 multi-file HMR과 외부 제품급 TSX 파일에서 component snapshot 및 graph throttle 재측정이다.
 ```

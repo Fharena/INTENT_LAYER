@@ -512,6 +512,7 @@ element select -> panel: <100ms
 direct patch apply: <50ms
 intent diff small change: <1s
 Vite transform overhead: <5ms/file target
+sidecar graph write: semantic fingerprint 변경 시에만 발생
 ```
 
 ## 10. 출시형 MVP 개발 순서

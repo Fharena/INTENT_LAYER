@@ -608,6 +608,7 @@ Vite transform 추가 비용: 파일당 5ms 이하 목표
 단순 patch 저장: 50ms 이하
 HMR 반영: 기존 Vite 속도 유지
 DOM id 추가 오버헤드: node당 20 bytes 내외 목표
+sidecar graph write: 의미 fingerprint 변경 시에만 수행
 ```
 
 ## 12. AI 사용 원칙

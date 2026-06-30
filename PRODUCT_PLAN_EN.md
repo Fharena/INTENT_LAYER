@@ -606,6 +606,7 @@ element select -> panel display: under 100ms
 simple patch write: under 50ms
 HMR update: preserve existing Vite speed
 DOM id overhead: roughly under 20 bytes per node
+sidecar graph write: only when the semantic fingerprint changes
 ```
 
 ## 12. AI Usage Principles

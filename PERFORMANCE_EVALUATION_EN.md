@@ -37,6 +37,7 @@ Measured inputs:
 - imported variant/cva related source handoff fixture
 - CLI `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
 - package install smoke fixture
+- product-sized Vite graph write throttle fixture
 - read-only binding handoff fixture
 - in-app browser click-to-panel, preview, apply, and revert measurement
 
@@ -163,8 +164,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 1.13ms / p95 3.813ms / max 3.813ms |
-| `src/main.tsx` | 0 | avg 0.005ms / p95 0.009ms / max 0.009ms |
+| `src/App.tsx` | 13 | avg 1.419ms / p95 2.918ms / max 2.918ms |
+| `src/main.tsx` | 0 | avg 0.007ms / p95 0.013ms / max 0.013ms |
 
 Summary:
 
@@ -172,12 +173,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 0.567ms |
-| Overall p95 transform time | 3.813ms |
-| Overall max transform time | 3.813ms |
-| Warm average transform time | 0.232ms |
-| Warm p95 transform time | 0.618ms |
-| Warm max transform time | 0.618ms |
+| Overall average transform time | 0.713ms |
+| Overall p95 transform time | 2.918ms |
+| Overall max transform time | 2.918ms |
+| Warm average transform time | 0.525ms |
+| Warm p95 transform time | 1.936ms |
+| Warm max transform time | 1.936ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -202,9 +203,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 9.593ms |
-| p95 transform time | 12.087ms |
-| Max transform time | 12.087ms |
+| Average transform time | 12.635ms |
+| p95 transform time | 17.019ms |
+| Max transform time | 17.019ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -212,7 +213,36 @@ Interpretation:
 
 - Separate from the 5ms gate for normal `src` files, the stress fixture measures 401 bindings against a 20ms target.
 - This suggests the MVP scanner does not collapse immediately on larger AI-generated screens.
-- Real product-sized files will still need caching, changed-file filtering, and graph write throttling.
+- Graph write throttling is measured separately in the product-sized fixture below.
+- Real product-sized projects still need multi-file HMR and changed-file filtering re-measurement.
+
+## 3.2 Product-sized Graph Write Throttle
+
+| Metric | Value |
+| --- | ---: |
+| Fixture file | `.intent/tmp/vite-graph-write-throttle/ProductGraphWriteThrottleFixture.tsx` |
+| Graph file | `.intent/tmp/vite-graph-write-throttle/.intent/graph.intent.json` |
+| Repeated cards | 100 |
+| Bindings | 401 |
+| Input size | 45,352 bytes |
+| Same-input repeats | 4 |
+| Initial transform | 28.229ms |
+| Same-input repeat transforms | 12.475ms / 12.02ms / 20.171ms / 12.397ms |
+| Changed-token transform | 19.753ms |
+| Changed-token repeat transform | 9.388ms |
+| Inferred write count | 2 |
+| Inferred skipped write count | 5 |
+| Same-code generatedAt stable | true |
+| Changed-code generatedAt update | true |
+| Changed-repeat generatedAt stable | true |
+| Result | pass |
+
+Interpretation:
+
+- The evaluation calls the Vite plugin transform directly with a 401-binding TSX fixture.
+- `transformMs` is a diagnostic field that changes on every run, so it is excluded from the graph publish fingerprint.
+- Four same-input repeats and one post-change repeat preserve `.intent/graph.intent.json` `generatedAt`, which infers skipped writes.
+- A real semantic token change (`gap-4` -> `gap-6`) updates `generatedAt` once.
 
 ## 4. Patch Performance and Safety
 
@@ -835,8 +865,8 @@ Package install smoke gate:
 | Installed help exit code | 0 |
 | Installed `/vite` import exit code | 0 |
 | Package file count | 14 |
-| Package size | 39642 bytes |
-| Unpacked size | 192888 bytes |
+| Package size | 39979 bytes |
+| Unpacked size | 194403 bytes |
 | Includes bin wrapper | true |
 | Includes CLI source | true |
 | Includes Vite plugin source | true |
@@ -847,11 +877,11 @@ Package install smoke gate:
 | `/vite` plugin name | `intent-layer-spike` |
 | `/vite` plugin enforce | `pre` |
 | Legacy plugin name | `intent-layer-spike` |
-| Dry-run time | 2336.144ms |
-| Pack time | 2298.76ms |
-| Install time | 3906.928ms |
-| Installed help time | 2590.179ms |
-| `/vite` import time | 1546.674ms |
+| Dry-run time | 2741.303ms |
+| Pack time | 2743.63ms |
+| Install time | 4135.405ms |
+| Installed help time | 2735.207ms |
+| `/vite` import time | 1633.83ms |
 
 Interpretation:
 
@@ -873,6 +903,7 @@ Interpretation:
 | warm transform target | max <= 5ms | pass |
 | cold transform target | max <= 10ms | pass |
 | large transform stress | 401 bindings max <= 20ms | pass |
+| product graph write throttle | 401 bindings, same input stable, changed input updates, inferred writes = 2, inferred skipped writes = 5 | pass |
 | CLI init | `.intent` folders/schema created or present + exit code 0 | pass |
 | CLI dev dry-run | local Vite command plan created + host/port verified + exit code 0 | pass |
 | package install smoke | pack dry-run + tarball install + installed `intent-layer --help` + installed `/vite` import + context-pack excluded | pass |
@@ -907,7 +938,7 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, and `/vite` export import.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures local plus one-hop relative imported variant/cva declarations as related source handoff context. A minimal `init`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, and `/vite` export import. This update also adds and passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged.
 
 What worked:
 
@@ -925,6 +956,7 @@ What worked:
 - undo conflict artifact generation with expected/actual/restore token records
 - undo conflict listing and `discard-pending-undo` resolution
 - source hash/className tokenization caches for repeated transforms
+- semantic graph fingerprint based sidecar write throttling for repeated Vite transforms
 - agent handoff task markdown generation
 - agent result markdown, selected source-window diff, component source diff, and selected/component/related `className` semantic diff generation
 - component snapshot discovery fixture pass 8/8
@@ -939,6 +971,7 @@ What worked:
 - source hash stale rejection
 - low-level scanner cold transform gate pass
 - 401-binding large TSX transform stress gate pass
+- 401-binding product graph write throttle gate pass
 - CLI `scan`/`check` JSON report and gate pass
 - CLI `init` workspace/schema creation and gate pass
 - CLI `dev --dry-run` local Vite command plan creation and gate pass
@@ -953,7 +986,7 @@ What worked:
 
 What remains weak:
 
-- cache/write throttling still needs to be validated on product-sized TSX files
+- graph write throttling and changed-file filtering still need re-measurement in real multi-file HMR sessions
 - real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - branch undo currently supports pending undo discard only; arbitrary non-top patches are not directly reverted from source
 - CLI tarball install and package `/vite` export smoke pass, but public npm package naming and external install-guide copy remain launch-polish work
@@ -966,5 +999,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is independent external corpus validation, deciding whether to expand branch undo into arbitrary non-top revert, path-alias/barrel/cross-variable handoff context, and component snapshot false-positive/false-negative measurement on product-sized TSX files.
+The next priority is independent external corpus validation, deciding whether to expand branch undo into arbitrary non-top revert, path-alias/barrel/cross-variable handoff context, and component snapshot plus graph throttle re-measurement on real multi-file HMR sessions and external product-sized TSX files.
 ```
