@@ -1,4 +1,6 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
 import { analyzeClassNames } from "./analyze-classnames";
@@ -25,6 +27,151 @@ const reportsDir = path.join(rootDir, "reports", "performance");
 const tmpDir = path.join(rootDir, ".intent", "tmp");
 const aiCorpusMinFiles = 50;
 const aiCorpusCoverageTarget = 0.5;
+
+interface CommandResult {
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  ms: number;
+}
+
+interface PackageSmokeResult {
+  packageName: string | null;
+  packageVersion: string | null;
+  binTarget: string | null;
+  dryRunExitCode: number | null;
+  packExitCode: number | null;
+  installExitCode: number | null;
+  helpExitCode: number | null;
+  packageFileCount: number;
+  packageSize: number;
+  packageUnpackedSize: number;
+  tarballFile: string | null;
+  installDir: string;
+  binFile: string;
+  hasBinWrapper: boolean;
+  hasCliSource: boolean;
+  hasContextPackFiles: boolean;
+  helpIncludesUsage: boolean;
+  helpIncludesDev: boolean;
+  dryRunMs: number;
+  packMs: number;
+  installMs: number;
+  helpMs: number;
+  stdoutBytes: number;
+  stderrBytes: number;
+}
+
+function npmCommand(): string {
+  return process.platform === "win32" ? "npm.cmd" : "npm";
+}
+
+function runCommand(command: string, args: string[], cwd: string): CommandResult {
+  const started = performance.now();
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+    windowsHide: true
+  });
+  return {
+    exitCode: result.status,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? result.error?.message ?? "",
+    ms: Number((performance.now() - started).toFixed(3))
+  };
+}
+
+function parsePackJson(stdout: string): {
+  name?: string;
+  version?: string;
+  size?: number;
+  unpackedSize?: number;
+  filename?: string;
+  files?: Array<{ path: string; size: number }>;
+} | null {
+  try {
+    const parsed = JSON.parse(stdout) as unknown;
+    return Array.isArray(parsed) ? (parsed[0] as ReturnType<typeof parsePackJson>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function reportPath(file: string): string {
+  const normalizedFile = path.resolve(file);
+  const normalizedTmp = path.resolve(os.tmpdir());
+  if (normalizedFile === normalizedTmp || normalizedFile.startsWith(`${normalizedTmp}${path.sep}`)) {
+    return path.join("<os-tmp>", path.relative(normalizedTmp, normalizedFile)).replace(/\\/g, "/");
+  }
+  return path.relative(rootDir, normalizedFile).replace(/\\/g, "/");
+}
+
+function packageSmoke(): PackageSmokeResult {
+  const packageRoot = fs.mkdtempSync(path.join(os.tmpdir(), "intent-layer-package-smoke-"));
+  const installDir = path.join(packageRoot, "install");
+  fs.mkdirSync(installDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(installDir, "package.json"),
+    `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`
+  );
+
+  const dryRun = runCommand(npmCommand(), ["pack", "--dry-run", "--json"], rootDir);
+  const dryRunPackage = parsePackJson(dryRun.stdout);
+  const pack = runCommand(npmCommand(), ["pack", "--json", "--pack-destination", packageRoot], rootDir);
+  const packedPackage = parsePackJson(pack.stdout);
+  const tarballFile =
+    packedPackage?.filename !== undefined ? path.join(packageRoot, packedPackage.filename) : null;
+  const install =
+    tarballFile && fs.existsSync(tarballFile)
+      ? runCommand(
+          npmCommand(),
+          ["install", path.relative(installDir, tarballFile), "--ignore-scripts", "--no-audit", "--no-fund"],
+          installDir
+        )
+      : { exitCode: null, stdout: "", stderr: "missing tarball", ms: 0 };
+  const binFile = path.join(
+    installDir,
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "intent-layer.cmd" : "intent-layer"
+  );
+  const help =
+    fs.existsSync(binFile) && install.exitCode === 0
+      ? runCommand(binFile, ["--help"], installDir)
+      : { exitCode: null, stdout: "", stderr: "missing installed bin", ms: 0 };
+  const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf8")) as {
+    bin?: Record<string, string>;
+  };
+  const files = dryRunPackage?.files ?? [];
+
+  return {
+    packageName: dryRunPackage?.name ?? null,
+    packageVersion: dryRunPackage?.version ?? null,
+    binTarget: packageJson.bin?.["intent-layer"] ?? null,
+    dryRunExitCode: dryRun.exitCode,
+    packExitCode: pack.exitCode,
+    installExitCode: install.exitCode,
+    helpExitCode: help.exitCode,
+    packageFileCount: files.length,
+    packageSize: dryRunPackage?.size ?? 0,
+    packageUnpackedSize: dryRunPackage?.unpackedSize ?? 0,
+    tarballFile: tarballFile ? reportPath(tarballFile) : null,
+    installDir: reportPath(installDir),
+    binFile: reportPath(binFile),
+    hasBinWrapper: files.some((file) => file.path === "bin/intent-layer.cjs"),
+    hasCliSource: files.some((file) => file.path === "src/intent/cli.ts"),
+    hasContextPackFiles: files.some((file) => file.path.startsWith(".context-pack/")),
+    helpIncludesUsage: help.stdout.includes("Usage:"),
+    helpIncludesDev: help.stdout.includes("intent-layer dev"),
+    dryRunMs: dryRun.ms,
+    packMs: pack.ms,
+    installMs: install.ms,
+    helpMs: help.ms,
+    stdoutBytes: dryRun.stdout.length + pack.stdout.length + install.stdout.length + help.stdout.length,
+    stderrBytes: dryRun.stderr.length + pack.stderr.length + install.stderr.length + help.stderr.length
+  };
+}
 
 function sourceFiles(input: string): string[] {
   const full = path.resolve(rootDir, input);
@@ -1172,6 +1319,8 @@ const cliDiff = runCli(
 const cliDiffReport = cliDiff.report?.command === "diff" ? cliDiff.report : null;
 const cliApplySyntaxErrors = parseSyntaxErrorCount(cliApplyFixture);
 
+const packageInstallSmoke = packageSmoke();
+
 const graphLookupIterations = 1000;
 const graphLookup = new Map(patchInstrument.entries.map((entry) => [entry.id, entry]));
 const lookupStarted = performance.now();
@@ -1332,6 +1481,7 @@ const report = {
     agentTaskStdoutBytes: cliAgentTask.stdout.length,
     agentResultStdoutBytes: cliAgentResult.stdout.length
   },
+  packageInstall: packageInstallSmoke,
   patch: {
     previewOk: preview.ok,
     previewMs: preview.ok ? preview.metrics.previewMs : preview.metrics?.previewMs,
@@ -1715,6 +1865,17 @@ const report = {
       cliDevReport.host === "127.0.0.1" &&
       cliDevReport.port === 5173 &&
       cliDevReport.args.some((arg) => arg.endsWith("vite.js")),
+    packageInstallSmokePass:
+      packageInstallSmoke.dryRunExitCode === 0 &&
+      packageInstallSmoke.packExitCode === 0 &&
+      packageInstallSmoke.installExitCode === 0 &&
+      packageInstallSmoke.helpExitCode === 0 &&
+      packageInstallSmoke.binTarget === "bin/intent-layer.cjs" &&
+      packageInstallSmoke.hasBinWrapper &&
+      packageInstallSmoke.hasCliSource &&
+      !packageInstallSmoke.hasContextPackFiles &&
+      packageInstallSmoke.helpIncludesUsage &&
+      packageInstallSmoke.helpIncludesDev,
     cliScanPass:
       cliScan.exitCode === 0 &&
       cliScanReport?.command === "scan" &&

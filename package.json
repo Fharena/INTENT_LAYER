@@ -4,7 +4,21 @@
   "private": true,
   "type": "module",
   "bin": {
-    "intent-layer": "src/intent/cli.ts"
+    "intent-layer": "bin/intent-layer.cjs"
+  },
+  "files": [
+    "bin/",
+    "src/intent/",
+    "README.md",
+    "PRODUCT_PLAN_KR.md",
+    "PRODUCT_PLAN_EN.md",
+    "LAUNCH_MVP_KR.md",
+    "LAUNCH_MVP_EN.md",
+    "PERFORMANCE_EVALUATION_KR.md",
+    "PERFORMANCE_EVALUATION_EN.md"
+  ],
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -26,19 +40,19 @@
     "eval": "tsx scripts/evaluate-spike.ts"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.17",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
     "vite": "^6.0.5"
   }
 }
