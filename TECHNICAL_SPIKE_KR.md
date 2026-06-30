@@ -212,6 +212,7 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - agent handoff는 선택 source window snapshot과 task/result markdown, intent diff 기록을 지원한다.
 - agent result는 선택 source window의 before/after line diff를 기록하지만, 아직 전체 파일 semantic diff를 자동 추론하지 않는다.
 - 실제 브라우저 click-to-panel, preview, apply, revert 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
+- 최신 브라우저 측정은 desktop 3회, mobile 390x844 viewport 3회로 반복했다.
 - 현재 fixture에서는 warm transform 5ms 목표와 cold transform 10ms 목표를 만족했다.
 - 100개 카드/401개 binding을 가진 대형 TSX stress fixture는 20ms 목표를 만족했다.
 - 실제 제품급 대형 TSX 파일에서는 cache와 graph write throttling을 추가 검증해야 한다.
@@ -220,13 +221,12 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 
 우선순위:
 
-1. browser metric 측정을 여러 샘플과 모바일 viewport로 확장한다.
-2. 실제 AI 생성 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
-3. agent result source window diff를 실제 semantic intent diff로 확장한다.
-4. undo stack과 operation log 기반 revert를 설계한다.
-5. read-only source diff를 더 넓은 source window와 연결한다.
-6. fixture를 nested component, map render, conditional render, fragment로 확장한다.
-7. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
+1. 실제 AI 생성 React/Tailwind corpus 50-100개로 editable coverage를 다시 측정한다.
+2. agent result source window diff를 실제 semantic intent diff로 확장한다.
+3. undo stack과 operation log 기반 revert를 설계한다.
+4. read-only source diff를 더 넓은 source window와 연결한다.
+5. fixture를 nested component, map render, conditional render, fragment로 확장한다.
+6. 실제 제품급 대형 TSX 파일에서 cache와 graph write throttling을 검증한다.
 
 ## 9. Agent Handoff와 Result
 
@@ -338,4 +338,16 @@ DELETE /__intent/client-metrics
 ```
 
 최신 실제 브라우저 측정은 in-app browser로 `Pick element`를 누른 뒤 `Patch Preview` heading을 선택하고, 첫 typography token을 `text-lg -> text-xl`로 preview/apply한 뒤 `Undo last`로 되돌려 수행했다.
+샘플은 desktop 기본 viewport 3회, mobile 390x844 viewport 3회로 나누어 측정했다.
+
+요약:
+
+```text
+samples: 6 total = 3 desktop + 3 mobile
+click-to-panel max: 2.3ms
+preview round trip max: 5.9ms
+apply round trip max: 32.3ms
+revert round trip max: 36.5ms
+```
+
 결과는 `reports/performance/browser-click-metric.json`에 저장한다.

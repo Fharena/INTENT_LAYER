@@ -88,8 +88,8 @@ Measurements:
 
 | File | Bindings | Transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 2.044ms / p95 5.515ms / max 5.515ms |
-| `src/main.tsx` | 0 | avg 0.008ms / p95 0.016ms / max 0.016ms |
+| `src/App.tsx` | 13 | avg 1.084ms / p95 2.855ms / max 2.855ms |
+| `src/main.tsx` | 0 | avg 0.004ms / p95 0.007ms / max 0.007ms |
 
 Summary:
 
@@ -97,12 +97,12 @@ Summary:
 | --- | ---: |
 | Files measured | 2 |
 | Iterations per file | 5 |
-| Overall average transform time | 1.026ms |
-| Overall p95 transform time | 5.515ms |
-| Overall max transform time | 5.515ms |
-| Warm average transform time | 0.592ms |
-| Warm p95 transform time | 1.43ms |
-| Warm max transform time | 1.43ms |
+| Overall average transform time | 0.544ms |
+| Overall p95 transform time | 2.855ms |
+| Overall max transform time | 2.855ms |
+| Warm average transform time | 0.322ms |
+| Warm p95 transform time | 0.765ms |
+| Warm max transform time | 0.765ms |
 | Warm target | <= 5ms |
 | Cold target | <= 10ms |
 | Result | warm pass / cold pass |
@@ -126,9 +126,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 10.988ms |
-| p95 transform time | 14.861ms |
-| Max transform time | 14.861ms |
+| Average transform time | 7.29ms |
+| p95 transform time | 14.403ms |
+| Max transform time | 14.403ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -143,13 +143,13 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Preview success | true |
-| Preview time | 1.233ms |
-| Preview round trip | 1.659ms |
+| Preview time | 1.414ms |
+| Preview round trip | 2.004ms |
 | Apply success | true |
-| Static apply time | 30.856ms |
-| Simple `cn()` apply time | 20.686ms |
+| Static apply time | 20.186ms |
+| Simple `cn()` apply time | 7.789ms |
 | Revert success | true |
-| Revert time | 20.368ms |
+| Revert time | 14.482ms |
 | Syntax errors after patch | 0 |
 | Syntax errors after revert | 0 |
 | Simple `cn()` syntax errors after patch | 0 |
@@ -169,8 +169,8 @@ Interpretation:
 | Metric | Value |
 | --- | ---: |
 | Iterations | 1000 |
-| Total time | 0.708ms |
-| Average lookup | 0.000708ms |
+| Total time | 0.623ms |
+| Average lookup | 0.000623ms |
 
 Caveat:
 
@@ -198,46 +198,61 @@ The overlay posted performance.now measurements to /__intent/client-metric.
 
 | Metric | Value |
 | --- | ---: |
-| Test URL | `http://127.0.0.1:5182/` |
-| Binding selected | true |
-| Graph fetch time | 5.4ms |
-| Pick-to-panel time | 355.2ms |
-| Click-to-panel time | 1.6ms |
-| Binding lookup time | 0ms |
-| Panel render time | 1.6ms |
-| Preview token | `text-lg -> text-xl` |
-| Preview round trip | 3ms |
-| Preview server time | 0.499ms |
-| Preview render time | 0.1ms |
-| Apply token | `text-lg -> text-xl` |
-| Apply round trip | 15.9ms |
-| Apply server time | 12.201ms |
-| Apply render time | 0.1ms |
+| Test URL | `http://127.0.0.1:5183/` |
+| Measurement plan | 3 desktop default viewport runs + 3 mobile 390x844 viewport runs |
+| Total samples | 6 |
+| Desktop samples | 3 |
+| Mobile samples | 3 |
+| All bindings selected | true |
+| All previews succeeded | true |
+| All applies succeeded | true |
+| All reverts succeeded | true |
+| Preview/apply token | `text-lg -> text-xl` |
 | Revert token | `text-xl -> text-lg` |
-| Revert round trip | 22ms |
-| Revert server time | 18.814ms |
-| Revert render time | 1.4ms |
-| Click-to-panel target | <= 100ms |
-| Preview round trip target | <= 50ms |
-| Apply round trip target | <= 50ms |
-| Revert round trip target | <= 50ms |
+| Click-to-panel target | max <= 100ms |
+| Preview round trip target | max <= 50ms |
+| Apply round trip target | max <= 50ms |
+| Revert round trip target | max <= 50ms |
 | Result | pass |
+
+All-sample summary:
+
+| Metric | Average | p95 | Max |
+| --- | ---: | ---: | ---: |
+| Graph fetch | 5.783ms | 7.5ms | 7.5ms |
+| Click-to-panel | 1.7ms | 2.3ms | 2.3ms |
+| Preview round trip | 5.017ms | 5.9ms | 5.9ms |
+| Preview server | 0.804ms | 0.992ms | 0.992ms |
+| Apply round trip | 28.4ms | 32.3ms | 32.3ms |
+| Apply server | 23.711ms | 26.821ms | 26.821ms |
+| Revert round trip | 19.883ms | 36.5ms | 36.5ms |
+| Revert server | 15.978ms | 31.808ms | 31.808ms |
+
+Viewport max summary:
+
+| Metric | Desktop max | Mobile max |
+| --- | ---: | ---: |
+| Graph fetch | 6.5ms | 7.5ms |
+| Click-to-panel | 2.3ms | 1.7ms |
+| Preview round trip | 5.3ms | 5.9ms |
+| Apply round trip | 32.3ms | 29.2ms |
+| Revert round trip | 17.5ms | 36.5ms |
 
 Interpretation:
 
-- From the actual target-element click to the panel rendering the selected binding, latency was 1.6ms.
+- From the actual target-element click to the panel rendering the selected binding, max latency across all samples was 2.3ms.
 - `pickToPanelMs` includes the time spent waiting for the user to click a target after entering pick mode, so it is not pure UI latency.
-- From the preview button click to preview-state rendering, real browser round trip was 3ms.
-- From the apply button click to source patch completion and status rendering, real browser round trip was 15.9ms.
-- From the Undo last click to source revert completion and status rendering, real browser round trip was 22ms.
-- This is currently a single desktop viewport sample.
+- From the preview button click to preview-state rendering, max real browser round trip across all samples was 5.9ms.
+- From the apply button click to source patch completion and status rendering, max real browser round trip across all samples was 32.3ms.
+- From the Undo last click to source revert completion and status rendering, max real browser round trip across all samples was 36.5ms.
+- The metric has moved beyond the initial one-run check, but it is still a small sample on one local machine and browser environment.
 
 ## 7. Agent Task Generation
 
 | Metric | Value |
 | --- | ---: |
 | Task generation success | true |
-| Task generation time | 8.554ms |
+| Task generation time | 13.391ms |
 | Required sections present | true |
 
 Required sections checked:
@@ -259,7 +274,7 @@ Required Checks
 | Metric | Value |
 | --- | ---: |
 | Result generation success | true |
-| Result generation time | 16.502ms |
+| Result generation time | 5.016ms |
 | Required sections present | true |
 | Result/diff files exist | true |
 | Source hash changed | true |
@@ -308,7 +323,7 @@ Interpretation:
 | Unsupported reason | `variable-reference` |
 | Editable token count | 0 |
 | Agent task created | true |
-| Agent task generation time | 2.493ms |
+| Agent task generation time | 1.959ms |
 
 Interpretation:
 
@@ -325,6 +340,7 @@ Interpretation:
 | warm transform target | max <= 5ms | pass |
 | cold transform target | max <= 10ms | pass |
 | large transform stress | 401 bindings max <= 20ms | pass |
+| browser sample count | total >= 6, desktop >= 3, mobile >= 3 | pass |
 | browser click-to-panel | click-to-panel <= 100ms | pass |
 | browser preview round trip | preview round trip <= 50ms | pass |
 | browser apply round trip | apply round trip <= 50ms | pass |
@@ -364,7 +380,7 @@ What worked:
 What remains weak:
 
 - cache/write throttling still needs to be validated on product-sized TSX files
-- real browser measurement is still a single desktop sample
+- real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
 - real AI-generated 50-100 sample corpus audit is still missing
 - source-window diffs still need to become component-level semantic diffs
 - variant functions and runtime template literals remain unsupported
@@ -373,5 +389,5 @@ Current decision:
 
 ```text
 The MVP direct-edit surface is worth expanding.
-The next priority is browser multi-sample/mobile measurement, real corpus audit, and semantic intent diff expansion.
+The next priority is real corpus audit, semantic intent diff expansion, and undo stack design.
 ```

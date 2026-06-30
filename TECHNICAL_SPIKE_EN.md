@@ -213,6 +213,7 @@ Support model:
 - Agent handoff records a selected source-window snapshot plus task/result markdown and intent diffs.
 - Agent results record a before/after line diff for the selected source window, but they do not yet infer a full-file semantic diff automatically.
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
+- The latest browser measurement repeats 3 desktop samples and 3 mobile 390x844 viewport samples.
 - Current fixtures now meet the 5ms warm transform target and the 10ms cold transform target.
 - The large TSX stress fixture with 100 cards and 401 bindings meets the 20ms stress target.
 - Product-sized TSX files still need cache and graph write throttling validation.
@@ -221,13 +222,12 @@ Support model:
 
 Priority order:
 
-1. Expand browser metric measurement to multiple samples and mobile viewport.
-2. Re-measure editable coverage on a real 50-100 sample AI-generated React/Tailwind corpus.
-3. Expand agent result source-window diffs into semantic intent diffs.
-4. Design an undo stack and operation-log-backed revert.
-5. Connect read-only source diffs to a wider source window.
-6. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
-7. Validate caching and graph write throttling on product-sized TSX files.
+1. Re-measure editable coverage on a real 50-100 sample AI-generated React/Tailwind corpus.
+2. Expand agent result source-window diffs into semantic intent diffs.
+3. Design an undo stack and operation-log-backed revert.
+4. Connect read-only source diffs to a wider source window.
+5. Expand fixtures to nested components, map rendering, conditional rendering, and fragments.
+6. Validate caching and graph write throttling on product-sized TSX files.
 
 ## 9. Agent Handoff And Result
 
@@ -339,4 +339,16 @@ DELETE /__intent/client-metrics
 ```
 
 The latest real browser measurement used the in-app browser to click `Pick element`, select the visible `Patch Preview` heading, preview/apply the first typography token from `text-lg -> text-xl`, and revert it through `Undo last`.
+Samples were split into 3 desktop default viewport runs and 3 mobile 390x844 viewport runs.
+
+Summary:
+
+```text
+samples: 6 total = 3 desktop + 3 mobile
+click-to-panel max: 2.3ms
+preview round trip max: 5.9ms
+apply round trip max: 32.3ms
+revert round trip max: 36.5ms
+```
+
 The result is stored in `reports/performance/browser-click-metric.json`.

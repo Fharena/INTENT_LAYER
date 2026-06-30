@@ -66,7 +66,7 @@ The demo currently supports:
 - source hash validation before patching
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply
 - source snapshot diff output for agent result review handoff
-- browser click-to-panel, preview, apply, and revert round-trip metric capture at `/__intent/client-metrics`
+- browser click-to-panel, preview, apply, and revert round-trip metric capture with desktop/mobile sample summaries at `/__intent/client-metrics`
 - large TSX transform stress reporting for a generated 401-binding fixture
 
 The first evaluation result is stored in:

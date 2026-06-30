@@ -88,8 +88,8 @@ reports/performance/spike-evaluation.json
 
 | 파일 | binding 수 | transform time |
 | --- | ---: | ---: |
-| `src/App.tsx` | 13 | avg 2.044ms / p95 5.515ms / max 5.515ms |
-| `src/main.tsx` | 0 | avg 0.008ms / p95 0.016ms / max 0.016ms |
+| `src/App.tsx` | 13 | avg 1.084ms / p95 2.855ms / max 2.855ms |
+| `src/main.tsx` | 0 | avg 0.004ms / p95 0.007ms / max 0.007ms |
 
 요약:
 
@@ -97,12 +97,12 @@ reports/performance/spike-evaluation.json
 | --- | ---: |
 | 측정 파일 수 | 2 |
 | 파일당 반복 측정 | 5 |
-| 전체 평균 transform time | 1.026ms |
-| 전체 p95 transform time | 5.515ms |
-| 전체 최대 transform time | 5.515ms |
-| warm 평균 transform time | 0.592ms |
-| warm p95 transform time | 1.43ms |
-| warm 최대 transform time | 1.43ms |
+| 전체 평균 transform time | 0.544ms |
+| 전체 p95 transform time | 2.855ms |
+| 전체 최대 transform time | 2.855ms |
+| warm 평균 transform time | 0.322ms |
+| warm p95 transform time | 0.765ms |
+| warm 최대 transform time | 0.765ms |
 | warm 목표 | 5ms 이하 |
 | cold 목표 | 10ms 이하 |
 | 결과 | warm 통과 / cold 통과 |
@@ -126,9 +126,9 @@ reports/performance/spike-evaluation.json
 | binding 수 | 401 |
 | 파일 크기 | 45,352 bytes |
 | 반복 측정 | 5 |
-| average transform time | 10.988ms |
-| p95 transform time | 14.861ms |
-| max transform time | 14.861ms |
+| average transform time | 7.29ms |
+| p95 transform time | 14.403ms |
+| max transform time | 14.403ms |
 | stress 목표 | 20ms 이하 |
 | 결과 | 통과 |
 
@@ -143,13 +143,13 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | preview 성공 | true |
-| preview time | 1.233ms |
-| preview round trip | 1.659ms |
+| preview time | 1.414ms |
+| preview round trip | 2.004ms |
 | apply 성공 | true |
-| static apply time | 30.856ms |
-| simple `cn()` apply time | 20.686ms |
+| static apply time | 20.186ms |
+| simple `cn()` apply time | 7.789ms |
 | revert 성공 | true |
-| revert time | 20.368ms |
+| revert time | 14.482ms |
 | patch 후 syntax error | 0 |
 | revert 후 syntax error | 0 |
 | simple `cn()` patch 후 syntax error | 0 |
@@ -169,8 +169,8 @@ reports/performance/spike-evaluation.json
 | 항목 | 값 |
 | --- | ---: |
 | 반복 횟수 | 1000 |
-| 총 시간 | 0.708ms |
-| 평균 lookup | 0.000708ms |
+| 총 시간 | 0.623ms |
+| 평균 lookup | 0.000623ms |
 
 주의:
 
@@ -197,46 +197,61 @@ overlay가 performance.now()로 측정한 값을 /__intent/client-metric에 POST
 
 | 항목 | 값 |
 | --- | ---: |
-| 테스트 URL | `http://127.0.0.1:5182/` |
-| binding 선택 성공 | true |
-| graph fetch time | 5.4ms |
-| pick-to-panel time | 355.2ms |
-| click-to-panel time | 1.6ms |
-| binding lookup time | 0ms |
-| panel render time | 1.6ms |
-| preview token | `text-lg -> text-xl` |
-| preview round trip | 3ms |
-| preview server time | 0.499ms |
-| preview render time | 0.1ms |
-| apply token | `text-lg -> text-xl` |
-| apply round trip | 15.9ms |
-| apply server time | 12.201ms |
-| apply render time | 0.1ms |
+| 테스트 URL | `http://127.0.0.1:5183/` |
+| 측정 방식 | desktop 기본 viewport 3회 + mobile 390x844 viewport 3회 |
+| 총 샘플 수 | 6 |
+| desktop 샘플 수 | 3 |
+| mobile 샘플 수 | 3 |
+| 모든 binding 선택 성공 | true |
+| 모든 preview 성공 | true |
+| 모든 apply 성공 | true |
+| 모든 revert 성공 | true |
+| preview/apply token | `text-lg -> text-xl` |
 | revert token | `text-xl -> text-lg` |
-| revert round trip | 22ms |
-| revert server time | 18.814ms |
-| revert render time | 1.4ms |
-| click-to-panel 목표 | 100ms 이하 |
-| preview round trip 목표 | 50ms 이하 |
-| apply round trip 목표 | 50ms 이하 |
-| revert round trip 목표 | 50ms 이하 |
+| click-to-panel 목표 | max 100ms 이하 |
+| preview round trip 목표 | max 50ms 이하 |
+| apply round trip 목표 | max 50ms 이하 |
+| revert round trip 목표 | max 50ms 이하 |
 | 결과 | 통과 |
+
+전체 샘플 요약:
+
+| 항목 | 평균 | p95 | 최대 |
+| --- | ---: | ---: | ---: |
+| graph fetch | 5.783ms | 7.5ms | 7.5ms |
+| click-to-panel | 1.7ms | 2.3ms | 2.3ms |
+| preview round trip | 5.017ms | 5.9ms | 5.9ms |
+| preview server | 0.804ms | 0.992ms | 0.992ms |
+| apply round trip | 28.4ms | 32.3ms | 32.3ms |
+| apply server | 23.711ms | 26.821ms | 26.821ms |
+| revert round trip | 19.883ms | 36.5ms | 36.5ms |
+| revert server | 15.978ms | 31.808ms | 31.808ms |
+
+Viewport별 최대값:
+
+| 항목 | desktop max | mobile max |
+| --- | ---: | ---: |
+| graph fetch | 6.5ms | 7.5ms |
+| click-to-panel | 2.3ms | 1.7ms |
+| preview round trip | 5.3ms | 5.9ms |
+| apply round trip | 32.3ms | 29.2ms |
+| revert round trip | 17.5ms | 36.5ms |
 
 해석:
 
-- 사용자가 실제 대상 요소를 클릭한 순간부터 panel이 binding 상태로 렌더되기까지는 1.6ms였다.
+- 사용자가 실제 대상 요소를 클릭한 순간부터 panel이 binding 상태로 렌더되기까지는 전체 샘플 기준 최대 2.3ms였다.
 - `pickToPanelMs`는 사용자가 pick mode에 들어간 뒤 실제 대상을 클릭하기까지 머문 시간까지 포함하므로 UX latency가 아니라 사용자 대기 시간이 섞인 값이다.
-- preview 버튼 클릭부터 preview 상태 렌더까지의 실제 browser round trip은 3ms였다.
-- apply 버튼 클릭부터 source patch 완료 및 상태 렌더까지의 실제 browser round trip은 15.9ms였다.
-- Undo last 클릭부터 source revert 완료 및 상태 렌더까지의 실제 browser round trip은 22ms였다.
-- 현재 수치는 단일 desktop viewport 샘플이다.
+- preview 버튼 클릭부터 preview 상태 렌더까지의 실제 browser round trip은 전체 샘플 기준 최대 5.9ms였다.
+- apply 버튼 클릭부터 source patch 완료 및 상태 렌더까지의 실제 browser round trip은 전체 샘플 기준 최대 32.3ms였다.
+- Undo last 클릭부터 source revert 완료 및 상태 렌더까지의 실제 browser round trip은 전체 샘플 기준 최대 36.5ms였다.
+- 초기 1회 측정에서 desktop/mobile 반복 측정으로 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
 
 ## 7. Agent Task 생성
 
 | 항목 | 값 |
 | --- | ---: |
 | task 생성 성공 | true |
-| task 생성 시간 | 8.554ms |
+| task 생성 시간 | 13.391ms |
 | 필수 섹션 포함 | true |
 
 검증한 필수 섹션:
@@ -258,7 +273,7 @@ Required Checks
 | 항목 | 값 |
 | --- | ---: |
 | result 생성 성공 | true |
-| result 생성 시간 | 16.502ms |
+| result 생성 시간 | 5.016ms |
 | 필수 섹션 포함 | true |
 | result/diff 파일 존재 | true |
 | source hash changed | true |
@@ -307,7 +322,7 @@ dev server endpoint smoke test:
 | unsupported reason | `variable-reference` |
 | editable token 수 | 0 |
 | agent task 생성 | true |
-| agent task 생성 시간 | 2.493ms |
+| agent task 생성 시간 | 1.959ms |
 
 해석:
 
@@ -324,6 +339,7 @@ dev server endpoint smoke test:
 | warm transform target | max <= 5ms | 통과 |
 | cold transform target | max <= 10ms | 통과 |
 | large transform stress | 401 bindings max <= 20ms | 통과 |
+| browser sample count | total >= 6, desktop >= 3, mobile >= 3 | 통과 |
 | browser click-to-panel | click-to-panel <= 100ms | 통과 |
 | browser preview round trip | preview round trip <= 50ms | 통과 |
 | browser apply round trip | apply round trip <= 50ms | 통과 |
@@ -363,7 +379,7 @@ dev server endpoint smoke test:
 아직 부족한 것:
 
 - 실제 제품급 대형 TSX 파일에서 cache/write throttling 검증
-- 실제 브라우저 측정은 아직 단일 desktop 샘플이다.
+- 실제 브라우저 측정은 desktop/mobile 반복 샘플까지 확장했지만, 아직 한 로컬 머신과 한 브라우저 환경의 작은 샘플이다.
 - 실제 AI 생성 코드 50-100개 corpus 검증
 - agent source-window diff를 component-level semantic diff로 확장
 - variant 함수와 runtime template literal 지원
@@ -372,5 +388,5 @@ dev server endpoint smoke test:
 
 ```text
 MVP direct-edit 범위는 계속 확장할 가치가 있다.
-다음 우선순위는 browser multi-sample/mobile 측정, 실제 corpus audit, semantic intent diff 확장이다.
+다음 우선순위는 실제 corpus audit, semantic intent diff 확장, undo stack 설계다.
 ```

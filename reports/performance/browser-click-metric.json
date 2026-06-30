@@ -1,18 +1,689 @@
 {
-  "generatedAt": "2026-06-30T05:09:32.5423395Z",
+  "generatedAt": "2026-06-30T05:24:18.977Z",
   "contextPackUsed": true,
-  "targetUrl": "http://127.0.0.1:5182/",
-  "measurement": "real-browser-click-to-panel-preview-apply-revert",
-  "method": "In-app browser opened the optimized Vite dev server, clicked Pick element, clicked the visible Patch Preview heading, changed the first h2 typography token from text-lg to text-xl, clicked Preview, clicked Apply, then clicked Undo last. The overlay posted performance.now measurements to /__intent/client-metric.",
-  "samples": [
+  "targetUrl": "http://127.0.0.1:5183/",
+  "measurement": "real-browser-click-preview-apply-revert-multi-viewport",
+  "method": "In-app browser opened the optimized Vite dev server, ran three default desktop samples, then set viewport to 390x844 and ran three mobile samples. Each sample clicked Pick element, selected the visible Patch Preview heading, changed the first h2 typography token from text-lg to text-xl, clicked Preview, clicked Apply, then clicked Undo last. The overlay posted performance.now measurements to /__intent/client-metric.",
+  "samplePlan": [
+    {
+      "label": "desktop-1",
+      "viewport": {
+        "name": "desktop-default",
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "label": "desktop-2",
+      "viewport": {
+        "name": "desktop-default",
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "label": "desktop-3",
+      "viewport": {
+        "name": "desktop-default",
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "label": "mobile-1",
+      "viewport": {
+        "name": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "mobile-2",
+      "viewport": {
+        "name": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "label": "mobile-3",
+      "viewport": {
+        "name": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      }
+    }
+  ],
+  "runs": [
+    {
+      "label": "desktop-1",
+      "viewport": {
+        "name": "desktop-default",
+        "width": 1280,
+        "height": 720
+      },
+      "clickToPanel": {
+        "kind": "click-to-panel",
+        "id": "il_76f396d2f6",
+        "status": "selected",
+        "createdAt": "2026-06-30T05:22:55.680Z",
+        "graphFetchMs": 3.8,
+        "pickToPanelMs": 340.2,
+        "clickToPanelMs": 1.3,
+        "bindingLookupMs": 0,
+        "renderMs": 1.3
+      },
+      "preview": {
+        "kind": "patch-preview",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:22:56.183Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 3.3,
+        "serverMs": 0.549,
+        "renderMs": 0.2
+      },
+      "apply": {
+        "kind": "patch-apply",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:22:56.567Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 25.5,
+        "serverMs": 22.5,
+        "renderMs": 0.1
+      },
+      "revert": {
+        "kind": "patch-revert",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:22:56.913Z",
+        "oldToken": "text-xl",
+        "nextToken": "text-lg",
+        "roundTripMs": 14.9,
+        "serverMs": 11.755,
+        "renderMs": 1.4
+      }
+    },
+    {
+      "label": "desktop-2",
+      "viewport": {
+        "name": "desktop-default",
+        "width": 1280,
+        "height": 720
+      },
+      "clickToPanel": {
+        "kind": "click-to-panel",
+        "id": "il_76f396d2f6",
+        "status": "selected",
+        "createdAt": "2026-06-30T05:22:58.608Z",
+        "graphFetchMs": 6.5,
+        "pickToPanelMs": 347.6,
+        "clickToPanelMs": 2.3,
+        "bindingLookupMs": 0,
+        "renderMs": 2.3
+      },
+      "preview": {
+        "kind": "patch-preview",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:22:59.156Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 5.3,
+        "serverMs": 0.741,
+        "renderMs": 0.2
+      },
+      "apply": {
+        "kind": "patch-apply",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:22:59.538Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 32.3,
+        "serverMs": 26.821,
+        "renderMs": 0.1
+      },
+      "revert": {
+        "kind": "patch-revert",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:22:59.876Z",
+        "oldToken": "text-xl",
+        "nextToken": "text-lg",
+        "roundTripMs": 16.8,
+        "serverMs": 12.898,
+        "renderMs": 1.4
+      }
+    },
+    {
+      "label": "desktop-3",
+      "viewport": {
+        "name": "desktop-default",
+        "width": 1280,
+        "height": 720
+      },
+      "clickToPanel": {
+        "kind": "click-to-panel",
+        "id": "il_76f396d2f6",
+        "status": "selected",
+        "createdAt": "2026-06-30T05:23:01.223Z",
+        "graphFetchMs": 6.1,
+        "pickToPanelMs": 342.9,
+        "clickToPanelMs": 1.5,
+        "bindingLookupMs": 0,
+        "renderMs": 1.5
+      },
+      "preview": {
+        "kind": "patch-preview",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:01.743Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 4.5,
+        "serverMs": 0.869,
+        "renderMs": 0
+      },
+      "apply": {
+        "kind": "patch-apply",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:02.121Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 27.7,
+        "serverMs": 22.403,
+        "renderMs": 0.1
+      },
+      "revert": {
+        "kind": "patch-revert",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:02.465Z",
+        "oldToken": "text-xl",
+        "nextToken": "text-lg",
+        "roundTripMs": 17.5,
+        "serverMs": 13.297,
+        "renderMs": 1.4
+      }
+    },
+    {
+      "label": "mobile-1",
+      "viewport": {
+        "name": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "clickToPanel": {
+        "kind": "click-to-panel",
+        "id": "il_76f396d2f6",
+        "status": "selected",
+        "createdAt": "2026-06-30T05:23:03.798Z",
+        "graphFetchMs": 7.5,
+        "pickToPanelMs": 335.6,
+        "clickToPanelMs": 1.7,
+        "bindingLookupMs": 0,
+        "renderMs": 1.6
+      },
+      "preview": {
+        "kind": "patch-preview",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:04.277Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 5.9,
+        "serverMs": 0.992,
+        "renderMs": 0.1
+      },
+      "apply": {
+        "kind": "patch-apply",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:04.639Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 29.2,
+        "serverMs": 24.246,
+        "renderMs": 0
+      },
+      "revert": {
+        "kind": "patch-revert",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:04.970Z",
+        "oldToken": "text-xl",
+        "nextToken": "text-lg",
+        "roundTripMs": 17.4,
+        "serverMs": 13.761,
+        "renderMs": 0.9
+      }
+    },
+    {
+      "label": "mobile-2",
+      "viewport": {
+        "name": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "clickToPanel": {
+        "kind": "click-to-panel",
+        "id": "il_76f396d2f6",
+        "status": "selected",
+        "createdAt": "2026-06-30T05:23:06.369Z",
+        "graphFetchMs": 5,
+        "pickToPanelMs": 359.8,
+        "clickToPanelMs": 1.7,
+        "bindingLookupMs": 0,
+        "renderMs": 1.6
+      },
+      "preview": {
+        "kind": "patch-preview",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:06.871Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 5.7,
+        "serverMs": 0.963,
+        "renderMs": 0.2
+      },
+      "apply": {
+        "kind": "patch-apply",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:07.252Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 27,
+        "serverMs": 22.36,
+        "renderMs": 0.1
+      },
+      "revert": {
+        "kind": "patch-revert",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:07.591Z",
+        "oldToken": "text-xl",
+        "nextToken": "text-lg",
+        "roundTripMs": 16.2,
+        "serverMs": 12.351,
+        "renderMs": 1.1
+      }
+    },
+    {
+      "label": "mobile-3",
+      "viewport": {
+        "name": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "clickToPanel": {
+        "kind": "click-to-panel",
+        "id": "il_76f396d2f6",
+        "status": "selected",
+        "createdAt": "2026-06-30T05:23:08.964Z",
+        "graphFetchMs": 5.8,
+        "pickToPanelMs": 339.2,
+        "clickToPanelMs": 1.7,
+        "bindingLookupMs": 0,
+        "renderMs": 1.7
+      },
+      "preview": {
+        "kind": "patch-preview",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:09.486Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 5.4,
+        "serverMs": 0.711,
+        "renderMs": 0.1
+      },
+      "apply": {
+        "kind": "patch-apply",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:09.872Z",
+        "oldToken": "text-lg",
+        "nextToken": "text-xl",
+        "roundTripMs": 28.7,
+        "serverMs": 23.935,
+        "renderMs": 0.1
+      },
+      "revert": {
+        "kind": "patch-revert",
+        "id": "il_76f396d2f6",
+        "status": "ok",
+        "createdAt": "2026-06-30T05:23:10.257Z",
+        "oldToken": "text-xl",
+        "nextToken": "text-lg",
+        "roundTripMs": 36.5,
+        "serverMs": 31.808,
+        "renderMs": 1.4
+      }
+    }
+  ],
+  "summaries": {
+    "all": {
+      "sampleCount": 6,
+      "clickToPanelMs": {
+        "average": 1.7,
+        "p95": 2.3,
+        "max": 2.3
+      },
+      "graphFetchMs": {
+        "average": 5.783,
+        "p95": 7.5,
+        "max": 7.5
+      },
+      "previewRoundTripMs": {
+        "average": 5.017,
+        "p95": 5.9,
+        "max": 5.9
+      },
+      "previewServerMs": {
+        "average": 0.804,
+        "p95": 0.992,
+        "max": 0.992
+      },
+      "applyRoundTripMs": {
+        "average": 28.4,
+        "p95": 32.3,
+        "max": 32.3
+      },
+      "applyServerMs": {
+        "average": 23.711,
+        "p95": 26.821,
+        "max": 26.821
+      },
+      "revertRoundTripMs": {
+        "average": 19.883,
+        "p95": 36.5,
+        "max": 36.5
+      },
+      "revertServerMs": {
+        "average": 15.978,
+        "p95": 31.808,
+        "max": 31.808
+      }
+    },
+    "desktop": {
+      "sampleCount": 3,
+      "clickToPanelMs": {
+        "average": 1.7,
+        "p95": 2.3,
+        "max": 2.3
+      },
+      "graphFetchMs": {
+        "average": 5.467,
+        "p95": 6.5,
+        "max": 6.5
+      },
+      "previewRoundTripMs": {
+        "average": 4.367,
+        "p95": 5.3,
+        "max": 5.3
+      },
+      "previewServerMs": {
+        "average": 0.72,
+        "p95": 0.869,
+        "max": 0.869
+      },
+      "applyRoundTripMs": {
+        "average": 28.5,
+        "p95": 32.3,
+        "max": 32.3
+      },
+      "applyServerMs": {
+        "average": 23.908,
+        "p95": 26.821,
+        "max": 26.821
+      },
+      "revertRoundTripMs": {
+        "average": 16.4,
+        "p95": 17.5,
+        "max": 17.5
+      },
+      "revertServerMs": {
+        "average": 12.65,
+        "p95": 13.297,
+        "max": 13.297
+      }
+    },
+    "mobile": {
+      "sampleCount": 3,
+      "clickToPanelMs": {
+        "average": 1.7,
+        "p95": 1.7,
+        "max": 1.7
+      },
+      "graphFetchMs": {
+        "average": 6.1,
+        "p95": 7.5,
+        "max": 7.5
+      },
+      "previewRoundTripMs": {
+        "average": 5.667,
+        "p95": 5.9,
+        "max": 5.9
+      },
+      "previewServerMs": {
+        "average": 0.889,
+        "p95": 0.992,
+        "max": 0.992
+      },
+      "applyRoundTripMs": {
+        "average": 28.3,
+        "p95": 29.2,
+        "max": 29.2
+      },
+      "applyServerMs": {
+        "average": 23.514,
+        "p95": 24.246,
+        "max": 24.246
+      },
+      "revertRoundTripMs": {
+        "average": 23.367,
+        "p95": 36.5,
+        "max": 36.5
+      },
+      "revertServerMs": {
+        "average": 19.307,
+        "p95": 31.808,
+        "max": 31.808
+      }
+    }
+  },
+  "latestClickToPanel": {
+    "kind": "click-to-panel",
+    "id": "il_76f396d2f6",
+    "status": "selected",
+    "createdAt": "2026-06-30T05:23:08.964Z",
+    "graphFetchMs": 5.8,
+    "pickToPanelMs": 339.2,
+    "clickToPanelMs": 1.7,
+    "bindingLookupMs": 0,
+    "renderMs": 1.7
+  },
+  "latestPreview": {
+    "kind": "patch-preview",
+    "id": "il_76f396d2f6",
+    "status": "ok",
+    "createdAt": "2026-06-30T05:23:09.486Z",
+    "oldToken": "text-lg",
+    "nextToken": "text-xl",
+    "roundTripMs": 5.4,
+    "serverMs": 0.711,
+    "renderMs": 0.1
+  },
+  "latestApply": {
+    "kind": "patch-apply",
+    "id": "il_76f396d2f6",
+    "status": "ok",
+    "createdAt": "2026-06-30T05:23:09.872Z",
+    "oldToken": "text-lg",
+    "nextToken": "text-xl",
+    "roundTripMs": 28.7,
+    "serverMs": 23.935,
+    "renderMs": 0.1
+  },
+  "latestRevert": {
+    "kind": "patch-revert",
+    "id": "il_76f396d2f6",
+    "status": "ok",
+    "createdAt": "2026-06-30T05:23:10.257Z",
+    "oldToken": "text-xl",
+    "nextToken": "text-lg",
+    "roundTripMs": 36.5,
+    "serverMs": 31.808,
+    "renderMs": 1.4
+  },
+  "rawSamples": [
     {
       "kind": "click-to-panel",
       "id": "il_76f396d2f6",
       "status": "selected",
-      "createdAt": "2026-06-30T05:09:09.640Z",
-      "graphFetchMs": 5.4,
-      "pickToPanelMs": 355.2,
-      "clickToPanelMs": 1.6,
+      "createdAt": "2026-06-30T05:22:55.680Z",
+      "graphFetchMs": 3.8,
+      "pickToPanelMs": 340.2,
+      "clickToPanelMs": 1.3,
+      "bindingLookupMs": 0,
+      "renderMs": 1.3
+    },
+    {
+      "kind": "patch-preview",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:22:56.183Z",
+      "oldToken": "text-lg",
+      "nextToken": "text-xl",
+      "roundTripMs": 3.3,
+      "serverMs": 0.549,
+      "renderMs": 0.2
+    },
+    {
+      "kind": "patch-apply",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:22:56.567Z",
+      "oldToken": "text-lg",
+      "nextToken": "text-xl",
+      "roundTripMs": 25.5,
+      "serverMs": 22.5,
+      "renderMs": 0.1
+    },
+    {
+      "kind": "patch-revert",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:22:56.913Z",
+      "oldToken": "text-xl",
+      "nextToken": "text-lg",
+      "roundTripMs": 14.9,
+      "serverMs": 11.755,
+      "renderMs": 1.4
+    },
+    {
+      "kind": "click-to-panel",
+      "id": "il_76f396d2f6",
+      "status": "selected",
+      "createdAt": "2026-06-30T05:22:58.608Z",
+      "graphFetchMs": 6.5,
+      "pickToPanelMs": 347.6,
+      "clickToPanelMs": 2.3,
+      "bindingLookupMs": 0,
+      "renderMs": 2.3
+    },
+    {
+      "kind": "patch-preview",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:22:59.156Z",
+      "oldToken": "text-lg",
+      "nextToken": "text-xl",
+      "roundTripMs": 5.3,
+      "serverMs": 0.741,
+      "renderMs": 0.2
+    },
+    {
+      "kind": "patch-apply",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:22:59.538Z",
+      "oldToken": "text-lg",
+      "nextToken": "text-xl",
+      "roundTripMs": 32.3,
+      "serverMs": 26.821,
+      "renderMs": 0.1
+    },
+    {
+      "kind": "patch-revert",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:22:59.876Z",
+      "oldToken": "text-xl",
+      "nextToken": "text-lg",
+      "roundTripMs": 16.8,
+      "serverMs": 12.898,
+      "renderMs": 1.4
+    },
+    {
+      "kind": "click-to-panel",
+      "id": "il_76f396d2f6",
+      "status": "selected",
+      "createdAt": "2026-06-30T05:23:01.223Z",
+      "graphFetchMs": 6.1,
+      "pickToPanelMs": 342.9,
+      "clickToPanelMs": 1.5,
+      "bindingLookupMs": 0,
+      "renderMs": 1.5
+    },
+    {
+      "kind": "patch-preview",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:23:01.743Z",
+      "oldToken": "text-lg",
+      "nextToken": "text-xl",
+      "roundTripMs": 4.5,
+      "serverMs": 0.869,
+      "renderMs": 0
+    },
+    {
+      "kind": "patch-apply",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:23:02.121Z",
+      "oldToken": "text-lg",
+      "nextToken": "text-xl",
+      "roundTripMs": 27.7,
+      "serverMs": 22.403,
+      "renderMs": 0.1
+    },
+    {
+      "kind": "patch-revert",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:23:02.465Z",
+      "oldToken": "text-xl",
+      "nextToken": "text-lg",
+      "roundTripMs": 17.5,
+      "serverMs": 13.297,
+      "renderMs": 1.4
+    },
+    {
+      "kind": "click-to-panel",
+      "id": "il_76f396d2f6",
+      "status": "selected",
+      "createdAt": "2026-06-30T05:23:03.798Z",
+      "graphFetchMs": 7.5,
+      "pickToPanelMs": 335.6,
+      "clickToPanelMs": 1.7,
       "bindingLookupMs": 0,
       "renderMs": 1.6
     },
@@ -20,92 +691,139 @@
       "kind": "patch-preview",
       "id": "il_76f396d2f6",
       "status": "ok",
-      "createdAt": "2026-06-30T05:09:10.150Z",
+      "createdAt": "2026-06-30T05:23:04.277Z",
       "oldToken": "text-lg",
       "nextToken": "text-xl",
-      "roundTripMs": 3,
-      "serverMs": 0.499,
+      "roundTripMs": 5.9,
+      "serverMs": 0.992,
       "renderMs": 0.1
     },
     {
       "kind": "patch-apply",
       "id": "il_76f396d2f6",
       "status": "ok",
-      "createdAt": "2026-06-30T05:09:10.519Z",
+      "createdAt": "2026-06-30T05:23:04.639Z",
       "oldToken": "text-lg",
       "nextToken": "text-xl",
-      "roundTripMs": 15.9,
-      "serverMs": 12.201,
+      "roundTripMs": 29.2,
+      "serverMs": 24.246,
+      "renderMs": 0
+    },
+    {
+      "kind": "patch-revert",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:23:04.970Z",
+      "oldToken": "text-xl",
+      "nextToken": "text-lg",
+      "roundTripMs": 17.4,
+      "serverMs": 13.761,
+      "renderMs": 0.9
+    },
+    {
+      "kind": "click-to-panel",
+      "id": "il_76f396d2f6",
+      "status": "selected",
+      "createdAt": "2026-06-30T05:23:06.369Z",
+      "graphFetchMs": 5,
+      "pickToPanelMs": 359.8,
+      "clickToPanelMs": 1.7,
+      "bindingLookupMs": 0,
+      "renderMs": 1.6
+    },
+    {
+      "kind": "patch-preview",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:23:06.871Z",
+      "oldToken": "text-lg",
+      "nextToken": "text-xl",
+      "roundTripMs": 5.7,
+      "serverMs": 0.963,
+      "renderMs": 0.2
+    },
+    {
+      "kind": "patch-apply",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:23:07.252Z",
+      "oldToken": "text-lg",
+      "nextToken": "text-xl",
+      "roundTripMs": 27,
+      "serverMs": 22.36,
       "renderMs": 0.1
     },
     {
       "kind": "patch-revert",
       "id": "il_76f396d2f6",
       "status": "ok",
-      "createdAt": "2026-06-30T05:09:10.881Z",
+      "createdAt": "2026-06-30T05:23:07.591Z",
       "oldToken": "text-xl",
       "nextToken": "text-lg",
-      "roundTripMs": 22,
-      "serverMs": 18.814,
+      "roundTripMs": 16.2,
+      "serverMs": 12.351,
+      "renderMs": 1.1
+    },
+    {
+      "kind": "click-to-panel",
+      "id": "il_76f396d2f6",
+      "status": "selected",
+      "createdAt": "2026-06-30T05:23:08.964Z",
+      "graphFetchMs": 5.8,
+      "pickToPanelMs": 339.2,
+      "clickToPanelMs": 1.7,
+      "bindingLookupMs": 0,
+      "renderMs": 1.7
+    },
+    {
+      "kind": "patch-preview",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:23:09.486Z",
+      "oldToken": "text-lg",
+      "nextToken": "text-xl",
+      "roundTripMs": 5.4,
+      "serverMs": 0.711,
+      "renderMs": 0.1
+    },
+    {
+      "kind": "patch-apply",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:23:09.872Z",
+      "oldToken": "text-lg",
+      "nextToken": "text-xl",
+      "roundTripMs": 28.7,
+      "serverMs": 23.935,
+      "renderMs": 0.1
+    },
+    {
+      "kind": "patch-revert",
+      "id": "il_76f396d2f6",
+      "status": "ok",
+      "createdAt": "2026-06-30T05:23:10.257Z",
+      "oldToken": "text-xl",
+      "nextToken": "text-lg",
+      "roundTripMs": 36.5,
+      "serverMs": 31.808,
       "renderMs": 1.4
     }
   ],
-  "latestClickToPanel": {
-    "kind": "click-to-panel",
-    "id": "il_76f396d2f6",
-    "status": "selected",
-    "createdAt": "2026-06-30T05:09:09.640Z",
-    "graphFetchMs": 5.4,
-    "pickToPanelMs": 355.2,
-    "clickToPanelMs": 1.6,
-    "bindingLookupMs": 0,
-    "renderMs": 1.6
-  },
-  "latestPreview": {
-    "kind": "patch-preview",
-    "id": "il_76f396d2f6",
-    "status": "ok",
-    "createdAt": "2026-06-30T05:09:10.150Z",
-    "oldToken": "text-lg",
-    "nextToken": "text-xl",
-    "roundTripMs": 3,
-    "serverMs": 0.499,
-    "renderMs": 0.1
-  },
-  "latestApply": {
-    "kind": "patch-apply",
-    "id": "il_76f396d2f6",
-    "status": "ok",
-    "createdAt": "2026-06-30T05:09:10.519Z",
-    "oldToken": "text-lg",
-    "nextToken": "text-xl",
-    "roundTripMs": 15.9,
-    "serverMs": 12.201,
-    "renderMs": 0.1
-  },
-  "latestRevert": {
-    "kind": "patch-revert",
-    "id": "il_76f396d2f6",
-    "status": "ok",
-    "createdAt": "2026-06-30T05:09:10.881Z",
-    "oldToken": "text-xl",
-    "nextToken": "text-lg",
-    "roundTripMs": 22,
-    "serverMs": 18.814,
-    "renderMs": 1.4
-  },
   "gates": {
-    "clickToPanelUnder100ms": true,
-    "graphFetchUnder100ms": true,
-    "previewRoundTripUnder50ms": true,
-    "previewServerUnder50ms": true,
-    "applyRoundTripUnder50ms": true,
-    "applyServerUnder50ms": true,
-    "revertRoundTripUnder50ms": true,
-    "revertServerUnder50ms": true,
-    "selectedBinding": true,
-    "previewOk": true,
-    "applyOk": true,
-    "revertOk": true
+    "sampleCountAtLeast6": true,
+    "desktopSamplesAtLeast3": true,
+    "mobileSamplesAtLeast3": true,
+    "clickToPanelMaxUnder100ms": true,
+    "graphFetchMaxUnder100ms": true,
+    "previewRoundTripMaxUnder50ms": true,
+    "previewServerMaxUnder50ms": true,
+    "applyRoundTripMaxUnder50ms": true,
+    "applyServerMaxUnder50ms": true,
+    "revertRoundTripMaxUnder50ms": true,
+    "revertServerMaxUnder50ms": true,
+    "allRunsSelected": true,
+    "allPreviewsOk": true,
+    "allAppliesOk": true,
+    "allRevertsOk": true
   }
 }
