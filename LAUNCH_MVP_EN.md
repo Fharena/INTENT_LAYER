@@ -454,8 +454,8 @@ required checks
 patch style
 ```
 
-For the MVP, related source snapshots cover same-file variable declarations, one-hop same-file variable dependency snapshots, imported variable declarations behind tsconfig paths aliases plus multi-hop barrel re-exports, one-hop relative named imports, and `variant/cva` declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports.
-Package imports, variant-function meaning analysis, and cross-file/transitive variable data flow remain explicit non-goals for handoff context.
+For the MVP, related source snapshots cover same-file variable declarations, one-hop same-file variable dependency snapshots, variable declarations behind workspace package imports, imported variable declarations behind tsconfig paths aliases plus multi-hop barrel re-exports, one-hop relative named imports, and `variant/cva` declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports.
+External npm package imports, variant-function meaning analysis, and cross-file/transitive variable data flow remain explicit non-goals for handoff context.
 
 This turns unsupported features into graceful agent-assisted workflows.
 

@@ -177,6 +177,7 @@ shadcn/ui
 CSS variables
 simple CSS modules
 same-file one-hop variable dependency handoff context
+workspace package import 기반 variable handoff context
 local 및 one-hop relative import 기반 variant/cva handoff context
 tsconfig paths alias + one-hop/multi-hop named barrel re-export 기반 variant/cva handoff context
 tsconfig paths alias + 다단계 barrel re-export 기반 imported variable handoff context
@@ -191,7 +192,7 @@ Emotion
 복잡한 CSS cascade 편집
 Tailwind arbitrary value 전범위
 동적 className 완전 해석
-package import, variant 함수 의미, cross-file/transitive variable data flow 기반 variant graph 해석
+external npm package import, variant 함수 의미, cross-file/transitive variable data flow 기반 variant graph 해석
 Figma import
 AI 자동 리팩터링
 ```
