@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-30T05:55:00.419Z",
+  "generatedAt": "2026-06-30T06:02:36.035Z",
   "contextPackUsed": true,
   "corpus": {
-    "generatedAt": "2026-06-30T05:54:59.890Z",
+    "generatedAt": "2026-06-30T06:02:35.585Z",
     "filesScanned": 8,
     "classNameOccurrences": 40,
     "classification": {
@@ -480,7 +480,7 @@
     ]
   },
   "aiGeneratedCorpus": {
-    "generatedAt": "2026-06-30T05:54:59.963Z",
+    "generatedAt": "2026-06-30T06:02:35.644Z",
     "filesScanned": 50,
     "classNameOccurrences": 390,
     "classification": {
@@ -536,37 +536,37 @@
         "file": "src/App.tsx",
         "entries": 13,
         "samples": [
-          3.258,
-          0.857,
-          0.753,
-          0.646,
-          1.701
+          2.714,
+          0.719,
+          0.673,
+          0.59,
+          0.59
         ],
-        "averageMs": 1.443,
-        "p95Ms": 3.258,
-        "maxMs": 3.258
+        "averageMs": 1.057,
+        "p95Ms": 2.714,
+        "maxMs": 2.714
       },
       {
         "file": "src/main.tsx",
         "entries": 0,
         "samples": [
-          0.008,
           0.006,
-          0.004,
-          0.004,
-          0.005
+          0.005,
+          0.005,
+          0.002,
+          0.002
         ],
-        "averageMs": 0.005,
-        "p95Ms": 0.008,
-        "maxMs": 0.008
+        "averageMs": 0.004,
+        "p95Ms": 0.006,
+        "maxMs": 0.006
       }
     ],
-    "averageMs": 0.724,
-    "p95Ms": 3.258,
-    "maxMs": 3.258,
-    "warmAverageMs": 0.497,
-    "warmP95Ms": 1.701,
-    "warmMaxMs": 1.701,
+    "averageMs": 0.531,
+    "p95Ms": 2.714,
+    "maxMs": 2.714,
+    "warmAverageMs": 0.323,
+    "warmP95Ms": 0.719,
+    "warmMaxMs": 0.719,
     "warmTargetMs": 5,
     "coldTargetMs": 10
   },
@@ -577,39 +577,39 @@
     "bytes": 45352,
     "iterations": 5,
     "samples": [
-      12.708,
-      18.089,
-      8.516,
-      10.89,
-      4.751
+      12.903,
+      12.176,
+      5.958,
+      7.577,
+      3.257
     ],
-    "averageMs": 10.991,
-    "p95Ms": 18.089,
-    "maxMs": 18.089,
+    "averageMs": 8.374,
+    "p95Ms": 12.903,
+    "maxMs": 12.903,
     "targetMs": 20,
     "pass": true
   },
   "graphLookupProxy": {
     "iterations": 1000,
-    "totalMs": 0.102,
-    "averageMs": 0.000102,
+    "totalMs": 0.096,
+    "averageMs": 0.000096,
     "note": "This measures id-to-binding graph lookup only, not a real browser click event."
   },
   "patch": {
     "previewOk": true,
-    "previewMs": 1.427,
-    "previewRoundTripMs": 1.821,
+    "previewMs": 1.761,
+    "previewRoundTripMs": 2.184,
     "applyOk": true,
-    "applyMs": 34.63,
+    "applyMs": 38.862,
     "syntaxErrorsAfterPatch": 0,
     "revertOk": true,
-    "revertMs": 34.014,
+    "revertMs": 28.019,
     "syntaxErrorsAfterRevert": 0,
     "staleRejectionOk": true,
     "staleRejectionReason": "source-hash-mismatch",
     "simpleCnClsx": {
       "applyOk": true,
-      "applyMs": 11.377,
+      "applyMs": 11.618,
       "syntaxErrorsAfterPatch": 0,
       "bindingKind": "call-literals",
       "callee": "cn",
@@ -629,17 +629,17 @@
   },
   "agentTask": {
     "ok": true,
-    "taskMs": 6.986,
+    "taskMs": 11.611,
     "sectionsPresent": true,
-    "taskFile": ".intent/agent/task_2026-06-30T05-55-00-232Z.md"
+    "taskFile": ".intent/agent/task_2026-06-30T06-02-35-881Z.md"
   },
   "agentResult": {
     "ok": true,
-    "resultMs": 22.542,
+    "resultMs": 11.094,
     "sectionsPresent": true,
     "filesExist": true,
-    "resultFile": ".intent/agent/result_2026-06-30T05-55-00-243Z.md",
-    "diffFile": ".intent/diffs/2026-06-30T05-55-00-243Z_agent.intent-diff.yml",
+    "resultFile": ".intent/agent/result_2026-06-30T06-02-35-892Z.md",
+    "diffFile": ".intent/diffs/2026-06-30T06-02-35-892Z_agent.intent-diff.yml",
     "sourceHashChanged": true,
     "snapshotAvailable": true,
     "diffLineCount": 2,
@@ -656,13 +656,68 @@
     "componentSemanticTokenAddedCount": 2,
     "componentSemanticTokenRemovedCount": 2
   },
+  "componentSnapshotFixtures": {
+    "cases": 4,
+    "passCount": 4,
+    "passRate": 1,
+    "results": [
+      {
+        "name": "function-nested-map-conditional-fragment",
+        "componentName": "ComponentSnapshotFunction",
+        "entryCreated": true,
+        "entryCount": 3,
+        "taskOk": true,
+        "taskMs": 4.32,
+        "snapshotAvailable": true,
+        "snapshotComponentName": "ComponentSnapshotFunction",
+        "markersPresent": true,
+        "pass": true
+      },
+      {
+        "name": "arrow-block",
+        "componentName": "ComponentSnapshotArrowBlock",
+        "entryCreated": true,
+        "entryCount": 2,
+        "taskOk": true,
+        "taskMs": 3.23,
+        "snapshotAvailable": true,
+        "snapshotComponentName": "ComponentSnapshotArrowBlock",
+        "markersPresent": true,
+        "pass": true
+      },
+      {
+        "name": "arrow-parenthesized-expression",
+        "componentName": "ComponentSnapshotArrowParen",
+        "entryCreated": true,
+        "entryCount": 2,
+        "taskOk": true,
+        "taskMs": 2.671,
+        "snapshotAvailable": true,
+        "snapshotComponentName": "ComponentSnapshotArrowParen",
+        "markersPresent": true,
+        "pass": true
+      },
+      {
+        "name": "arrow-jsx-no-parens",
+        "componentName": "ComponentSnapshotArrowJsx",
+        "entryCreated": true,
+        "entryCount": 1,
+        "taskOk": true,
+        "taskMs": 3.43,
+        "snapshotAvailable": true,
+        "snapshotComponentName": "ComponentSnapshotArrowJsx",
+        "markersPresent": true,
+        "pass": true
+      }
+    ]
+  },
   "readOnlyBinding": {
     "entryCreated": true,
     "kind": "read-only",
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 2.609
+    "taskMs": 2.234
   },
   "gates": {
     "staticEditableTokenCoveragePass": true,
@@ -680,6 +735,7 @@
     "revertPatchPass": true,
     "agentTaskPass": true,
     "agentResultPass": true,
+    "componentSnapshotFixturePass": true,
     "readOnlyHandoffPass": true,
     "simpleCnClsxPatchPass": true,
     "staleRejectionPass": true,

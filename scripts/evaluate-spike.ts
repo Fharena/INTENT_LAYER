@@ -85,6 +85,28 @@ function largeTransformFixture(cardCount: number): string {
   ].join("\n");
 }
 
+interface TaskComponentSnapshot {
+  file: string;
+  componentName: string | null;
+  range: {
+    start: number;
+    end: number;
+  };
+  excerpt: string;
+}
+
+function parseTaskJsonSection<T>(markdown: string, heading: string): T | null {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(new RegExp(`## ${escapedHeading}\\s+\`\`\`json\\s+([\\s\\S]*?)\\s+\`\`\``));
+  if (!match) return null;
+
+  try {
+    return JSON.parse(match[1]) as T;
+  } catch {
+    return null;
+  }
+}
+
 fs.mkdirSync(reportsDir, { recursive: true });
 fs.mkdirSync(tmpDir, { recursive: true });
 
@@ -222,6 +244,107 @@ const agentResultSectionsPresent = agentResultRequiredSections.every((section) =
 );
 const agentResultFilesExist =
   agentResult.ok && fs.existsSync(agentResult.resultFile) && fs.existsSync(agentResult.diffFile);
+
+const componentSnapshotFixtureCases = [
+  {
+    name: "function-nested-map-conditional-fragment",
+    componentName: "ComponentSnapshotFunction",
+    expectedMarkers: ["export function ComponentSnapshotFunction", "items.map", "<>", "active ?"],
+    source: [
+      "export function ComponentSnapshotFunction({ active, items }: { active: boolean; items: string[] }) {",
+      "  return (",
+      "    <>",
+      "      <section className=\"grid grid-cols-2 gap-4 rounded-lg p-6\">",
+      "        {items.map((item) => (",
+      "          <article key={item} className={active ? \"rounded-lg p-4\" : \"rounded-xl p-6\"}>",
+      "            <span className=\"text-sm font-medium\">{item}</span>",
+      "          </article>",
+      "        ))}",
+      "      </section>",
+      "    </>",
+      "  );",
+      "}",
+      ""
+    ].join("\n")
+  },
+  {
+    name: "arrow-block",
+    componentName: "ComponentSnapshotArrowBlock",
+    expectedMarkers: ["export const ComponentSnapshotArrowBlock", "return (", "items.map"],
+    source: [
+      "export const ComponentSnapshotArrowBlock = ({ items }: { items: string[] }) => {",
+      "  return (",
+      "    <section className=\"grid grid-cols-3 gap-4 rounded-lg p-6\">",
+      "      {items.map((item) => <article key={item} className=\"rounded-lg p-4\">{item}</article>)}",
+      "    </section>",
+      "  );",
+      "};",
+      ""
+    ].join("\n")
+  },
+  {
+    name: "arrow-parenthesized-expression",
+    componentName: "ComponentSnapshotArrowParen",
+    expectedMarkers: ["export const ComponentSnapshotArrowParen", "<section", "</section>"],
+    source: [
+      "export const ComponentSnapshotArrowParen = ({ active }: { active: boolean }) => (",
+      "  <section className=\"grid gap-4 rounded-lg p-6\">",
+      "    {active ? <article className=\"rounded-lg p-4\">Active</article> : null}",
+      "  </section>",
+      ");",
+      ""
+    ].join("\n")
+  },
+  {
+    name: "arrow-jsx-no-parens",
+    componentName: "ComponentSnapshotArrowJsx",
+    expectedMarkers: ["export const ComponentSnapshotArrowJsx", "<section", "No parens"],
+    source: [
+      "export const ComponentSnapshotArrowJsx = () => <section className=\"grid gap-4 rounded-lg p-6\">No parens</section>;",
+      ""
+    ].join("\n")
+  }
+];
+
+const componentSnapshotFixtures = componentSnapshotFixtureCases.map((fixtureCase) => {
+  const file = path.join(tmpDir, `${fixtureCase.componentName}.tsx`);
+  fs.writeFileSync(file, fixtureCase.source);
+  const instrumented = instrumentSource({
+    code: fixtureCase.source,
+    file,
+    rootDir
+  });
+  const entry = instrumented.entries.find((candidate) => candidate.componentName === fixtureCase.componentName);
+  const task = createAgentTask(rootDir, entry, {
+    id: entry?.id ?? `missing-${fixtureCase.name}`,
+    desiredChange: `Fixture only: capture component snapshot for ${fixtureCase.name}.`
+  });
+  const snapshot = task.ok
+    ? parseTaskJsonSection<TaskComponentSnapshot | null>(task.markdown, "Component Snapshot")
+    : null;
+  const markersPresent = fixtureCase.expectedMarkers.every((marker) =>
+    snapshot?.excerpt.includes(marker)
+  );
+
+  return {
+    name: fixtureCase.name,
+    componentName: fixtureCase.componentName,
+    entryCreated: Boolean(entry),
+    entryCount: instrumented.entries.length,
+    taskOk: task.ok,
+    taskMs: task.ok ? task.metrics.taskMs : task.metrics?.taskMs,
+    snapshotAvailable: Boolean(snapshot),
+    snapshotComponentName: snapshot?.componentName ?? null,
+    markersPresent,
+    pass:
+      Boolean(entry) &&
+      task.ok &&
+      Boolean(snapshot) &&
+      snapshot?.componentName === fixtureCase.componentName &&
+      markersPresent
+  };
+});
+const componentSnapshotFixturePassCount = componentSnapshotFixtures.filter((fixture) => fixture.pass).length;
 
 const readOnlyFixture = path.join(tmpDir, "ReadOnlyBindingFixture.tsx");
 fs.writeFileSync(
@@ -501,6 +624,14 @@ const report = {
       ? agentResult.componentSemanticDiff?.tokenRemovedCount ?? 0
       : 0
   },
+  componentSnapshotFixtures: {
+    cases: componentSnapshotFixtures.length,
+    passCount: componentSnapshotFixturePassCount,
+    passRate: componentSnapshotFixtures.length
+      ? Number((componentSnapshotFixturePassCount / componentSnapshotFixtures.length).toFixed(4))
+      : 0,
+    results: componentSnapshotFixtures
+  },
   readOnlyBinding: {
     entryCreated: Boolean(readOnlyEntry),
     kind: readOnlyEntry?.className.kind ?? null,
@@ -542,6 +673,9 @@ const report = {
       agentResult.source.componentDiffLineCount > 0 &&
       agentResult.source.componentSemanticChangeCount > 0 &&
       Boolean(agentResult.componentSemanticDiff),
+    componentSnapshotFixturePass:
+      componentSnapshotFixtures.length > 0 &&
+      componentSnapshotFixturePassCount === componentSnapshotFixtures.length,
     readOnlyHandoffPass:
       Boolean(readOnlyEntry) &&
       readOnlyEntry?.className.kind === "read-only" &&

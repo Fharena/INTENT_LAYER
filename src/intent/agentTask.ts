@@ -51,6 +51,12 @@ function lineWindow(source: string, start: number, end: number, contextLines = 4
   };
 }
 
+function skipWhitespace(source: string, index: number): number {
+  let cursor = index;
+  while (cursor < source.length && /\s/.test(source[cursor] ?? "")) cursor += 1;
+  return cursor;
+}
+
 function scanBalanced(source: string, start: number, open: string, close: string): number {
   let depth = 0;
   let quote: string | null = null;
@@ -79,13 +85,41 @@ function scanBalanced(source: string, start: number, open: string, close: string
   return -1;
 }
 
+function scanExpressionStatementEnd(source: string, start: number): number {
+  let quote: string | null = null;
+  let depth = 0;
+
+  for (let index = start; index < source.length; index += 1) {
+    const character = source[index];
+    const previous = source[index - 1];
+
+    if (quote) {
+      if (character === quote && previous !== "\\") quote = null;
+      continue;
+    }
+
+    if (character === "\"" || character === "'" || character === "`") {
+      quote = character;
+      continue;
+    }
+
+    if (character === "(" || character === "{" || character === "[") depth += 1;
+    if (character === ")" || character === "}" || character === "]") depth = Math.max(0, depth - 1);
+    if (character === ";" && depth === 0) return index + 1;
+  }
+
+  return source.length;
+}
+
 function findComponentRange(source: string, componentName: string | null): { start: number; end: number } | null {
   if (!componentName) return null;
 
   const escapedName = escapeRegExp(componentName);
   const functionMatch = new RegExp(`\\bfunction\\s+${escapedName}\\s*\\(`).exec(source);
   if (functionMatch) {
-    const bodyStart = source.indexOf("{", functionMatch.index);
+    const paramsStart = source.indexOf("(", functionMatch.index);
+    const paramsEnd = paramsStart >= 0 ? scanBalanced(source, paramsStart, "(", ")") : -1;
+    const bodyStart = paramsEnd > paramsStart ? source.indexOf("{", paramsEnd) : -1;
     const bodyEnd = bodyStart >= 0 ? scanBalanced(source, bodyStart, "{", "}") : -1;
     if (bodyEnd > bodyStart) {
       return {
@@ -101,29 +135,35 @@ function findComponentRange(source: string, componentName: string | null): { sta
   const arrowIndex = source.indexOf("=>", variableMatch.index);
   if (arrowIndex < 0) return null;
 
-  const blockStart = source.indexOf("{", arrowIndex);
-  const expressionStart = source.indexOf("(", arrowIndex);
-  const usesExpressionBody = expressionStart >= 0 && (blockStart < 0 || expressionStart < blockStart);
+  const bodyStart = skipWhitespace(source, arrowIndex + 2);
+  const first = source[bodyStart];
 
-  if (usesExpressionBody) {
-    const expressionEnd = scanBalanced(source, expressionStart, "(", ")");
-    if (expressionEnd > expressionStart) {
-      const semicolonEnd = source[expressionEnd] === ";" ? expressionEnd + 1 : expressionEnd;
-      return {
-        start: variableMatch.index,
-        end: semicolonEnd
-      };
-    }
-  }
-
-  if (blockStart >= 0) {
-    const blockEnd = scanBalanced(source, blockStart, "{", "}");
-    if (blockEnd > blockStart) {
+  if (first === "{") {
+    const blockEnd = scanBalanced(source, bodyStart, "{", "}");
+    if (blockEnd > bodyStart) {
       return {
         start: variableMatch.index,
         end: source[blockEnd] === ";" ? blockEnd + 1 : blockEnd
       };
     }
+  }
+
+  if (first === "(") {
+    const expressionEnd = scanBalanced(source, bodyStart, "(", ")");
+    if (expressionEnd > bodyStart) {
+      return {
+        start: variableMatch.index,
+        end: source[expressionEnd] === ";" ? expressionEnd + 1 : expressionEnd
+      };
+    }
+  }
+
+  const expressionEnd = scanExpressionStatementEnd(source, bodyStart);
+  if (expressionEnd > bodyStart) {
+    return {
+      start: variableMatch.index,
+      end: expressionEnd
+    };
   }
 
   return null;
