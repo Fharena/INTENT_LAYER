@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "intent": "tsx src/intent/cli.ts",
     "intent:init": "tsx src/intent/cli.ts init",
+    "intent:dev": "tsx src/intent/cli.ts dev",
     "intent:scan": "tsx src/intent/cli.ts scan",
     "intent:check": "tsx src/intent/cli.ts check",
     "intent:diff": "tsx src/intent/cli.ts diff",

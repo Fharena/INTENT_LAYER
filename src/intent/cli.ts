@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -12,6 +13,7 @@ import type { IntentBinding, IntentGraph } from "./types";
 
 type CliCommand =
   | "init"
+  | "dev"
   | "scan"
   | "check"
   | "diff"
@@ -30,6 +32,9 @@ interface CliOptions {
   diff: string | null;
   id: string | null;
   component: string | null;
+  host: string;
+  port: number;
+  dryRun: boolean;
   desiredChange: string | null;
   taskFile: string | null;
   summary: string | null;
@@ -49,6 +54,24 @@ interface CliInitReport {
   createdPaths: string[];
   existingPaths: string[];
   initMs: number;
+}
+
+interface CliDevReport {
+  version: 1;
+  command: "dev";
+  generatedAt: string;
+  ok: boolean;
+  dryRun: boolean;
+  cwd: string;
+  executable: string | null;
+  args: string[];
+  host: string;
+  port: number;
+  url: string;
+  usesLocalVite: boolean;
+  devMs: number;
+  reason: string | null;
+  detail: string | null;
 }
 
 interface ScanFileResult {
@@ -208,6 +231,7 @@ export interface CliRunResult {
   stderr: string;
   report:
     | CliInitReport
+    | CliDevReport
     | CliScanReport
     | CliCheckReport
     | CliDiffReport
@@ -527,6 +551,38 @@ function initIntentWorkspace(rootDir: string): CliInitReport {
   };
 }
 
+function devCommandReport(rootDir: string, options: CliOptions): CliDevReport {
+  const started = performance.now();
+  const validPort = Number.isInteger(options.port) && options.port > 0 && options.port <= 65535;
+  const viteBin = path.join(rootDir, "node_modules", "vite", "bin", "vite.js");
+  const usesLocalVite = fs.existsSync(viteBin);
+  const ok = usesLocalVite && validPort;
+  const executable = ok ? process.execPath : null;
+  const args = ok ? [viteBin, "--host", options.host, "--port", String(options.port)] : [];
+
+  return {
+    version: 1,
+    command: "dev",
+    generatedAt: new Date().toISOString(),
+    ok,
+    dryRun: options.dryRun,
+    cwd: rootDir,
+    executable,
+    args,
+    host: options.host,
+    port: options.port,
+    url: `http://${options.host}:${options.port}`,
+    usesLocalVite,
+    devMs: Number((performance.now() - started).toFixed(3)),
+    reason: ok ? null : usesLocalVite ? "invalid-port" : "missing-local-vite",
+    detail: ok
+      ? null
+      : usesLocalVite
+        ? "Pass --port with an integer between 1 and 65535."
+        : "Install dependencies first so node_modules/vite/bin/vite.js exists."
+  };
+}
+
 function latestDiffFile(rootDir: string): string | null {
   const diffsDir = path.join(rootDir, ".intent", "diffs");
   if (!fs.existsSync(diffsDir)) return null;
@@ -637,6 +693,7 @@ function usage(): string {
   return [
     "Usage:",
     "  intent-layer init",
+    "  intent-layer dev [--host 127.0.0.1] [--port 5173] [--dry-run]",
     "  intent-layer scan [inputs...] [--out file] [--write-graph]",
     "  intent-layer check [inputs...] [--min-supported-direct n] [--max-file-transform-ms n] [--out file]",
     "  intent-layer diff [--diff file] [--out file]",
@@ -662,6 +719,9 @@ function parseOptions(args: string[]): CliOptions {
   let diff: string | null = null;
   let id: string | null = null;
   let component: string | null = null;
+  let host = "127.0.0.1";
+  let port = 5173;
+  let dryRun = false;
   let desiredChange: string | null = null;
   let taskFile: string | null = null;
   let summary: string | null = null;
@@ -693,6 +753,14 @@ function parseOptions(args: string[]): CliOptions {
     } else if (arg === "--component") {
       component = args[index + 1] ?? null;
       index += 1;
+    } else if (arg === "--host") {
+      host = args[index + 1] ?? host;
+      index += 1;
+    } else if (arg === "--port") {
+      port = Number(args[index + 1] ?? port);
+      index += 1;
+    } else if (arg === "--dry-run") {
+      dryRun = true;
     } else if (arg === "--change") {
       desiredChange = args[index + 1] ?? null;
       index += 1;
@@ -732,6 +800,9 @@ function parseOptions(args: string[]): CliOptions {
     diff,
     id,
     component,
+    host,
+    port,
+    dryRun,
     desiredChange,
     taskFile,
     summary,
@@ -764,6 +835,7 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
 
   if (
     command !== "init" &&
+    command !== "dev" &&
     command !== "scan" &&
     command !== "check" &&
     command !== "diff" &&
@@ -786,6 +858,13 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
     const json = `${JSON.stringify(report, null, 2)}\n`;
     writeOut(rootDir, options.out, json);
     return { exitCode: 0, stdout: json, stderr: "", report };
+  }
+
+  if (command === "dev") {
+    const report = devCommandReport(rootDir, options);
+    const json = `${JSON.stringify(report, null, 2)}\n`;
+    writeOut(rootDir, options.out, json);
+    return { exitCode: report.ok ? 0 : 1, stdout: json, stderr: "", report };
   }
 
   if (command === "diff") {
@@ -1074,8 +1153,31 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const result = runCli(process.argv.slice(2));
-  if (result.stdout) process.stdout.write(result.stdout);
-  if (result.stderr) process.stderr.write(result.stderr);
-  process.exitCode = result.exitCode;
+  const argv = process.argv.slice(2);
+  if (argv[0] === "dev" && !argv.includes("--dry-run") && !argv.includes("--out")) {
+    const options = parseOptions(argv.slice(1));
+    const report = devCommandReport(process.cwd(), options);
+    if (!report.ok || !report.executable) {
+      process.stderr.write(`${JSON.stringify(report, null, 2)}\n`);
+      process.exitCode = 1;
+    } else {
+      process.stdout.write(`Starting intent-layer dev at ${report.url}\n`);
+      const child = spawn(report.executable, report.args, {
+        cwd: report.cwd,
+        stdio: "inherit"
+      });
+      child.on("exit", (code) => {
+        process.exitCode = code ?? 0;
+      });
+      child.on("error", (error) => {
+        process.stderr.write(`intent-layer dev failed: ${error.message}\n`);
+        process.exitCode = 1;
+      });
+    }
+  } else {
+    const result = runCli(argv);
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+    process.exitCode = result.exitCode;
+  }
 }

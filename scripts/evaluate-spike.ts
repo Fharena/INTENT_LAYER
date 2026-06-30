@@ -973,6 +973,8 @@ const cliScan = runCli(["scan", "fixtures/corpus", "src/App.tsx"], rootDir);
 const cliScanReport = cliScan.report?.command === "scan" ? cliScan.report : null;
 const cliInit = runCli(["init"], rootDir);
 const cliInitReport = cliInit.report?.command === "init" ? cliInit.report : null;
+const cliDev = runCli(["dev", "--dry-run"], rootDir);
+const cliDevReport = cliDev.report?.command === "dev" ? cliDev.report : null;
 const cliInitSchemaExists =
   fs.existsSync(path.join(rootDir, ".intent", "schema", "intent-op.schema.json")) &&
   fs.existsSync(path.join(rootDir, ".intent", "schema", "intent-diff.schema.json")) &&
@@ -1234,6 +1236,7 @@ const report = {
   },
   cli: {
     initExitCode: cliInit.exitCode,
+    devExitCode: cliDev.exitCode,
     scanExitCode: cliScan.exitCode,
     checkExitCode: cliCheck.exitCode,
     graphScanExitCode: cliGraphScan.exitCode,
@@ -1244,6 +1247,7 @@ const report = {
     agentTaskExitCode: cliAgentTask.exitCode,
     agentResultExitCode: cliAgentResult.exitCode,
     initCommand: cliInitReport?.command ?? null,
+    devCommand: cliDevReport?.command ?? null,
     scanCommand: cliScanReport?.command ?? null,
     checkCommand: cliCheckReport?.command ?? null,
     applyCommand: cliApplyReport?.command ?? null,
@@ -1255,6 +1259,15 @@ const report = {
     initCreatedPathCount: cliInitReport?.createdPaths.length ?? 0,
     initExistingPathCount: cliInitReport?.existingPaths.length ?? 0,
     initSchemaExists: cliInitSchemaExists,
+    devOk: cliDevReport?.ok ?? false,
+    devDryRun: cliDevReport?.dryRun ?? false,
+    devHost: cliDevReport?.host ?? null,
+    devPort: cliDevReport?.port ?? null,
+    devUrl: cliDevReport?.url ?? null,
+    devUsesLocalVite: cliDevReport?.usesLocalVite ?? false,
+    devExecutablePresent: Boolean(cliDevReport?.executable),
+    devArgCount: cliDevReport?.args.length ?? 0,
+    devMs: cliDevReport?.devMs ?? null,
     filesScanned: cliCheckReport?.summary.filesScanned ?? 0,
     bindingCount: cliCheckReport?.summary.bindingCount ?? 0,
     directEditBindingCount: cliCheckReport?.summary.directEditBindingCount ?? 0,
@@ -1310,6 +1323,7 @@ const report = {
     diffBytes: cliDiffReport?.bytes ?? 0,
     diffChangeCount: cliDiffReport?.changeCount ?? 0,
     initStdoutBytes: cliInit.stdout.length,
+    devStdoutBytes: cliDev.stdout.length,
     scanStdoutBytes: cliScan.stdout.length,
     checkStdoutBytes: cliCheck.stdout.length,
     applyStdoutBytes: cliApply.stdout.length,
@@ -1692,6 +1706,15 @@ const report = {
       cliInitReport?.command === "init" &&
       cliInitReport.ok &&
       cliInitSchemaExists,
+    cliDevDryRunPass:
+      cliDev.exitCode === 0 &&
+      cliDevReport?.command === "dev" &&
+      cliDevReport.ok &&
+      cliDevReport.dryRun &&
+      cliDevReport.usesLocalVite &&
+      cliDevReport.host === "127.0.0.1" &&
+      cliDevReport.port === 5173 &&
+      cliDevReport.args.some((arg) => arg.endsWith("vite.js")),
     cliScanPass:
       cliScan.exitCode === 0 &&
       cliScanReport?.command === "scan" &&
