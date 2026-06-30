@@ -1,0 +1,79 @@
+{
+  "areas": {
+    "docs": {
+      "contracts": [
+        "Docs should describe the current install and usage flow.",
+        "Agent guidance should be concise and actionable."
+      ],
+      "description": "User-facing docs, onboarding notes, and repository guidance.",
+      "doc": ".context-pack/AREAS/docs.md",
+      "failure_modes": [
+        "Docs promise behavior the tool does not implement.",
+        "Local machine paths leak into public documentation."
+      ],
+      "keywords": [
+        "docs",
+        "readme",
+        "agents",
+        "claude",
+        "onboarding",
+        "usage",
+        "adoption",
+        "proof"
+      ],
+      "paths": [
+        "README.md"
+      ],
+      "stale_if_paths": [
+        "README.md"
+      ],
+      "start_files": [
+        "README.md"
+      ],
+      "tests": []
+    },
+    "overview": {
+      "contracts": [
+        "Treat context docs as routing hints, not ground truth.",
+        "Verify source code when the context fingerprint is stale."
+      ],
+      "description": "Default project orientation and safe starting point.",
+      "doc": ".context-pack/AREAS/overview.md",
+      "failure_modes": [
+        "Trusting old summaries after HEAD or dirty files changed.",
+        "Reading logs or generated packs before current source files.",
+        "Editing the wrong checkout or copied workspace."
+      ],
+      "keywords": [
+        "overview",
+        "onboarding",
+        "new session",
+        "architecture",
+        "context",
+        "review"
+      ],
+      "paths": [
+        "README.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "codex.md",
+        ".context-pack/**"
+      ],
+      "stale_if_paths": [
+        ".context-pack/**",
+        ".context-pack/**",
+        "AGENTS.md",
+        "README.md"
+      ],
+      "start_files": [
+        "README.md",
+        "AGENTS.md",
+        ".context-pack/INDEX.md",
+        ".context-pack/CURRENT.md"
+      ],
+      "tests": []
+    }
+  },
+  "generated_by": "context-pack",
+  "version": 1
+}

@@ -1,0 +1,238 @@
+# AGENTS.md
+
+This file is for AI coding agents working on the INTENT_LAYER product.
+
+## Product Mission
+
+INTENT_LAYER is an AI-native frontend intent layer for React/Tailwind projects.
+
+The product helps users:
+
+1. Click UI elements in the browser.
+2. Map them back to source code.
+3. Inspect semantic layout/style intent.
+4. Apply deterministic code patches for simple edits.
+5. Generate structured AI handoff tasks for complex edits.
+6. Review changes through intent diffs.
+
+## Core Principle
+
+Prefer deterministic code operations over LLM calls.
+
+Use AI for:
+
+- semantic naming
+- ambiguous structure explanation
+- complex refactor planning
+- generated task markdown
+- intent diff summaries
+
+Do not use AI for:
+
+- simple Tailwind token replacement
+- direct patch application
+- undo/revert
+- validation
+- formatting-only changes
+
+## Architecture Boundaries
+
+Keep core independent from framework integrations.
+
+Core packages should know about:
+
+- `IntentNode`
+- `IntentProperty`
+- `SourceBinding`
+- `PatchOperation`
+- `ValidationResult`
+- confidence and drift state
+
+Core packages should not directly depend on:
+
+- React
+- Vite
+- Tailwind
+- VS Code
+- browser DOM
+
+Framework-specific logic belongs in adapters.
+
+Recommended package boundaries:
+
+```text
+packages/core
+packages/react
+packages/tailwind
+packages/vite
+packages/server
+packages/overlay
+packages/cli
+```
+
+## Supported v1 Stack
+
+Prioritize:
+
+- React
+- Vite
+- TypeScript / TSX
+- Tailwind CSS
+- literal `className`
+- simple `cn()` / `clsx()`
+- common shadcn/ui patterns
+
+Do not spend early implementation time on:
+
+- styled-components
+- Emotion
+- arbitrary frameworks
+- full CSS cascade editing
+- Figma import
+- full design system inference
+
+## Required File Formats
+
+The product uses these intent file formats:
+
+```text
+*.intent.yml
+*.intent-diff.yml
+*.intent-op.json
+```
+
+Main folder:
+
+```text
+.intent/
+  graph.intent.json
+  components/
+  operations/
+  diffs/
+  agent/
+  schema/
+```
+
+## Safe Patch Rules
+
+Never rewrite a full source file when a small range patch is enough.
+
+For direct edits:
+
+1. Locate source binding.
+2. Validate confidence.
+3. Generate minimal patch.
+4. Preview patch.
+5. Apply patch.
+6. Re-scan changed binding.
+7. Produce intent diff.
+
+If confidence is low, do not patch directly. Generate an agent handoff task instead.
+
+## Agent Handoff Rules
+
+When a change is too complex for deterministic direct edit, create a markdown task under:
+
+```text
+.intent/agent/task_*.md
+```
+
+The task must include:
+
+- goal
+- selected component
+- source file/range
+- current intent document
+- desired change
+- constraints
+- files that may be edited
+- files that should not be edited
+- required checks
+
+After the agent modifies code, generate or update:
+
+```text
+.intent/agent/result_*.md
+.intent/diffs/*.intent-diff.yml
+```
+
+## Performance Rules
+
+Avoid whole-project analysis by default.
+
+Use this model:
+
+```text
+Always:
+  short data-intent-id injection
+  sidecar source map
+
+On selection:
+  parse selected file only
+  analyze selected node and nearby parents/children
+
+On demand:
+  repo-wide scan
+  AI semantic summary
+  agent task generation
+```
+
+Target performance:
+
+- element select to panel: under 100ms
+- simple patch: under 50ms
+- small intent diff: under 1s
+- Vite transform overhead: under 5ms per file target
+
+## UX Rules
+
+The user should feel:
+
+- small UI tweaks are faster than prompting AI
+- patches are predictable
+- unsupported edits degrade into structured AI tasks
+- AI-made changes can be reviewed semantically
+
+Avoid:
+
+- hiding uncertainty
+- applying low-confidence patches
+- surprising full component rewrites
+- making AI calls during simple knob edits
+
+## Documentation Rules
+
+When updating product plans, update both Korean and English docs when feasible:
+
+- `PRODUCT_PLAN_KR.md`
+- `PRODUCT_PLAN_EN.md`
+- `LAUNCH_MVP_KR.md`
+- `LAUNCH_MVP_EN.md`
+
+Korean docs should be practical and product-oriented.
+English docs should be suitable for external contributors and future open-source README expansion.
+
+
+<!-- context-pack:rules:start -->
+## Context Pack
+
+Use Context Pack as quiet orientation for natural-language coding, review, debugging, and handoff requests. The user does not need to name it or ask for a pack.
+
+Treat requests like "fix this bug", "why are tests failing?", "review this branch", "look over my changes", "continue where we left off", "I'm done for now", or "leave this easy to resume" as normal triggers. Run Context Pack as part of the work, then keep going with the user's actual task.
+
+Run it only when repo orientation would save broad reading or preserve useful handoff state:
+- Session start or continuation with no clear task yet: `context-pack start`, then read `CURRENT.md` and `INDEX.md`.
+- Non-trivial bug, feature, or debugging task: `context-pack start --task "<short task>"`
+- Review, PR, or branch work: `context-pack start --review`; add `--base <base-ref>` when known. Without a base, Context Pack tries upstream/common default branches.
+- Changed files are the only signal: `context-pack start --changed`
+- Missing `.context-pack/` during a normal task: still use `context-pack start`; it auto-initializes lightweight context docs.
+- Explicit install/configuration request: `context-pack setup --dry-run`, then `context-pack setup` if setup was requested; use `context-pack doctor --fix` for broken setup.
+- End of meaningful work or handoff: `context-pack checkpoint --pack`
+
+Skip Context Pack for pure Q&A, tiny obvious single-file edits, or tasks where the relevant files and tests are already clear.
+
+When a pack is generated, read `.context-pack/packs/CONTEXT_PACK.md` before broad source reads. Treat context docs as routing hints, not ground truth; verify against source when state, stale warnings, or code behavior disagree.
+
+Use `context-pack checkpoint --publish --pack` only when the handoff should be committed and shared through git.
+
+<!-- context-pack:rules:end -->
