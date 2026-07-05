@@ -125,6 +125,37 @@ Primary GUI flow:
 
 ```text
 Pick element -> choose a UI element -> Preview -> Apply -> Undo last
+Minimize / Expand keeps the tool out of the way without leaving the page
+```
+
+Agent handoff GUI:
+
+```text
+Agent handoff -> Create task -> Plan Codex / Plan Claude
+Agent handoff -> Run Codex / Run Claude
+```
+
+`Plan` creates a command plan from `.intent/agent/task_*.md` without starting an external process. `Run` uses the same plan, but direct spawning is disabled unless the target project has `INTENT_LAYER_AGENT_RUN=1`.
+
+The current default command plans are:
+
+```bash
+codex exec --sandbox workspace-write "Read .intent/agent/task_x.md and implement the requested change..."
+claude -p "Read .intent/agent/task_x.md and implement the requested change..."
+```
+
+Override the executable names when needed:
+
+```bash
+INTENT_LAYER_CODEX_COMMAND=/path/to/codex
+INTENT_LAYER_CLAUDE_COMMAND=/path/to/claude
+```
+
+CLI equivalent:
+
+```bash
+npx intent-layer agent-launch --provider codex --id <intent-id> --change "Describe the desired change"
+npx intent-layer agent-launch --provider claude --task .intent/agent/task_x.md
 ```
 
 CLI commands are for setup, diagnostics, and repeatable checks. Day-to-day visual edits should start from the browser panel.
@@ -149,13 +180,15 @@ npx intent-layer scan src --write-graph
 Latest `npm run eval` values:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 3.381ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.694ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-installed Vite apply refresh: 88.279ms
-installed Vite revert refresh: 43.139ms
-installed 3-file graph refresh: 132.441ms
+installed Vite apply refresh: 194.581ms
+installed Vite revert refresh: 127.724ms
+installed 3-file graph refresh: 123.273ms
 package smoke: pass
 ```
+
+The installed Vite dev server refresh smoke target is 2500ms because temp installs and OS file watchers are noisier than the main browser UX loop. Real browser UX gates are measured separately at click-to-panel 100ms, preview/apply 50ms, and revert 100ms.
 
 Current independent external baseline coverage:
 

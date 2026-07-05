@@ -1,6 +1,6 @@
 # INTENT_LAYER MVP 핸드오프
 
-업데이트: 2026-07-03 KST
+업데이트: 2026-07-05 KST
 
 ## 상태
 
@@ -15,6 +15,8 @@ INTENT_LAYER는 React/Vite/Tailwind click-to-patch 흐름 기준으로 MVP 후�
 - undo history를 통한 last patch revert
 - intent operation/diff artifact 생성
 - 직접 patch가 어려운 binding의 structured agent handoff task 생성
+- Codex/Claude headless CLI용 agent launch plan 생성
+- 재사용 컴포넌트 shared source scope 표시와 다중 rendered instance outline
 - package tarball을 temp project에 설치하고 `intent-layer/vite` 사용
 
 ## 주요 근거
@@ -108,15 +110,32 @@ revert는 source 복원과 undo artifact 기록을 포함하므로 MVP gate는 `
 
 | 항목 | 값 |
 | --- | ---: |
-| installed transform hook | 6.094ms |
-| installed apply refresh | 88.279ms |
-| installed revert refresh | 43.139ms |
-| installed 3-file refresh | 132.441ms |
+| installed transform hook | 6.851ms |
+| installed apply refresh | 194.581ms |
+| installed revert refresh | 127.724ms |
+| installed 3-file refresh | 123.273ms |
+| installed refresh target | 2500ms |
+
+## Agent Launch
+
+agent task는 overlay 또는 CLI에서 Codex/Claude 실행 계획으로 바로 바꿀 수 있다.
+
+| 항목 | 값 |
+| --- | ---: |
+| CLI agent launch gate | 통과 |
+| 전체 eval gate 수 | 53 |
+| false gate 수 | 0 |
+| Codex plan 시간 | 0.605ms |
+| Claude plan 시간 | 0.206ms |
+| 기본 실행 상태 | `executed=false` |
+
+실제 process spawn은 `INTENT_LAYER_AGENT_RUN=1`일 때만 허용한다. 기본 UX는 안전한 command plan 생성이다.
 
 ## 알려진 한계
 
 - 직접 patch는 의도적으로 static `className`과 simple/partial `cn()` / `clsx()` literal segment에 집중한다.
 - variant function, runtime template literal, 임의 깊이 cross-file data flow는 read-only 또는 handoff 경로다.
+- custom component call-site prop 자체는 아직 직접 source binding이 아니다. 현재는 같은 internal DOM binding이 여러 번 렌더될 때 영향 범위를 보여주는 단계다.
 - 브라우저 QA는 현재 한 로컬 머신과 in-app browser desktop/mobile sample 기준이다.
 - 두 번째 브라우저 runtime으로 Chrome을 시도했지만, 현재 환경에서 Codex Chrome Extension/native host 연결을 사용할 수 없었다. 근거는 `reports/performance/browser-runtime-availability.json`에 남겼다.
 - npm registry publish와 registry 기준 install copy는 아직 하지 않았다.

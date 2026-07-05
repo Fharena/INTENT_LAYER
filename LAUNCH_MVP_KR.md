@@ -21,6 +21,7 @@ React/Vite/Tailwind 프로젝트에 붙는 AI-friendly intent layer
 → intent 문서 생성
 → intent diff
 → AI 에이전트용 context 생성
+→ Codex/Claude 실행 계획 생성
 → 구현되지 않은 작업은 agent pipeline으로 위임
 → 사용자 승인 후 patch 적용
 ```
@@ -42,6 +43,7 @@ React/Vite/Tailwind 프로젝트에 붙는 AI-friendly intent layer
 - deterministic patch가 가능한 범위는 빠르게 처리해야 한다.
 - deterministic patch가 어려운 범위는 AI에게 넘겨도 된다.
 - 단, AI에게 넘길 때도 자연어 한 덩어리가 아니라 구조화된 intent task여야 한다.
+- 외부 agent 실행은 기본적으로 command plan이며, 직접 실행은 명시적 opt-in이어야 한다.
 
 즉 제품은 둘 중 하나가 아니다.
 

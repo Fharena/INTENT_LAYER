@@ -3,6 +3,7 @@ import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import ts from "typescript";
 import type { Plugin, ViteDevServer } from "vite";
+import { launchAgentTask } from "./agentLaunch";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
@@ -22,6 +23,7 @@ import {
 } from "./patch";
 import type {
   AgentResultRequest,
+  AgentLaunchRequest,
   AgentTaskRequest,
   ClientMetric,
   IntentBinding,
@@ -164,7 +166,6 @@ function refreshChangedFile(state: IntentState, file: string) {
 function invalidateChangedFile(server: ViteDevServer, file: string) {
   const candidates = [...new Set([file, path.normalize(file), file.replace(/\\/g, "/")])];
   const timestamp = Date.now();
-  let invalidated = false;
 
   for (const candidate of candidates) {
     server.moduleGraph.onFileChange(candidate);
@@ -175,13 +176,10 @@ function invalidateChangedFile(server: ViteDevServer, file: string) {
 
     for (const moduleNode of modules) {
       server.moduleGraph.invalidateModule(moduleNode, undefined, timestamp, true);
-      invalidated = true;
     }
   }
 
-  if (!invalidated) {
-    server.moduleGraph.invalidateAll();
-  }
+  server.moduleGraph.invalidateAll();
 }
 
 function syncChangedFile(server: ViteDevServer, state: IntentState, file: string) {
@@ -481,6 +479,37 @@ export function intentLayerSpike(): Plugin {
             const body = JSON.parse(await readBody(request)) as AgentTaskRequest;
             const entry = state.entriesById.get(body.id);
             const result = createAgentTask(state.rootDir, entry, body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/agent-launch" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as AgentLaunchRequest;
+            let taskFile = body.taskFile;
+            if (!taskFile && body.id && body.desiredChange) {
+              const entry = state.entriesById.get(body.id);
+              const task = createAgentTask(state.rootDir, entry, {
+                id: body.id,
+                desiredChange: body.desiredChange
+              });
+              if (!task.ok) {
+                writeJson(response, 409, task);
+                return;
+              }
+              taskFile = task.taskFile;
+            }
+            const result = launchAgentTask(state.rootDir, {
+              ...body,
+              taskFile
+            });
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
             writeJson(response, 500, {

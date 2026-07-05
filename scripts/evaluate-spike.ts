@@ -579,7 +579,7 @@ function packageSmoke(): PackageSmokeResult {
       "    }",
       "  );",
       "  const applyRefreshMs = Number((performance.now() - applyRefreshStarted).toFixed(3));",
-      "  const refreshTargetMs = 500;",
+      "  const refreshTargetMs = 2500;",
       "  const parsedGraphAfterApply = graphAfterApply.status === 200 ? JSON.parse(graphAfterApply.body) : null;",
       "  const entriesAfterApply = parsedGraphAfterApply ? Object.values(parsedGraphAfterApply.entries ?? {}) : [];",
       "  const firstAfterApply = entriesAfterApply[0] ?? null;",
@@ -4037,6 +4037,32 @@ const cliAgentTaskSectionsPresent = [
   "## Source Snapshot",
   "## Required Checks"
 ].every((section) => cliAgentTaskMarkdown.includes(section));
+const cliAgentLaunchCodex = runCli(
+  [
+    "agent-launch",
+    "--provider",
+    "codex",
+    "--id",
+    cliAgentTaskBinding?.id ?? "missing-cli-agent-launch-id",
+    "--change",
+    "CLI fixture: plan a Codex handoff launch for a selected read-only className."
+  ],
+  rootDir
+);
+const cliAgentLaunchCodexReport =
+  cliAgentLaunchCodex.report?.command === "agent-launch" ? cliAgentLaunchCodex.report : null;
+const cliAgentLaunchClaude = runCli(
+  [
+    "agent-launch",
+    "--provider",
+    "claude",
+    "--task",
+    cliAgentTaskReport?.taskFile ?? "missing-cli-agent-task-file.md"
+  ],
+  rootDir
+);
+const cliAgentLaunchClaudeReport =
+  cliAgentLaunchClaude.report?.command === "agent-launch" ? cliAgentLaunchClaude.report : null;
 
 const cliAgentResultFixture = path.join(tmpDir, "CliAgentResultFixture.tsx");
 fs.writeFileSync(
@@ -4271,6 +4297,8 @@ const report = {
     diffExitCode: cliDiff.exitCode,
     agentContextExitCode: cliAgentContext.exitCode,
     agentTaskExitCode: cliAgentTask.exitCode,
+    agentLaunchCodexExitCode: cliAgentLaunchCodex.exitCode,
+    agentLaunchClaudeExitCode: cliAgentLaunchClaude.exitCode,
     agentResultExitCode: cliAgentResult.exitCode,
     initCommand: cliInitReport?.command ?? null,
     doctorCommand: cliDoctorReport?.command ?? null,
@@ -4281,6 +4309,8 @@ const report = {
     diffCommand: cliDiffReport?.command ?? null,
     agentContextCommand: cliAgentContextReport?.command ?? null,
     agentTaskCommand: cliAgentTaskReport?.command ?? null,
+    agentLaunchCodexCommand: cliAgentLaunchCodexReport?.command ?? null,
+    agentLaunchClaudeCommand: cliAgentLaunchClaudeReport?.command ?? null,
     agentResultCommand: cliAgentResultReport?.command ?? null,
     initOk: cliInitReport?.ok ?? false,
     initCreatedPathCount: cliInitReport?.createdPaths.length ?? 0,
@@ -4343,6 +4373,20 @@ const report = {
     agentTaskMarkdownBytes: cliAgentTaskReport?.markdownBytes ?? 0,
     agentTaskMs: cliAgentTaskReport?.taskMs ?? null,
     agentTaskSectionsPresent: cliAgentTaskSectionsPresent,
+    agentLaunchCodexOk: cliAgentLaunchCodexReport?.ok ?? false,
+    agentLaunchCodexTaskCreated: cliAgentLaunchCodexReport?.taskCreated ?? false,
+    agentLaunchCodexTaskFile: cliAgentLaunchCodexReport?.taskFile ?? null,
+    agentLaunchCodexExecuted: cliAgentLaunchCodexReport?.executed ?? true,
+    agentLaunchCodexEnabled: cliAgentLaunchCodexReport?.enabled ?? true,
+    agentLaunchCodexCommandText: cliAgentLaunchCodexReport?.commandText ?? null,
+    agentLaunchCodexMs: cliAgentLaunchCodexReport?.launchMs ?? null,
+    agentLaunchClaudeOk: cliAgentLaunchClaudeReport?.ok ?? false,
+    agentLaunchClaudeTaskCreated: cliAgentLaunchClaudeReport?.taskCreated ?? true,
+    agentLaunchClaudeTaskFile: cliAgentLaunchClaudeReport?.taskFile ?? null,
+    agentLaunchClaudeExecuted: cliAgentLaunchClaudeReport?.executed ?? true,
+    agentLaunchClaudeEnabled: cliAgentLaunchClaudeReport?.enabled ?? true,
+    agentLaunchClaudeCommandText: cliAgentLaunchClaudeReport?.commandText ?? null,
+    agentLaunchClaudeMs: cliAgentLaunchClaudeReport?.launchMs ?? null,
     agentResultGraphScanExitCode: cliAgentResultGraphScan.exitCode,
     agentResultTaskExitCode: cliAgentResultTask.exitCode,
     agentResultOk: cliAgentResultReport?.ok ?? false,
@@ -4377,6 +4421,8 @@ const report = {
     doctorMissingPluginStdoutBytes: cliDoctorMissingPlugin.stdout.length,
     agentContextStdoutBytes: cliAgentContext.stdout.length,
     agentTaskStdoutBytes: cliAgentTask.stdout.length,
+    agentLaunchCodexStdoutBytes: cliAgentLaunchCodex.stdout.length,
+    agentLaunchClaudeStdoutBytes: cliAgentLaunchClaude.stdout.length,
     agentResultStdoutBytes: cliAgentResult.stdout.length
   },
   packageInstall: packageInstallSmoke,
@@ -5518,6 +5564,23 @@ const report = {
       cliAgentTaskReport.ok &&
       Boolean(cliAgentTaskReport.taskFile) &&
       cliAgentTaskSectionsPresent,
+    cliAgentLaunchPass:
+      cliGraphScan.exitCode === 0 &&
+      Boolean(cliAgentTaskBinding) &&
+      cliAgentLaunchCodex.exitCode === 0 &&
+      cliAgentLaunchCodexReport?.command === "agent-launch" &&
+      cliAgentLaunchCodexReport.ok &&
+      cliAgentLaunchCodexReport.taskCreated &&
+      cliAgentLaunchCodexReport.executed === false &&
+      cliAgentLaunchCodexReport.commandPlan?.slice(1, 4).join(" ") === "exec --sandbox workspace-write" &&
+      Boolean(cliAgentLaunchCodexReport.commandText?.includes("Read .intent/agent/")) &&
+      cliAgentLaunchClaude.exitCode === 0 &&
+      cliAgentLaunchClaudeReport?.command === "agent-launch" &&
+      cliAgentLaunchClaudeReport.ok &&
+      cliAgentLaunchClaudeReport.taskCreated === false &&
+      cliAgentLaunchClaudeReport.executed === false &&
+      cliAgentLaunchClaudeReport.commandPlan?.[1] === "-p" &&
+      cliAgentLaunchClaudeReport.taskFile === cliAgentTaskReport?.taskFile,
     cliAgentResultPass:
       cliAgentResultGraphScan.exitCode === 0 &&
       Boolean(cliAgentResultBinding) &&

@@ -96,7 +96,7 @@ Core: Intent Engine
 Runtime: browser overlay + local server
 Integration: Vite plugin
 Distribution: CLI + optional editor extension
-AI Integration: optional Codex/Cursor/Claude plugin
+AI Integration: optional Codex/Cursor/Claude command plan / plugin
 ```
 
 It should not start as a framework. A framework would require users to migrate their app structure, which raises adoption friction. This should attach to existing React/Tailwind projects.
@@ -120,7 +120,8 @@ Most competitors focus on one of these:
 3. Intent diffs instead of raw line diffs
 4. Confidence-based editability
 5. Code/document drift detection
-6. A foundation for agents to work with intent operations instead of raw code
+6. A foundation for agents to work with intent operations/tasks instead of raw code
+7. External agent execution defaults to command planning; direct execution requires explicit opt-in
 ```
 
 This is closer to a **Prisma-like middle layer for UI intent** than a simple visual editor.
@@ -134,6 +135,8 @@ This is closer to a **Prisma-like middle layer for UI intent** than a simple vis
 - Vibe coders who can understand product-level intent but struggle with line-by-line review
 - Beginner frontend developers who want to stay code-based but need safer visual controls
 - Developers who want to review AI-generated frontend changes more efficiently
+
+For this audience, the browser GUI should be the primary operating surface. CLI commands are supporting tools for install, diagnostics, repeatable evaluation, and automation.
 
 ### 6.2 Secondary Users
 

@@ -5,11 +5,12 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { createAgentContext } from "./agentContext";
+import { launchAgentTask } from "./agentLaunch";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
 import { applyTokenPatch, recordPatchApplyInOperationLog } from "./patch";
-import type { IntentBinding, IntentGraph } from "./types";
+import type { AgentLaunchResult, IntentBinding, IntentGraph, PatchFailure } from "./types";
 
 type CliCommand =
   | "init"
@@ -21,6 +22,7 @@ type CliCommand =
   | "apply"
   | "agent-context"
   | "agent-task"
+  | "agent-launch"
   | "agent-result";
 
 interface CliOptions {
@@ -36,6 +38,8 @@ interface CliOptions {
   host: string;
   port: number;
   dryRun: boolean;
+  provider: string | null;
+  executeAgent: boolean;
   desiredChange: string | null;
   taskFile: string | null;
   summary: string | null;
@@ -229,6 +233,28 @@ interface CliAgentTaskReport {
   detail: string | null;
 }
 
+interface CliAgentLaunchReport {
+  version: 1;
+  command: "agent-launch";
+  generatedAt: string;
+  ok: boolean;
+  id: string | null;
+  provider: string | null;
+  graphFile: string;
+  taskCreated: boolean;
+  taskFile: string | null;
+  commandPlan: string[] | null;
+  commandText: string | null;
+  enabled: boolean;
+  executed: boolean;
+  pid: number | null;
+  stdoutFile: string | null;
+  stderrFile: string | null;
+  launchMs: number | null;
+  reason: string | null;
+  detail: string | null;
+}
+
 interface CliAgentResultReport {
   version: 1;
   command: "agent-result";
@@ -266,6 +292,7 @@ export interface CliRunResult {
     | CliApplyReport
     | CliAgentContextReport
     | CliAgentTaskReport
+    | CliAgentLaunchReport
     | CliAgentResultReport
     | null;
 }
@@ -926,6 +953,7 @@ function usage(): string {
     "  intent-layer apply --op file [--graph .intent/graph.intent.json] [--out file]",
     "  intent-layer agent-context [component] [--id intent-id] [--graph .intent/graph.intent.json]",
     "  intent-layer agent-task --id intent-id --change text [--graph .intent/graph.intent.json] [--out file]",
+    "  intent-layer agent-launch --provider codex|claude [--id intent-id --change text] [--task file] [--execute]",
     "  intent-layer agent-result --id intent-id --summary text [--task file] [--changed file] [--check command]",
     "",
     "Defaults:",
@@ -948,6 +976,8 @@ function parseOptions(args: string[]): CliOptions {
   let host = "127.0.0.1";
   let port = 5173;
   let dryRun = false;
+  let provider: string | null = null;
+  let executeAgent = false;
   let desiredChange: string | null = null;
   let taskFile: string | null = null;
   let summary: string | null = null;
@@ -987,6 +1017,11 @@ function parseOptions(args: string[]): CliOptions {
       index += 1;
     } else if (arg === "--dry-run") {
       dryRun = true;
+    } else if (arg === "--provider") {
+      provider = args[index + 1] ?? null;
+      index += 1;
+    } else if (arg === "--execute") {
+      executeAgent = true;
     } else if (arg === "--change") {
       desiredChange = args[index + 1] ?? null;
       index += 1;
@@ -1029,6 +1064,8 @@ function parseOptions(args: string[]): CliOptions {
     host,
     port,
     dryRun,
+    provider,
+    executeAgent,
     desiredChange,
     taskFile,
     summary,
@@ -1069,6 +1106,7 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
     command !== "apply" &&
     command !== "agent-context" &&
     command !== "agent-task" &&
+    command !== "agent-launch" &&
     command !== "agent-result"
   ) {
     return {
@@ -1211,6 +1249,101 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
       contextMs: result.metrics.contextMs,
       reason: result.ok ? null : result.reason,
       detail: result.ok ? null : result.detail
+    };
+    const json = `${JSON.stringify(report, null, 2)}\n`;
+    writeOut(rootDir, options.out, json);
+    return { exitCode: result.ok ? 0 : 1, stdout: json, stderr: "", report };
+  }
+
+  if (command === "agent-launch") {
+    const graph = readGraph(rootDir, options.graph);
+    let taskFile = options.taskFile;
+    let taskCreated = false;
+    const failedPreflight =
+      !options.provider
+        ? {
+            ok: false as const,
+            id: options.id ?? undefined,
+            reason: "missing-agent-provider",
+            detail: "Pass --provider codex or --provider claude.",
+            metrics: { launchMs: 0 }
+          }
+        : !taskFile && !options.id
+          ? {
+              ok: false as const,
+              id: options.id ?? undefined,
+              reason: "missing-id",
+              detail: "Pass --id with an intent id, or pass --task with an existing agent task file.",
+              metrics: { launchMs: 0 }
+            }
+          : !taskFile && !options.desiredChange
+            ? {
+                ok: false as const,
+                id: options.id ?? undefined,
+                reason: "missing-desired-change",
+                detail: "Pass --change with the desired edit, or pass --task with an existing agent task file.",
+                metrics: { launchMs: 0 }
+              }
+            : !taskFile && !graph
+              ? {
+                  ok: false as const,
+                  id: options.id ?? undefined,
+                  reason: "missing-graph",
+                  detail: "Run scan --write-graph first or pass --graph with an existing graph file.",
+                  metrics: { launchMs: 0 }
+                }
+              : null;
+
+    let result: AgentLaunchResult | PatchFailure | null = failedPreflight;
+    if (!result && !taskFile && options.id && options.desiredChange && graph) {
+      const binding = graph.entries[options.id];
+      const task = createAgentTask(rootDir, binding, {
+        id: options.id,
+        desiredChange: options.desiredChange
+      });
+      if (task.ok) {
+        taskFile = path.relative(rootDir, task.taskFile).replace(/\\/g, "/");
+        taskCreated = true;
+      } else {
+        result = {
+          ok: false as const,
+          id: options.id,
+          reason: task.reason,
+          detail: task.detail ?? "Agent task creation failed.",
+          metrics: { launchMs: task.metrics?.taskMs ?? 0 }
+        };
+      }
+    }
+
+    result =
+      result ??
+      launchAgentTask(rootDir, {
+        id: options.id ?? undefined,
+        provider: options.provider as "codex" | "claude",
+        desiredChange: options.desiredChange ?? undefined,
+        taskFile: taskFile ?? undefined,
+        execute: options.executeAgent
+      });
+    const report: CliAgentLaunchReport = {
+      version: 1,
+      command,
+      generatedAt: new Date().toISOString(),
+      ok: result.ok,
+      id: options.id,
+      provider: options.provider,
+      graphFile: options.graph,
+      taskCreated,
+      taskFile: result.ok ? result.taskFile : taskFile,
+      commandPlan: result.ok ? result.command : null,
+      commandText: result.ok ? result.commandText : null,
+      enabled: result.ok ? result.enabled : false,
+      executed: result.ok ? result.executed : false,
+      pid: result.ok ? result.pid : null,
+      stdoutFile: result.ok ? result.stdoutFile : null,
+      stderrFile: result.ok ? result.stderrFile : null,
+      launchMs: result.ok ? result.metrics.launchMs : result.metrics?.launchMs ?? null,
+      reason: result.ok ? null : result.reason,
+      detail: result.ok ? null : result.detail ?? null
     };
     const json = `${JSON.stringify(report, null, 2)}\n`;
     writeOut(rootDir, options.out, json);

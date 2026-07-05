@@ -4,7 +4,7 @@ INTENT_LAYER는 AI가 만든 React/Tailwind UI를 사람이 브라우저에서 �
 
 현재 상태:
 
-> React/Vite/Tailwind click-to-patch MVP 후보. 구조화된 agent handoff/result artifact와 수치 기반 성능 리포트를 포함한다.
+> React/Vite/Tailwind click-to-patch MVP 후보. 구조화된 agent handoff/result artifact, Codex/Claude 실행 계획, 수치 기반 성능 리포트를 포함한다.
 
 ## 핵심 정의
 
@@ -81,6 +81,8 @@ npx tsx src/intent/cli.ts apply --op .intent/operations/example.intent-op.json
 npx tsx src/intent/cli.ts diff --diff .intent/diffs/example.intent-diff.yml
 npx tsx src/intent/cli.ts agent-context ProductGrid
 npx tsx src/intent/cli.ts agent-task --id <intent-id> --change "Describe the desired change"
+npx tsx src/intent/cli.ts agent-launch --provider codex --id <intent-id> --change "Describe the desired change"
+npx tsx src/intent/cli.ts agent-launch --provider claude --task .intent/agent/task_x.md
 npx tsx src/intent/cli.ts agent-result --id <intent-id> --task .intent/agent/task_x.md --summary "Describe the result"
 ```
 
@@ -138,6 +140,7 @@ npm run analyze:external-corpus
 - `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last`
 - apply/revert refresh timing
 - 3-file graph refresh
+- Codex/Claude agent launch dry-run 계획
 - missing-plugin `doctor` failure guidance
 - 401-binding transform stress
 - 24-file / 624-binding product-sized graph refresh
@@ -149,6 +152,8 @@ npm run analyze:external-corpus
 - compile-time `data-intent-id` injection
 - `.intent/graph.intent.json` sidecar graph
 - floating browser overlay
+- overlay 수동 minimize/expand
+- 같은 intent id를 가진 렌더 DOM 전체 outline과 shared source scope 표시
 - patch preview before apply
 - static `className` Tailwind token replacement
 - simple `cn()` / `clsx()` literal segment replacement
@@ -158,6 +163,7 @@ npm run analyze:external-corpus
 - safe non-top revert
 - revert conflict artifact
 - agent handoff task/result markdown
+- `.intent/agent/task_*.md` 기반 Codex/Claude launch plan; 실제 spawn은 `INTENT_LAYER_AGENT_RUN=1` 필요
 - source hash validation
 - operation/diff artifact output
 - related source snapshot/diff for read-only handoff

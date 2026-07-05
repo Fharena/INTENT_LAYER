@@ -1,6 +1,6 @@
 # INTENT_LAYER MVP Handoff
 
-Updated: 2026-07-03 KST
+Updated: 2026-07-05 KST
 
 ## Status
 
@@ -15,6 +15,8 @@ The current evidence supports:
 - reverting the last patch through undo history
 - generating intent operation/diff artifacts
 - degrading unsupported bindings into structured agent handoff tasks
+- creating Codex/Claude headless CLI agent launch plans
+- showing shared-source scope and outlining multiple rendered instances for reused components
 - installing the package tarball into a temp project and using `intent-layer/vite`
 
 ## Primary Evidence
@@ -108,15 +110,32 @@ Latest package smoke highlights:
 
 | Metric | Value |
 | --- | ---: |
-| installed transform hook | 6.094ms |
-| installed apply refresh | 88.279ms |
-| installed revert refresh | 43.139ms |
-| installed 3-file refresh | 132.441ms |
+| installed transform hook | 6.851ms |
+| installed apply refresh | 194.581ms |
+| installed revert refresh | 127.724ms |
+| installed 3-file refresh | 123.273ms |
+| installed refresh target | 2500ms |
+
+## Agent Launch
+
+Agent tasks can now be turned into Codex/Claude launch plans from the overlay or CLI.
+
+| Metric | Value |
+| --- | ---: |
+| CLI agent launch gate | pass |
+| Total eval gates | 53 |
+| False gates | 0 |
+| Codex plan time | 0.605ms |
+| Claude plan time | 0.206ms |
+| Default execution state | `executed=false` |
+
+Direct process spawning is allowed only when `INTENT_LAYER_AGENT_RUN=1` is set. The default UX is safe command planning.
 
 ## Known Limits
 
 - Direct patching intentionally targets static `className` and simple/partial `cn()` / `clsx()` literal segments.
 - Variant functions, runtime template literals, and arbitrary-depth cross-file data flow are read-only or handoff paths.
+- Custom component call-site props are not direct source bindings yet. The current reusable-component support shows impact scope when one internal DOM binding renders multiple times.
 - Browser QA is currently one local machine plus in-app browser desktop/mobile samples.
 - Chrome was attempted as a second browser runtime, but the Codex Chrome Extension/native host was unavailable in this environment. See `reports/performance/browser-runtime-availability.json`.
 - npm registry publish and registry-oriented install copy are not done.

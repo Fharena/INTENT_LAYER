@@ -98,7 +98,7 @@ Core: Intent Engine
 Runtime: browser overlay + local server
 Integration: Vite plugin
 Distribution: CLI + optional editor extension
-AI Integration: optional Codex/Cursor/Claude plugin
+AI Integration: optional Codex/Cursor/Claude command plan / plugin
 ```
 
 프레임워크가 아니다. 사용자가 새 프레임워크로 갈아타게 만들면 도입 장벽이 너무 높다. 기존 React/Tailwind 프로젝트에 붙는 도구여야 한다.
@@ -122,7 +122,8 @@ AI Integration: optional Codex/Cursor/Claude plugin
 3. line diff가 아닌 intent diff
 4. confidence 기반 편집 가능성 표시
 5. 코드/문서 drift 감지
-6. 에이전트가 raw code가 아니라 intent operation을 다루게 하는 기반
+6. 에이전트가 raw code가 아니라 intent operation/task를 다루게 하는 기반
+7. 외부 agent 실행은 기본 command plan으로 두고, 직접 실행은 명시적 opt-in으로 제한
 ```
 
 즉, 단순 visual editor가 아니라 **UI 코드를 위한 Prisma-like 중간 레이어**를 지향한다.
@@ -136,6 +137,8 @@ AI Integration: optional Codex/Cursor/Claude plugin
 - AI가 만든 UI를 시각적으로 빠르게 다듬고 싶은 사람
 - 코드는 조금 알지만 line-by-line review가 부담스러운 바이브코더
 - 프론트엔드 초보지만 코드 기반 작업을 포기하고 싶지는 않은 사람
+
+이 사용자층에서는 GUI가 1차 조작면이어야 한다. CLI는 설치, 진단, 반복 평가, 자동화용 보조 수단으로 둔다.
 
 ### 6.2 2차 사용자
 

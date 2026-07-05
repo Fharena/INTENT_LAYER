@@ -31,6 +31,9 @@ Keep this file updated when the user's operating preferences change.
 - Keep milestone scopes large enough for fast Codex-driven delivery, but avoid speculative architecture work before the feature needs it.
 - Avoid over-engineering. Prefer small in-repo implementations, including low-level scanners/parsers where they are sufficient.
 - Do not introduce external services or heavy dependencies just because they exist; use them only when they clearly reduce risk or implementation time.
+- The target user is a vibe-coder. Prefer GUI-first workflows; keep npm/CLI steps available but avoid making them the primary day-to-day UX.
+- When integrating external agents, default to command planning. Directly spawning Codex/Claude must remain opt-in through `INTENT_LAYER_AGENT_RUN=1`.
+- Reused component edits must clearly show shared-source scope. If one source binding affects multiple rendered instances, surface that count in the overlay.
 
 ## Documentation Rules
 
@@ -157,6 +160,7 @@ installed package import path should stay aligned with `intent-layer/vite`
 CLI doctor check count/pass/warn/fail/guidance count and runtime
 CLI doctor negative fixtures such as missing `intentLayer()` guidance
 package tarball inclusion for install and failure mode docs
+CLI agent-launch provider, command plan, task-created flag, enabled/executed flags, launch time, and dry-run gate result
 supported fixture success rate
 intentional stale-token rejection rate
 syntax error count after supported patches

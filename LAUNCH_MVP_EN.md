@@ -21,6 +21,7 @@ AI-friendly intent layer for React/Vite/Tailwind
 → generate intent documents
 → produce intent diffs
 → generate context for AI agents
+→ create Codex/Claude launch plans
 → hand unsupported edits to an agent pipeline
 → review and apply resulting patches
 ```
@@ -42,6 +43,7 @@ The target user already uses AI-assisted development tools. Therefore the produc
 - deterministic patches should be immediate
 - complex or unsupported changes can be delegated to an AI agent
 - agent handoff should use structured intent tasks, not vague natural-language prompts
+- external agent execution should default to command planning, with direct execution explicitly opted in
 
 The product should not choose between visual editing and AI agents.
 

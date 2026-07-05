@@ -1,6 +1,8 @@
 import { candidatesForToken } from "./tailwind";
 import type {
   AgentResultArtifact,
+  AgentLaunchResult,
+  AgentProvider,
   ClientMetric,
   AgentTaskResult,
   IntentBinding,
@@ -22,6 +24,7 @@ type PatchResponse = PatchApplyResult | PatchFailure;
 type PreviewResponse = PatchPreview | PatchFailure;
 type RevertResponse = PatchRevertResult | PatchFailure;
 type AgentTaskResponse = AgentTaskResult | PatchFailure;
+type AgentLaunchResponse = AgentLaunchResult | PatchFailure;
 type AgentResultResponse = AgentResultArtifact | PatchFailure;
 type UndoHistoryResponse = UndoHistoryReport;
 type ConflictReportResponse = PatchConflictReport;
@@ -29,11 +32,17 @@ type ConflictResolveResponse = PatchConflictResolveResult | PatchFailure;
 type UndoDiscardResponse = PatchUndoDiscardResult | PatchFailure;
 type UndoRevertResponse = PatchUndoRevertResult | PatchFailure;
 
+interface RenderScope {
+  renderedInstanceCount: number;
+  isShared: boolean;
+}
+
 const lastAgentTaskFileByIntentId = new Map<string, string>();
 const overlayStyleId = "intent-layer-overlay-style";
 const overlayBaseBottom = 18;
 const overlayAvoidanceGap = 14;
 let overlayPlacementFrame: number | null = null;
+let overlayCollapsed = false;
 const devToolCandidateSelector = [
   "nextjs-portal",
   "vite-error-overlay",
@@ -164,6 +173,18 @@ function ensureOverlayStyles() {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
   gap: 8px !important;
+}
+
+.intent-layer-header-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+[data-intent-overlay-root][data-intent-collapsed="true"] {
+  width: min(286px, calc(100vw - 24px)) !important;
+}
+
+[data-intent-overlay-root][data-intent-collapsed="true"] .intent-layer-header {
+  border-bottom: 0 !important;
 }
 
 [data-intent-overlay-root] .intent-layer-button,
@@ -459,6 +480,34 @@ function createButton(label: string, variant: "primary" | "secondary" = "seconda
   return button;
 }
 
+function intentIdSelector(id: string): string {
+  const escaped = typeof CSS !== "undefined" && "escape" in CSS ? CSS.escape(id) : id.replace(/[^A-Za-z0-9_-]/g, "\\$&");
+  return `[data-intent-id="${escaped}"]`;
+}
+
+function elementsForIntentId(id: string): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>(intentIdSelector(id))).filter(
+    (element) => !element.closest("[data-intent-overlay-root]")
+  );
+}
+
+function clearSelectedIntentElements() {
+  for (const element of document.querySelectorAll<HTMLElement>("[data-intent-selected='true']")) {
+    element.removeAttribute("data-intent-selected");
+  }
+}
+
+function selectIntentElements(id: string): RenderScope {
+  const elements = elementsForIntentId(id);
+  for (const element of elements) {
+    element.setAttribute("data-intent-selected", "true");
+  }
+  return {
+    renderedInstanceCount: Math.max(elements.length, 1),
+    isShared: elements.length > 1
+  };
+}
+
 function createPanel() {
   ensureOverlayStyles();
   const panel = document.createElement("div");
@@ -485,7 +534,9 @@ function renderTokenRow(
   root: HTMLElement,
   binding: IntentBinding,
   token: IntentToken,
-  setStatus: (message: string) => void
+  scope: RenderScope | null,
+  setStatus: (message: string) => void,
+  rerender: (message: string) => void
 ) {
   const row = document.createElement("div");
   row.className = "intent-layer-token-row";
@@ -517,7 +568,12 @@ function renderTokenRow(
   }
 
   const preview = createButton("Preview");
-  const apply = createButton("Apply");
+  const apply = createButton(scope?.isShared ? "Apply all" : "Apply");
+  if (scope?.isShared) {
+    const title = `This source binding is rendered ${scope.renderedInstanceCount} times on the page.`;
+    preview.title = title;
+    apply.title = title;
+  }
   const previewBox = document.createElement("pre");
   previewBox.className = "intent-layer-preview-box";
   previewBox.style.gridColumn = "1 / -1";
@@ -587,7 +643,8 @@ function renderTokenRow(
     const responseAt = performance.now();
     const renderStartedAt = performance.now();
     if (result.ok) {
-      renderBinding(root, binding, `Applied ${result.oldToken} -> ${result.nextToken} in ${result.metrics.applyMs}ms`);
+      const scopeNote = scope?.isShared ? `; affects ${scope.renderedInstanceCount} rendered instances` : "";
+      rerender(`Applied ${result.oldToken} -> ${result.nextToken} in ${result.metrics.applyMs}ms${scopeNote}`);
     } else {
       setStatus(`Rejected: ${result.reason}`);
     }
@@ -653,11 +710,86 @@ function renderAgentTaskForm(
     const result = (await response.json()) as AgentTaskResponse;
     if (result.ok) {
       lastAgentTaskFileByIntentId.set(binding.id, result.taskFile);
+      launchBox.style.display = "block";
+      launchBox.textContent = `Task file\n${result.taskFile}`;
       setStatus(`Agent task created in ${result.metrics.taskMs}ms: ${result.taskFile}`);
     } else {
       setStatus(`Agent task rejected: ${result.reason}`);
     }
   });
+
+  const launchActions = document.createElement("div");
+  launchActions.className = "intent-layer-actions";
+  launchActions.style.marginTop = "8px";
+
+  const launchBox = document.createElement("pre");
+  launchBox.className = "intent-layer-preview-box";
+  launchBox.style.display = "none";
+  launchBox.style.marginTop = "8px";
+
+  async function launch(provider: AgentProvider, execute: boolean) {
+    const knownTaskFile = lastAgentTaskFileByIntentId.get(binding.id);
+    const response = await fetch("/__intent/agent-launch", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        id: binding.id,
+        provider,
+        desiredChange: textarea.value,
+        taskFile: knownTaskFile,
+        execute
+      })
+    });
+    const result = (await response.json()) as AgentLaunchResponse;
+    launchBox.style.display = "block";
+    if (result.ok) {
+      lastAgentTaskFileByIntentId.set(binding.id, result.taskFile);
+      launchBox.textContent = [
+        result.executed ? `${provider} started` : `${provider} command plan`,
+        `task: ${result.taskFile}`,
+        `cwd: ${result.cwd}`,
+        result.executed ? `pid: ${result.pid ?? "unknown"}` : "execution: not started",
+        result.stdoutFile ? `stdout: ${result.stdoutFile}` : null,
+        result.stderrFile ? `stderr: ${result.stderrFile}` : null,
+        "",
+        result.commandText
+      ]
+        .filter(Boolean)
+        .join("\n");
+      if (result.executed) {
+        setStatus(`${provider} launched in ${result.metrics.launchMs}ms: ${result.taskFile}`);
+      } else if (execute && !result.enabled) {
+        setStatus(`${provider} run disabled; set INTENT_LAYER_AGENT_RUN=1 to execute. Command planned.`);
+      } else {
+        setStatus(`${provider} command planned in ${result.metrics.launchMs}ms: ${result.taskFile}`);
+      }
+    } else {
+      launchBox.textContent = result.detail ?? result.reason;
+      setStatus(`${provider} launch rejected: ${result.reason}`);
+    }
+  }
+
+  const planCodex = createButton("Plan Codex");
+  planCodex.addEventListener("click", () => {
+    void launch("codex", false);
+  });
+
+  const runCodex = createButton("Run Codex");
+  runCodex.addEventListener("click", () => {
+    void launch("codex", true);
+  });
+
+  const planClaude = createButton("Plan Claude");
+  planClaude.addEventListener("click", () => {
+    void launch("claude", false);
+  });
+
+  const runClaude = createButton("Run Claude");
+  runClaude.addEventListener("click", () => {
+    void launch("claude", true);
+  });
+
+  launchActions.append(planCodex, runCodex, planClaude, runClaude);
 
   const resultLabel = document.createElement("label");
   resultLabel.textContent = "Result";
@@ -700,7 +832,7 @@ function renderAgentTaskForm(
     }
   });
 
-  wrapper.append(label, textarea, create, resultLabel, resultTextarea, record);
+  wrapper.append(label, textarea, create, launchActions, launchBox, resultLabel, resultTextarea, record);
   root.appendChild(wrapper);
 }
 
@@ -902,8 +1034,9 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
     });
 }
 
-function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status: string) {
+function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status: string, scope: RenderScope | null = null) {
   panel.innerHTML = "";
+  panel.dataset.intentCollapsed = overlayCollapsed ? "true" : "false";
 
   const header = document.createElement("div");
   header.className = "intent-layer-header";
@@ -931,12 +1064,25 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   header.appendChild(statusLine);
 
   const actions = document.createElement("div");
-  actions.className = "intent-layer-actions";
+  actions.className = "intent-layer-actions intent-layer-header-actions";
 
-  const pick = createButton("Pick element", "primary");
+  const pick = createButton("Pick", "primary");
+  pick.title = "Pick an element on the page";
+  pick.addEventListener("click", () => {
+    panel.dispatchEvent(new CustomEvent("intent:start-pick"));
+  });
   actions.appendChild(pick);
 
+  const toggle = createButton(overlayCollapsed ? "Expand" : "Minimize");
+  toggle.title = overlayCollapsed ? "Expand the Intent Layer panel" : "Minimize the Intent Layer panel";
+  toggle.addEventListener("click", () => {
+    overlayCollapsed = !overlayCollapsed;
+    renderBinding(panel, binding, overlayCollapsed ? "Panel minimized" : status, scope);
+  });
+  actions.appendChild(toggle);
+
   const undo = createButton("Undo last");
+  undo.title = "Revert the latest direct patch";
   undo.addEventListener("click", async () => {
     const startedAt = performance.now();
     const response = await fetch("/__intent/revert-last", {
@@ -949,11 +1095,12 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
       renderBinding(
         panel,
         binding,
-        `Reverted ${result.oldToken} -> ${result.restoredToken} in ${result.metrics.revertMs}ms`
+        `Reverted ${result.oldToken} -> ${result.restoredToken} in ${result.metrics.revertMs}ms`,
+        scope
       );
     } else {
       const conflict = result.conflictFile ? ` (${result.conflictFile})` : "";
-      renderBinding(panel, binding, `Undo rejected: ${result.reason}${conflict}`);
+      renderBinding(panel, binding, `Undo rejected: ${result.reason}${conflict}`, scope);
     }
     const renderedAt = performance.now();
     recordClientMetric({
@@ -972,6 +1119,11 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   actions.appendChild(undo);
   header.appendChild(actions);
   panel.appendChild(header);
+
+  if (overlayCollapsed) {
+    scheduleOverlayPlacement(panel);
+    return;
+  }
 
   const content = document.createElement("div");
   content.className = "intent-layer-content";
@@ -1008,6 +1160,22 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     meta.style.whiteSpace = "pre-wrap";
     content.appendChild(meta);
 
+    const effectiveScope = scope ?? {
+      renderedInstanceCount: 1,
+      isShared: false
+    };
+    const scopeBox = document.createElement("div");
+    scopeBox.className = "intent-layer-section";
+    const scopeTitle = document.createElement("div");
+    scopeTitle.className = "intent-layer-section-title";
+    scopeTitle.textContent = effectiveScope.isShared ? "Shared source" : "Single render";
+    const scopeText = document.createElement("p");
+    scopeText.textContent = effectiveScope.isShared
+      ? `Affects ${effectiveScope.renderedInstanceCount} rendered instances.`
+      : "Affects this rendered instance.";
+    scopeBox.append(scopeTitle, scopeText);
+    content.appendChild(scopeBox);
+
     const editableTokens = binding.tokens.filter((item) => item.editable);
     if (editableTokens.length === 0) {
       const empty = document.createElement("p");
@@ -1018,9 +1186,18 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     }
 
     for (const token of editableTokens) {
-      renderTokenRow(content, binding, token, (message) => {
-        statusLine.textContent = message;
-      });
+      renderTokenRow(
+        content,
+        binding,
+        token,
+        effectiveScope,
+        (message) => {
+          statusLine.textContent = message;
+        },
+        (message) => {
+          renderBinding(panel, binding, message, effectiveScope);
+        }
+      );
     }
 
     renderAgentTaskForm(content, binding, (message) => {
@@ -1028,16 +1205,12 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     });
 
     renderUndoHistory(content, (message) => {
-      renderBinding(panel, binding, message);
+      renderBinding(panel, binding, message, effectiveScope);
     });
     renderConflictPanel(content, (message) => {
-      renderBinding(panel, binding, message);
+      renderBinding(panel, binding, message, effectiveScope);
     });
   }
-
-  pick.addEventListener("click", () => {
-    panel.dispatchEvent(new CustomEvent("intent:start-pick"));
-  });
 
   scheduleOverlayPlacement(panel);
 }
@@ -1063,14 +1236,14 @@ export function initIntentOverlay() {
   });
 
   let graph: IntentGraph | null = null;
-  let selectedElement: HTMLElement | null = null;
   let selectedBinding: IntentBinding | null = null;
+  let selectedScope: RenderScope | null = null;
   let pickMode = false;
   let pickStartedAt = 0;
   let graphFetchMs: number | null = null;
 
   function setStatus(message: string) {
-    renderBinding(panel, selectedBinding, message);
+    renderBinding(panel, selectedBinding, message, selectedScope);
   }
 
   renderBinding(panel, null, "Ready. Start by picking an element.");
@@ -1102,6 +1275,9 @@ export function initIntentOverlay() {
       delete document.body.dataset.intentLayerPicking;
 
       if (!element || !graph) {
+        clearSelectedIntentElements();
+        selectedBinding = null;
+        selectedScope = null;
         const renderStartedAt = performance.now();
         setStatus("No intent binding on this element");
         const renderedAt = performance.now();
@@ -1119,17 +1295,20 @@ export function initIntentOverlay() {
         return;
       }
 
-      if (selectedElement) {
-        selectedElement.removeAttribute("data-intent-selected");
-      }
-
-      selectedElement = element;
-      selectedElement.setAttribute("data-intent-selected", "true");
       const lookupStartedAt = performance.now();
-      selectedBinding = graph.entries[element.dataset.intentId ?? ""] ?? null;
+      const intentId = element.dataset.intentId ?? "";
+      clearSelectedIntentElements();
+      selectedScope = intentId ? selectIntentElements(intentId) : null;
+      selectedBinding = graph.entries[intentId] ?? null;
       const lookupEndedAt = performance.now();
       const renderStartedAt = performance.now();
-      renderBinding(panel, selectedBinding, selectedBinding ? "Element selected" : "No binding found for that element");
+      overlayCollapsed = false;
+      renderBinding(
+        panel,
+        selectedBinding,
+        selectedBinding ? "Element selected" : "No binding found for that element",
+        selectedScope
+      );
       const renderedAt = performance.now();
       recordClientMetric({
         kind: "click-to-panel",

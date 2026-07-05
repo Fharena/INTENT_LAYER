@@ -327,6 +327,8 @@ Support model:
 - `className={someVariable}` degrades to a read-only binding and agent handoff.
 - Template literals degrade to read-only bindings and agent handoff.
 - Variant functions and props forwarding degrade to read-only bindings and agent handoff.
+- When internal DOM from a reused component shares the same source binding, the overlay outlines every rendered instance with the same `data-intent-id` and shows the affected instance count.
+- Uppercase custom component call-site props are not direct source bindings yet. Forwarded `className` and variant prop edits remain read-only/handoff paths.
 - Undo uses an operation-log-backed LIFO stack and can revert multiple direct patches in order.
 - After a dev server restart, the pending undo stack can be restored from the operation log once graph bindings are available again.
 - The overlay displays up to 5 pending undo entries, highlights the next revert target, and can discard pending undo entries or safely non-top revert them.
@@ -344,9 +346,9 @@ Support model:
 - Variant-function read-only bindings store same-file local `function` / `const` variant declarations, one-hop relative named imports, and variant declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports as related source snapshots, then record related source and semantic diffs on result.
 - The package smoke now transforms an external temp fixture through the installed `vite.cjs` wrapper-backed `/vite` export after tarball install and verifies `data-intent-id` plus `.intent/graph.intent.json` output.
 - In the same install folder, it starts a real Vite dev server and verifies the `/src/App.tsx` transform response plus the `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, and `/__intent/revert-last` endpoints over HTTP.
-- The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts, pending undo history, and post-apply module/graph refresh in 88.279ms.
-- The same installed Vite dev server smoke calls `/__intent/revert-last`, verifies source/module/graph return to `gap-4`, clears pending undo history, and completes revert refresh in 43.139ms.
-- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4` to `gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, graph `generatedAt` changes, and module/graph refresh completes in 132.441ms.
+- The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts, pending undo history, and post-apply module/graph refresh in 194.581ms.
+- The same installed Vite dev server smoke calls `/__intent/revert-last`, verifies source/module/graph return to `gap-4`, clears pending undo history, and completes revert refresh in 127.724ms.
+- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4` to `gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, graph `generatedAt` changes, and module/graph refresh completes in 123.273ms.
 - The `doctor` missing-plugin fixture verifies exit code 1, one `vite-plugin` failure, and guidance that mentions `intent-layer/vite` when `intentLayer()` is missing from the Vite config.
 - `INSTALL_KR/EN.md` and `FAILURE_MODES_KR/EN.md` are included in the package tarball so local tarball setup and failure recovery have external-facing copy.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
@@ -401,8 +403,31 @@ Required Checks
 Expected Result
 ```
 
-This implementation does not call an LLM.
+Default task creation does not call an LLM.
 It only turns the selected source binding and desired change into markdown that can be handed to Codex, Cursor, Claude, or another agent.
+
+Agent launch flow:
+
+1. The user creates a task from `Agent handoff`, or provides a desired change.
+2. The overlay exposes `Plan Codex`, `Plan Claude`, `Run Codex`, and `Run Claude`.
+3. The `/__intent/agent-launch` endpoint prepares a task file and returns a provider-specific command plan.
+4. By default, it only returns the command plan. Direct process spawning is allowed only when `INTENT_LAYER_AGENT_RUN=1` is set.
+
+Default command plans:
+
+```bash
+codex exec --sandbox workspace-write "Read .intent/agent/task_x.md and implement the requested change..."
+claude -p "Read .intent/agent/task_x.md and implement the requested change..."
+```
+
+The CLI uses the same flow:
+
+```bash
+intent-layer agent-launch --provider codex --id <intent-id> --change "Describe the desired change"
+intent-layer agent-launch --provider claude --task .intent/agent/task_x.md
+```
+
+Executable names can be overridden with `INTENT_LAYER_CODEX_COMMAND` and `INTENT_LAYER_CLAUDE_COMMAND`.
 
 Result recording flow:
 

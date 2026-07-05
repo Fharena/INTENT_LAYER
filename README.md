@@ -4,7 +4,7 @@ Working product folder for the Intent Layer concept.
 
 Current state:
 
-> React/Vite/Tailwind click-to-patch spike with structured agent handoff/result artifacts.
+> React/Vite/Tailwind click-to-patch spike with structured agent handoff/result artifacts and Codex/Claude launch plans.
 
 Documents:
 
@@ -75,6 +75,8 @@ npx tsx src/intent/cli.ts apply --op .intent/operations/example.intent-op.json
 npx tsx src/intent/cli.ts diff --diff .intent/diffs/example.intent-diff.yml
 npx tsx src/intent/cli.ts agent-context ProductGrid
 npx tsx src/intent/cli.ts agent-task --id <intent-id> --change "Describe the desired change"
+npx tsx src/intent/cli.ts agent-launch --provider codex --id <intent-id> --change "Describe the desired change"
+npx tsx src/intent/cli.ts agent-launch --provider claude --task .intent/agent/task_x.md
 npx tsx src/intent/cli.ts agent-result --id <intent-id> --task .intent/agent/task_x.md --summary "Describe the result"
 ```
 
@@ -104,7 +106,7 @@ Current independent external baselines all clear the 50% MVP evidence gate:
 
 The current MVP decision has moved past token taxonomy breadth: direct-edit coverage, package smoke, graph refresh, and real browser click-to-patch QA all have numeric evidence. Remaining watch items are broader browser-environment repeats, packaging/demo cleanup, and strict revert latency under 50ms.
 
-`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last`, apply/revert refresh, and a 3-file graph refresh after one TSX file changes. It also verifies a missing-plugin `doctor` failure guidance fixture, generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture, a 24-file/624-binding multi-file fixture, and an external corpus import/report smoke marked as `local-smoke-fixture`.
+`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last`, apply/revert refresh, and a 3-file graph refresh after one TSX file changes. It also verifies a missing-plugin `doctor` failure guidance fixture, generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture, a 24-file/624-binding multi-file fixture, an external corpus import/report smoke marked as `local-smoke-fixture`, and dry-run Codex/Claude agent launch plans.
 
 The demo currently supports:
 
@@ -113,6 +115,8 @@ The demo currently supports:
 - low-level JSX/className scanner for the current MVP direct-edit path, with AST fallback for complex syntax
 - source sidecar graph generation at `.intent/graph.intent.json`
 - floating browser overlay
+- manual overlay minimize/expand control
+- shared source scope display that outlines every rendered DOM instance with the same intent id
 - patch preview before apply
 - direct Tailwind token replacement for supported static tokens
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
@@ -126,6 +130,7 @@ The demo currently supports:
 - revert conflict artifact output at `.intent/conflicts/*.intent-conflict.json` when undo cannot safely restore the stored token
 - undo conflict list and discard-pending-undo resolution flow in the overlay
 - structured agent handoff task generation at `.intent/agent/task_*.md`
+- opt-in Codex/Claude launch planning from `.intent/agent/task_*.md`; direct spawn requires `INTENT_LAYER_AGENT_RUN=1`
 - structured agent result artifact generation at `.intent/agent/result_*.md`
 - source hash validation before patching
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply

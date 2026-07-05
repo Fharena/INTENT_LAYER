@@ -326,6 +326,8 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - `className={someVariable}`는 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
 - template literal은 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
 - variant 함수와 props forwarding은 직접 patch 대신 read-only binding과 agent handoff로 처리한다.
+- 재사용 컴포넌트 내부 DOM이 같은 source binding을 공유하면 overlay는 같은 `data-intent-id`를 가진 화면상의 모든 rendered instance를 outline하고 영향 count를 표시한다.
+- 대문자 custom component call-site의 prop 자체는 아직 별도 source binding으로 직접 patch하지 않는다. forwarded `className`과 variant prop 변경은 read-only/handoff 경로로 둔다.
 - undo는 operation log 기반 LIFO stack으로 여러 direct patch를 순서대로 되돌릴 수 있다.
 - dev server 재시작 후에도 graph binding이 다시 준비되면 operation log에서 pending undo stack을 복원할 수 있다.
 - overlay는 pending undo history를 최근 5개까지 표시하고 다음 revert 대상을 강조하며, 각 pending undo를 비파괴적으로 폐기하거나 안전하게 non-top revert할 수 있다.
@@ -343,9 +345,9 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - variant 함수 read-only binding은 같은 파일 안의 local `function` / `const` variant 선언, one-hop relative named import, tsconfig paths alias + one-hop/multi-hop named barrel re-export 뒤의 variant 선언을 related source snapshot으로 저장하고, result 기록 시 related source/semantic diff를 남긴다.
 - package smoke는 tarball install 뒤 `vite.cjs` wrapper 기반 `/vite` export로 외부 temp fixture를 transform하고 `data-intent-id`/`.intent/graph.intent.json` 생성까지 확인한다.
 - 같은 설치 폴더에서 실제 Vite dev server를 띄워 `/src/App.tsx` transform 결과, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last` endpoint 응답까지 HTTP로 확인한다.
-- 설치된 Vite dev server smoke는 `gap-4 -> gap-6` patch를 실제 source에 적용하고, operation/diff/log artifact 생성, pending undo history, apply 후 module/graph refresh 88.279ms를 확인한다.
-- 같은 설치형 Vite dev server smoke는 `/__intent/revert-last`를 호출해 source/module/graph가 `gap-4`로 돌아오고 pending undo history가 비워지며, revert refresh가 43.139ms에 끝나는지 확인한다.
-- 설치된 Vite dev server smoke는 App/Header/Card 3개 TSX 파일을 graph에 올린 뒤 Card만 `gap-4 -> gap-8`로 바꾸고, graph entry 3개 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경, module/graph refresh 132.441ms를 확인한다.
+- 설치된 Vite dev server smoke는 `gap-4 -> gap-6` patch를 실제 source에 적용하고, operation/diff/log artifact 생성, pending undo history, apply 후 module/graph refresh 194.581ms를 확인한다.
+- 같은 설치형 Vite dev server smoke는 `/__intent/revert-last`를 호출해 source/module/graph가 `gap-4`로 돌아오고 pending undo history가 비워지며, revert refresh가 127.724ms에 끝나는지 확인한다.
+- 설치된 Vite dev server smoke는 App/Header/Card 3개 TSX 파일을 graph에 올린 뒤 Card만 `gap-4 -> gap-8`로 바꾸고, graph entry 3개 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경, module/graph refresh 123.273ms를 확인한다.
 - `doctor` missing-plugin fixture는 Vite config에 `intentLayer()`가 빠졌을 때 exit code 1, `vite-plugin` fail 1건, `intent-layer/vite` guidance 포함을 확인한다.
 - `INSTALL_KR/EN.md`와 `FAILURE_MODES_KR/EN.md`는 package tarball에 포함되어 local tarball 설치와 실패 대응을 외부 사용자용 문구로 제공한다.
 - agent result는 선택 source window와 선택 component 범위에서 `className` semantic token diff를 기록한다.
@@ -400,8 +402,31 @@ Required Checks
 Expected Result
 ```
 
-이번 구현은 LLM을 호출하지 않는다.
+기본 task 생성은 LLM을 호출하지 않는다.
 작업을 Codex/Cursor/Claude 같은 외부 agent에게 넘기기 좋은 markdown으로 구조화하는 것만 담당한다.
+
+agent launch 흐름:
+
+1. 사용자가 `Agent handoff`에서 task를 만들거나 원하는 변경을 적는다.
+2. overlay에서 `Plan Codex`, `Plan Claude`, `Run Codex`, `Run Claude` 중 하나를 누른다.
+3. `/__intent/agent-launch` endpoint가 task file을 준비하고 provider별 command plan을 만든다.
+4. 기본값은 command plan만 반환한다. 실제 process spawn은 `INTENT_LAYER_AGENT_RUN=1`이 설정된 경우에만 허용한다.
+
+기본 command plan:
+
+```bash
+codex exec --sandbox workspace-write "Read .intent/agent/task_x.md and implement the requested change..."
+claude -p "Read .intent/agent/task_x.md and implement the requested change..."
+```
+
+CLI에서는 다음처럼 같은 흐름을 사용할 수 있다.
+
+```bash
+intent-layer agent-launch --provider codex --id <intent-id> --change "Describe the desired change"
+intent-layer agent-launch --provider claude --task .intent/agent/task_x.md
+```
+
+실행 파일 이름은 `INTENT_LAYER_CODEX_COMMAND`, `INTENT_LAYER_CLAUDE_COMMAND`로 바꿀 수 있다.
 
 result 기록 흐름:
 

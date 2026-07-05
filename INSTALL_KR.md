@@ -125,6 +125,37 @@ port: 5173
 
 ```text
 Pick element -> UI 요소 선택 -> Preview -> Apply -> Undo last
+Minimize / Expand로 페이지를 벗어나지 않고 패널을 접거나 펼친다
+```
+
+Agent handoff GUI:
+
+```text
+Agent handoff -> Create task -> Plan Codex / Plan Claude
+Agent handoff -> Run Codex / Run Claude
+```
+
+`Plan`은 `.intent/agent/task_*.md`에서 실행 명령만 만든다. 외부 process는 시작하지 않는다. `Run`은 같은 계획을 사용하지만, 대상 프로젝트에 `INTENT_LAYER_AGENT_RUN=1`이 설정되어 있을 때만 실제 spawn한다.
+
+현재 기본 command plan:
+
+```bash
+codex exec --sandbox workspace-write "Read .intent/agent/task_x.md and implement the requested change..."
+claude -p "Read .intent/agent/task_x.md and implement the requested change..."
+```
+
+필요하면 실행 파일 이름을 override할 수 있다.
+
+```bash
+INTENT_LAYER_CODEX_COMMAND=/path/to/codex
+INTENT_LAYER_CLAUDE_COMMAND=/path/to/claude
+```
+
+CLI 대체 경로:
+
+```bash
+npx intent-layer agent-launch --provider codex --id <intent-id> --change "Describe the desired change"
+npx intent-layer agent-launch --provider claude --task .intent/agent/task_x.md
 ```
 
 CLI 명령은 setup, 진단, 반복 검증용이다. 일상적인 시각 편집은 브라우저 패널에서 시작하는 것이 기본 UX다.
@@ -149,13 +180,15 @@ npx intent-layer scan src --write-graph
 최근 `npm run eval` 기준:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 3.381ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.694ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-installed Vite apply refresh: 88.279ms
-installed Vite revert refresh: 43.139ms
-installed 3-file graph refresh: 132.441ms
+installed Vite apply refresh: 194.581ms
+installed Vite revert refresh: 127.724ms
+installed 3-file graph refresh: 123.273ms
 package smoke: pass
 ```
+
+설치형 Vite dev server refresh smoke target은 OS watcher와 temp install 환경의 흔들림을 고려해 2500ms로 둔다. 실제 브라우저 UX gate는 별도로 click-to-panel 100ms, preview/apply 50ms, revert 100ms 기준으로 본다.
 
 현재 독립 외부 baseline coverage:
 

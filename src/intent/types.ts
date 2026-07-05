@@ -114,6 +114,7 @@ export interface PatchFailure {
     resolveMs?: number;
     discardMs?: number;
     taskMs?: number;
+    launchMs?: number;
     resultMs?: number;
   };
 }
@@ -309,6 +310,35 @@ export interface AgentTaskResult {
   markdown: string;
   metrics: {
     taskMs: number;
+  };
+}
+
+export type AgentProvider = "codex" | "claude";
+
+export interface AgentLaunchRequest {
+  id?: string;
+  provider: AgentProvider;
+  desiredChange?: string;
+  taskFile?: string;
+  execute?: boolean;
+}
+
+export interface AgentLaunchResult {
+  ok: true;
+  id: string | null;
+  provider: AgentProvider;
+  taskFile: string;
+  command: string[];
+  commandText: string;
+  cwd: string;
+  enabled: boolean;
+  executed: boolean;
+  pid: number | null;
+  stdoutFile: string | null;
+  stderrFile: string | null;
+  guidance: string[];
+  metrics: {
+    launchMs: number;
   };
 }
 
