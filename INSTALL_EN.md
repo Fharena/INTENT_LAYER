@@ -60,7 +60,7 @@ import { defineConfig } from "vite";
 import { intentLayer } from "intent-layer/vite";
 
 export default defineConfig({
-  plugins: [react(), intentLayer()]
+  plugins: [intentLayer(), react()]
 });
 ```
 
