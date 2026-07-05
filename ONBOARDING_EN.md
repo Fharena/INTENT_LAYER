@@ -53,6 +53,22 @@ Panel position and density apply immediately after saving. `Start minimized` app
 - Graph: whether source bindings exist after Vite transforms TSX/JSX
 - Agent: whether the queue signal, Codex skill, Claude hook, Codex/Claude commands, and run mode are ready
 
+## Panel Visualization Structure
+
+After an element is selected, the panel is organized so beginners and senior engineers can read the same surface at different depths.
+
+- Workflow rail: shows `Pick -> Inspect -> Edit -> Review` as the current path.
+- Intent map: shows component, source file, source hash, `className` mode, editable token count, and shared-source impact.
+- Direct edit: exposes only deterministic Tailwind token patches through select/preview/apply controls.
+- Agent handoff: sends ambiguous or larger changes to the same queue/status/lock task flow.
+- Review: keeps undo history and conflict state visible in the same panel.
+
+Design intent:
+
+- Beginners see the next action first.
+- Senior engineers can verify source binding, source hash, shared render count, and unsupported reason before patching.
+- During HMR, a stale overlay root is replaced when the client runtime version changes.
+
 ## Agent Hook UX
 
 Agent handoff does not start with provider-specific buttons. The user describes the desired change and clicks `Create task`.

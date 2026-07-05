@@ -139,6 +139,8 @@ The demo currently supports:
 - source sidecar graph generation at `.intent/graph.intent.json`
 - floating browser overlay
 - browser setup/settings view with Korean/English language selection, panel preferences, onboarding reset, and Agent queue/hook/command settings
+- selected-element workflow rail for `Pick -> Inspect -> Edit -> Review`
+- Intent map showing component, source hash, `className` mode, editable token count, and shared render count
 - manual overlay minimize/expand control
 - shared source scope display that outlines every rendered DOM instance with the same intent id
 - patch preview before apply

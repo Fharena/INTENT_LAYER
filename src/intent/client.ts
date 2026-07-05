@@ -43,10 +43,12 @@ interface RenderScope {
   isShared: boolean;
 }
 
+type WorkflowState = "idle" | "done" | "active" | "blocked";
 type OverlayView = "editor" | "setup";
 
 type TextKey =
   | "agentCreate"
+  | "agentChange"
   | "agentCreated"
   | "agentHandoff"
   | "agentLaunchPlan"
@@ -69,13 +71,18 @@ type TextKey =
   | "autoOpenSetupDetail"
   | "apply"
   | "applyAll"
+  | "beginnerStartDetail"
+  | "beginnerStartTitle"
+  | "binding"
   | "claudeCommand"
   | "claudeHook"
   | "claudeHookDetail"
+  | "classMode"
   | "codexSubtool"
   | "codexCommand"
   | "codexSkill"
   | "codexSkillDetail"
+  | "component"
   | "commandInputPlaceholder"
   | "commandPlan"
   | "compact"
@@ -83,20 +90,29 @@ type TextKey =
   | "conflicts"
   | "conflictsEmpty"
   | "comfortable"
+  | "deterministicPatch"
   | "defaultCollapsed"
   | "defaultCollapsedDetail"
   | "dock"
   | "dockLeft"
   | "dockRight"
+  | "directEdit"
   | "directEditEmpty"
   | "dynamicArgs"
+  | "editableTokens"
   | "elementSelected"
   | "english"
   | "expand"
+  | "expertTrace"
+  | "guardedHandoff"
+  | "healthReady"
+  | "healthSetup"
   | "inspectableNoTokens"
+  | "intentMap"
   | "korean"
   | "language"
   | "minimize"
+  | "nextStep"
   | "noBinding"
   | "noIntentElement"
   | "panelSettings"
@@ -111,6 +127,7 @@ type TextKey =
   | "saveSettings"
   | "settingsSaved"
   | "selectSingle"
+  | "selectedSource"
   | "setup"
   | "setupApply"
   | "setupComplete"
@@ -123,14 +140,20 @@ type TextKey =
   | "setupTitleReady"
   | "setupWorkspaceReady"
   | "setupWorkspaceWaiting"
+  | "sourceHash"
   | "sharedSource"
   | "singleRender"
   | "undo"
   | "undoHistory"
-  | "undoHistoryEmpty";
+  | "undoHistoryEmpty"
+  | "workflowEdit"
+  | "workflowInspect"
+  | "workflowPick"
+  | "workflowReview";
 
 const lastAgentTaskFileByIntentId = new Map<string, string>();
 const overlayStyleId = "intent-layer-overlay-style";
+const overlayRuntimeVersion = "visual-map-v1";
 const overlayBaseBottom = 18;
 const overlayAvoidanceGap = 14;
 let overlayPlacementFrame: number | null = null;
@@ -159,6 +182,7 @@ declare global {
 const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
   ko: {
     agentCreate: "작업 만들기",
+    agentChange: "변경 요청",
     agentCreated: "Agent 작업 생성",
     agentHandoff: "Agent 전달",
     agentLaunchPlan: "실행 계획",
@@ -181,13 +205,18 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     autoOpenSetupDetail: "workspace나 onboarding이 비어 있으면 시작할 때 설정 화면을 엽니다.",
     apply: "적용",
     applyAll: "전체 적용",
+    beginnerStartDetail: "시작은 하나입니다. 선택을 누르고 고칠 UI를 클릭하세요.",
+    beginnerStartTitle: "수정할 화면 요소를 고르세요",
+    binding: "Source binding",
     claudeCommand: "Claude 명령",
     claudeHook: "Claude 자동 픽업",
     claudeHookDetail: "Claude Code가 열려 있으면 .intent-agent-queue.json 변경을 감지해 같은 작업 큐를 처리합니다.",
+    classMode: "Class 모드",
     codexSubtool: "Codex 보조 도구",
     codexCommand: "Codex 명령",
     codexSkill: "Codex 작업 스킬",
     codexSkillDetail: "프로젝트에 Codex skill을 설치해 queued 작업을 같은 방식으로 claim하고 처리합니다.",
+    component: "컴포넌트",
     commandInputPlaceholder: "비워두면 기본값 또는 환경변수를 사용합니다",
     commandPlan: "명령 계획",
     compact: "컴팩트",
@@ -195,20 +224,29 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     conflicts: "되돌리기 충돌",
     conflictsEmpty: "해결되지 않은 충돌이 없습니다.",
     comfortable: "기본",
+    deterministicPatch: "결정론적 패치",
     defaultCollapsed: "시작 시 접기",
     defaultCollapsedDetail: "다음 새로고침부터 패널을 접힌 상태로 시작합니다.",
     dock: "패널 위치",
     dockLeft: "왼쪽",
     dockRight: "오른쪽",
+    directEdit: "직접 수정",
     directEditEmpty: "직접 수정 가능한 토큰이 아직 없습니다.",
     dynamicArgs: "동적 인자 read-only",
+    editableTokens: "수정 가능 토큰",
     elementSelected: "요소를 선택했습니다",
     english: "English",
     expand: "펼치기",
+    expertTrace: "검증 근거",
+    guardedHandoff: "Agent 전달",
+    healthReady: "준비",
+    healthSetup: "설정 필요",
     inspectableNoTokens: "이 요소는 inspect 가능하지만 아직 직접 수정 가능한 토큰이 없습니다.",
+    intentMap: "Intent 맵",
     korean: "한국어",
     language: "언어",
     minimize: "접기",
+    nextStep: "다음 행동",
     noBinding: "이 요소의 binding을 찾지 못했습니다",
     noIntentElement: "Intent binding이 있는 요소가 아닙니다",
     panelSettings: "패널",
@@ -223,6 +261,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     saveSettings: "설정 저장",
     settingsSaved: "설정을 저장했습니다",
     selectSingle: "이 렌더 인스턴스에만 연결됩니다.",
+    selectedSource: "선택된 소스",
     setup: "설정",
     setupApply: "설정 완료",
     setupComplete: "설정이 완료됐습니다",
@@ -235,14 +274,20 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     setupTitleReady: "설정",
     setupWorkspaceReady: ".intent 워크스페이스가 준비됐습니다.",
     setupWorkspaceWaiting: ".intent 워크스페이스를 생성해야 합니다.",
+    sourceHash: "Source hash",
     sharedSource: "공유 source",
     singleRender: "단일 렌더",
     undo: "되돌리기",
     undoHistory: "되돌리기 기록",
-    undoHistoryEmpty: "대기 중인 되돌리기 작업이 없습니다."
+    undoHistoryEmpty: "대기 중인 되돌리기 작업이 없습니다.",
+    workflowEdit: "수정",
+    workflowInspect: "근거 확인",
+    workflowPick: "선택",
+    workflowReview: "검토"
   },
   en: {
     agentCreate: "Create task",
+    agentChange: "Change request",
     agentCreated: "Agent task created",
     agentHandoff: "Agent handoff",
     agentLaunchPlan: "Command plan",
@@ -265,13 +310,18 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     autoOpenSetupDetail: "Open the setup view on startup when the workspace or onboarding is incomplete.",
     apply: "Apply",
     applyAll: "Apply all",
+    beginnerStartDetail: "Start with one action: pick an element on the page.",
+    beginnerStartTitle: "Choose something to edit",
+    binding: "Binding",
     claudeCommand: "Claude command",
     claudeHook: "Claude auto pickup",
     claudeHookDetail: "When Claude Code is open, it watches .intent-agent-queue.json and processes the same queue.",
+    classMode: "Class mode",
     codexSubtool: "Codex subtool",
     codexCommand: "Codex command",
     codexSkill: "Codex task skill",
     codexSkillDetail: "Install a project Codex skill that claims and processes queued tasks through the shared queue.",
+    component: "Component",
     commandInputPlaceholder: "Leave blank to use the default or environment variable",
     commandPlan: "Command plan",
     compact: "Compact",
@@ -279,20 +329,29 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     conflicts: "Undo conflicts",
     conflictsEmpty: "No unresolved undo conflicts.",
     comfortable: "Comfortable",
+    deterministicPatch: "Deterministic patch",
     defaultCollapsed: "Start minimized",
     defaultCollapsedDetail: "Start the panel collapsed on the next page load.",
     dock: "Panel position",
     dockLeft: "Left",
     dockRight: "Right",
+    directEdit: "Direct edit",
     directEditEmpty: "No direct-edit tokens yet.",
     dynamicArgs: "dynamic args read-only",
+    editableTokens: "Editable tokens",
     elementSelected: "Element selected",
     english: "English",
     expand: "Expand",
+    expertTrace: "Validation trace",
+    guardedHandoff: "Agent handoff",
+    healthReady: "Ready",
+    healthSetup: "Setup needed",
     inspectableNoTokens: "This element is inspectable, but it has no direct-edit tokens yet.",
+    intentMap: "Intent map",
     korean: "Korean",
     language: "Language",
     minimize: "Minimize",
+    nextStep: "Next step",
     noBinding: "No binding found for that element",
     noIntentElement: "No intent binding on this element",
     panelSettings: "Panel",
@@ -307,6 +366,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     saveSettings: "Save settings",
     settingsSaved: "Settings saved",
     selectSingle: "Affects this rendered instance.",
+    selectedSource: "Selected source",
     setup: "Setup",
     setupApply: "Finish setup",
     setupComplete: "Setup complete",
@@ -319,11 +379,16 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     setupTitleReady: "Settings",
     setupWorkspaceReady: ".intent workspace is ready.",
     setupWorkspaceWaiting: ".intent workspace needs to be created.",
+    sourceHash: "Source hash",
     sharedSource: "Shared source",
     singleRender: "Single render",
     undo: "Undo",
     undoHistory: "Undo history",
-    undoHistoryEmpty: "No pending undo operations."
+    undoHistoryEmpty: "No pending undo operations.",
+    workflowEdit: "Edit",
+    workflowInspect: "Inspect",
+    workflowPick: "Pick",
+    workflowReview: "Review"
   }
 };
 
@@ -340,6 +405,10 @@ function detectInitialLanguage(): IntentLayerLanguage {
 
 function t(key: TextKey): string {
   return texts[overlayLanguage][key];
+}
+
+function compactPath(value: string): string {
+  return value.split(/[\\/]/).pop() ?? value;
 }
 
 function setOverlayLanguage(language: IntentLayerLanguage) {
@@ -387,7 +456,7 @@ function ensureOverlayStyles() {
   right: max(18px, env(safe-area-inset-right)) !important;
   bottom: var(--intent-layer-bottom, 18px) !important;
   z-index: 2147483000 !important;
-  width: min(392px, calc(100vw - 24px)) !important;
+  width: min(430px, calc(100vw - 24px)) !important;
   max-height: var(--intent-layer-max-height, min(72vh, calc(100vh - 48px))) !important;
   overflow: hidden auto !important;
   box-sizing: border-box !important;
@@ -544,8 +613,182 @@ function ensureOverlayStyles() {
 
 .intent-layer-content {
   display: grid !important;
-  gap: 10px !important;
+  gap: 11px !important;
   padding: 12px 13px 13px !important;
+}
+
+.intent-layer-workflow {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+}
+
+.intent-layer-step {
+  display: grid !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+  padding: 8px 7px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+}
+
+.intent-layer-step[data-intent-state="done"] {
+  border-color: rgba(85, 230, 165, 0.28) !important;
+  background: rgba(85, 230, 165, 0.08) !important;
+}
+
+.intent-layer-step[data-intent-state="active"] {
+  border-color: rgba(118, 204, 255, 0.5) !important;
+  background: linear-gradient(135deg, rgba(124, 109, 255, 0.2), rgba(78, 188, 255, 0.12)) !important;
+  box-shadow: 0 0 0 1px rgba(118, 204, 255, 0.14) inset !important;
+}
+
+.intent-layer-step[data-intent-state="blocked"] {
+  border-color: rgba(255, 209, 102, 0.3) !important;
+  background: rgba(255, 209, 102, 0.07) !important;
+}
+
+.intent-layer-step-index {
+  display: inline-grid !important;
+  width: 20px !important;
+  height: 20px !important;
+  place-items: center !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #dbe7ff !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+}
+
+.intent-layer-step-label {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: #eef2ff !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+}
+
+.intent-layer-empty-state {
+  display: grid !important;
+  gap: 10px !important;
+  padding: 12px !important;
+  border: 1px solid rgba(118, 204, 255, 0.18) !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(135deg, rgba(124, 109, 255, 0.14), rgba(78, 188, 255, 0.07)),
+    rgba(255, 255, 255, 0.045) !important;
+}
+
+.intent-layer-section-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.intent-layer-section-header > .intent-layer-section-title {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.intent-layer-chip-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+.intent-layer-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  max-width: 100% !important;
+  min-height: 22px !important;
+  padding: 3px 7px !important;
+  border: 1px solid rgba(255, 255, 255, 0.11) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #cbd6f0 !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  line-height: 1.1 !important;
+}
+
+.intent-layer-chip[data-intent-tone="ready"] {
+  border-color: rgba(85, 230, 165, 0.35) !important;
+  background: rgba(85, 230, 165, 0.1) !important;
+  color: #bdf8dc !important;
+}
+
+.intent-layer-chip[data-intent-tone="warn"] {
+  border-color: rgba(255, 209, 102, 0.38) !important;
+  background: rgba(255, 209, 102, 0.1) !important;
+  color: #ffe4a3 !important;
+}
+
+.intent-layer-kv-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.intent-layer-kv {
+  display: grid !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  padding: 9px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  background: rgba(3, 6, 14, 0.34) !important;
+}
+
+.intent-layer-kv-label {
+  color: #95a1ba !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+}
+
+.intent-layer-kv-value {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: #f5f8ff !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+}
+
+.intent-layer-kv-detail {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: #a9b4cc !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 10px !important;
+}
+
+.intent-layer-code-box {
+  margin: 0 !important;
+  padding: 9px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 7px !important;
+  background: rgba(3, 6, 14, 0.5) !important;
+  color: #cfd7eb !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 10px !important;
+  line-height: 1.45 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+.intent-layer-token-list {
+  display: grid !important;
+  gap: 8px !important;
 }
 
 .intent-layer-setup-grid {
@@ -654,6 +897,23 @@ function ensureOverlayStyles() {
   gap: 8px !important;
   align-items: center !important;
   margin: 0 !important;
+}
+
+.intent-layer-token-row[data-intent-token-category="color"] {
+  border-left: 2px solid rgba(98, 217, 255, 0.5) !important;
+  padding-left: 8px !important;
+}
+
+.intent-layer-token-row[data-intent-token-category="spacing"],
+.intent-layer-token-row[data-intent-token-category="layout"] {
+  border-left: 2px solid rgba(142, 130, 255, 0.55) !important;
+  padding-left: 8px !important;
+}
+
+.intent-layer-token-row[data-intent-token-category="typography"],
+.intent-layer-token-row[data-intent-token-category="radius"] {
+  border-left: 2px solid rgba(85, 230, 165, 0.45) !important;
+  padding-left: 8px !important;
 }
 
 .intent-layer-token-label {
@@ -895,6 +1155,177 @@ function createToggleButton(active: boolean): HTMLButtonElement {
   return button;
 }
 
+function createSection(title: string, tone?: "ready" | "warn" | "neutral"): HTMLElement {
+  const section = document.createElement("section");
+  section.className = "intent-layer-section";
+
+  const header = document.createElement("div");
+  header.className = "intent-layer-section-header";
+
+  const label = document.createElement("div");
+  label.className = "intent-layer-section-title";
+  label.textContent = title;
+  header.appendChild(label);
+
+  if (tone) {
+    const chip = createChip(tone === "ready" ? t("healthReady") : tone === "warn" ? t("healthSetup") : "Info", tone);
+    header.appendChild(chip);
+  }
+
+  section.appendChild(header);
+  return section;
+}
+
+function createChip(label: string, tone: "ready" | "warn" | "neutral" = "neutral"): HTMLElement {
+  const chip = document.createElement("span");
+  chip.className = "intent-layer-chip";
+  chip.dataset.intentTone = tone;
+  chip.textContent = label;
+  return chip;
+}
+
+function createKeyValue(label: string, value: string, detail?: string): HTMLElement {
+  const item = document.createElement("div");
+  item.className = "intent-layer-kv";
+
+  const labelElement = document.createElement("div");
+  labelElement.className = "intent-layer-kv-label";
+  labelElement.textContent = label;
+
+  const valueElement = document.createElement("div");
+  valueElement.className = "intent-layer-kv-value";
+  valueElement.title = value;
+  valueElement.textContent = value;
+
+  item.append(labelElement, valueElement);
+
+  if (detail) {
+    const detailElement = document.createElement("div");
+    detailElement.className = "intent-layer-kv-detail";
+    detailElement.title = detail;
+    detailElement.textContent = detail;
+    item.appendChild(detailElement);
+  }
+
+  return item;
+}
+
+function renderWorkflowRail(root: HTMLElement, binding: IntentBinding | null, editableCount = 0) {
+  const rail = document.createElement("div");
+  rail.className = "intent-layer-workflow";
+
+  const steps: Array<{ label: string; state: WorkflowState }> = binding
+    ? [
+        { label: t("workflowPick"), state: "done" },
+        { label: t("workflowInspect"), state: "done" },
+        { label: t("workflowEdit"), state: editableCount > 0 ? "active" : "blocked" },
+        { label: t("workflowReview"), state: "idle" }
+      ]
+    : [
+        { label: t("workflowPick"), state: "active" },
+        { label: t("workflowInspect"), state: "idle" },
+        { label: t("workflowEdit"), state: "idle" },
+        { label: t("workflowReview"), state: "idle" }
+      ];
+
+  steps.forEach((step, index) => {
+    const item = document.createElement("div");
+    item.className = "intent-layer-step";
+    item.dataset.intentState = step.state;
+
+    const number = document.createElement("span");
+    number.className = "intent-layer-step-index";
+    number.textContent = String(index + 1);
+
+    const label = document.createElement("span");
+    label.className = "intent-layer-step-label";
+    label.textContent = step.label;
+
+    item.append(number, label);
+    rail.appendChild(item);
+  });
+
+  root.appendChild(rail);
+}
+
+function renderEmptyState(root: HTMLElement, panel: HTMLElement) {
+  renderWorkflowRail(root, null);
+
+  const empty = document.createElement("section");
+  empty.className = "intent-layer-empty-state";
+
+  const title = document.createElement("div");
+  title.className = "intent-layer-section-title";
+  title.textContent = t("beginnerStartTitle");
+
+  const detail = document.createElement("p");
+  detail.textContent = t("beginnerStartDetail");
+
+  const pick = createButton(t("pick"), "primary");
+  pick.addEventListener("click", () => {
+    overlayView = "editor";
+    panel.dispatchEvent(new CustomEvent("intent:start-pick"));
+  });
+
+  empty.append(title, detail, pick);
+  root.appendChild(empty);
+}
+
+function renderIntentMap(
+  root: HTMLElement,
+  binding: IntentBinding,
+  scope: RenderScope,
+  editableTokens: IntentToken[]
+) {
+  const section = createSection(t("intentMap"), editableTokens.length > 0 ? "ready" : "warn");
+
+  const chips = document.createElement("div");
+  chips.className = "intent-layer-chip-row";
+  chips.append(
+    createChip(editableTokens.length > 0 ? t("deterministicPatch") : t("guardedHandoff"), editableTokens.length > 0 ? "ready" : "warn"),
+    createChip(scope.isShared ? t("sharedSource") : t("singleRender"), scope.isShared ? "warn" : "neutral")
+  );
+  section.appendChild(chips);
+
+  const grid = document.createElement("div");
+  grid.className = "intent-layer-kv-grid";
+  grid.append(
+    createKeyValue(t("component"), `${binding.componentName ?? "Unknown"} <${binding.tagName}>`, binding.id),
+    createKeyValue(t("selectedSource"), binding.relativeFile, `${t("sourceHash")}: ${binding.sourceHash.slice(0, 10)}`),
+    createKeyValue(
+      t("classMode"),
+      `${binding.className.kind}${binding.className.callee ? `/${binding.className.callee}` : ""}`,
+      binding.className.unsupportedReason ?? `${t("dynamicArgs")}: ${binding.className.dynamicSegments}`
+    ),
+    createKeyValue(
+      t("editableTokens"),
+      String(editableTokens.length),
+      scope.isShared
+        ? overlayLanguage === "ko"
+          ? `${scope.renderedInstanceCount}개 렌더에 영향`
+          : `Affects ${scope.renderedInstanceCount} renders`
+        : t("selectSingle")
+    )
+  );
+  section.appendChild(grid);
+
+  const trace = document.createElement("pre");
+  trace.className = "intent-layer-code-box";
+  trace.textContent = [
+    `${t("expertTrace")}: ${binding.relativeFile}`,
+    `${t("binding")}: ${binding.id}`,
+    `className: ${binding.className.kind}${
+      binding.className.callee ? ` (${binding.className.callee})` : ""
+    }`,
+    binding.className.unsupportedReason
+      ? `unsupported: ${binding.className.unsupportedReason}`
+      : `unsupported: none`
+  ].join("\n");
+  section.appendChild(trace);
+
+  root.appendChild(section);
+}
+
 function applyOverlaySettingsToPanel(panel: HTMLElement) {
   panel.dataset.intentDock = overlaySettings.dock;
   panel.dataset.intentDensity = overlaySettings.density;
@@ -961,6 +1392,7 @@ function renderTokenRow(
 ) {
   const row = document.createElement("div");
   row.className = "intent-layer-token-row";
+  row.dataset.intentTokenCategory = token.category ?? "unknown";
   row.style.display = "grid";
   row.style.gridTemplateColumns = "1fr 1fr auto auto";
   row.style.gap = "8px";
@@ -1095,14 +1527,10 @@ function renderAgentTaskForm(
   binding: IntentBinding,
   setStatus: (message: string) => void
 ) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "intent-layer-section";
-  wrapper.style.marginTop = "12px";
-  wrapper.style.paddingTop = "10px";
-  wrapper.style.borderTop = "1px solid #e2e8f0";
+  const wrapper = createSection(t("guardedHandoff"));
 
   const label = document.createElement("label");
-  label.textContent = t("agentHandoff");
+  label.textContent = t("agentChange");
   label.style.display = "block";
   label.style.fontSize = "12px";
   label.style.fontWeight = "800";
@@ -1122,7 +1550,7 @@ function renderAgentTaskForm(
   const create = createButton(t("agentCreate"));
   create.style.marginTop = "8px";
   const queueSection = document.createElement("div");
-  queueSection.className = "intent-layer-section";
+  queueSection.className = "intent-layer-control-grid";
   queueSection.style.marginTop = "8px";
 
   const queueHeader = document.createElement("div");
@@ -1134,7 +1562,7 @@ function renderAgentTaskForm(
   queueHeader.append(queueTitle, refreshQueue);
 
   const queueBox = document.createElement("pre");
-  queueBox.className = "intent-layer-preview-box";
+  queueBox.className = "intent-layer-code-box";
   queueBox.textContent = "Loading...";
 
   async function renderQueueStatus() {
@@ -1146,17 +1574,19 @@ function renderAgentTaskForm(
     }
 
     const latest = result.tasks[0] ?? null;
-    queueBox.textContent = latest
-      ? [
-          `${t("agentQueueLatest")}: ${latest.taskFile}`,
-          `status: ${latest.status}`,
-          `provider: ${latest.provider ?? "none"}`,
-          `pending: ${result.pendingTaskCount}`,
-          `running: ${result.runningTaskCount}`,
-          `done: ${result.doneTaskCount}`,
-          `signal: ${result.queueFile}`
-        ].join("\n")
-      : `${t("agentQueueEmpty")}\nsignal: ${result.queueFile}`;
+    if (!latest) {
+      queueBox.textContent = `${t("agentQueueEmpty")}\nsignal: ${compactPath(result.queueFile)}`;
+      return;
+    }
+
+    const activeCount = result.pendingTaskCount + result.runningTaskCount;
+    queueBox.textContent = [
+      `${t("agentQueueLatest")}: ${compactPath(latest.taskFile)}`,
+      `status: ${latest.status}`,
+      `provider: ${latest.provider ?? "none"}`,
+      `active: ${activeCount} / done: ${result.doneTaskCount}`,
+      `signal: ${compactPath(result.queueFile)}`
+    ].join("\n");
   }
 
   refreshQueue.addEventListener("click", () => {
@@ -1179,7 +1609,7 @@ function renderAgentTaskForm(
       setStatus(`${t("agentCreated")} ${result.metrics.taskMs}ms: ${result.taskFile}`);
       queueBox.textContent = [
         t("agentQueueWaiting"),
-        `task: ${result.taskFile}`,
+        `task: ${compactPath(result.taskFile)}`,
         `status: ${result.status}`,
         `signal: .intent-agent-queue.json`
       ].join("\n");
@@ -1290,7 +1720,7 @@ function renderSetupPanel(
     });
 
   const wrapper = document.createElement("div");
-  wrapper.className = "intent-layer-section";
+  wrapper.className = "intent-layer-control-grid";
 
   const title = document.createElement("div");
   title.className = "intent-layer-section-title";
@@ -1590,17 +2020,7 @@ async function saveSetup(
 }
 
 function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => void) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "intent-layer-section";
-  wrapper.style.marginTop = "12px";
-  wrapper.style.paddingTop = "10px";
-  wrapper.style.borderTop = "1px solid #e2e8f0";
-
-  const header = document.createElement("div");
-  header.className = "intent-layer-section-title";
-  header.textContent = t("undoHistory");
-  header.style.fontSize = "12px";
-  header.style.fontWeight = "800";
+  const wrapper = createSection(t("undoHistory"));
 
   const body = document.createElement("div");
   body.className = "intent-layer-muted";
@@ -1609,7 +2029,7 @@ function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => vo
   body.style.fontSize = "11px";
   body.style.color = "#475569";
 
-  wrapper.append(header, body);
+  wrapper.appendChild(body);
   root.appendChild(wrapper);
 
   void fetch("/__intent/undo-history")
@@ -1697,17 +2117,7 @@ function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => vo
 }
 
 function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => void) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "intent-layer-section";
-  wrapper.style.marginTop = "12px";
-  wrapper.style.paddingTop = "10px";
-  wrapper.style.borderTop = "1px solid #e2e8f0";
-
-  const header = document.createElement("div");
-  header.className = "intent-layer-section-title";
-  header.textContent = t("conflicts");
-  header.style.fontSize = "12px";
-  header.style.fontWeight = "800";
+  const wrapper = createSection(t("conflicts"));
 
   const body = document.createElement("div");
   body.className = "intent-layer-muted";
@@ -1716,7 +2126,7 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
   body.style.fontSize = "11px";
   body.style.color = "#475569";
 
-  wrapper.append(header, body);
+  wrapper.appendChild(body);
   root.appendChild(wrapper);
 
   void fetch("/__intent/conflicts")
@@ -1905,66 +2315,31 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
       statusLine.textContent = message;
     });
   } else if (!binding) {
-    const hint = document.createElement("p");
-    hint.textContent = t("pickHint");
-    hint.style.fontSize = "12px";
-    hint.style.lineHeight = "1.5";
-    content.appendChild(hint);
+    renderEmptyState(content, panel);
   } else {
-    const meta = document.createElement("pre");
-    meta.className = "intent-layer-meta";
-    meta.textContent = [
-      `${binding.componentName ?? "Unknown"} <${binding.tagName}>`,
-      binding.relativeFile,
-      binding.id,
-      `className: ${binding.className.kind}${
-        binding.className.callee ? ` (${binding.className.callee})` : ""
-      }`,
-      binding.className.dynamicSegments > 0
-        ? `${t("dynamicArgs")}: ${binding.className.dynamicSegments}`
-        : `${t("dynamicArgs")}: 0`,
-      binding.className.unsupportedReason
-        ? `unsupported: ${binding.className.unsupportedReason}`
-        : "unsupported: none"
-    ].join("\n");
-    meta.style.marginTop = "10px";
-    meta.style.padding = "8px";
-    meta.style.borderRadius = "6px";
-    meta.style.background = "#f1f5f9";
-    meta.style.fontSize = "11px";
-    meta.style.whiteSpace = "pre-wrap";
-    content.appendChild(meta);
-
     const effectiveScope = scope ?? {
       renderedInstanceCount: 1,
       isShared: false
     };
-    const scopeBox = document.createElement("div");
-    scopeBox.className = "intent-layer-section";
-    const scopeTitle = document.createElement("div");
-    scopeTitle.className = "intent-layer-section-title";
-    scopeTitle.textContent = effectiveScope.isShared ? t("sharedSource") : t("singleRender");
-    const scopeText = document.createElement("p");
-    scopeText.textContent = effectiveScope.isShared
-      ? overlayLanguage === "ko"
-        ? `${effectiveScope.renderedInstanceCount}개 렌더 인스턴스에 반영됩니다.`
-        : `Affects ${effectiveScope.renderedInstanceCount} rendered instances.`
-      : t("selectSingle");
-    scopeBox.append(scopeTitle, scopeText);
-    content.appendChild(scopeBox);
 
     const editableTokens = binding.tokens.filter((item) => item.editable);
+    renderWorkflowRail(content, binding, editableTokens.length);
+    renderIntentMap(content, binding, effectiveScope, editableTokens);
+
+    const directSection = createSection(t("directEdit"), editableTokens.length > 0 ? "ready" : "warn");
     if (editableTokens.length === 0) {
       const empty = document.createElement("p");
       empty.textContent = t("inspectableNoTokens");
       empty.style.fontSize = "12px";
       empty.style.lineHeight = "1.5";
-      content.appendChild(empty);
+      directSection.appendChild(empty);
     }
 
+    const tokenList = document.createElement("div");
+    tokenList.className = "intent-layer-token-list";
     for (const token of editableTokens) {
       renderTokenRow(
-        content,
+        tokenList,
         binding,
         token,
         effectiveScope,
@@ -1976,6 +2351,10 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
         }
       );
     }
+    if (editableTokens.length > 0) {
+      directSection.appendChild(tokenList);
+    }
+    content.appendChild(directSection);
 
     renderAgentTaskForm(content, binding, (message) => {
       statusLine.textContent = message;
@@ -1994,10 +2373,18 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
 
 export function initIntentOverlay() {
   if (typeof window === "undefined") return;
-  if (document.querySelector("[data-intent-overlay-root]")) return;
+  const existingPanel = document.querySelector<HTMLElement>("[data-intent-overlay-root]");
+  if (existingPanel) {
+    const hotReloading = Boolean((import.meta as ImportMeta & { hot?: unknown }).hot);
+    if (!hotReloading || existingPanel.dataset.intentOverlayVersion === overlayRuntimeVersion) {
+      return;
+    }
+    existingPanel.remove();
+  }
 
   const panel = createPanel();
   panel.dataset.intentOverlayRoot = "true";
+  panel.dataset.intentOverlayVersion = overlayRuntimeVersion;
   document.body.appendChild(panel);
   scheduleOverlayPlacement(panel);
 

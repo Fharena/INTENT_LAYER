@@ -53,6 +53,22 @@
 - Graph: Vite transform 후 source binding 생성 여부
 - Agent: queue signal, Codex skill, Claude hook, Codex/Claude command 탐지와 실행 잠금 상태
 
+## 패널 시각화 구조
+
+선택 후 패널은 초보자와 시니어가 같은 화면을 다른 깊이로 읽을 수 있게 구성한다.
+
+- 단계 rail: `선택 -> 근거 확인 -> 수정 -> 검토` 순서로 현재 위치를 보여준다.
+- Intent 맵: 컴포넌트, source file, source hash, `className` 모드, 수정 가능 token 수, shared source 영향 범위를 함께 보여준다.
+- 직접 수정: 결정론적으로 patch 가능한 Tailwind token만 select/preview/apply로 노출한다.
+- Agent 전달: 직접 patch가 모호하거나 큰 변경은 같은 queue/status/lock 규칙을 쓰는 task로 넘긴다.
+- 검토: undo history와 conflict 상태를 같은 패널에서 확인한다.
+
+설계 의도:
+
+- 초보자는 다음 행동을 먼저 본다.
+- 시니어는 patch 전에 source binding, source hash, shared render count, unsupported reason을 확인한다.
+- HMR 중 overlay 코드가 바뀌면 stale 패널을 제거하고 새 runtime version으로 다시 그린다.
+
 ## Agent Hook UX
 
 Agent handoff는 provider 버튼을 먼저 고르는 흐름이 아니다. 사용자는 변경 내용을 적고 `작업 만들기`를 누른다.

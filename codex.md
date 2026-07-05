@@ -44,6 +44,11 @@ Keep this file updated when the user's operating preferences change.
   - concurrency guard: task frontmatter status plus `.intent/agent/locks/*.lock.json`
   - completion flag: `agent-result` marks the task `done`; `agent-fail` marks it `failed`
 - Reused component edits must clearly show shared-source scope. If one source binding affects multiple rendered instances, surface that count in the overlay.
+- Overlay visualization should serve both beginner and senior use:
+  - beginners see the next action first through a simple workflow rail
+  - seniors see source binding, source hash, className mode, editable token count, shared render count, and unsupported reason before patching
+  - direct edit and agent handoff must stay visually distinct
+  - stale overlay roots during HMR should be replaced when the client runtime version changes
 
 ## Documentation Rules
 

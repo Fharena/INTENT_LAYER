@@ -178,6 +178,8 @@ npm run analyze:external-corpus
 - `.intent/graph.intent.json` sidecar graph
 - floating browser overlay
 - 브라우저 setup/settings 화면, 한국어/영어 선택, 패널 preference, 온보딩 재표시, Agent queue/hook/command 설정
+- 선택 후 `선택 -> 근거 확인 -> 수정 -> 검토` 단계 rail
+- component/source hash/className mode/editable token/shared render count를 보여주는 Intent 맵
 - overlay 수동 minimize/expand
 - 같은 intent id를 가진 렌더 DOM 전체 outline과 shared source scope 표시
 - patch preview before apply
