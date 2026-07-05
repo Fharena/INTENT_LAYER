@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { sourceHash } from "./hash";
+import { buildAgentTaskMarkdown, createAgentTaskMetadata, refreshAgentQueueSignal } from "./agentQueue";
 import type { AgentTaskRequest, AgentTaskResult, IntentBinding, PatchFailure } from "./types";
 
 function timestampSlug(): string {
@@ -1286,7 +1287,12 @@ export function createAgentTask(
     editableTokens: binding.tokens.filter((token) => token.editable)
   };
 
-  const markdown = [
+  const metadata = createAgentTaskMetadata({
+    taskFile,
+    sourceIntentId: binding.id,
+    sourceFile: binding.relativeFile
+  });
+  const body = [
     "# Intent Agent Task",
     "",
     "## Goal",
@@ -1367,15 +1373,19 @@ export function createAgentTask(
     "- Update or create an intent diff describing the semantic change.",
     ""
   ].join("\n");
+  const markdown = buildAgentTaskMarkdown(metadata, body);
 
   fs.writeFileSync(taskFile, markdown);
+  refreshAgentQueueSignal(rootDir);
 
   return {
     ok: true,
     id: binding.id,
+    taskId: metadata.taskId,
     file: binding.file,
     relativeFile: binding.relativeFile,
     taskFile,
+    status: metadata.status,
     markdown,
     metrics: {
       taskMs: Number((performance.now() - started).toFixed(3))

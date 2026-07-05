@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { agentIntegrationStatus, ensureAgentIntegrations } from "./agentIntegrations";
 import type {
   IntentAgentCommandSource,
   IntentAgentRunSource,
@@ -67,7 +68,9 @@ export function defaultIntentSettings(language: IntentLayerLanguage = "en"): Int
     agent: {
       runEnabled: false,
       codexCommand: null,
-      claudeCommand: null
+      claudeCommand: null,
+      codexSkillEnabled: true,
+      claudeHookEnabled: true
     }
   };
 }
@@ -87,7 +90,9 @@ function normalizeAgentSettings(value: unknown): IntentAgentSettings {
   return {
     runEnabled: normalizeBoolean(raw.runEnabled, false),
     codexCommand: normalizeCommand(raw.codexCommand),
-    claudeCommand: normalizeCommand(raw.claudeCommand)
+    claudeCommand: normalizeCommand(raw.claudeCommand),
+    codexSkillEnabled: normalizeBoolean(raw.codexSkillEnabled, true),
+    claudeHookEnabled: normalizeBoolean(raw.claudeHookEnabled, true)
   };
 }
 
@@ -142,6 +147,7 @@ export function initIntentWorkspace(rootDir: string): IntentWorkspaceInitResult 
     path.join(intentDir, "operations"),
     path.join(intentDir, "diffs"),
     path.join(intentDir, "agent"),
+    path.join(intentDir, "agent", "locks"),
     path.join(intentDir, "schema")
   ]) {
     createDirIfMissing(rootDir, dir, createdPaths, existingPaths);
@@ -336,6 +342,7 @@ export function intentSetupStatus(
   const agentRunMode = resolveAgentRunMode(rootDir);
   const codexCommand = agentCommands.codex.command;
   const claudeCommand = agentCommands.claude.command;
+  const integrations = agentIntegrationStatus(rootDir, effectiveSettings.agent);
 
   return {
     version: 1,
@@ -373,6 +380,17 @@ export function intentSetupStatus(
           agentRunMode.enabled
             ? `Agent run is enabled by ${agentRunMode.source}. Run buttons may spawn local CLIs.`
             : "Agent run is locked. Enable it in settings or set INTENT_LAYER_AGENT_RUN=1 to spawn local CLIs."
+      },
+      {
+        name: "agent-integrations",
+        status:
+          integrations.queueSignalReady &&
+          (!integrations.codexSkillEnabled || integrations.codexSkillReady) &&
+          (!integrations.claudeHookEnabled || integrations.claudeHookReady)
+            ? "ready"
+            : "warn",
+        detail:
+          "Agent queue uses one shared signal file. Codex uses a project skill; Claude uses a FileChanged hook."
       }
     ],
     agent: {
@@ -383,7 +401,15 @@ export function intentSetupStatus(
       codexAvailable: executableAvailable(codexCommand, rootDir),
       claudeCommand,
       claudeCommandSource: agentCommands.claude.source,
-      claudeAvailable: executableAvailable(claudeCommand, rootDir)
+      claudeAvailable: executableAvailable(claudeCommand, rootDir),
+      queueSignalReady: integrations.queueSignalReady,
+      queueSignalPath: integrations.queueSignalPath,
+      codexSkillEnabled: integrations.codexSkillEnabled,
+      codexSkillReady: integrations.codexSkillReady,
+      codexSkillPath: integrations.codexSkillPath,
+      claudeHookEnabled: integrations.claudeHookEnabled,
+      claudeHookReady: integrations.claudeHookReady,
+      claudeSettingsPath: integrations.claudeSettingsPath
     }
   };
 }
@@ -432,6 +458,7 @@ export function applyIntentSetup(
     createdPaths,
     existingPaths
   );
+  ensureAgentIntegrations(rootDir, nextAgent, createdPaths, existingPaths);
 
   return {
     ok: true,

@@ -19,5 +19,7 @@ dist/
 .intent/agent/context_*.md
 .intent/agent/task_*.md
 .intent/agent/result_*.md
+.intent/agent/locks/
 .intent/tmp/
 .intent/external-corpus*/
+.intent-agent-queue.json

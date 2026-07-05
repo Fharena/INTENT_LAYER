@@ -10,9 +10,9 @@
 
 - Vite 설정에 `intentLayer()`만 등록하면 브라우저 패널이 설정을 안내한다.
 - `.intent/` workspace 생성은 패널에서 처리한다.
-- 언어, 패널 위치/밀도, 시작 시 접기, setup 자동 열기, Agent 실행 허용, Agent command는 패널에서 바꾸고 `.intent/settings.json`에 저장한다.
-- Codex/Claude hook은 기본적으로 실행하지 않고 command plan을 보여준다.
-- 실제 Agent 실행은 설정에서 명시적으로 켜거나 `INTENT_LAYER_AGENT_RUN=1`이 설정된 경우에만 열린다.
+- 언어, 패널 위치/밀도, 시작 시 접기, setup 자동 열기, Agent queue 자동 설정, Agent 실행 허용, Agent command는 패널에서 바꾸고 `.intent/settings.json`에 저장한다.
+- Codex는 project skill, Claude는 FileChanged hook으로 같은 Agent queue를 본다.
+- 브라우저 패널은 기본적으로 외부 프로세스를 직접 실행하지 않는다. 실제 Agent 실행 버튼/CLI spawn은 설정에서 명시적으로 켜거나 `INTENT_LAYER_AGENT_RUN=1`이 설정된 경우에만 열린다.
 
 ## 새 Vite 프로젝트 기준 흐름
 
@@ -23,7 +23,7 @@
 5. 브라우저 우하단에 Intent Layer 패널이 뜬다.
 6. 첫 실행이면 `처음 설정` 화면이 열린다.
 7. 사용자는 한국어/영어와 기본 패널 설정을 고르고 `설정 완료`를 누른다.
-8. 패널이 `.intent/` 폴더, schema, `.intent/settings.json`을 생성한다.
+8. 패널이 `.intent/` 폴더, schema, `.intent/settings.json`, `.intent-agent-queue.json`, Codex skill, Claude hook 설정을 생성한다.
 9. 이후에는 `선택`으로 UI를 클릭해 direct edit 또는 Agent handoff를 시작한다.
 
 ## 중간 설정 변경
@@ -37,6 +37,8 @@
 - 패널 밀도: 기본 / 컴팩트
 - 시작 시 접기
 - 설정 필요 시 setup 자동 열기
+- Codex 작업 스킬
+- Claude 자동 픽업
 - Agent 실행 허용
 - Codex command
 - Claude command
@@ -49,23 +51,31 @@
 - Workspace: `.intent/`와 schema 파일 준비 여부
 - Language: 현재 overlay 언어
 - Graph: Vite transform 후 source binding 생성 여부
-- Agent: Codex/Claude command 탐지와 실행 잠금 상태
+- Agent: queue signal, Codex skill, Claude hook, Codex/Claude command 탐지와 실행 잠금 상태
 
 ## Agent Hook UX
 
-Agent 버튼은 두 계층으로 나뉜다.
+Agent handoff는 provider 버튼을 먼저 고르는 흐름이 아니다. 사용자는 변경 내용을 적고 `작업 만들기`를 누른다.
 
 ```text
-Plan Codex / Plan Claude
+Agent handoff -> 작업 만들기 -> Agent 큐
 ```
 
-명령만 만든다. 외부 프로세스를 시작하지 않는다.
+생성되는 것:
 
 ```text
-Run Codex / Run Claude
+.intent/agent/task_*.md
+.intent-agent-queue.json
+.intent/agent/locks/*.lock.json  // claim 후 생성
 ```
 
-같은 명령 계획을 사용하지만, 설정의 `Agent 실행 허용`이 켜져 있거나 환경변수 `INTENT_LAYER_AGENT_RUN=1`이 있을 때만 실제 CLI를 spawn한다. 둘 다 꺼져 있다면 패널은 한국어로 실행 잠김 상태를 보여주고 command plan만 표시한다.
+Codex는 `.agents/skills/intent-layer-task-runner/SKILL.md`를 통해 queued task를 읽고 `agent-claim --provider codex`로 claim한다.
+
+Claude는 Claude Code가 열려 있을 때 `.claude/settings.json`의 `FileChanged` hook으로 `.intent-agent-queue.json` 변경을 감지한다.
+
+작업 완료 시 `agent-result`가 task frontmatter를 `done`으로 바꾸고 lock을 해제한다. 실패 시 `agent-fail`이 `failed` status를 남긴다.
+
+호환/진단용으로 Codex/Claude command plan과 직접 실행 경로는 남겨둔다. 다만 실제 CLI spawn은 설정의 `Agent 실행 허용`이 켜져 있거나 환경변수 `INTENT_LAYER_AGENT_RUN=1`이 있을 때만 가능하다.
 
 ## 저장되는 파일
 
@@ -78,6 +88,9 @@ Run Codex / Run Claude
   operations/
   diffs/
   agent/
+.intent-agent-queue.json
+.agents/skills/intent-layer-task-runner/SKILL.md
+.claude/settings.json
 ```
 
 `settings.json` 예시:
@@ -97,7 +110,9 @@ Run Codex / Run Claude
   "agent": {
     "runEnabled": false,
     "codexCommand": null,
-    "claudeCommand": null
+    "claudeCommand": null,
+    "codexSkillEnabled": true,
+    "claudeHookEnabled": true
   }
 }
 ```
@@ -105,6 +120,6 @@ Run Codex / Run Claude
 ## 아직 남은 UX 과제
 
 - Vite config 자동 수정은 아직 하지 않는다. 사용자가 plugin import/call을 한 번은 추가해야 한다.
-- Agent 실제 실행 허용은 GUI 설정에서 켤 수 있고, 자동화/CI에서는 `INTENT_LAYER_AGENT_RUN=1` env override로도 열 수 있다.
+- Agent 실제 실행 허용은 GUI 설정에서 켤 수 있고, 자동화/CI에서는 `INTENT_LAYER_AGENT_RUN=1` env override로도 열 수 있다. 기본 UX는 shared queue pickup이다.
 - Next.js adapter는 아직 별도 과제다.
 - custom component call-site와 forwarded `className`은 다음 React compatibility roadmap에서 확장한다.

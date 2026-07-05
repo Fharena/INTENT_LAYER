@@ -669,6 +669,9 @@ Interpretation:
 | Task generation success | true |
 | Task generation time | 2.3ms |
 | Required sections present | true |
+| Initial task status | `queued` |
+| Queue signal file | `.intent-agent-queue.json` |
+| Concurrency guard | `.intent/agent/locks/*.lock.json` |
 
 Required sections checked:
 
@@ -685,6 +688,14 @@ Files That May Be Edited
 Files That Should Not Be Edited
 Required Checks
 ```
+
+Agent queue behavior:
+
+- Task markdown starts with frontmatter for status, provider, session, and result metadata.
+- Task creation refreshes `.intent-agent-queue.json`, which is the shared signal for the Codex skill and Claude hook.
+- Codex uses the `.agents/skills/intent-layer-task-runner/SKILL.md` project skill to claim queued tasks.
+- Claude watches the same signal through the `.claude/settings.json` `FileChanged` hook when Claude Code is open.
+- Once one provider succeeds with `agent-claim`, the task becomes `claimed` and a lock file is created.
 
 ## 8. Agent Result Generation
 
@@ -709,6 +720,9 @@ Required Checks
 | Component semantic token added count | 2 |
 | Component semantic token removed count | 2 |
 | Component semantic diff present | true |
+| Task completion status | `done` |
+
+`agent-result` writes the result/diff artifacts, marks the task frontmatter `done`, and releases the lock file. Failed work can be marked `failed` with `agent-fail`.
 
 Required sections checked:
 

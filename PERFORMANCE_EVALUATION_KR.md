@@ -668,6 +668,9 @@ Viewport별 최대값:
 | task 생성 성공 | true |
 | task 생성 시간 | 2.3ms |
 | 필수 섹션 포함 | true |
+| 초기 task status | `queued` |
+| queue signal 파일 | `.intent-agent-queue.json` |
+| 동시 실행 방지 | `.intent/agent/locks/*.lock.json` |
 
 검증한 필수 섹션:
 
@@ -684,6 +687,14 @@ Files That May Be Edited
 Files That Should Not Be Edited
 Required Checks
 ```
+
+Agent queue 동작:
+
+- task markdown 앞에는 status/provider/session/result metadata를 담는 frontmatter를 붙인다.
+- task 생성 시 `.intent-agent-queue.json`이 갱신되어 Codex skill과 Claude hook이 같은 signal을 본다.
+- Codex는 `.agents/skills/intent-layer-task-runner/SKILL.md` project skill을 통해 queued task를 claim한다.
+- Claude는 Claude Code가 열려 있을 때 `.claude/settings.json`의 `FileChanged` hook으로 같은 signal 변경을 감지한다.
+- 둘 중 하나가 먼저 `agent-claim`에 성공하면 task는 `claimed`가 되고 lock 파일이 생긴다.
 
 ## 8. Agent Result 생성
 
@@ -708,6 +719,9 @@ Required Checks
 | component semantic token added 수 | 2 |
 | component semantic token removed 수 | 2 |
 | component semantic diff 포함 | true |
+| task 완료 status | `done` |
+
+`agent-result`는 result/diff artifact를 만든 뒤 task frontmatter를 `done`으로 바꾸고 lock 파일을 해제한다. 실패한 작업은 `agent-fail`로 `failed` status를 남긴다.
 
 검증한 필수 섹션:
 

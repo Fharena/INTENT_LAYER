@@ -4,7 +4,7 @@ INTENT_LAYER는 AI가 만든 React/Tailwind UI를 사람이 브라우저에서 �
 
 현재 상태:
 
-> React/Vite/Tailwind click-to-patch MVP 후보. 구조화된 agent handoff/result artifact, Codex/Claude 실행 계획, 수치 기반 성능 리포트를 포함한다.
+> React/Vite/Tailwind click-to-patch MVP 후보. 구조화된 agent handoff/result artifact, 공통 Agent queue, Codex skill/Claude hook 자동 설정, 수치 기반 성능 리포트를 포함한다.
 
 ## 핵심 정의
 
@@ -16,7 +16,7 @@ INTENT_LAYER는 AI가 만든 React/Tailwind UI를 사람이 브라우저에서 �
 - 클릭한 DOM을 source binding으로 연결한다.
 - Tailwind token intent를 확인한다.
 - 단순 변경은 range patch로 preview/apply한다.
-- 복잡하거나 불확실한 변경은 agent handoff task로 보낸다.
+- 복잡하거나 불확실한 변경은 agent handoff task로 보내고 `.intent-agent-queue.json`에 올린다.
 - 적용 결과는 operation log와 intent diff로 검토한다.
 
 ## 문서
@@ -59,10 +59,10 @@ npm run dev
 브라우저 첫 설정:
 
 ```text
-Vite dev URL 열기 -> Intent Layer 설정 -> 언어/패널/Agent command 설정 -> 설정 완료
+Vite dev URL 열기 -> Intent Layer 설정 -> 언어/패널/Agent queue 설정 -> 설정 완료
 ```
 
-설정 화면은 브라우저 패널에서 `.intent/` schema와 `.intent/settings.json`을 만든다. 이후에도 `설정` 버튼에서 언어, 패널 위치/밀도, 시작 시 접기, setup 자동 열기, Codex/Claude command를 바꿀 수 있다. CLI는 진단과 반복 검증용으로 남기지만, 일상적인 시각 편집의 기본 흐름은 GUI-first다.
+설정 화면은 브라우저 패널에서 `.intent/` schema, `.intent/settings.json`, `.intent-agent-queue.json`, Codex project skill, Claude FileChanged hook을 만든다. 이후에도 `설정` 버튼에서 언어, 패널 위치/밀도, 시작 시 접기, setup 자동 열기, Agent queue 자동 설정, Codex/Claude command를 바꿀 수 있다. CLI는 진단과 반복 검증용으로 남기지만, 일상적인 시각 편집의 기본 흐름은 GUI-first다.
 
 검증 명령:
 
@@ -91,10 +91,23 @@ npx tsx src/intent/cli.ts apply --op .intent/operations/example.intent-op.json
 npx tsx src/intent/cli.ts diff --diff .intent/diffs/example.intent-diff.yml
 npx tsx src/intent/cli.ts agent-context ProductGrid
 npx tsx src/intent/cli.ts agent-task --id <intent-id> --change "Describe the desired change"
+npx tsx src/intent/cli.ts agent-queue
+npx tsx src/intent/cli.ts agent-claim --provider codex --task .intent/agent/task_x.md
 npx tsx src/intent/cli.ts agent-launch --provider codex --id <intent-id> --change "Describe the desired change"
 npx tsx src/intent/cli.ts agent-launch --provider claude --task .intent/agent/task_x.md
 npx tsx src/intent/cli.ts agent-result --id <intent-id> --task .intent/agent/task_x.md --summary "Describe the result"
 ```
+
+Agent 기본 UX:
+
+```text
+Agent handoff -> 작업 만들기 -> .intent-agent-queue.json에 queued
+Codex: 설치된 project skill이 queued task를 claim하고 처리
+Claude: Claude Code가 열려 있으면 FileChanged hook이 queue 변경을 감지해 처리
+완료: agent-result가 task frontmatter를 done으로 표시하고 lock을 해제
+```
+
+Codex와 Claude는 같은 task markdown, 같은 signal file, 같은 lock/status 규칙을 사용한다. 둘이 동시에 반응해도 먼저 `.intent/agent/locks/*.lock.json`을 만든 provider만 작업한다.
 
 ## 외부 Corpus 측정
 
@@ -151,6 +164,7 @@ npm run analyze:external-corpus
 - setup/settings update persistence
 - apply/revert refresh timing
 - 3-file graph refresh
+- Agent queue signal, Codex skill, Claude hook 자동 설정
 - Codex/Claude agent launch dry-run 계획
 - missing-plugin `doctor` failure guidance
 - 401-binding transform stress
@@ -163,7 +177,7 @@ npm run analyze:external-corpus
 - compile-time `data-intent-id` injection
 - `.intent/graph.intent.json` sidecar graph
 - floating browser overlay
-- 브라우저 setup/settings 화면, 한국어/영어 선택, 패널 preference, 온보딩 재표시, Agent command 설정
+- 브라우저 setup/settings 화면, 한국어/영어 선택, 패널 preference, 온보딩 재표시, Agent queue/hook/command 설정
 - overlay 수동 minimize/expand
 - 같은 intent id를 가진 렌더 DOM 전체 outline과 shared source scope 표시
 - patch preview before apply
@@ -175,7 +189,10 @@ npm run analyze:external-corpus
 - safe non-top revert
 - revert conflict artifact
 - agent handoff task/result markdown
-- `.intent/agent/task_*.md` 기반 Codex/Claude launch plan; 실제 spawn은 설정의 Agent 실행 허용 또는 `INTENT_LAYER_AGENT_RUN=1` 필요
+- `.intent/agent/task_*.md` task frontmatter status와 `.intent-agent-queue.json` signal
+- Codex project skill 자동 생성: `.agents/skills/intent-layer-task-runner/SKILL.md`
+- Claude FileChanged hook 자동 설정: `.claude/settings.json`
+- `.intent/agent/task_*.md` 기반 Codex/Claude launch plan 호환 경로; 실제 spawn은 설정의 Agent 실행 허용 또는 `INTENT_LAYER_AGENT_RUN=1` 필요
 - source hash validation
 - operation/diff artifact output
 - related source snapshot/diff for read-only handoff

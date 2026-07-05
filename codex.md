@@ -36,6 +36,13 @@ Keep this file updated when the user's operating preferences change.
 - The same overlay path should remain usable as mid-session Settings: language, panel preferences, onboarding reset, and Agent command settings should be editable without extra CLI steps.
 - Korean UI support is a product requirement. Keep English available for external contributors, but make Korean practical and complete enough for the target user.
 - When integrating external agents, default to command planning. Directly spawning Codex/Claude must remain opt-in through `.intent/settings.json` Agent run settings or `INTENT_LAYER_AGENT_RUN=1`.
+- For the default agent UX, prefer the shared queue model over browser-triggered CLI spawning:
+  - task source of truth: `.intent/agent/task_*.md`
+  - shared signal file: `.intent-agent-queue.json`
+  - Codex pickup: project skill at `.agents/skills/intent-layer-task-runner/SKILL.md`
+  - Claude pickup: `.claude/settings.json` `FileChanged` hook watching `.intent-agent-queue.json`
+  - concurrency guard: task frontmatter status plus `.intent/agent/locks/*.lock.json`
+  - completion flag: `agent-result` marks the task `done`; `agent-fail` marks it `failed`
 - Reused component edits must clearly show shared-source scope. If one source binding affects multiple rendered instances, surface that count in the overlay.
 
 ## Documentation Rules
@@ -164,6 +171,7 @@ CLI doctor check count/pass/warn/fail/guidance count and runtime
 CLI doctor negative fixtures such as missing `intentLayer()` guidance
 package tarball inclusion for install and failure mode docs
 CLI agent-launch provider, command plan, task-created flag, enabled/executed flags, launch time, and dry-run gate result
+Agent queue signal readiness, Codex skill readiness, Claude hook readiness, queued/claimed/done status transitions, and lock file creation
 supported fixture success rate
 intentional stale-token rejection rate
 syntax error count after supported patches

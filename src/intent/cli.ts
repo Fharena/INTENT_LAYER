@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { createAgentContext } from "./agentContext";
 import { launchAgentTask } from "./agentLaunch";
+import { claimAgentTask, failAgentTask, refreshAgentQueueSignal } from "./agentQueue";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
@@ -22,6 +23,9 @@ type CliCommand =
   | "apply"
   | "agent-context"
   | "agent-task"
+  | "agent-queue"
+  | "agent-claim"
+  | "agent-fail"
   | "agent-launch"
   | "agent-result";
 
@@ -43,6 +47,7 @@ interface CliOptions {
   desiredChange: string | null;
   taskFile: string | null;
   summary: string | null;
+  sessionId: string | null;
   changedFiles: string[];
   checks: string[];
   notes: string | null;
@@ -225,10 +230,54 @@ interface CliAgentTaskReport {
   ok: boolean;
   id: string | null;
   graphFile: string;
+  taskId: string | null;
+  status: string | null;
   taskFile: string | null;
   relativeFile: string | null;
   markdownBytes: number;
   taskMs: number | null;
+  reason: string | null;
+  detail: string | null;
+}
+
+interface CliAgentQueueReport {
+  version: 1;
+  command: "agent-queue";
+  generatedAt: string;
+  ok: boolean;
+  queueFile: string;
+  pendingTaskCount: number;
+  runningTaskCount: number;
+  doneTaskCount: number;
+  latestTask: string | null;
+  taskCount: number;
+}
+
+interface CliAgentClaimReport {
+  version: 1;
+  command: "agent-claim";
+  generatedAt: string;
+  ok: boolean;
+  provider: string | null;
+  taskFile: string | null;
+  taskId: string | null;
+  status: string | null;
+  lockFile: string | null;
+  claimMs: number | null;
+  reason: string | null;
+  detail: string | null;
+}
+
+interface CliAgentFailReport {
+  version: 1;
+  command: "agent-fail";
+  generatedAt: string;
+  ok: boolean;
+  provider: string | null;
+  taskFile: string | null;
+  taskId: string | null;
+  status: string | null;
+  statusMs: number | null;
   reason: string | null;
   detail: string | null;
 }
@@ -292,6 +341,9 @@ export interface CliRunResult {
     | CliApplyReport
     | CliAgentContextReport
     | CliAgentTaskReport
+    | CliAgentQueueReport
+    | CliAgentClaimReport
+    | CliAgentFailReport
     | CliAgentLaunchReport
     | CliAgentResultReport
     | null;
@@ -953,6 +1005,9 @@ function usage(): string {
     "  intent-layer apply --op file [--graph .intent/graph.intent.json] [--out file]",
     "  intent-layer agent-context [component] [--id intent-id] [--graph .intent/graph.intent.json]",
     "  intent-layer agent-task --id intent-id --change text [--graph .intent/graph.intent.json] [--out file]",
+    "  intent-layer agent-queue [--out file]",
+    "  intent-layer agent-claim --provider codex|claude [--task file] [--session id]",
+    "  intent-layer agent-fail --provider codex|claude --task file --summary text",
     "  intent-layer agent-launch --provider codex|claude [--id intent-id --change text] [--task file] [--execute]",
     "  intent-layer agent-result --id intent-id --summary text [--task file] [--changed file] [--check command]",
     "",
@@ -981,6 +1036,7 @@ function parseOptions(args: string[]): CliOptions {
   let desiredChange: string | null = null;
   let taskFile: string | null = null;
   let summary: string | null = null;
+  let sessionId: string | null = null;
   const changedFiles: string[] = [];
   const checks: string[] = [];
   let notes: string | null = null;
@@ -1031,6 +1087,9 @@ function parseOptions(args: string[]): CliOptions {
     } else if (arg === "--summary") {
       summary = args[index + 1] ?? null;
       index += 1;
+    } else if (arg === "--session") {
+      sessionId = args[index + 1] ?? null;
+      index += 1;
     } else if (arg === "--changed") {
       if (args[index + 1]) changedFiles.push(args[index + 1]);
       index += 1;
@@ -1069,6 +1128,7 @@ function parseOptions(args: string[]): CliOptions {
     desiredChange,
     taskFile,
     summary,
+    sessionId,
     changedFiles,
     checks,
     notes,
@@ -1106,6 +1166,9 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
     command !== "apply" &&
     command !== "agent-context" &&
     command !== "agent-task" &&
+    command !== "agent-queue" &&
+    command !== "agent-claim" &&
+    command !== "agent-fail" &&
     command !== "agent-launch" &&
     command !== "agent-result"
   ) {
@@ -1350,6 +1413,114 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
     return { exitCode: result.ok ? 0 : 1, stdout: json, stderr: "", report };
   }
 
+  if (command === "agent-queue") {
+    const queue = refreshAgentQueueSignal(rootDir);
+    const report: CliAgentQueueReport = {
+      version: 1,
+      command,
+      generatedAt: new Date().toISOString(),
+      ok: true,
+      queueFile: queue.queueFile,
+      pendingTaskCount: queue.pendingTaskCount,
+      runningTaskCount: queue.runningTaskCount,
+      doneTaskCount: queue.doneTaskCount,
+      latestTask: queue.latestTask,
+      taskCount: queue.tasks.length
+    };
+    const json = `${JSON.stringify({ ...report, queue }, null, 2)}\n`;
+    writeOut(rootDir, options.out, json);
+    return { exitCode: 0, stdout: json, stderr: "", report };
+  }
+
+  if (command === "agent-claim") {
+    const result = !options.provider
+      ? {
+          ok: false as const,
+          id: undefined,
+          reason: "missing-agent-provider",
+          detail: "Pass --provider codex or --provider claude.",
+          metrics: { claimMs: 0 }
+        }
+      : options.provider !== "codex" && options.provider !== "claude"
+        ? {
+            ok: false as const,
+            id: undefined,
+            reason: "unsupported-agent-provider",
+            detail: "Use provider codex or claude.",
+            metrics: { claimMs: 0 }
+          }
+        : claimAgentTask(rootDir, {
+            provider: options.provider,
+            taskFile: options.taskFile ?? undefined,
+            sessionId: options.sessionId ?? undefined
+          });
+    const report: CliAgentClaimReport = {
+      version: 1,
+      command,
+      generatedAt: new Date().toISOString(),
+      ok: result.ok,
+      provider: options.provider,
+      taskFile: result.ok ? result.taskFile : options.taskFile,
+      taskId: result.ok ? result.taskId : null,
+      status: result.ok ? result.status : null,
+      lockFile: result.ok ? result.lockFile : null,
+      claimMs: result.ok ? result.metrics.claimMs : result.metrics?.claimMs ?? null,
+      reason: result.ok ? null : result.reason,
+      detail: result.ok ? null : result.detail ?? null
+    };
+    const json = `${JSON.stringify(report, null, 2)}\n`;
+    writeOut(rootDir, options.out, json);
+    return { exitCode: result.ok ? 0 : 1, stdout: json, stderr: "", report };
+  }
+
+  if (command === "agent-fail") {
+    const result = !options.provider
+      ? {
+          ok: false as const,
+          id: undefined,
+          reason: "missing-agent-provider",
+          detail: "Pass --provider codex or --provider claude.",
+          metrics: { statusMs: 0 }
+        }
+      : options.provider !== "codex" && options.provider !== "claude"
+        ? {
+            ok: false as const,
+            id: undefined,
+            reason: "unsupported-agent-provider",
+            detail: "Use provider codex or claude.",
+            metrics: { statusMs: 0 }
+          }
+        : !options.taskFile
+          ? {
+              ok: false as const,
+              id: undefined,
+              reason: "missing-task-file",
+              detail: "Pass --task with the agent task file.",
+              metrics: { statusMs: 0 }
+            }
+          : failAgentTask(rootDir, {
+              provider: options.provider,
+              taskFile: options.taskFile,
+              failureReason: options.summary ?? options.notes ?? "Agent marked this task failed."
+            });
+    const report: CliAgentFailReport = {
+      version: 1,
+      command,
+      generatedAt: new Date().toISOString(),
+      ok: result.ok,
+      provider: options.provider,
+      taskFile: result.ok ? result.taskFile : options.taskFile,
+      taskId: result.ok ? result.taskId : null,
+      status: result.ok ? result.status : null,
+      statusMs: result.ok ? result.metrics.statusMs : result.metrics?.statusMs ?? null,
+      reason: result.ok ? null : result.reason,
+      detail: result.ok ? null : result.detail ?? null
+    };
+    const json = `${JSON.stringify(report, null, 2)}\n`;
+    writeOut(rootDir, options.out, json);
+    return { exitCode: result.ok ? 0 : 1, stdout: json, stderr: "", report };
+  }
+
   if (command === "agent-result") {
     const graph = readGraph(rootDir, options.graph);
     const binding = options.id && graph ? graph.entries[options.id] : undefined;
@@ -1450,6 +1621,8 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
       ok: result.ok,
       id: options.id,
       graphFile: options.graph,
+      taskId: result.ok ? result.taskId : null,
+      status: result.ok ? result.status : null,
       taskFile: result.ok ? path.relative(rootDir, result.taskFile).replace(/\\/g, "/") : null,
       relativeFile: result.ok ? result.relativeFile : null,
       markdownBytes: result.ok ? result.markdown.length : 0,

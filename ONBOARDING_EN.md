@@ -10,9 +10,9 @@ Principles:
 
 - Once `intentLayer()` is registered in Vite, the browser panel guides setup.
 - The panel can create the `.intent/` workspace.
-- The panel stores language, panel position/density, startup collapse, setup auto-open, Agent run permission, and Agent commands in `.intent/settings.json`.
-- Codex/Claude hooks default to command planning.
-- Direct Agent execution is only available when enabled in settings or when `INTENT_LAYER_AGENT_RUN=1` is set.
+- The panel stores language, panel position/density, startup collapse, setup auto-open, Agent queue automation, Agent run permission, and Agent commands in `.intent/settings.json`.
+- Codex uses a project skill; Claude uses a FileChanged hook. Both watch the same Agent queue.
+- The browser panel does not directly start external processes by default. Direct Agent execution is only available when enabled in settings or when `INTENT_LAYER_AGENT_RUN=1` is set.
 
 ## New Vite Project Flow
 
@@ -23,7 +23,7 @@ Principles:
 5. The Intent Layer panel appears in the browser.
 6. On first run, the panel opens the setup view.
 7. The user chooses Korean/English plus basic panel settings and clicks `Finish setup`.
-8. The panel creates `.intent/`, schema files, and `.intent/settings.json`.
+8. The panel creates `.intent/`, schema files, `.intent/settings.json`, `.intent-agent-queue.json`, the Codex skill, and the Claude hook settings.
 9. The user clicks `Pick` to start direct edit or Agent handoff.
 
 ## Changing Settings Later
@@ -37,6 +37,8 @@ The GUI can currently change:
 - Panel density: comfortable / compact
 - Start minimized
 - Open setup when needed
+- Codex task skill
+- Claude auto pickup
 - Enable Agent run
 - Codex command
 - Claude command
@@ -49,23 +51,31 @@ Panel position and density apply immediately after saving. `Start minimized` app
 - Workspace: whether `.intent/` and schema files are ready
 - Language: current overlay language
 - Graph: whether source bindings exist after Vite transforms TSX/JSX
-- Agent: whether Codex/Claude commands are discoverable and whether run mode is locked
+- Agent: whether the queue signal, Codex skill, Claude hook, Codex/Claude commands, and run mode are ready
 
 ## Agent Hook UX
 
-Agent buttons have two levels.
+Agent handoff does not start with provider-specific buttons. The user describes the desired change and clicks `Create task`.
 
 ```text
-Plan Codex / Plan Claude
+Agent handoff -> Create task -> Agent queue
 ```
 
-These produce a command plan only. No external process is started.
+Files involved:
 
 ```text
-Run Codex / Run Claude
+.intent/agent/task_*.md
+.intent-agent-queue.json
+.intent/agent/locks/*.lock.json  // created after claim
 ```
 
-These use the same plan, but only spawn a local CLI when Agent run is enabled in settings or `INTENT_LAYER_AGENT_RUN=1` is set. Otherwise, the panel explains that execution is locked and shows the command plan.
+Codex reads queued tasks through `.agents/skills/intent-layer-task-runner/SKILL.md` and claims them with `agent-claim --provider codex`.
+
+Claude notices `.intent-agent-queue.json` changes through the `.claude/settings.json` `FileChanged` hook when Claude Code is open.
+
+On completion, `agent-result` marks the task frontmatter `done` and releases the lock. On failure, `agent-fail` records a `failed` status.
+
+Codex/Claude command plans and direct execution remain as compatibility and diagnostic paths. Direct CLI spawning is still gated by `Enable Agent run` or `INTENT_LAYER_AGENT_RUN=1`.
 
 ## Files Written
 
@@ -78,6 +88,9 @@ These use the same plan, but only spawn a local CLI when Agent run is enabled in
   operations/
   diffs/
   agent/
+.intent-agent-queue.json
+.agents/skills/intent-layer-task-runner/SKILL.md
+.claude/settings.json
 ```
 
 Example `settings.json`:
@@ -97,7 +110,9 @@ Example `settings.json`:
   "agent": {
     "runEnabled": false,
     "codexCommand": null,
-    "claudeCommand": null
+    "claudeCommand": null,
+    "codexSkillEnabled": true,
+    "claudeHookEnabled": true
   }
 }
 ```
@@ -105,6 +120,6 @@ Example `settings.json`:
 ## Remaining UX Work
 
 - The tool does not edit Vite config automatically yet. The user still registers the plugin once.
-- Direct Agent execution is controlled by the GUI setting, with `INTENT_LAYER_AGENT_RUN=1` still available as an automation/CI override.
+- Direct Agent execution is controlled by the GUI setting, with `INTENT_LAYER_AGENT_RUN=1` still available as an automation/CI override. The default UX is shared queue pickup.
 - Next.js support remains a separate adapter task.
 - Custom component call-sites and forwarded `className` support belong to the next React compatibility roadmap.

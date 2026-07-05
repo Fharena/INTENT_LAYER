@@ -91,6 +91,8 @@ export interface IntentAgentSettings {
   runEnabled: boolean;
   codexCommand: string | null;
   claudeCommand: string | null;
+  codexSkillEnabled: boolean;
+  claudeHookEnabled: boolean;
 }
 
 export interface IntentLayerSettings {
@@ -129,6 +131,14 @@ export interface IntentSetupStatus {
     claudeCommand: string;
     claudeCommandSource: IntentAgentCommandSource;
     claudeAvailable: boolean;
+    queueSignalReady: boolean;
+    queueSignalPath: string;
+    codexSkillEnabled: boolean;
+    codexSkillReady: boolean;
+    codexSkillPath: string;
+    claudeHookEnabled: boolean;
+    claudeHookReady: boolean;
+    claudeSettingsPath: string;
   };
 }
 
@@ -194,6 +204,8 @@ export interface PatchFailure {
     taskMs?: number;
     launchMs?: number;
     resultMs?: number;
+    claimMs?: number;
+    statusMs?: number;
   };
 }
 
@@ -379,12 +391,104 @@ export interface AgentTaskRequest {
   desiredChange: string;
 }
 
+export type AgentTaskStatus = "queued" | "claimed" | "running" | "done" | "failed" | "cancelled";
+
+export interface AgentTaskMetadata {
+  intentTaskVersion: 1;
+  taskId: string;
+  status: AgentTaskStatus;
+  provider: AgentProvider | "manual" | null;
+  claimedBy: string | null;
+  sessionId: string | null;
+  exclusive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sourceIntentId: string | null;
+  sourceFile: string | null;
+  resultFile: string | null;
+  diffFile: string | null;
+  failureReason: string | null;
+}
+
+export interface AgentQueueTask {
+  taskId: string;
+  status: AgentTaskStatus;
+  provider: AgentProvider | "manual" | null;
+  claimedBy: string | null;
+  sessionId: string | null;
+  exclusive: boolean;
+  taskFile: string;
+  sourceIntentId: string | null;
+  sourceFile: string | null;
+  resultFile: string | null;
+  diffFile: string | null;
+  failureReason: string | null;
+  locked: boolean;
+  lockFile: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentQueueSignal {
+  version: 1;
+  kind: "intent-agent-queue";
+  updatedAt: string;
+  queueFile: string;
+  agentDir: string;
+  pendingTaskCount: number;
+  runningTaskCount: number;
+  doneTaskCount: number;
+  latestTask: string | null;
+  tasks: AgentQueueTask[];
+}
+
+export interface AgentTaskClaimRequest {
+  provider: AgentProvider;
+  taskFile?: string;
+  claimedBy?: string;
+  sessionId?: string;
+}
+
+export interface AgentTaskClaimResult {
+  ok: true;
+  taskId: string;
+  provider: AgentProvider;
+  taskFile: string;
+  status: AgentTaskStatus;
+  lockFile: string;
+  queue: AgentQueueSignal;
+  metrics: {
+    claimMs: number;
+  };
+}
+
+export interface AgentTaskStatusUpdateRequest {
+  provider?: AgentProvider | "manual";
+  taskFile: string;
+  resultFile?: string | null;
+  diffFile?: string | null;
+  failureReason?: string | null;
+}
+
+export interface AgentTaskStatusUpdateResult {
+  ok: true;
+  taskId: string;
+  taskFile: string;
+  status: AgentTaskStatus;
+  queue: AgentQueueSignal;
+  metrics: {
+    statusMs: number;
+  };
+}
+
 export interface AgentTaskResult {
   ok: true;
   id: string;
+  taskId: string;
   file: string;
   relativeFile: string;
   taskFile: string;
+  status: AgentTaskStatus;
   markdown: string;
   metrics: {
     taskMs: number;

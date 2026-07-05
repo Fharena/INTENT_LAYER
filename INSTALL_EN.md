@@ -79,14 +79,17 @@ On first run, the Intent Layer panel opens a setup view. Use it to:
 - choose Korean or English
 - set panel position/density and startup behavior
 - set Codex/Claude commands
+- enable the Codex project skill setup
+- enable the Claude FileChanged hook setup
 - create the `.intent/` workspace and schema files
+- create the `.intent-agent-queue.json` signal file
 - write `.intent/settings.json`
 - see whether source bindings have been generated
 - see whether Codex/Claude are available and whether Agent run mode is enabled or locked
 
 No `init` command is required for the default GUI path.
 
-After setup, reopen the same view with the panel header `Setup` button to change language, panel preferences, Agent run permission, Agent commands, or to show onboarding again.
+After setup, reopen the same view with the panel header `Setup` button to change language, panel preferences, Agent queue automation, Agent run permission, Agent commands, or to show onboarding again.
 
 CLI diagnostics remain available when you want a repeatable report:
 
@@ -156,11 +159,23 @@ Minimize / Expand keeps the tool out of the way without leaving the page
 Agent handoff GUI:
 
 ```text
-Agent handoff -> Create task -> Plan Codex / Plan Claude
-Agent handoff -> Run Codex / Run Claude
+Agent handoff -> Create task -> check the Agent queue
+Codex skill or Claude hook claims and processes the queued task
 ```
 
-`Plan` creates a command plan from `.intent/agent/task_*.md` without starting an external process. `Run` uses the same plan, but direct spawning is disabled unless Agent run is enabled in the target project settings or `INTENT_LAYER_AGENT_RUN=1` is set.
+The default UX does not start external processes from the browser. Creating a task writes `.intent/agent/task_*.md` and updates `.intent-agent-queue.json`; Codex and Claude process that shared queue with the same status and lock rules.
+
+Auto-created setup files:
+
+```text
+.intent-agent-queue.json
+.agents/skills/intent-layer-task-runner/SKILL.md
+.claude/settings.json
+```
+
+Codex uses the project skill to read `.intent-agent-queue.json` and claim queued tasks with `agent-claim --provider codex`. Claude watches the same queue signal through the `FileChanged` hook when Claude Code is open. If both react, only the provider that first creates `.intent/agent/locks/*.lock.json` should continue.
+
+The older `Plan`/`Run` CLI path remains available for compatibility and diagnostics. `Plan` creates a command plan from `.intent/agent/task_*.md` without starting an external process. `Run` uses the same plan, but direct spawning is disabled unless Agent run is enabled in the target project settings or `INTENT_LAYER_AGENT_RUN=1` is set.
 
 The current default command plans are:
 
@@ -181,6 +196,9 @@ CLI equivalent:
 ```bash
 npx intent-layer agent-launch --provider codex --id <intent-id> --change "Describe the desired change"
 npx intent-layer agent-launch --provider claude --task .intent/agent/task_x.md
+npx intent-layer agent-queue
+npx intent-layer agent-claim --provider codex --task .intent/agent/task_x.md
+npx intent-layer agent-result --id <intent-id> --task .intent/agent/task_x.md --summary "Describe the result"
 ```
 
 CLI commands are for setup, diagnostics, and repeatable checks. Day-to-day visual edits should start from the browser panel.
@@ -207,8 +225,8 @@ Latest `npm run eval` values:
 ```text
 doctor: 10 checks, 10 pass, 0 warn, 0 fail, 4.271ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-first-run setup smoke: status 200, apply 200, language ko, workspace/settings/schema ready
-settings update smoke: language en, dock left, density compact, Agent commands from settings
+first-run setup smoke: status 200, apply 200, language ko, workspace/settings/schema/agent queue ready
+settings update smoke: language en, dock left, density compact, Agent commands and queue settings from settings
 installed Vite apply refresh: 262.18ms
 installed Vite revert refresh: 1747.146ms
 installed 3-file graph refresh: 13.724ms

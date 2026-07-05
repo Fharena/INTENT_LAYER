@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { completeAgentTask, refreshAgentQueueSignal } from "./agentQueue";
 import { sourceHash } from "./hash";
 import { tokenizeClassName } from "./tailwind";
 import type {
@@ -927,6 +928,15 @@ export function recordAgentResult(
 
   fs.writeFileSync(resultFile, markdown);
   fs.writeFileSync(diffFile, diff);
+  if (taskFile) {
+    completeAgentTask(rootDir, {
+      taskFile,
+      resultFile: normalizeRelativePath(rootDir, resultFile),
+      diffFile: normalizeRelativePath(rootDir, diffFile)
+    });
+  } else {
+    refreshAgentQueueSignal(rootDir);
+  }
 
   return {
     ok: true,

@@ -156,6 +156,23 @@ After the agent modifies code, generate or update:
 .intent/diffs/*.intent-diff.yml
 ```
 
+Agent tasks also use a shared queue signal:
+
+```text
+.intent-agent-queue.json
+.intent/agent/locks/*.lock.json
+```
+
+Default pickup model:
+
+- Codex uses `.agents/skills/intent-layer-task-runner/SKILL.md`.
+- Claude uses `.claude/settings.json` `FileChanged` hook when Claude Code is open.
+- Both providers read the same queue signal and the same task markdown.
+- Claim before editing with `intent-layer agent-claim --provider codex|claude --task <task-file>`.
+- Do not edit a task that is already claimed, running, done, failed, or locked by another provider.
+- Record completion with `intent-layer agent-result ...`; this marks task frontmatter `done` and releases the lock.
+- If blocked, use `intent-layer agent-fail --provider codex|claude --task <task-file> --summary "<reason>"`.
+
 ## Performance Rules
 
 Avoid whole-project analysis by default.

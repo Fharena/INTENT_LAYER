@@ -79,14 +79,17 @@ npm run dev
 - 한국어/영어 선택
 - 패널 위치/밀도와 시작 동작 설정
 - Codex/Claude command 설정
+- Codex project skill 자동 설정
+- Claude FileChanged hook 자동 설정
 - `.intent/` workspace와 schema 파일 생성
+- `.intent-agent-queue.json` signal 파일 생성
 - `.intent/settings.json` 저장
 - source binding 생성 여부 확인
 - Codex/Claude 사용 가능 여부와 Agent 실행 잠금 상태 확인
 
 기본 GUI 흐름에서는 `init` 명령이 필요 없다.
 
-설정 완료 후에도 패널 상단 `설정` 버튼으로 같은 화면을 다시 열어 언어, 패널 preference, Agent command, 온보딩 다시 보기를 바꿀 수 있다.
+설정 완료 후에도 패널 상단 `설정` 버튼으로 같은 화면을 다시 열어 언어, 패널 preference, Agent queue 자동 설정, Agent command, 온보딩 다시 보기를 바꿀 수 있다.
 
 반복 가능한 진단 리포트가 필요할 때만 CLI를 사용한다.
 
@@ -156,11 +159,23 @@ Minimize / Expand로 페이지를 벗어나지 않고 패널을 접거나 펼친
 Agent handoff GUI:
 
 ```text
-Agent handoff -> Create task -> Plan Codex / Plan Claude
-Agent handoff -> Run Codex / Run Claude
+Agent handoff -> 작업 만들기 -> Agent 큐 확인
+Codex skill 또는 Claude hook이 queued task를 claim하고 처리
 ```
 
-`Plan`은 `.intent/agent/task_*.md`에서 실행 명령만 만든다. 외부 process는 시작하지 않는다. `Run`은 같은 계획을 사용하지만, 대상 프로젝트 설정에서 Agent 실행이 켜져 있거나 `INTENT_LAYER_AGENT_RUN=1`이 설정되어 있을 때만 실제 spawn한다.
+기본 UX는 브라우저에서 외부 process를 직접 시작하지 않는다. 작업을 만들면 `.intent/agent/task_*.md`와 `.intent-agent-queue.json`에 올라가고, Codex와 Claude는 같은 queue/status/lock 규칙으로 처리한다.
+
+자동 설정 파일:
+
+```text
+.intent-agent-queue.json
+.agents/skills/intent-layer-task-runner/SKILL.md
+.claude/settings.json
+```
+
+Codex는 project skill이 `.intent-agent-queue.json`을 읽고 queued task를 `agent-claim --provider codex`로 claim한다. Claude는 Claude Code가 열려 있을 때 `.claude/settings.json`의 `FileChanged` hook으로 같은 queue signal 변경을 감지한다. 둘이 동시에 반응해도 `.intent/agent/locks/*.lock.json`을 먼저 만든 provider만 계속 진행한다.
+
+호환/진단용으로 `Plan`/`Run` CLI 경로도 남아 있다. `Plan`은 `.intent/agent/task_*.md`에서 실행 명령만 만든다. 외부 process는 시작하지 않는다. `Run`은 같은 계획을 사용하지만, 대상 프로젝트 설정에서 Agent 실행이 켜져 있거나 `INTENT_LAYER_AGENT_RUN=1`이 설정되어 있을 때만 실제 spawn한다.
 
 현재 기본 command plan:
 
@@ -181,6 +196,9 @@ CLI 대체 경로:
 ```bash
 npx intent-layer agent-launch --provider codex --id <intent-id> --change "Describe the desired change"
 npx intent-layer agent-launch --provider claude --task .intent/agent/task_x.md
+npx intent-layer agent-queue
+npx intent-layer agent-claim --provider codex --task .intent/agent/task_x.md
+npx intent-layer agent-result --id <intent-id> --task .intent/agent/task_x.md --summary "Describe the result"
 ```
 
 CLI 명령은 setup, 진단, 반복 검증용이다. 일상적인 시각 편집은 브라우저 패널에서 시작하는 것이 기본 UX다.
@@ -207,8 +225,8 @@ npx intent-layer scan src --write-graph
 ```text
 doctor: 10 checks, 10 pass, 0 warn, 0 fail, 4.271ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-first-run setup smoke: status 200, apply 200, language ko, workspace/settings/schema ready
-settings update smoke: language en, dock left, density compact, Agent commands from settings
+first-run setup smoke: status 200, apply 200, language ko, workspace/settings/schema/agent queue ready
+settings update smoke: language en, dock left, density compact, Agent commands and queue settings from settings
 installed Vite apply refresh: 262.18ms
 installed Vite revert refresh: 1747.146ms
 installed 3-file graph refresh: 13.724ms

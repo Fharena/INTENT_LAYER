@@ -1,8 +1,7 @@
 import { candidatesForToken } from "./tailwind";
 import type {
   AgentResultArtifact,
-  AgentLaunchResult,
-  AgentProvider,
+  AgentQueueSignal,
   ClientMetric,
   AgentTaskResult,
   IntentBinding,
@@ -29,8 +28,8 @@ type PatchResponse = PatchApplyResult | PatchFailure;
 type PreviewResponse = PatchPreview | PatchFailure;
 type RevertResponse = PatchRevertResult | PatchFailure;
 type AgentTaskResponse = AgentTaskResult | PatchFailure;
-type AgentLaunchResponse = AgentLaunchResult | PatchFailure;
 type AgentResultResponse = AgentResultArtifact | PatchFailure;
+type AgentQueueResponse = AgentQueueSignal | PatchFailure;
 type UndoHistoryResponse = UndoHistoryReport;
 type ConflictReportResponse = PatchConflictReport;
 type ConflictResolveResponse = PatchConflictResolveResult | PatchFailure;
@@ -53,6 +52,11 @@ type TextKey =
   | "agentLaunchPlan"
   | "agentLaunchRunLocked"
   | "agentPlaceholder"
+  | "agentQueue"
+  | "agentQueueEmpty"
+  | "agentQueueLatest"
+  | "agentQueueRefresh"
+  | "agentQueueWaiting"
   | "agentRecord"
   | "agentResult"
   | "agentResultPlaceholder"
@@ -66,8 +70,12 @@ type TextKey =
   | "apply"
   | "applyAll"
   | "claudeCommand"
+  | "claudeHook"
+  | "claudeHookDetail"
   | "codexSubtool"
   | "codexCommand"
+  | "codexSkill"
+  | "codexSkillDetail"
   | "commandInputPlaceholder"
   | "commandPlan"
   | "compact"
@@ -156,6 +164,11 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     agentLaunchPlan: "실행 계획",
     agentLaunchRunLocked: "실행 잠김",
     agentPlaceholder: "복잡하거나 직접 수정이 어려운 변경사항을 적어주세요",
+    agentQueue: "Agent 큐",
+    agentQueueEmpty: "대기 중인 Agent 작업이 없습니다.",
+    agentQueueLatest: "최근 작업",
+    agentQueueRefresh: "큐 새로고침",
+    agentQueueWaiting: "작업이 큐에 올라갔습니다. Codex skill 또는 Claude hook이 처리합니다.",
     agentRecord: "결과 기록",
     agentResult: "결과",
     agentResultPlaceholder: "Agent가 작업한 결과를 요약해 주세요",
@@ -169,8 +182,12 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     apply: "적용",
     applyAll: "전체 적용",
     claudeCommand: "Claude 명령",
+    claudeHook: "Claude 자동 픽업",
+    claudeHookDetail: "Claude Code가 열려 있으면 .intent-agent-queue.json 변경을 감지해 같은 작업 큐를 처리합니다.",
     codexSubtool: "Codex 보조 도구",
     codexCommand: "Codex 명령",
+    codexSkill: "Codex 작업 스킬",
+    codexSkillDetail: "프로젝트에 Codex skill을 설치해 queued 작업을 같은 방식으로 claim하고 처리합니다.",
     commandInputPlaceholder: "비워두면 기본값 또는 환경변수를 사용합니다",
     commandPlan: "명령 계획",
     compact: "컴팩트",
@@ -231,6 +248,11 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     agentLaunchPlan: "Command plan",
     agentLaunchRunLocked: "Run locked",
     agentPlaceholder: "Describe a complex or unsupported edit",
+    agentQueue: "Agent queue",
+    agentQueueEmpty: "No pending agent tasks.",
+    agentQueueLatest: "Latest task",
+    agentQueueRefresh: "Refresh queue",
+    agentQueueWaiting: "Task is queued. Codex skill or Claude hook can pick it up.",
     agentRecord: "Record result",
     agentResult: "Result",
     agentResultPlaceholder: "Summarize the agent result",
@@ -244,8 +266,12 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     apply: "Apply",
     applyAll: "Apply all",
     claudeCommand: "Claude command",
+    claudeHook: "Claude auto pickup",
+    claudeHookDetail: "When Claude Code is open, it watches .intent-agent-queue.json and processes the same queue.",
     codexSubtool: "Codex subtool",
     codexCommand: "Codex command",
+    codexSkill: "Codex task skill",
+    codexSkillDetail: "Install a project Codex skill that claims and processes queued tasks through the shared queue.",
     commandInputPlaceholder: "Leave blank to use the default or environment variable",
     commandPlan: "Command plan",
     compact: "Compact",
@@ -1095,6 +1121,49 @@ function renderAgentTaskForm(
 
   const create = createButton(t("agentCreate"));
   create.style.marginTop = "8px";
+  const queueSection = document.createElement("div");
+  queueSection.className = "intent-layer-section";
+  queueSection.style.marginTop = "8px";
+
+  const queueHeader = document.createElement("div");
+  queueHeader.className = "intent-layer-setting-row";
+  const queueTitle = document.createElement("div");
+  queueTitle.className = "intent-layer-section-title";
+  queueTitle.textContent = t("agentQueue");
+  const refreshQueue = createButton(t("agentQueueRefresh"));
+  queueHeader.append(queueTitle, refreshQueue);
+
+  const queueBox = document.createElement("pre");
+  queueBox.className = "intent-layer-preview-box";
+  queueBox.textContent = "Loading...";
+
+  async function renderQueueStatus() {
+    const response = await fetch("/__intent/agent-queue");
+    const result = (await response.json()) as AgentQueueResponse;
+    if (!("kind" in result)) {
+      queueBox.textContent = result.detail ?? result.reason;
+      return;
+    }
+
+    const latest = result.tasks[0] ?? null;
+    queueBox.textContent = latest
+      ? [
+          `${t("agentQueueLatest")}: ${latest.taskFile}`,
+          `status: ${latest.status}`,
+          `provider: ${latest.provider ?? "none"}`,
+          `pending: ${result.pendingTaskCount}`,
+          `running: ${result.runningTaskCount}`,
+          `done: ${result.doneTaskCount}`,
+          `signal: ${result.queueFile}`
+        ].join("\n")
+      : `${t("agentQueueEmpty")}\nsignal: ${result.queueFile}`;
+  }
+
+  refreshQueue.addEventListener("click", () => {
+    void renderQueueStatus();
+  });
+  queueSection.append(queueHeader, queueBox);
+
   create.addEventListener("click", async () => {
     const response = await fetch("/__intent/agent-task", {
       method: "POST",
@@ -1107,90 +1176,18 @@ function renderAgentTaskForm(
     const result = (await response.json()) as AgentTaskResponse;
     if (result.ok) {
       lastAgentTaskFileByIntentId.set(binding.id, result.taskFile);
-      launchBox.style.display = "block";
-      launchBox.textContent = `Task file\n${result.taskFile}`;
       setStatus(`${t("agentCreated")} ${result.metrics.taskMs}ms: ${result.taskFile}`);
+      queueBox.textContent = [
+        t("agentQueueWaiting"),
+        `task: ${result.taskFile}`,
+        `status: ${result.status}`,
+        `signal: .intent-agent-queue.json`
+      ].join("\n");
+      void renderQueueStatus();
     } else {
       setStatus(`Agent task rejected: ${result.reason}`);
     }
   });
-
-  const launchActions = document.createElement("div");
-  launchActions.className = "intent-layer-actions";
-  launchActions.style.marginTop = "8px";
-
-  const launchBox = document.createElement("pre");
-  launchBox.className = "intent-layer-preview-box";
-  launchBox.style.display = "none";
-  launchBox.style.marginTop = "8px";
-
-  async function launch(provider: AgentProvider, execute: boolean) {
-    const knownTaskFile = lastAgentTaskFileByIntentId.get(binding.id);
-    const response = await fetch("/__intent/agent-launch", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        id: binding.id,
-        provider,
-        desiredChange: textarea.value,
-        taskFile: knownTaskFile,
-        execute
-      })
-    });
-    const result = (await response.json()) as AgentLaunchResponse;
-    launchBox.style.display = "block";
-    if (result.ok) {
-      lastAgentTaskFileByIntentId.set(binding.id, result.taskFile);
-      launchBox.textContent = [
-        result.executed ? `${provider} started` : `${provider} ${t("commandPlan")}`,
-        `task: ${result.taskFile}`,
-        `cwd: ${result.cwd}`,
-        result.executed
-          ? `pid: ${result.pid ?? "unknown"}`
-          : overlayLanguage === "ko"
-            ? "execution: 시작하지 않음"
-            : "execution: not started",
-        result.stdoutFile ? `stdout: ${result.stdoutFile}` : null,
-        result.stderrFile ? `stderr: ${result.stderrFile}` : null,
-        "",
-        result.commandText
-      ]
-        .filter(Boolean)
-        .join("\n");
-      if (result.executed) {
-        setStatus(`${provider} launched in ${result.metrics.launchMs}ms: ${result.taskFile}`);
-      } else if (execute && !result.enabled) {
-        setStatus(`${provider}: ${t("runLocked")}`);
-      } else {
-        setStatus(`${provider} ${t("agentLaunchPlan")} ${result.metrics.launchMs}ms: ${result.taskFile}`);
-      }
-    } else {
-      launchBox.textContent = result.detail ?? result.reason;
-      setStatus(`${provider} launch rejected: ${result.reason}`);
-    }
-  }
-
-  const planCodex = createButton("Plan Codex");
-  planCodex.addEventListener("click", () => {
-    void launch("codex", false);
-  });
-
-  const runCodex = createButton("Run Codex");
-  runCodex.addEventListener("click", () => {
-    void launch("codex", true);
-  });
-
-  const planClaude = createButton("Plan Claude");
-  planClaude.addEventListener("click", () => {
-    void launch("claude", false);
-  });
-
-  const runClaude = createButton("Run Claude");
-  runClaude.addEventListener("click", () => {
-    void launch("claude", true);
-  });
-
-  launchActions.append(planCodex, runCodex, planClaude, runClaude);
 
   const resultLabel = document.createElement("label");
   resultLabel.textContent = t("agentResult");
@@ -1233,8 +1230,9 @@ function renderAgentTaskForm(
     }
   });
 
-  wrapper.append(label, textarea, create, launchActions, launchBox, resultLabel, resultTextarea, record);
+  wrapper.append(label, textarea, create, queueSection, resultLabel, resultTextarea, record);
   root.appendChild(wrapper);
+  void renderQueueStatus();
 }
 
 function renderSetupPanel(
@@ -1252,7 +1250,9 @@ function renderSetupPanel(
     agent: {
       runEnabled: false,
       codexCommand: null,
-      claudeCommand: null
+      claudeCommand: null,
+      codexSkillEnabled: true,
+      claudeHookEnabled: true
     }
   };
   let draftLanguage = settings.language;
@@ -1263,6 +1263,8 @@ function renderSetupPanel(
   let draftAgentRunEnabled = settings.agent.runEnabled;
   let draftCodexCommand = settings.agent.codexCommand ?? "";
   let draftClaudeCommand = settings.agent.claudeCommand ?? "";
+  let draftCodexSkillEnabled = settings.agent.codexSkillEnabled;
+  let draftClaudeHookEnabled = settings.agent.claudeHookEnabled;
 
   const currentOverlayDraft = (): IntentOverlaySettings => ({
     dock: draftDock,
@@ -1274,7 +1276,9 @@ function renderSetupPanel(
   const currentAgentDraft = () => ({
     runEnabled: draftAgentRunEnabled,
     codexCommand: draftCodexCommand.trim() || null,
-    claudeCommand: draftClaudeCommand.trim() || null
+    claudeCommand: draftClaudeCommand.trim() || null,
+    codexSkillEnabled: draftCodexSkillEnabled,
+    claudeHookEnabled: draftClaudeHookEnabled
   });
 
   const saveDraft = (completeOnboarding: boolean, resetOnboarding = false) =>
@@ -1329,7 +1333,9 @@ function renderSetupPanel(
           ? t("language")
           : check.name === "graph"
             ? "Graph"
-            : "Agent";
+            : check.name === "agent-integrations"
+              ? t("agentSettings")
+              : "Agent";
     const detail = document.createElement("p");
     if (check.name === "workspace") {
       detail.textContent = status?.workspaceReady ? t("setupWorkspaceReady") : t("setupWorkspaceWaiting");
@@ -1339,6 +1345,15 @@ function renderSetupPanel(
         : t("setupGraphWaiting");
     } else if (check.name === "agent-run") {
       detail.textContent = status?.agent.runEnabled ? t("agentRunEnabled") : t("agentRunLockedDetail");
+    } else if (check.name === "agent-integrations" && status) {
+      detail.textContent = [
+        `${status.agent.codexSkillEnabled ? t("codexSkill") : "Codex skill off"}: ${
+          status.agent.codexSkillReady ? "ready" : "setup"
+        }`,
+        `${status.agent.claudeHookEnabled ? t("claudeHook") : "Claude hook off"}: ${
+          status.agent.claudeHookReady ? "ready" : "setup"
+        }`
+      ].join(" / ");
     } else {
       detail.textContent = check.detail;
     }
@@ -1427,9 +1442,26 @@ function renderSetupPanel(
   agentTitle.className = "intent-layer-section-title";
   agentTitle.textContent = t("agentSettings");
   const agentNote = document.createElement("p");
-  agentNote.textContent = status?.agent.runEnabled ? t("agentRunEnabled") : t("agentRunLockedDetail");
+  agentNote.textContent =
+    overlayLanguage === "ko"
+      ? "작업은 하나의 큐에 올라가고, Codex와 Claude가 같은 상태/lock 규칙으로 처리합니다."
+      : "Tasks go into one queue. Codex and Claude use the same status and lock rules.";
   const codexInput = createTextInput(settings.agent.codexCommand ?? "", t("commandInputPlaceholder"));
   const claudeInput = createTextInput(settings.agent.claudeCommand ?? "", t("commandInputPlaceholder"));
+  const codexSkillToggle = createToggleButton(draftCodexSkillEnabled);
+  codexSkillToggle.addEventListener("click", () => {
+    draftCodexSkillEnabled = !draftCodexSkillEnabled;
+    draftCodexCommand = codexInput.value;
+    draftClaudeCommand = claudeInput.value;
+    void saveDraft(false);
+  });
+  const claudeHookToggle = createToggleButton(draftClaudeHookEnabled);
+  claudeHookToggle.addEventListener("click", () => {
+    draftClaudeHookEnabled = !draftClaudeHookEnabled;
+    draftCodexCommand = codexInput.value;
+    draftClaudeCommand = claudeInput.value;
+    void saveDraft(false);
+  });
   const runToggle = createToggleButton(draftAgentRunEnabled);
   runToggle.addEventListener("click", () => {
     draftAgentRunEnabled = !draftAgentRunEnabled;
@@ -1456,6 +1488,9 @@ function renderSetupPanel(
     agent.textContent = [
       `Codex: ${status.agent.codexAvailable ? "ready" : "plan only"} (${status.agent.codexCommand}, ${status.agent.codexCommandSource})`,
       `Claude: ${status.agent.claudeAvailable ? "ready" : "plan only"} (${status.agent.claudeCommand}, ${status.agent.claudeCommandSource})`,
+      `queue: ${status.agent.queueSignalReady ? "ready" : "setup"} (${status.agent.queueSignalPath})`,
+      `codex skill: ${status.agent.codexSkillReady ? "ready" : "setup"} (${status.agent.codexSkillPath})`,
+      `claude hook: ${status.agent.claudeHookReady ? "ready" : "setup"} (${status.agent.claudeSettingsPath})`,
       status.agent.runEnabled
         ? `agent run: enabled (${status.agent.runEnabledSource})`
         : "agent run: locked"
@@ -1465,6 +1500,8 @@ function renderSetupPanel(
   agentSection.append(
     agentTitle,
     agentNote,
+    createSettingRow(t("codexSkill"), t("codexSkillDetail"), codexSkillToggle),
+    createSettingRow(t("claudeHook"), t("claudeHookDetail"), claudeHookToggle),
     createSettingRow(t("agentRunToggle"), t("agentRunToggleDetail"), runToggle),
     commandGrid
   );
@@ -1509,7 +1546,13 @@ async function saveSetup(
   patch: {
     language?: IntentLayerLanguage;
     overlay?: IntentOverlaySettings;
-    agent?: { runEnabled: boolean; codexCommand: string | null; claudeCommand: string | null };
+    agent?: {
+      runEnabled: boolean;
+      codexCommand: string | null;
+      claudeCommand: string | null;
+      codexSkillEnabled: boolean;
+      claudeHookEnabled: boolean;
+    };
     resetOnboarding?: boolean;
   } = {}
 ) {

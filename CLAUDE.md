@@ -1,3 +1,16 @@
+## INTENT_LAYER Agent Queue
+
+When processing INTENT_LAYER agent tasks, use the shared queue instead of ad hoc provider-specific state.
+
+- Queue signal: `.intent-agent-queue.json`
+- Task files: `.intent/agent/task_*.md`
+- Locks: `.intent/agent/locks/*.lock.json`
+- Claude pickup: `.claude/settings.json` `FileChanged` hook watches `.intent-agent-queue.json` while Claude Code is open.
+- Claim before editing: `intent-layer agent-claim --provider claude --task <task-file>`
+- Do not process tasks already claimed, running, done, failed, or locked by another provider.
+- Record success: `intent-layer agent-result --id <intent-id> --task <task-file> --summary "<what changed>" --changed <file> --check "<command>"`
+- Record failure: `intent-layer agent-fail --provider claude --task <task-file> --summary "<why it could not be completed>"`
+
 <!-- context-pack:rules:start -->
 ## Context Pack
 

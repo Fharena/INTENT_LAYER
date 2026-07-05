@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import ts from "typescript";
 import type { Plugin, ViteDevServer } from "vite";
 import { launchAgentTask } from "./agentLaunch";
+import { claimAgentTask, failAgentTask, refreshAgentQueueSignal } from "./agentQueue";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
@@ -25,7 +26,9 @@ import {
 import type {
   AgentResultRequest,
   AgentLaunchRequest,
+  AgentTaskClaimRequest,
   AgentTaskRequest,
+  AgentTaskStatusUpdateRequest,
   ClientMetric,
   IntentBinding,
   IntentGraph,
@@ -511,6 +514,49 @@ export function intentLayerSpike(): Plugin {
             const body = JSON.parse(await readBody(request)) as AgentTaskRequest;
             const entry = state.entriesById.get(body.id);
             const result = createAgentTask(state.rootDir, entry, body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/agent-queue" && request.method === "GET") {
+          try {
+            writeJson(response, 200, refreshAgentQueueSignal(state.rootDir));
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/agent-claim" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as AgentTaskClaimRequest;
+            const result = claimAgentTask(state.rootDir, body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/agent-fail" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as AgentTaskStatusUpdateRequest;
+            const result = failAgentTask(state.rootDir, body);
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
             writeJson(response, 500, {

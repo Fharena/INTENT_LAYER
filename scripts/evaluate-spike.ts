@@ -5,6 +5,7 @@ import path from "node:path";
 import ts from "typescript";
 import { analyzeClassNames } from "./analyze-classnames";
 import { runCli } from "../src/intent/cli";
+import { readAgentTaskMetadata } from "../src/intent/agentQueue";
 import { recordAgentResult } from "../src/intent/agentResult";
 import { createAgentTask } from "../src/intent/agentTask";
 import { instrumentSource } from "../src/intent/instrument";
@@ -97,6 +98,12 @@ interface PackageSmokeResult {
   installedViteDevServerSetupGraphReady: boolean;
   installedViteDevServerSetupSettingsFileExists: boolean;
   installedViteDevServerSetupSchemaExists: boolean;
+  installedViteDevServerSetupQueueSignalExists: boolean;
+  installedViteDevServerSetupQueueStatus: number | null;
+  installedViteDevServerSetupQueuePendingCount: number;
+  installedViteDevServerSetupCodexSkillExists: boolean;
+  installedViteDevServerSetupClaudeSettingsExists: boolean;
+  installedViteDevServerSetupClaudeHookConfigured: boolean;
   installedViteDevServerSettingsUpdateStatus: number | null;
   installedViteDevServerSettingsLanguage: string | null;
   installedViteDevServerSettingsDock: string | null;
@@ -104,8 +111,13 @@ interface PackageSmokeResult {
   installedViteDevServerSettingsDefaultCollapsed: boolean;
   installedViteDevServerSettingsAutoOpenSetup: boolean;
   installedViteDevServerSettingsAgentRunEnabled: boolean;
+  installedViteDevServerSettingsCodexSkillEnabled: boolean;
+  installedViteDevServerSettingsClaudeHookEnabled: boolean;
   installedViteDevServerSetupAgentRunEnabled: boolean;
   installedViteDevServerSetupAgentRunSource: string | null;
+  installedViteDevServerSetupQueueSignalReady: boolean;
+  installedViteDevServerSetupCodexSkillReady: boolean;
+  installedViteDevServerSetupClaudeHookReady: boolean;
   installedViteDevServerSettingsCodexCommand: string | null;
   installedViteDevServerSettingsClaudeCommand: string | null;
   installedViteDevServerSettingsCommandSource: string | null;
@@ -584,6 +596,15 @@ function packageSmoke(): PackageSmokeResult {
       "  const setupAfterJson = setupAfter.status === 200 ? JSON.parse(setupAfter.body) : null;",
       "  const setupSettingsFileExists = fs.existsSync(path.join(root, \".intent\", \"settings.json\"));",
       "  const setupSchemaExists = fs.existsSync(path.join(root, \".intent\", \"schema\", \"graph.intent.schema.json\"));",
+      "  const setupQueueSignalExists = fs.existsSync(path.join(root, \".intent-agent-queue.json\"));",
+      "  const setupCodexSkillExists = fs.existsSync(path.join(root, \".agents\", \"skills\", \"intent-layer-task-runner\", \"SKILL.md\"));",
+      "  const setupClaudeSettingsFile = path.join(root, \".claude\", \"settings.json\");",
+      "  const setupClaudeSettingsExists = fs.existsSync(setupClaudeSettingsFile);",
+      "  const setupClaudeHookConfigured =",
+      "    setupClaudeSettingsExists &&",
+      "    fs.readFileSync(setupClaudeSettingsFile, \"utf8\").includes(\".intent-agent-queue.json\");",
+      "  const agentQueue = await waitFetch(`${baseUrl}/__intent/agent-queue`, 10000);",
+      "  const agentQueueJson = agentQueue.status === 200 ? JSON.parse(agentQueue.body) : null;",
       "  const settingsUpdate = await postJson(`${baseUrl}/__intent/setup`, {",
       "    language: \"en\",",
       "    createWorkspace: true,",
@@ -597,7 +618,9 @@ function packageSmoke(): PackageSmokeResult {
       "    agent: {",
       "      runEnabled: true,",
       "      codexCommand: \"codex-custom\",",
-      "      claudeCommand: \"claude-custom\"",
+      "      claudeCommand: \"claude-custom\",",
+      "      codexSkillEnabled: true,",
+      "      claudeHookEnabled: true",
       "    }",
       "  });",
       "  const settingsAfter = await waitFetch(`${baseUrl}/__intent/setup`, 10000);",
@@ -610,8 +633,13 @@ function packageSmoke(): PackageSmokeResult {
       "    settingsAfterJson?.settings?.overlay?.defaultCollapsed === true &&",
       "    settingsAfterJson?.settings?.overlay?.autoOpenSetup === false &&",
       "    settingsAfterJson?.settings?.agent?.runEnabled === true &&",
+      "    settingsAfterJson?.settings?.agent?.codexSkillEnabled === true &&",
+      "    settingsAfterJson?.settings?.agent?.claudeHookEnabled === true &&",
       "    settingsAfterJson?.agent?.runEnabled === true &&",
       "    settingsAfterJson?.agent?.runEnabledSource === \"settings\" &&",
+      "    settingsAfterJson?.agent?.queueSignalReady === true &&",
+      "    settingsAfterJson?.agent?.codexSkillReady === true &&",
+      "    settingsAfterJson?.agent?.claudeHookReady === true &&",
       "    settingsAfterJson?.settings?.agent?.codexCommand === \"codex-custom\" &&",
       "    settingsAfterJson?.settings?.agent?.claudeCommand === \"claude-custom\" &&",
       "    settingsAfterJson?.agent?.codexCommand === \"codex-custom\" &&",
@@ -776,6 +804,8 @@ function packageSmoke(): PackageSmokeResult {
       "    setupAfter.status === 200 && setupAfterJson?.language === \"ko\" &&",
       "    setupAfterJson?.workspaceReady === true && setupAfterJson?.settingsReady === true &&",
       "    setupAfterJson?.graphReady === true && setupSettingsFileExists && setupSchemaExists &&",
+      "    setupQueueSignalExists && setupCodexSkillExists && setupClaudeSettingsExists && setupClaudeHookConfigured &&",
+      "    agentQueue.status === 200 && agentQueueJson?.kind === \"intent-agent-queue\" &&",
       "    settingsUpdateOk &&",
       "    preview.status === 200 && preview.json?.ok === true &&",
       "    apply.status === 200 && apply.json?.ok === true &&",
@@ -811,6 +841,12 @@ function packageSmoke(): PackageSmokeResult {
       "    setupGraphReady: setupAfterJson?.graphReady === true,",
       "    setupSettingsFileExists,",
       "    setupSchemaExists,",
+      "    setupQueueSignalExists,",
+      "    setupQueueStatus: agentQueue.status,",
+      "    setupQueuePendingCount: agentQueueJson?.pendingTaskCount ?? 0,",
+      "    setupCodexSkillExists,",
+      "    setupClaudeSettingsExists,",
+      "    setupClaudeHookConfigured,",
       "    settingsUpdateStatus: settingsUpdate.status,",
       "    settingsLanguage: settingsAfterJson?.settings?.language ?? null,",
       "    settingsDock: settingsAfterJson?.settings?.overlay?.dock ?? null,",
@@ -818,8 +854,13 @@ function packageSmoke(): PackageSmokeResult {
       "    settingsDefaultCollapsed: settingsAfterJson?.settings?.overlay?.defaultCollapsed === true,",
       "    settingsAutoOpenSetup: settingsAfterJson?.settings?.overlay?.autoOpenSetup === true,",
       "    settingsAgentRunEnabled: settingsAfterJson?.settings?.agent?.runEnabled ?? null,",
+      "    settingsCodexSkillEnabled: settingsAfterJson?.settings?.agent?.codexSkillEnabled ?? null,",
+      "    settingsClaudeHookEnabled: settingsAfterJson?.settings?.agent?.claudeHookEnabled ?? null,",
       "    setupAgentRunEnabled: settingsAfterJson?.agent?.runEnabled ?? null,",
       "    setupAgentRunSource: settingsAfterJson?.agent?.runEnabledSource ?? null,",
+      "    setupQueueSignalReady: settingsAfterJson?.agent?.queueSignalReady ?? null,",
+      "    setupCodexSkillReady: settingsAfterJson?.agent?.codexSkillReady ?? null,",
+      "    setupClaudeHookReady: settingsAfterJson?.agent?.claudeHookReady ?? null,",
       "    settingsCodexCommand: settingsAfterJson?.settings?.agent?.codexCommand ?? null,",
       "    settingsClaudeCommand: settingsAfterJson?.settings?.agent?.claudeCommand ?? null,",
       "    settingsCommandSource: settingsAfterJson?.agent?.codexCommandSource ?? null,",
@@ -891,6 +932,12 @@ function packageSmoke(): PackageSmokeResult {
       "    setupGraphReady: false,",
       "    setupSettingsFileExists: false,",
       "    setupSchemaExists: false,",
+      "    setupQueueSignalExists: false,",
+      "    setupQueueStatus: null,",
+      "    setupQueuePendingCount: 0,",
+      "    setupCodexSkillExists: false,",
+      "    setupClaudeSettingsExists: false,",
+      "    setupClaudeHookConfigured: false,",
       "    settingsUpdateStatus: null,",
       "    settingsLanguage: null,",
       "    settingsDock: null,",
@@ -898,8 +945,13 @@ function packageSmoke(): PackageSmokeResult {
       "    settingsDefaultCollapsed: false,",
       "    settingsAutoOpenSetup: false,",
       "    settingsAgentRunEnabled: false,",
+      "    settingsCodexSkillEnabled: false,",
+      "    settingsClaudeHookEnabled: false,",
       "    setupAgentRunEnabled: false,",
       "    setupAgentRunSource: null,",
+      "    setupQueueSignalReady: false,",
+      "    setupCodexSkillReady: false,",
+      "    setupClaudeHookReady: false,",
       "    settingsCodexCommand: null,",
       "    settingsClaudeCommand: null,",
       "    settingsCommandSource: null,",
@@ -967,6 +1019,12 @@ function packageSmoke(): PackageSmokeResult {
     setupGraphReady?: boolean;
     setupSettingsFileExists?: boolean;
     setupSchemaExists?: boolean;
+    setupQueueSignalExists?: boolean;
+    setupQueueStatus?: number | null;
+    setupQueuePendingCount?: number;
+    setupCodexSkillExists?: boolean;
+    setupClaudeSettingsExists?: boolean;
+    setupClaudeHookConfigured?: boolean;
     settingsUpdateStatus?: number | null;
     settingsLanguage?: string | null;
     settingsDock?: string | null;
@@ -974,8 +1032,13 @@ function packageSmoke(): PackageSmokeResult {
     settingsDefaultCollapsed?: boolean;
     settingsAutoOpenSetup?: boolean;
     settingsAgentRunEnabled?: boolean | null;
+    settingsCodexSkillEnabled?: boolean | null;
+    settingsClaudeHookEnabled?: boolean | null;
     setupAgentRunEnabled?: boolean | null;
     setupAgentRunSource?: string | null;
+    setupQueueSignalReady?: boolean | null;
+    setupCodexSkillReady?: boolean | null;
+    setupClaudeHookReady?: boolean | null;
     settingsCodexCommand?: string | null;
     settingsClaudeCommand?: string | null;
     settingsCommandSource?: string | null;
@@ -1096,6 +1159,18 @@ function packageSmoke(): PackageSmokeResult {
     installedViteDevServerSetupSettingsFileExists:
       installedViteDevServerReport.setupSettingsFileExists === true,
     installedViteDevServerSetupSchemaExists: installedViteDevServerReport.setupSchemaExists === true,
+    installedViteDevServerSetupQueueSignalExists:
+      installedViteDevServerReport.setupQueueSignalExists === true,
+    installedViteDevServerSetupQueueStatus:
+      installedViteDevServerReport.setupQueueStatus ?? null,
+    installedViteDevServerSetupQueuePendingCount:
+      installedViteDevServerReport.setupQueuePendingCount ?? 0,
+    installedViteDevServerSetupCodexSkillExists:
+      installedViteDevServerReport.setupCodexSkillExists === true,
+    installedViteDevServerSetupClaudeSettingsExists:
+      installedViteDevServerReport.setupClaudeSettingsExists === true,
+    installedViteDevServerSetupClaudeHookConfigured:
+      installedViteDevServerReport.setupClaudeHookConfigured === true,
     installedViteDevServerSettingsUpdateStatus:
       installedViteDevServerReport.settingsUpdateStatus ?? null,
     installedViteDevServerSettingsLanguage: installedViteDevServerReport.settingsLanguage ?? null,
@@ -1107,10 +1182,20 @@ function packageSmoke(): PackageSmokeResult {
       installedViteDevServerReport.settingsAutoOpenSetup === true,
     installedViteDevServerSettingsAgentRunEnabled:
       installedViteDevServerReport.settingsAgentRunEnabled === true,
+    installedViteDevServerSettingsCodexSkillEnabled:
+      installedViteDevServerReport.settingsCodexSkillEnabled === true,
+    installedViteDevServerSettingsClaudeHookEnabled:
+      installedViteDevServerReport.settingsClaudeHookEnabled === true,
     installedViteDevServerSetupAgentRunEnabled:
       installedViteDevServerReport.setupAgentRunEnabled === true,
     installedViteDevServerSetupAgentRunSource:
       installedViteDevServerReport.setupAgentRunSource ?? null,
+    installedViteDevServerSetupQueueSignalReady:
+      installedViteDevServerReport.setupQueueSignalReady === true,
+    installedViteDevServerSetupCodexSkillReady:
+      installedViteDevServerReport.setupCodexSkillReady === true,
+    installedViteDevServerSetupClaudeHookReady:
+      installedViteDevServerReport.setupClaudeHookReady === true,
     installedViteDevServerSettingsCodexCommand:
       installedViteDevServerReport.settingsCodexCommand ?? null,
     installedViteDevServerSettingsClaudeCommand:
@@ -2330,6 +2415,8 @@ const agentResult = recordAgentResult(rootDir, patchEntry, {
   notes: "Evaluation fixture only; no LLM call is made."
 });
 const agentResultMarkdown = agentResult.ok ? agentResult.markdown : "";
+const agentTaskMetadataAfterResult =
+  agentTask.ok ? readAgentTaskMetadata(rootDir, agentTask.taskFile)?.metadata ?? null : null;
 const agentResultRequiredSections = [
   "## Summary",
   "## Source Binding",
@@ -4203,6 +4290,22 @@ const cliAgentTaskSectionsPresent = [
   "## Source Snapshot",
   "## Required Checks"
 ].every((section) => cliAgentTaskMarkdown.includes(section));
+const cliAgentQueue = runCli(["agent-queue"], rootDir);
+const cliAgentQueueReport = cliAgentQueue.report?.command === "agent-queue" ? cliAgentQueue.report : null;
+const cliAgentClaimCodex = runCli(
+  [
+    "agent-claim",
+    "--provider",
+    "codex",
+    "--task",
+    cliAgentTaskReport?.taskFile ?? "missing-cli-agent-task-file.md",
+    "--session",
+    "eval-smoke"
+  ],
+  rootDir
+);
+const cliAgentClaimCodexReport =
+  cliAgentClaimCodex.report?.command === "agent-claim" ? cliAgentClaimCodex.report : null;
 const cliAgentLaunchCodex = runCli(
   [
     "agent-launch",
@@ -4463,6 +4566,8 @@ const report = {
     diffExitCode: cliDiff.exitCode,
     agentContextExitCode: cliAgentContext.exitCode,
     agentTaskExitCode: cliAgentTask.exitCode,
+    agentQueueExitCode: cliAgentQueue.exitCode,
+    agentClaimCodexExitCode: cliAgentClaimCodex.exitCode,
     agentLaunchCodexExitCode: cliAgentLaunchCodex.exitCode,
     agentLaunchClaudeExitCode: cliAgentLaunchClaude.exitCode,
     agentResultExitCode: cliAgentResult.exitCode,
@@ -4475,6 +4580,8 @@ const report = {
     diffCommand: cliDiffReport?.command ?? null,
     agentContextCommand: cliAgentContextReport?.command ?? null,
     agentTaskCommand: cliAgentTaskReport?.command ?? null,
+    agentQueueCommand: cliAgentQueueReport?.command ?? null,
+    agentClaimCodexCommand: cliAgentClaimCodexReport?.command ?? null,
     agentLaunchCodexCommand: cliAgentLaunchCodexReport?.command ?? null,
     agentLaunchClaudeCommand: cliAgentLaunchClaudeReport?.command ?? null,
     agentResultCommand: cliAgentResultReport?.command ?? null,
@@ -4539,6 +4646,13 @@ const report = {
     agentTaskMarkdownBytes: cliAgentTaskReport?.markdownBytes ?? 0,
     agentTaskMs: cliAgentTaskReport?.taskMs ?? null,
     agentTaskSectionsPresent: cliAgentTaskSectionsPresent,
+    agentQueueOk: cliAgentQueueReport?.ok ?? false,
+    agentQueuePendingTaskCount: cliAgentQueueReport?.pendingTaskCount ?? 0,
+    agentQueueLatestTask: cliAgentQueueReport?.latestTask ?? null,
+    agentClaimCodexOk: cliAgentClaimCodexReport?.ok ?? false,
+    agentClaimCodexTaskFile: cliAgentClaimCodexReport?.taskFile ?? null,
+    agentClaimCodexStatus: cliAgentClaimCodexReport?.status ?? null,
+    agentClaimCodexLockFile: cliAgentClaimCodexReport?.lockFile ?? null,
     agentLaunchCodexOk: cliAgentLaunchCodexReport?.ok ?? false,
     agentLaunchCodexTaskCreated: cliAgentLaunchCodexReport?.taskCreated ?? false,
     agentLaunchCodexTaskFile: cliAgentLaunchCodexReport?.taskFile ?? null,
@@ -4587,6 +4701,8 @@ const report = {
     doctorMissingPluginStdoutBytes: cliDoctorMissingPlugin.stdout.length,
     agentContextStdoutBytes: cliAgentContext.stdout.length,
     agentTaskStdoutBytes: cliAgentTask.stdout.length,
+    agentQueueStdoutBytes: cliAgentQueue.stdout.length,
+    agentClaimCodexStdoutBytes: cliAgentClaimCodex.stdout.length,
     agentLaunchCodexStdoutBytes: cliAgentLaunchCodex.stdout.length,
     agentLaunchClaudeStdoutBytes: cliAgentLaunchClaude.stdout.length,
     agentResultStdoutBytes: cliAgentResult.stdout.length
@@ -4696,7 +4812,11 @@ const report = {
     ok: agentTask.ok,
     taskMs: agentTask.ok ? agentTask.metrics.taskMs : agentTask.metrics?.taskMs,
     sectionsPresent: agentTaskSectionsPresent,
-    taskFile: agentTask.ok ? path.relative(rootDir, agentTask.taskFile).replace(/\\/g, "/") : null
+    taskFile: agentTask.ok ? path.relative(rootDir, agentTask.taskFile).replace(/\\/g, "/") : null,
+    taskId: agentTask.ok ? agentTask.taskId : null,
+    initialStatus: agentTask.ok ? agentTask.status : null,
+    statusAfterResult: agentTaskMetadataAfterResult?.status ?? null,
+    doneAfterResult: agentTaskMetadataAfterResult?.status === "done"
   },
   agentResult: {
     ok: agentResult.ok,
@@ -5652,6 +5772,11 @@ const report = {
       packageInstallSmoke.installedViteDevServerSetupGraphReady &&
       packageInstallSmoke.installedViteDevServerSetupSettingsFileExists &&
       packageInstallSmoke.installedViteDevServerSetupSchemaExists &&
+      packageInstallSmoke.installedViteDevServerSetupQueueSignalExists &&
+      packageInstallSmoke.installedViteDevServerSetupQueueStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerSetupCodexSkillExists &&
+      packageInstallSmoke.installedViteDevServerSetupClaudeSettingsExists &&
+      packageInstallSmoke.installedViteDevServerSetupClaudeHookConfigured &&
       packageInstallSmoke.installedViteDevServerSettingsUpdateStatus === 200 &&
       packageInstallSmoke.installedViteDevServerSettingsLanguage === "en" &&
       packageInstallSmoke.installedViteDevServerSettingsDock === "left" &&
@@ -5659,8 +5784,13 @@ const report = {
       packageInstallSmoke.installedViteDevServerSettingsDefaultCollapsed &&
       !packageInstallSmoke.installedViteDevServerSettingsAutoOpenSetup &&
       packageInstallSmoke.installedViteDevServerSettingsAgentRunEnabled &&
+      packageInstallSmoke.installedViteDevServerSettingsCodexSkillEnabled &&
+      packageInstallSmoke.installedViteDevServerSettingsClaudeHookEnabled &&
       packageInstallSmoke.installedViteDevServerSetupAgentRunEnabled &&
       packageInstallSmoke.installedViteDevServerSetupAgentRunSource === "settings" &&
+      packageInstallSmoke.installedViteDevServerSetupQueueSignalReady &&
+      packageInstallSmoke.installedViteDevServerSetupCodexSkillReady &&
+      packageInstallSmoke.installedViteDevServerSetupClaudeHookReady &&
       packageInstallSmoke.installedViteDevServerSettingsCodexCommand === "codex-custom" &&
       packageInstallSmoke.installedViteDevServerSettingsClaudeCommand === "claude-custom" &&
       packageInstallSmoke.installedViteDevServerSettingsCommandSource === "settings" &&
@@ -5750,7 +5880,16 @@ const report = {
       cliAgentTaskReport?.command === "agent-task" &&
       cliAgentTaskReport.ok &&
       Boolean(cliAgentTaskReport.taskFile) &&
-      cliAgentTaskSectionsPresent,
+      cliAgentTaskSectionsPresent &&
+      cliAgentQueue.exitCode === 0 &&
+      cliAgentQueueReport?.command === "agent-queue" &&
+      cliAgentQueueReport.ok &&
+      cliAgentQueueReport.pendingTaskCount > 0 &&
+      cliAgentClaimCodex.exitCode === 0 &&
+      cliAgentClaimCodexReport?.command === "agent-claim" &&
+      cliAgentClaimCodexReport.ok &&
+      cliAgentClaimCodexReport.status === "claimed" &&
+      Boolean(cliAgentClaimCodexReport.lockFile),
     cliAgentLaunchPass:
       cliGraphScan.exitCode === 0 &&
       Boolean(cliAgentTaskBinding) &&
@@ -5784,11 +5923,12 @@ const report = {
       cliAgentResultSyntaxErrors === 0,
     supportedPatchPass: apply.ok && syntaxErrorsAfterPatch === 0,
     revertPatchPass: revert.ok && syntaxErrorsAfterRevert === 0,
-    agentTaskPass: agentTask.ok && agentTaskSectionsPresent,
+    agentTaskPass: agentTask.ok && agentTaskSectionsPresent && agentTask.status === "queued",
     agentResultPass:
       agentResult.ok &&
       agentResultSectionsPresent &&
       agentResultFilesExist &&
+      agentTaskMetadataAfterResult?.status === "done" &&
       agentResult.source.snapshotAvailable &&
       agentResult.source.diffLineCount > 0 &&
       agentResult.source.semanticChangeCount > 0 &&
