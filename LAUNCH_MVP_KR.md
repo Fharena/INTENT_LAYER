@@ -44,6 +44,7 @@ React/Vite/Tailwind 프로젝트에 붙는 AI-friendly intent layer
 - deterministic patch가 어려운 범위는 AI에게 넘겨도 된다.
 - 단, AI에게 넘길 때도 자연어 한 덩어리가 아니라 구조화된 intent task여야 한다.
 - 외부 agent 실행은 기본적으로 command plan이며, 직접 실행은 명시적 opt-in이어야 한다.
+- 설치와 중간 설정 변경은 CLI보다 브라우저 overlay Settings에서 끝나야 한다.
 
 즉 제품은 둘 중 하나가 아니다.
 

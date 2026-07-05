@@ -55,10 +55,10 @@ npm run dev
 First browser setup:
 
 ```text
-Open the Vite dev URL -> Intent Layer setup -> choose Korean/English -> Finish setup
+Open the Vite dev URL -> Intent Layer setup -> choose language/panel/Agent command settings -> Finish setup
 ```
 
-The setup view creates `.intent/` schema files and `.intent/settings.json` from the browser panel. CLI commands remain available for diagnostics and repeatable checks, but the intended day-to-day flow is GUI-first.
+The setup/settings view creates `.intent/` schema files and `.intent/settings.json` from the browser panel. Users can reopen it later to change language, panel position/density, startup collapse, setup auto-open, and Codex/Claude command settings. CLI commands remain available for diagnostics and repeatable checks, but the intended day-to-day flow is GUI-first.
 
 Run checks:
 
@@ -116,7 +116,7 @@ Current independent external baselines all clear the 50% MVP evidence gate:
 
 The current MVP decision has moved past token taxonomy breadth: direct-edit coverage, package smoke, graph refresh, and real browser click-to-patch QA all have numeric evidence. Remaining watch items are broader browser-environment repeats, packaging/demo cleanup, and strict revert latency under 50ms.
 
-`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/setup`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last`, apply/revert refresh, and a 3-file graph refresh after one TSX file changes. It also verifies a missing-plugin `doctor` failure guidance fixture, generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture, a 24-file/624-binding multi-file fixture, an external corpus import/report smoke marked as `local-smoke-fixture`, and dry-run Codex/Claude agent launch plans.
+`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/setup`, settings update persistence, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last`, apply/revert refresh, and a 3-file graph refresh after one TSX file changes. It also verifies a missing-plugin `doctor` failure guidance fixture, generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture, a 24-file/624-binding multi-file fixture, an external corpus import/report smoke marked as `local-smoke-fixture`, and dry-run Codex/Claude agent launch plans.
 
 The demo currently supports:
 
@@ -125,7 +125,7 @@ The demo currently supports:
 - low-level JSX/className scanner for the current MVP direct-edit path, with AST fallback for complex syntax
 - source sidecar graph generation at `.intent/graph.intent.json`
 - floating browser overlay
-- first-run browser setup wizard with Korean/English language selection
+- browser setup/settings view with Korean/English language selection, panel preferences, onboarding reset, and Agent command settings
 - manual overlay minimize/expand control
 - shared source scope display that outlines every rendered DOM instance with the same intent id
 - patch preview before apply

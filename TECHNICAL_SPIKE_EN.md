@@ -347,9 +347,10 @@ Support model:
 - The package smoke now transforms an external temp fixture through the installed `vite.cjs` wrapper-backed `/vite` export after tarball install and verifies `data-intent-id` plus `.intent/graph.intent.json` output.
 - In the same install folder, it starts a real Vite dev server and verifies the `/src/App.tsx` transform response plus the `/__intent/graph`, `/__intent/setup`, `/__intent/preview`, `/__intent/apply`, and `/__intent/revert-last` endpoints over HTTP.
 - The installed Vite dev server smoke calls `/__intent/setup`, applies Korean first-run setup, and verifies `.intent/settings.json`, schema output, workspace readiness, settings readiness, and graph readiness.
-- The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts, pending undo history, and post-apply module/graph refresh in 283.321ms.
-- The same installed Vite dev server smoke calls `/__intent/revert-last`, verifies source/module/graph return to `gap-4`, clears pending undo history, and completes revert refresh in 204.204ms.
-- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4` to `gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, graph `generatedAt` changes, and module/graph refresh completes in 135.331ms.
+- The same setup smoke changes settings mid-session to English, left dock, compact density, start-minimized true, setup auto-open false, custom Codex/Claude commands, and verifies command source `settings`.
+- The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts, pending undo history, and post-apply module/graph refresh in 262.18ms.
+- The same installed Vite dev server smoke calls `/__intent/revert-last`, verifies source/module/graph return to `gap-4`, clears pending undo history, and completes revert refresh in 1747.146ms.
+- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4` to `gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, graph `generatedAt` changes, and module/graph refresh completes in 13.724ms.
 - The `doctor` missing-plugin fixture verifies exit code 1, one `vite-plugin` failure, and guidance that mentions `intent-layer/vite` when `intentLayer()` is missing from the Vite config.
 - `INSTALL_KR/EN.md` and `FAILURE_MODES_KR/EN.md` are included in the package tarball so local tarball setup and failure recovery have external-facing copy.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.

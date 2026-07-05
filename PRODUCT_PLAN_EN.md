@@ -138,7 +138,7 @@ This is closer to a **Prisma-like middle layer for UI intent** than a simple vis
 
 For this audience, the browser GUI should be the primary operating surface. CLI commands are supporting tools for install, diagnostics, repeatable evaluation, and automation.
 
-First-run setup should also be GUI-first. After the Vite plugin is registered, the browser overlay should handle Korean/English language choice, `.intent` workspace creation, source binding status, and Codex/Claude hook run-lock status as the default path.
+First-run setup should also be GUI-first. After the Vite plugin is registered, the browser overlay should handle Korean/English language choice, `.intent` workspace creation, source binding status, and Codex/Claude hook run-lock status as the default path. The same view should remain available as Settings after onboarding so users can change language, panel position/density, startup behavior, Agent commands, and onboarding reset without extra CLI steps.
 
 ### 6.2 Secondary Users
 

@@ -75,11 +75,29 @@ export interface ClientMetricsReport {
 }
 
 export type IntentLayerLanguage = "ko" | "en";
+export type IntentOverlayDock = "left" | "right";
+export type IntentOverlayDensity = "comfortable" | "compact";
+export type IntentAgentCommandSource = "settings" | "env" | "default";
+
+export interface IntentOverlaySettings {
+  dock: IntentOverlayDock;
+  density: IntentOverlayDensity;
+  defaultCollapsed: boolean;
+  autoOpenSetup: boolean;
+}
+
+export interface IntentAgentSettings {
+  codexCommand: string | null;
+  claudeCommand: string | null;
+}
 
 export interface IntentLayerSettings {
   version: 1;
   language: IntentLayerLanguage;
   onboardingCompletedAt: string | null;
+  updatedAt: string;
+  overlay: IntentOverlaySettings;
+  agent: IntentAgentSettings;
 }
 
 export interface IntentSetupCheck {
@@ -98,12 +116,15 @@ export interface IntentSetupStatus {
   graphReady: boolean;
   graphEntryCount: number;
   setupRequired: boolean;
+  settings: IntentLayerSettings;
   checks: IntentSetupCheck[];
   agent: {
     runEnabled: boolean;
     codexCommand: string;
+    codexCommandSource: IntentAgentCommandSource;
     codexAvailable: boolean;
     claudeCommand: string;
+    claudeCommandSource: IntentAgentCommandSource;
     claudeAvailable: boolean;
   };
 }
@@ -112,6 +133,9 @@ export interface IntentSetupRequest {
   language?: IntentLayerLanguage;
   createWorkspace?: boolean;
   completeOnboarding?: boolean;
+  resetOnboarding?: boolean;
+  overlay?: Partial<IntentOverlaySettings>;
+  agent?: Partial<IntentAgentSettings>;
 }
 
 export interface IntentSetupResult {

@@ -10,7 +10,7 @@
 
 - Vite 설정에 `intentLayer()`만 등록하면 브라우저 패널이 설정을 안내한다.
 - `.intent/` workspace 생성은 패널에서 처리한다.
-- 언어는 패널에서 한국어/영어를 고르고 `.intent/settings.json`에 저장한다.
+- 언어, 패널 위치/밀도, 시작 시 접기, setup 자동 열기, Agent command는 패널에서 바꾸고 `.intent/settings.json`에 저장한다.
 - Codex/Claude hook은 기본적으로 실행하지 않고 command plan을 보여준다.
 - 실제 Agent 실행은 `INTENT_LAYER_AGENT_RUN=1`이 설정된 경우에만 열린다.
 
@@ -22,9 +22,26 @@
 4. 기존처럼 Vite dev server를 실행한다.
 5. 브라우저 우하단에 Intent Layer 패널이 뜬다.
 6. 첫 실행이면 `처음 설정` 화면이 열린다.
-7. 사용자는 한국어/영어를 고르고 `설정 완료`를 누른다.
+7. 사용자는 한국어/영어와 기본 패널 설정을 고르고 `설정 완료`를 누른다.
 8. 패널이 `.intent/` 폴더, schema, `.intent/settings.json`을 생성한다.
 9. 이후에는 `선택`으로 UI를 클릭해 direct edit 또는 Agent handoff를 시작한다.
+
+## 중간 설정 변경
+
+완료 후에도 패널 상단 `설정` 버튼으로 같은 화면에 다시 들어간다.
+
+현재 GUI에서 바꿀 수 있는 항목:
+
+- 언어: 한국어 / English
+- 패널 위치: 왼쪽 / 오른쪽
+- 패널 밀도: 기본 / 컴팩트
+- 시작 시 접기
+- 설정 필요 시 setup 자동 열기
+- Codex command
+- Claude command
+- 온보딩 다시 보기
+
+패널 위치와 밀도는 저장 직후 바로 반영된다. `시작 시 접기`는 다음 새로고침부터 적용된다.
 
 ## Setup 화면에서 확인하는 것
 
@@ -68,12 +85,24 @@ Run Codex / Run Claude
 {
   "version": 1,
   "language": "ko",
-  "onboardingCompletedAt": "2026-07-05T00:00:00.000Z"
+  "onboardingCompletedAt": "2026-07-05T00:00:00.000Z",
+  "updatedAt": "2026-07-05T00:00:00.000Z",
+  "overlay": {
+    "dock": "right",
+    "density": "comfortable",
+    "defaultCollapsed": false,
+    "autoOpenSetup": true
+  },
+  "agent": {
+    "codexCommand": null,
+    "claudeCommand": null
+  }
 }
 ```
 
 ## 아직 남은 UX 과제
 
 - Vite config 자동 수정은 아직 하지 않는다. 사용자가 plugin import/call을 한 번은 추가해야 한다.
+- Agent 실제 실행 허용은 GUI 설정이 아니라 여전히 `INTENT_LAYER_AGENT_RUN=1` env lock으로 보호한다.
 - Next.js adapter는 아직 별도 과제다.
 - custom component call-site와 forwarded `className`은 다음 React compatibility roadmap에서 확장한다.

@@ -18,6 +18,8 @@ import type {
   PatchUndoDiscardResult,
   PatchUndoRevertResult,
   IntentLayerLanguage,
+  IntentLayerSettings,
+  IntentOverlaySettings,
   IntentSetupResult,
   IntentSetupStatus,
   UndoHistoryReport
@@ -54,12 +56,28 @@ type TextKey =
   | "agentRecord"
   | "agentResult"
   | "agentResultPlaceholder"
+  | "agentRunEnabled"
+  | "agentRunLockedDetail"
+  | "agentSettings"
+  | "autoOpenSetup"
+  | "autoOpenSetupDetail"
   | "apply"
   | "applyAll"
+  | "claudeCommand"
   | "codexSubtool"
+  | "codexCommand"
+  | "commandInputPlaceholder"
   | "commandPlan"
+  | "compact"
+  | "density"
   | "conflicts"
   | "conflictsEmpty"
+  | "comfortable"
+  | "defaultCollapsed"
+  | "defaultCollapsedDetail"
+  | "dock"
+  | "dockLeft"
+  | "dockRight"
   | "directEditEmpty"
   | "dynamicArgs"
   | "elementSelected"
@@ -71,12 +89,17 @@ type TextKey =
   | "minimize"
   | "noBinding"
   | "noIntentElement"
+  | "panelSettings"
   | "pick"
   | "pickHint"
   | "pickMode"
   | "preview"
   | "ready"
+  | "resetOnboarding"
+  | "resetOnboardingDone"
   | "runLocked"
+  | "saveSettings"
+  | "settingsSaved"
   | "selectSingle"
   | "setup"
   | "setupApply"
@@ -87,6 +110,7 @@ type TextKey =
   | "setupOpen"
   | "setupStatus"
   | "setupTitle"
+  | "setupTitleReady"
   | "setupWorkspaceReady"
   | "setupWorkspaceWaiting"
   | "sharedSource"
@@ -103,6 +127,7 @@ let overlayPlacementFrame: number | null = null;
 let overlayCollapsed = false;
 let overlayView: OverlayView = "editor";
 let overlayLanguage: IntentLayerLanguage = detectInitialLanguage();
+let overlaySettings: IntentOverlaySettings = defaultOverlaySettings();
 let latestSetupStatus: IntentSetupStatus | null = null;
 const devToolCandidateSelector = [
   "nextjs-portal",
@@ -132,12 +157,28 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     agentRecord: "결과 기록",
     agentResult: "결과",
     agentResultPlaceholder: "Agent가 작업한 결과를 요약해 주세요",
+    agentRunEnabled: "Agent 실행이 켜져 있습니다. Run 버튼이 로컬 CLI를 시작할 수 있습니다.",
+    agentRunLockedDetail: "Agent 실행은 env lock으로 보호됩니다. 명령은 저장할 수 있지만 실제 실행은 INTENT_LAYER_AGENT_RUN=1에서만 가능합니다.",
+    agentSettings: "Agent Hooks",
+    autoOpenSetup: "설정 필요 시 자동 열기",
+    autoOpenSetupDetail: "workspace나 onboarding이 비어 있으면 시작할 때 설정 화면을 엽니다.",
     apply: "적용",
     applyAll: "전체 적용",
+    claudeCommand: "Claude 명령",
     codexSubtool: "Codex 보조 도구",
+    codexCommand: "Codex 명령",
+    commandInputPlaceholder: "비워두면 기본값 또는 환경변수를 사용합니다",
     commandPlan: "명령 계획",
+    compact: "컴팩트",
+    density: "밀도",
     conflicts: "되돌리기 충돌",
     conflictsEmpty: "해결되지 않은 충돌이 없습니다.",
+    comfortable: "기본",
+    defaultCollapsed: "시작 시 접기",
+    defaultCollapsedDetail: "다음 새로고침부터 패널을 접힌 상태로 시작합니다.",
+    dock: "패널 위치",
+    dockLeft: "왼쪽",
+    dockRight: "오른쪽",
     directEditEmpty: "직접 수정 가능한 토큰이 아직 없습니다.",
     dynamicArgs: "동적 인자 read-only",
     elementSelected: "요소를 선택했습니다",
@@ -149,12 +190,17 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     minimize: "접기",
     noBinding: "이 요소의 binding을 찾지 못했습니다",
     noIntentElement: "Intent binding이 있는 요소가 아닙니다",
+    panelSettings: "패널",
     pick: "선택",
     pickHint: "선택을 누른 뒤 페이지에서 수정할 UI를 클릭하세요.",
     pickMode: "선택 모드입니다",
     preview: "미리보기",
     ready: "준비됐습니다. 요소를 선택하세요.",
+    resetOnboarding: "온보딩 다시 보기",
+    resetOnboardingDone: "다음 실행 때 설정 화면이 다시 열립니다",
     runLocked: "실행은 잠겨 있습니다. INTENT_LAYER_AGENT_RUN=1일 때만 Agent CLI가 실행됩니다.",
+    saveSettings: "설정 저장",
+    settingsSaved: "설정을 저장했습니다",
     selectSingle: "이 렌더 인스턴스에만 연결됩니다.",
     setup: "설정",
     setupApply: "설정 완료",
@@ -165,6 +211,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     setupOpen: "설정 화면",
     setupStatus: "설정 상태",
     setupTitle: "처음 설정",
+    setupTitleReady: "설정",
     setupWorkspaceReady: ".intent 워크스페이스가 준비됐습니다.",
     setupWorkspaceWaiting: ".intent 워크스페이스를 생성해야 합니다.",
     sharedSource: "공유 source",
@@ -183,12 +230,28 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     agentRecord: "Record result",
     agentResult: "Result",
     agentResultPlaceholder: "Summarize the agent result",
+    agentRunEnabled: "Agent run is enabled. Run buttons may start local CLIs.",
+    agentRunLockedDetail: "Agent run is protected by an env lock. Commands can be saved, but CLIs run only when INTENT_LAYER_AGENT_RUN=1 is set.",
+    agentSettings: "Agent Hooks",
+    autoOpenSetup: "Open setup when needed",
+    autoOpenSetupDetail: "Open the setup view on startup when the workspace or onboarding is incomplete.",
     apply: "Apply",
     applyAll: "Apply all",
+    claudeCommand: "Claude command",
     codexSubtool: "Codex subtool",
+    codexCommand: "Codex command",
+    commandInputPlaceholder: "Leave blank to use the default or environment variable",
     commandPlan: "Command plan",
+    compact: "Compact",
+    density: "Density",
     conflicts: "Undo conflicts",
     conflictsEmpty: "No unresolved undo conflicts.",
+    comfortable: "Comfortable",
+    defaultCollapsed: "Start minimized",
+    defaultCollapsedDetail: "Start the panel collapsed on the next page load.",
+    dock: "Panel position",
+    dockLeft: "Left",
+    dockRight: "Right",
     directEditEmpty: "No direct-edit tokens yet.",
     dynamicArgs: "dynamic args read-only",
     elementSelected: "Element selected",
@@ -200,12 +263,17 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     minimize: "Minimize",
     noBinding: "No binding found for that element",
     noIntentElement: "No intent binding on this element",
+    panelSettings: "Panel",
     pick: "Pick",
     pickHint: "Click Pick, then choose something on the page to edit.",
     pickMode: "Pick mode active",
     preview: "Preview",
     ready: "Ready. Start by picking an element.",
+    resetOnboarding: "Show onboarding again",
+    resetOnboardingDone: "Setup will open again on the next run",
     runLocked: "Agent run is locked. Agent CLIs run only when INTENT_LAYER_AGENT_RUN=1 is set.",
+    saveSettings: "Save settings",
+    settingsSaved: "Settings saved",
     selectSingle: "Affects this rendered instance.",
     setup: "Setup",
     setupApply: "Finish setup",
@@ -216,6 +284,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     setupOpen: "Setup view",
     setupStatus: "Setup status",
     setupTitle: "First setup",
+    setupTitleReady: "Settings",
     setupWorkspaceReady: ".intent workspace is ready.",
     setupWorkspaceWaiting: ".intent workspace needs to be created.",
     sharedSource: "Shared source",
@@ -248,6 +317,20 @@ function setOverlayLanguage(language: IntentLayerLanguage) {
   } catch {
     // Ignore storage failures in embedded previews.
   }
+}
+
+function defaultOverlaySettings(): IntentOverlaySettings {
+  return {
+    dock: "right",
+    density: "comfortable",
+    defaultCollapsed: false,
+    autoOpenSetup: true
+  };
+}
+
+function syncSettings(settings: IntentLayerSettings) {
+  setOverlayLanguage(settings.language);
+  overlaySettings = settings.overlay;
 }
 
 function recordClientMetric(metric: ClientMetric) {
@@ -293,6 +376,21 @@ function ensureOverlayStyles() {
   font-size: 12px !important;
   line-height: 1.45 !important;
   letter-spacing: 0 !important;
+}
+
+[data-intent-overlay-root][data-intent-dock="left"] {
+  right: auto !important;
+  left: max(18px, env(safe-area-inset-left)) !important;
+}
+
+[data-intent-overlay-root][data-intent-dock="right"] {
+  right: max(18px, env(safe-area-inset-right)) !important;
+  left: auto !important;
+}
+
+[data-intent-overlay-root][data-intent-density="compact"] {
+  width: min(346px, calc(100vw - 24px)) !important;
+  font-size: 11px !important;
 }
 
 [data-intent-overlay-root] *,
@@ -455,6 +553,29 @@ function ensureOverlayStyles() {
   gap: 8px !important;
 }
 
+.intent-layer-control-grid {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.intent-layer-segmented {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.intent-layer-setting-row {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  gap: 10px !important;
+  align-items: center !important;
+}
+
+.intent-layer-command-grid {
+  display: grid !important;
+  gap: 8px !important;
+}
+
 .intent-layer-section {
   display: grid !important;
   gap: 8px !important;
@@ -513,6 +634,7 @@ function ensureOverlayStyles() {
 }
 
 [data-intent-overlay-root] select,
+[data-intent-overlay-root] input,
 [data-intent-overlay-root] textarea {
   width: 100% !important;
   min-width: 0 !important;
@@ -707,6 +829,45 @@ function createButton(label: string, variant: "primary" | "secondary" = "seconda
   return button;
 }
 
+function createTextInput(value: string, placeholder: string): HTMLInputElement {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = value;
+  input.placeholder = placeholder;
+  return input;
+}
+
+function createSettingRow(title: string, detail: string, control: HTMLElement): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "intent-layer-setting-row";
+  const body = document.createElement("div");
+  const label = document.createElement("div");
+  label.className = "intent-layer-section-title";
+  label.textContent = title;
+  body.appendChild(label);
+  if (detail) {
+    const description = document.createElement("p");
+    description.textContent = detail;
+    body.appendChild(description);
+  }
+  row.append(body, control);
+  return row;
+}
+
+function createToggleButton(active: boolean): HTMLButtonElement {
+  const button = createButton(
+    active ? (overlayLanguage === "ko" ? "켜짐" : "On") : overlayLanguage === "ko" ? "꺼짐" : "Off",
+    active ? "primary" : "secondary"
+  );
+  button.dataset.intentToggle = active ? "true" : "false";
+  return button;
+}
+
+function applyOverlaySettingsToPanel(panel: HTMLElement) {
+  panel.dataset.intentDock = overlaySettings.dock;
+  panel.dataset.intentDensity = overlaySettings.density;
+}
+
 function intentIdSelector(id: string): string {
   const escaped = typeof CSS !== "undefined" && "escape" in CSS ? CSS.escape(id) : id.replace(/[^A-Za-z0-9_-]/g, "\\$&");
   return `[data-intent-id="${escaped}"]`;
@@ -739,6 +900,7 @@ function createPanel() {
   ensureOverlayStyles();
   const panel = document.createElement("div");
   panel.className = "intent-layer-panel";
+  applyOverlaySettingsToPanel(panel);
   panel.style.position = "fixed";
   panel.style.right = "16px";
   panel.style.bottom = "16px";
@@ -1074,40 +1236,64 @@ function renderSetupPanel(
   panel: HTMLElement,
   setStatus: (message: string) => void
 ) {
+  const status = latestSetupStatus;
+  const settings = status?.settings ?? {
+    version: 1 as const,
+    language: overlayLanguage,
+    onboardingCompletedAt: null,
+    updatedAt: new Date().toISOString(),
+    overlay: overlaySettings,
+    agent: {
+      codexCommand: null,
+      claudeCommand: null
+    }
+  };
+  let draftLanguage = settings.language;
+  let draftDock = settings.overlay.dock;
+  let draftDensity = settings.overlay.density;
+  let draftDefaultCollapsed = settings.overlay.defaultCollapsed;
+  let draftAutoOpenSetup = settings.overlay.autoOpenSetup;
+  let draftCodexCommand = settings.agent.codexCommand ?? "";
+  let draftClaudeCommand = settings.agent.claudeCommand ?? "";
+
+  const currentOverlayDraft = (): IntentOverlaySettings => ({
+    dock: draftDock,
+    density: draftDensity,
+    defaultCollapsed: draftDefaultCollapsed,
+    autoOpenSetup: draftAutoOpenSetup
+  });
+
+  const currentAgentDraft = () => ({
+    codexCommand: draftCodexCommand.trim() || null,
+    claudeCommand: draftClaudeCommand.trim() || null
+  });
+
+  const saveDraft = (completeOnboarding: boolean, resetOnboarding = false) =>
+    saveSetup(panel, setStatus, completeOnboarding, {
+      resetOnboarding,
+      language: draftLanguage,
+      overlay: currentOverlayDraft(),
+      agent: currentAgentDraft()
+    });
+
   const wrapper = document.createElement("div");
   wrapper.className = "intent-layer-section";
 
   const title = document.createElement("div");
   title.className = "intent-layer-section-title";
-  title.textContent = t("setupTitle");
+  title.textContent = status?.settingsReady ? t("setupTitleReady") : t("setupTitle");
 
   const intro = document.createElement("p");
   intro.textContent = t("setupIntro");
 
-  const languageLabel = document.createElement("label");
-  languageLabel.textContent = t("language");
-
-  const languageGrid = document.createElement("div");
-  languageGrid.className = "intent-layer-language-grid";
-
-  const korean = createButton(t("korean"), overlayLanguage === "ko" ? "primary" : "secondary");
-  korean.addEventListener("click", () => {
-    setOverlayLanguage("ko");
-    void saveSetup(panel, setStatus, false);
-  });
-
-  const english = createButton(t("english"), overlayLanguage === "en" ? "primary" : "secondary");
-  english.addEventListener("click", () => {
-    setOverlayLanguage("en");
-    void saveSetup(panel, setStatus, false);
-  });
-
-  languageGrid.append(korean, english);
-
+  const statusSection = document.createElement("div");
+  statusSection.className = "intent-layer-section";
+  const statusTitle = document.createElement("div");
+  statusTitle.className = "intent-layer-section-title";
+  statusTitle.textContent = t("setupStatus");
   const checks = document.createElement("div");
   checks.className = "intent-layer-setup-grid";
 
-  const status = latestSetupStatus;
   const setupChecks =
     status?.checks ??
     [
@@ -1143,7 +1329,7 @@ function renderSetupPanel(
         ? `${t("setupGraphReady")} (${status.graphEntryCount})`
         : t("setupGraphWaiting");
     } else if (check.name === "agent-run") {
-      detail.textContent = t("runLocked");
+      detail.textContent = status?.agent.runEnabled ? t("agentRunEnabled") : t("agentRunLockedDetail");
     } else {
       detail.textContent = check.detail;
     }
@@ -1152,23 +1338,132 @@ function renderSetupPanel(
     checks.appendChild(row);
   }
 
+  statusSection.append(statusTitle, checks);
+
+  const languageSection = document.createElement("div");
+  languageSection.className = "intent-layer-section";
+  const languageLabel = document.createElement("label");
+  languageLabel.textContent = t("language");
+  const languageGrid = document.createElement("div");
+  languageGrid.className = "intent-layer-language-grid";
+  const korean = createButton(t("korean"), draftLanguage === "ko" ? "primary" : "secondary");
+  const english = createButton(t("english"), draftLanguage === "en" ? "primary" : "secondary");
+  korean.addEventListener("click", () => {
+    draftLanguage = "ko";
+    void saveDraft(false);
+  });
+  english.addEventListener("click", () => {
+    draftLanguage = "en";
+    void saveDraft(false);
+  });
+  languageGrid.append(korean, english);
+  languageSection.append(languageLabel, languageGrid);
+
+  const panelSection = document.createElement("div");
+  panelSection.className = "intent-layer-section";
+  const panelTitle = document.createElement("div");
+  panelTitle.className = "intent-layer-section-title";
+  panelTitle.textContent = t("panelSettings");
+
+  const dockGrid = document.createElement("div");
+  dockGrid.className = "intent-layer-segmented";
+  const dockLeft = createButton(t("dockLeft"), draftDock === "left" ? "primary" : "secondary");
+  const dockRight = createButton(t("dockRight"), draftDock === "right" ? "primary" : "secondary");
+  dockLeft.addEventListener("click", () => {
+    draftDock = "left";
+    void saveDraft(false);
+  });
+  dockRight.addEventListener("click", () => {
+    draftDock = "right";
+    void saveDraft(false);
+  });
+  dockGrid.append(dockLeft, dockRight);
+
+  const densityGrid = document.createElement("div");
+  densityGrid.className = "intent-layer-segmented";
+  const comfortable = createButton(t("comfortable"), draftDensity === "comfortable" ? "primary" : "secondary");
+  const compact = createButton(t("compact"), draftDensity === "compact" ? "primary" : "secondary");
+  comfortable.addEventListener("click", () => {
+    draftDensity = "comfortable";
+    void saveDraft(false);
+  });
+  compact.addEventListener("click", () => {
+    draftDensity = "compact";
+    void saveDraft(false);
+  });
+  densityGrid.append(comfortable, compact);
+
+  const collapsedToggle = createToggleButton(draftDefaultCollapsed);
+  collapsedToggle.addEventListener("click", () => {
+    draftDefaultCollapsed = !draftDefaultCollapsed;
+    void saveDraft(false);
+  });
+  const autoOpenToggle = createToggleButton(draftAutoOpenSetup);
+  autoOpenToggle.addEventListener("click", () => {
+    draftAutoOpenSetup = !draftAutoOpenSetup;
+    void saveDraft(false);
+  });
+
+  panelSection.append(
+    panelTitle,
+    createSettingRow(t("dock"), "", dockGrid),
+    createSettingRow(t("density"), "", densityGrid),
+    createSettingRow(t("defaultCollapsed"), t("defaultCollapsedDetail"), collapsedToggle),
+    createSettingRow(t("autoOpenSetup"), t("autoOpenSetupDetail"), autoOpenToggle)
+  );
+
+  const agentSection = document.createElement("div");
+  agentSection.className = "intent-layer-section";
+  const agentTitle = document.createElement("div");
+  agentTitle.className = "intent-layer-section-title";
+  agentTitle.textContent = t("agentSettings");
+  const agentNote = document.createElement("p");
+  agentNote.textContent = status?.agent.runEnabled ? t("agentRunEnabled") : t("agentRunLockedDetail");
+  const codexInput = createTextInput(settings.agent.codexCommand ?? "", t("commandInputPlaceholder"));
+  const claudeInput = createTextInput(settings.agent.claudeCommand ?? "", t("commandInputPlaceholder"));
+  codexInput.addEventListener("input", () => {
+    draftCodexCommand = codexInput.value;
+  });
+  claudeInput.addEventListener("input", () => {
+    draftClaudeCommand = claudeInput.value;
+  });
+  const commandGrid = document.createElement("div");
+  commandGrid.className = "intent-layer-command-grid";
+  const codexLabel = document.createElement("label");
+  codexLabel.textContent = t("codexCommand");
+  const claudeLabel = document.createElement("label");
+  claudeLabel.textContent = t("claudeCommand");
+  commandGrid.append(codexLabel, codexInput, claudeLabel, claudeInput);
   if (status) {
     const agent = document.createElement("pre");
     agent.className = "intent-layer-preview-box";
     agent.textContent = [
-      `Codex: ${status.agent.codexAvailable ? "ready" : "plan only"} (${status.agent.codexCommand})`,
-      `Claude: ${status.agent.claudeAvailable ? "ready" : "plan only"} (${status.agent.claudeCommand})`,
+      `Codex: ${status.agent.codexAvailable ? "ready" : "plan only"} (${status.agent.codexCommand}, ${status.agent.codexCommandSource})`,
+      `Claude: ${status.agent.claudeAvailable ? "ready" : "plan only"} (${status.agent.claudeCommand}, ${status.agent.claudeCommandSource})`,
       status.agent.runEnabled ? "agent run: enabled" : "agent run: locked"
     ].join("\n");
-    checks.appendChild(agent);
+    commandGrid.appendChild(agent);
   }
+  agentSection.append(agentTitle, agentNote, commandGrid);
 
-  const apply = createButton(t("setupApply"), "primary");
-  apply.addEventListener("click", () => {
-    void saveSetup(panel, setStatus, true);
+  const actions = document.createElement("div");
+  actions.className = "intent-layer-actions";
+  const save = createButton(status?.settingsReady ? t("saveSettings") : t("setupApply"), "primary");
+  save.addEventListener("click", () => {
+    draftCodexCommand = codexInput.value;
+    draftClaudeCommand = claudeInput.value;
+    void saveDraft(!status?.settingsReady);
   });
+  const reset = createButton(t("resetOnboarding"));
+  reset.addEventListener("click", () => {
+    draftCodexCommand = codexInput.value;
+    draftClaudeCommand = claudeInput.value;
+    draftAutoOpenSetup = true;
+    void saveDraft(false, true);
+  });
+  actions.append(save, reset);
 
-  wrapper.append(title, intro, languageLabel, languageGrid, checks, apply);
+  wrapper.append(title, intro, statusSection, languageSection, panelSection, agentSection, actions);
   root.appendChild(wrapper);
 }
 
@@ -1177,7 +1472,7 @@ async function fetchSetupStatus(language = overlayLanguage): Promise<IntentSetup
     const response = await fetch(`/__intent/setup?language=${encodeURIComponent(language)}`);
     const status = (await response.json()) as SetupResponse;
     latestSetupStatus = status;
-    setOverlayLanguage(status.language);
+    syncSettings(status.settings);
     return status;
   } catch {
     return null;
@@ -1187,22 +1482,38 @@ async function fetchSetupStatus(language = overlayLanguage): Promise<IntentSetup
 async function saveSetup(
   panel: HTMLElement,
   setStatus: (message: string) => void,
-  completeOnboarding: boolean
+  completeOnboarding: boolean,
+  patch: {
+    language?: IntentLayerLanguage;
+    overlay?: IntentOverlaySettings;
+    agent?: { codexCommand: string | null; claudeCommand: string | null };
+    resetOnboarding?: boolean;
+  } = {}
 ) {
   const response = await fetch("/__intent/setup", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      language: overlayLanguage,
+      language: patch.language ?? overlayLanguage,
       createWorkspace: true,
-      completeOnboarding
+      completeOnboarding,
+      resetOnboarding: patch.resetOnboarding,
+      overlay: patch.overlay,
+      agent: patch.agent
     })
   });
   const result = (await response.json()) as SetupApplyResponse;
   if (result.ok) {
     latestSetupStatus = result.status;
-    setOverlayLanguage(result.status.language);
-    setStatus(completeOnboarding ? `${t("setupComplete")} (${result.metrics.setupMs}ms)` : t("setupOpen"));
+    syncSettings(result.status.settings);
+    applyOverlaySettingsToPanel(panel);
+    setStatus(
+      patch.resetOnboarding
+        ? `${t("resetOnboardingDone")} (${result.metrics.setupMs}ms)`
+        : completeOnboarding
+          ? `${t("setupComplete")} (${result.metrics.setupMs}ms)`
+          : `${t("settingsSaved")} (${result.metrics.setupMs}ms)`
+    );
     if (completeOnboarding) {
       overlayView = "editor";
     }
@@ -1413,6 +1724,7 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
 function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status: string, scope: RenderScope | null = null) {
   panel.innerHTML = "";
   panel.dataset.intentCollapsed = overlayCollapsed ? "true" : "false";
+  applyOverlaySettingsToPanel(panel);
 
   const header = document.createElement("div");
   header.className = "intent-layer-header";
@@ -1455,7 +1767,13 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   setup.addEventListener("click", () => {
     overlayView = overlayView === "setup" ? "editor" : "setup";
     overlayCollapsed = false;
-    renderBinding(panel, binding, overlayView === "setup" ? t("setupOpen") : status, scope);
+    if (overlayView === "setup") {
+      void fetchSetupStatus().then(() => {
+        renderBinding(panel, binding, t("setupOpen"), scope);
+      });
+    } else {
+      renderBinding(panel, binding, status, scope);
+    }
   });
   actions.appendChild(setup);
 
@@ -1642,8 +1960,10 @@ export function initIntentOverlay() {
   renderBinding(panel, null, t("ready"));
   void fetchSetupStatus().then((status) => {
     if (!status) return;
-    if (status.setupRequired) {
+    overlayCollapsed = status.settings.overlay.defaultCollapsed;
+    if (status.setupRequired && status.settings.overlay.autoOpenSetup) {
       overlayView = "setup";
+      overlayCollapsed = false;
       renderBinding(panel, null, t("setupOpen"));
     } else {
       renderBinding(panel, selectedBinding, t("ready"), selectedScope);

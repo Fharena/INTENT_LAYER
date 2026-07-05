@@ -2,8 +2,13 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import type {
+  IntentAgentCommandSource,
+  IntentAgentSettings,
   IntentLayerLanguage,
   IntentLayerSettings,
+  IntentOverlayDensity,
+  IntentOverlayDock,
+  IntentOverlaySettings,
   IntentSetupRequest,
   IntentSetupResult,
   IntentSetupStatus
@@ -28,6 +33,72 @@ function settingsPath(rootDir: string): string {
 
 function normalizeLanguage(language: unknown): IntentLayerLanguage {
   return language === "ko" ? "ko" : "en";
+}
+
+function normalizeDock(value: unknown): IntentOverlayDock {
+  return value === "left" ? "left" : "right";
+}
+
+function normalizeDensity(value: unknown): IntentOverlayDensity {
+  return value === "compact" ? "compact" : "comfortable";
+}
+
+function normalizeBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function normalizeCommand(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+export function defaultIntentSettings(language: IntentLayerLanguage = "en"): IntentLayerSettings {
+  return {
+    version: 1,
+    language,
+    onboardingCompletedAt: null,
+    updatedAt: new Date().toISOString(),
+    overlay: {
+      dock: "right",
+      density: "comfortable",
+      defaultCollapsed: false,
+      autoOpenSetup: true
+    },
+    agent: {
+      codexCommand: null,
+      claudeCommand: null
+    }
+  };
+}
+
+function normalizeOverlaySettings(value: unknown): IntentOverlaySettings {
+  const raw = value && typeof value === "object" ? (value as Partial<IntentOverlaySettings>) : {};
+  return {
+    dock: normalizeDock(raw.dock),
+    density: normalizeDensity(raw.density),
+    defaultCollapsed: normalizeBoolean(raw.defaultCollapsed, false),
+    autoOpenSetup: normalizeBoolean(raw.autoOpenSetup, true)
+  };
+}
+
+function normalizeAgentSettings(value: unknown): IntentAgentSettings {
+  const raw = value && typeof value === "object" ? (value as Partial<IntentAgentSettings>) : {};
+  return {
+    codexCommand: normalizeCommand(raw.codexCommand),
+    claudeCommand: normalizeCommand(raw.claudeCommand)
+  };
+}
+
+function normalizeSettings(value: Partial<IntentLayerSettings> | null, languageFallback: IntentLayerLanguage): IntentLayerSettings {
+  const fallback = defaultIntentSettings(languageFallback);
+  return {
+    version: 1,
+    language: normalizeLanguage(value?.language ?? fallback.language),
+    onboardingCompletedAt:
+      typeof value?.onboardingCompletedAt === "string" ? value.onboardingCompletedAt : null,
+    updatedAt: typeof value?.updatedAt === "string" ? value.updatedAt : fallback.updatedAt,
+    overlay: normalizeOverlaySettings(value?.overlay),
+    agent: normalizeAgentSettings(value?.agent)
+  };
 }
 
 function writeFileIfMissing(
@@ -162,12 +233,7 @@ export function readIntentSettings(rootDir: string): IntentLayerSettings | null 
 
   try {
     const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as Partial<IntentLayerSettings>;
-    return {
-      version: 1,
-      language: normalizeLanguage(parsed.language),
-      onboardingCompletedAt:
-        typeof parsed.onboardingCompletedAt === "string" ? parsed.onboardingCompletedAt : null
-    };
+    return normalizeSettings(parsed, normalizeLanguage(parsed.language));
   } catch {
     return null;
   }
@@ -200,12 +266,46 @@ function executableAvailable(command: string, rootDir: string): boolean {
   return result.status === 0;
 }
 
+function resolveCommand(
+  settingsCommand: string | null,
+  envName: string,
+  defaultCommand: string
+): { command: string; source: IntentAgentCommandSource } {
+  if (settingsCommand) {
+    return { command: settingsCommand, source: "settings" };
+  }
+
+  const envCommand = process.env[envName]?.trim();
+  if (envCommand) {
+    return { command: envCommand, source: "env" };
+  }
+
+  return { command: defaultCommand, source: "default" };
+}
+
+export function resolveAgentCommands(rootDir: string) {
+  const settings = readIntentSettings(rootDir) ?? defaultIntentSettings();
+  return {
+    codex: resolveCommand(settings.agent.codexCommand, "INTENT_LAYER_CODEX_COMMAND", "codex"),
+    claude: resolveCommand(settings.agent.claudeCommand, "INTENT_LAYER_CLAUDE_COMMAND", "claude")
+  };
+}
+
 export function intentSetupStatus(
   rootDir: string,
   options: { graphEntryCount?: number; language?: IntentLayerLanguage } = {}
 ): IntentSetupStatus {
   const settings = readIntentSettings(rootDir);
-  const language = options.language ?? settings?.language ?? "en";
+  const effectiveSettings = settings ?? defaultIntentSettings(options.language ?? "en");
+  const language = settings ? effectiveSettings.language : options.language ?? effectiveSettings.language;
+  const displaySettings =
+    language === effectiveSettings.language
+      ? effectiveSettings
+      : {
+          ...effectiveSettings,
+          language,
+          updatedAt: new Date().toISOString()
+        };
   const intentDir = path.join(rootDir, ".intent");
   const workspaceReady =
     fs.existsSync(intentDir) &&
@@ -215,8 +315,9 @@ export function intentSetupStatus(
   const settingsReady = Boolean(settings?.onboardingCompletedAt);
   const graphEntryCount = options.graphEntryCount ?? 0;
   const graphReady = graphEntryCount > 0 || fs.existsSync(path.join(intentDir, "graph.intent.json"));
-  const codexCommand = process.env.INTENT_LAYER_CODEX_COMMAND?.trim() || "codex";
-  const claudeCommand = process.env.INTENT_LAYER_CLAUDE_COMMAND?.trim() || "claude";
+  const agentCommands = resolveAgentCommands(rootDir);
+  const codexCommand = agentCommands.codex.command;
+  const claudeCommand = agentCommands.claude.command;
 
   return {
     version: 1,
@@ -228,6 +329,7 @@ export function intentSetupStatus(
     graphReady,
     graphEntryCount,
     setupRequired: !workspaceReady || !settingsReady,
+    settings: displaySettings,
     checks: [
       {
         name: "workspace",
@@ -258,8 +360,10 @@ export function intentSetupStatus(
     agent: {
       runEnabled: process.env.INTENT_LAYER_AGENT_RUN === "1",
       codexCommand,
+      codexCommandSource: agentCommands.codex.source,
       codexAvailable: executableAvailable(codexCommand, rootDir),
       claudeCommand,
+      claudeCommandSource: agentCommands.claude.source,
       claudeAvailable: executableAvailable(claudeCommand, rootDir)
     }
   };
@@ -280,17 +384,31 @@ export function applyIntentSetup(
     existingPaths.push(...init.existingPaths);
   }
 
-  const previous = readIntentSettings(rootDir);
-  const language = normalizeLanguage(request.language ?? previous?.language ?? "en");
+  const previous = readIntentSettings(rootDir) ?? defaultIntentSettings();
+  const language = normalizeLanguage(request.language ?? previous.language);
+  const nextOverlay = normalizeOverlaySettings({
+    ...previous.overlay,
+    ...(request.overlay ?? {})
+  });
+  const nextAgent = normalizeAgentSettings({
+    ...previous.agent,
+    ...(request.agent ?? {})
+  });
+  const onboardingCompletedAt =
+    request.resetOnboarding === true
+      ? null
+      : request.completeOnboarding === false
+        ? previous.onboardingCompletedAt
+        : previous.onboardingCompletedAt ?? new Date().toISOString();
   const settingsFile = writeIntentSettings(
     rootDir,
     {
       version: 1,
       language,
-      onboardingCompletedAt:
-        request.completeOnboarding === false
-          ? previous?.onboardingCompletedAt ?? null
-          : previous?.onboardingCompletedAt ?? new Date().toISOString()
+      onboardingCompletedAt,
+      updatedAt: new Date().toISOString(),
+      overlay: nextOverlay,
+      agent: nextAgent
     },
     createdPaths,
     existingPaths

@@ -97,6 +97,16 @@ interface PackageSmokeResult {
   installedViteDevServerSetupGraphReady: boolean;
   installedViteDevServerSetupSettingsFileExists: boolean;
   installedViteDevServerSetupSchemaExists: boolean;
+  installedViteDevServerSettingsUpdateStatus: number | null;
+  installedViteDevServerSettingsLanguage: string | null;
+  installedViteDevServerSettingsDock: string | null;
+  installedViteDevServerSettingsDensity: string | null;
+  installedViteDevServerSettingsDefaultCollapsed: boolean;
+  installedViteDevServerSettingsAutoOpenSetup: boolean;
+  installedViteDevServerSettingsCodexCommand: string | null;
+  installedViteDevServerSettingsClaudeCommand: string | null;
+  installedViteDevServerSettingsCommandSource: string | null;
+  installedViteDevServerSettingsUpdateOk: boolean;
   installedViteDevServerPreviewStatus: number | null;
   installedViteDevServerPreviewOk: boolean;
   installedViteDevServerApplyStatus: number | null;
@@ -571,6 +581,34 @@ function packageSmoke(): PackageSmokeResult {
       "  const setupAfterJson = setupAfter.status === 200 ? JSON.parse(setupAfter.body) : null;",
       "  const setupSettingsFileExists = fs.existsSync(path.join(root, \".intent\", \"settings.json\"));",
       "  const setupSchemaExists = fs.existsSync(path.join(root, \".intent\", \"schema\", \"graph.intent.schema.json\"));",
+      "  const settingsUpdate = await postJson(`${baseUrl}/__intent/setup`, {",
+      "    language: \"en\",",
+      "    createWorkspace: true,",
+      "    completeOnboarding: false,",
+      "    overlay: {",
+      "      dock: \"left\",",
+      "      density: \"compact\",",
+      "      defaultCollapsed: true,",
+      "      autoOpenSetup: false",
+      "    },",
+      "    agent: {",
+      "      codexCommand: \"codex-custom\",",
+      "      claudeCommand: \"claude-custom\"",
+      "    }",
+      "  });",
+      "  const settingsAfter = await waitFetch(`${baseUrl}/__intent/setup`, 10000);",
+      "  const settingsAfterJson = settingsAfter.status === 200 ? JSON.parse(settingsAfter.body) : null;",
+      "  const settingsUpdateOk =",
+      "    settingsUpdate.status === 200 && settingsUpdate.json?.ok === true && settingsAfter.status === 200 &&",
+      "    settingsAfterJson?.language === \"en\" && settingsAfterJson?.settings?.language === \"en\" &&",
+      "    settingsAfterJson?.settings?.overlay?.dock === \"left\" &&",
+      "    settingsAfterJson?.settings?.overlay?.density === \"compact\" &&",
+      "    settingsAfterJson?.settings?.overlay?.defaultCollapsed === true &&",
+      "    settingsAfterJson?.settings?.overlay?.autoOpenSetup === false &&",
+      "    settingsAfterJson?.settings?.agent?.codexCommand === \"codex-custom\" &&",
+      "    settingsAfterJson?.settings?.agent?.claudeCommand === \"claude-custom\" &&",
+      "    settingsAfterJson?.agent?.codexCommand === \"codex-custom\" &&",
+      "    settingsAfterJson?.agent?.codexCommandSource === \"settings\";",
       "  const patchToken = editableToken(first, \"gap-4\");",
       "  const patchRequest = {",
       "    id: first?.id ?? \"missing-installed-dev-server-id\",",
@@ -731,6 +769,7 @@ function packageSmoke(): PackageSmokeResult {
       "    setupAfter.status === 200 && setupAfterJson?.language === \"ko\" &&",
       "    setupAfterJson?.workspaceReady === true && setupAfterJson?.settingsReady === true &&",
       "    setupAfterJson?.graphReady === true && setupSettingsFileExists && setupSchemaExists &&",
+      "    settingsUpdateOk &&",
       "    preview.status === 200 && preview.json?.ok === true &&",
       "    apply.status === 200 && apply.json?.ok === true &&",
       "    sourceAfterApply.includes(\"gap-6\") && !sourceAfterApply.includes(\"gap-4\") &&",
@@ -765,6 +804,16 @@ function packageSmoke(): PackageSmokeResult {
       "    setupGraphReady: setupAfterJson?.graphReady === true,",
       "    setupSettingsFileExists,",
       "    setupSchemaExists,",
+      "    settingsUpdateStatus: settingsUpdate.status,",
+      "    settingsLanguage: settingsAfterJson?.settings?.language ?? null,",
+      "    settingsDock: settingsAfterJson?.settings?.overlay?.dock ?? null,",
+      "    settingsDensity: settingsAfterJson?.settings?.overlay?.density ?? null,",
+      "    settingsDefaultCollapsed: settingsAfterJson?.settings?.overlay?.defaultCollapsed === true,",
+      "    settingsAutoOpenSetup: settingsAfterJson?.settings?.overlay?.autoOpenSetup === true,",
+      "    settingsCodexCommand: settingsAfterJson?.settings?.agent?.codexCommand ?? null,",
+      "    settingsClaudeCommand: settingsAfterJson?.settings?.agent?.claudeCommand ?? null,",
+      "    settingsCommandSource: settingsAfterJson?.agent?.codexCommandSource ?? null,",
+      "    settingsUpdateOk,",
       "    previewStatus: preview.status,",
       "    previewOk: preview.json?.ok === true,",
       "    applyStatus: apply.status,",
@@ -832,6 +881,16 @@ function packageSmoke(): PackageSmokeResult {
       "    setupGraphReady: false,",
       "    setupSettingsFileExists: false,",
       "    setupSchemaExists: false,",
+      "    settingsUpdateStatus: null,",
+      "    settingsLanguage: null,",
+      "    settingsDock: null,",
+      "    settingsDensity: null,",
+      "    settingsDefaultCollapsed: false,",
+      "    settingsAutoOpenSetup: false,",
+      "    settingsCodexCommand: null,",
+      "    settingsClaudeCommand: null,",
+      "    settingsCommandSource: null,",
+      "    settingsUpdateOk: false,",
       "    previewStatus: null,",
       "    previewOk: false,",
       "    applyStatus: null,",
@@ -895,6 +954,16 @@ function packageSmoke(): PackageSmokeResult {
     setupGraphReady?: boolean;
     setupSettingsFileExists?: boolean;
     setupSchemaExists?: boolean;
+    settingsUpdateStatus?: number | null;
+    settingsLanguage?: string | null;
+    settingsDock?: string | null;
+    settingsDensity?: string | null;
+    settingsDefaultCollapsed?: boolean;
+    settingsAutoOpenSetup?: boolean;
+    settingsCodexCommand?: string | null;
+    settingsClaudeCommand?: string | null;
+    settingsCommandSource?: string | null;
+    settingsUpdateOk?: boolean;
     previewStatus?: number | null;
     previewOk?: boolean;
     applyStatus?: number | null;
@@ -1011,6 +1080,22 @@ function packageSmoke(): PackageSmokeResult {
     installedViteDevServerSetupSettingsFileExists:
       installedViteDevServerReport.setupSettingsFileExists === true,
     installedViteDevServerSetupSchemaExists: installedViteDevServerReport.setupSchemaExists === true,
+    installedViteDevServerSettingsUpdateStatus:
+      installedViteDevServerReport.settingsUpdateStatus ?? null,
+    installedViteDevServerSettingsLanguage: installedViteDevServerReport.settingsLanguage ?? null,
+    installedViteDevServerSettingsDock: installedViteDevServerReport.settingsDock ?? null,
+    installedViteDevServerSettingsDensity: installedViteDevServerReport.settingsDensity ?? null,
+    installedViteDevServerSettingsDefaultCollapsed:
+      installedViteDevServerReport.settingsDefaultCollapsed === true,
+    installedViteDevServerSettingsAutoOpenSetup:
+      installedViteDevServerReport.settingsAutoOpenSetup === true,
+    installedViteDevServerSettingsCodexCommand:
+      installedViteDevServerReport.settingsCodexCommand ?? null,
+    installedViteDevServerSettingsClaudeCommand:
+      installedViteDevServerReport.settingsClaudeCommand ?? null,
+    installedViteDevServerSettingsCommandSource:
+      installedViteDevServerReport.settingsCommandSource ?? null,
+    installedViteDevServerSettingsUpdateOk: installedViteDevServerReport.settingsUpdateOk === true,
     installedViteDevServerPreviewStatus: installedViteDevServerReport.previewStatus ?? null,
     installedViteDevServerPreviewOk: installedViteDevServerReport.previewOk === true,
     installedViteDevServerApplyStatus: installedViteDevServerReport.applyStatus ?? null,
@@ -5545,6 +5630,16 @@ const report = {
       packageInstallSmoke.installedViteDevServerSetupGraphReady &&
       packageInstallSmoke.installedViteDevServerSetupSettingsFileExists &&
       packageInstallSmoke.installedViteDevServerSetupSchemaExists &&
+      packageInstallSmoke.installedViteDevServerSettingsUpdateStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerSettingsLanguage === "en" &&
+      packageInstallSmoke.installedViteDevServerSettingsDock === "left" &&
+      packageInstallSmoke.installedViteDevServerSettingsDensity === "compact" &&
+      packageInstallSmoke.installedViteDevServerSettingsDefaultCollapsed &&
+      !packageInstallSmoke.installedViteDevServerSettingsAutoOpenSetup &&
+      packageInstallSmoke.installedViteDevServerSettingsCodexCommand === "codex-custom" &&
+      packageInstallSmoke.installedViteDevServerSettingsClaudeCommand === "claude-custom" &&
+      packageInstallSmoke.installedViteDevServerSettingsCommandSource === "settings" &&
+      packageInstallSmoke.installedViteDevServerSettingsUpdateOk &&
       packageInstallSmoke.installedViteDevServerPreviewStatus === 200 &&
       packageInstallSmoke.installedViteDevServerPreviewOk &&
       packageInstallSmoke.installedViteDevServerApplyStatus === 200 &&

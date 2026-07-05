@@ -59,10 +59,10 @@ npm run dev
 브라우저 첫 설정:
 
 ```text
-Vite dev URL 열기 -> Intent Layer 설정 -> 한국어/영어 선택 -> 설정 완료
+Vite dev URL 열기 -> Intent Layer 설정 -> 언어/패널/Agent command 설정 -> 설정 완료
 ```
 
-설정 화면은 브라우저 패널에서 `.intent/` schema와 `.intent/settings.json`을 만든다. CLI는 진단과 반복 검증용으로 남기지만, 일상적인 시각 편집의 기본 흐름은 GUI-first다.
+설정 화면은 브라우저 패널에서 `.intent/` schema와 `.intent/settings.json`을 만든다. 이후에도 `설정` 버튼에서 언어, 패널 위치/밀도, 시작 시 접기, setup 자동 열기, Codex/Claude command를 바꿀 수 있다. CLI는 진단과 반복 검증용으로 남기지만, 일상적인 시각 편집의 기본 흐름은 GUI-first다.
 
 검증 명령:
 
@@ -148,6 +148,7 @@ npm run analyze:external-corpus
 - 설치된 Vite plugin transform/graph output
 - 실제 Vite dev server HTTP smoke
 - `/__intent/graph`, `/__intent/setup`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last`
+- setup/settings update persistence
 - apply/revert refresh timing
 - 3-file graph refresh
 - Codex/Claude agent launch dry-run 계획
@@ -162,7 +163,7 @@ npm run analyze:external-corpus
 - compile-time `data-intent-id` injection
 - `.intent/graph.intent.json` sidecar graph
 - floating browser overlay
-- 첫 실행 브라우저 setup wizard와 한국어/영어 언어 선택
+- 브라우저 setup/settings 화면, 한국어/영어 선택, 패널 preference, 온보딩 재표시, Agent command 설정
 - overlay 수동 minimize/expand
 - 같은 intent id를 가진 렌더 DOM 전체 outline과 shared source scope 표시
 - patch preview before apply

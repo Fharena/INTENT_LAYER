@@ -44,6 +44,7 @@ The target user already uses AI-assisted development tools. Therefore the produc
 - complex or unsupported changes can be delegated to an AI agent
 - agent handoff should use structured intent tasks, not vague natural-language prompts
 - external agent execution should default to command planning, with direct execution explicitly opted in
+- setup and mid-session settings changes should be handled in the browser overlay before requiring CLI commands
 
 The product should not choose between visual editing and AI agents.
 

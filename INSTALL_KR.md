@@ -77,12 +77,16 @@ npm run dev
 첫 실행이면 Intent Layer 패널이 설정 화면을 연다. 여기서 다음을 처리한다.
 
 - 한국어/영어 선택
+- 패널 위치/밀도와 시작 동작 설정
+- Codex/Claude command 설정
 - `.intent/` workspace와 schema 파일 생성
 - `.intent/settings.json` 저장
 - source binding 생성 여부 확인
 - Codex/Claude 사용 가능 여부와 Agent 실행 잠금 상태 확인
 
 기본 GUI 흐름에서는 `init` 명령이 필요 없다.
+
+설정 완료 후에도 패널 상단 `설정` 버튼으로 같은 화면을 다시 열어 언어, 패널 preference, Agent command, 온보딩 다시 보기를 바꿀 수 있다.
 
 반복 가능한 진단 리포트가 필요할 때만 CLI를 사용한다.
 
@@ -201,12 +205,13 @@ npx intent-layer scan src --write-graph
 최근 `npm run eval` 기준:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.467ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 4.271ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
 first-run setup smoke: status 200, apply 200, language ko, workspace/settings/schema ready
-installed Vite apply refresh: 283.321ms
-installed Vite revert refresh: 204.204ms
-installed 3-file graph refresh: 135.331ms
+settings update smoke: language en, dock left, density compact, Agent commands from settings
+installed Vite apply refresh: 262.18ms
+installed Vite revert refresh: 1747.146ms
+installed 3-file graph refresh: 13.724ms
 package smoke: pass, 53 gates, 0 false
 ```
 

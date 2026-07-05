@@ -77,12 +77,16 @@ npm run dev
 On first run, the Intent Layer panel opens a setup view. Use it to:
 
 - choose Korean or English
+- set panel position/density and startup behavior
+- set Codex/Claude commands
 - create the `.intent/` workspace and schema files
 - write `.intent/settings.json`
 - see whether source bindings have been generated
 - see whether Codex/Claude are available and whether Agent run mode is locked
 
 No `init` command is required for the default GUI path.
+
+After setup, reopen the same view with the panel header `Setup` button to change language, panel preferences, Agent commands, or to show onboarding again.
 
 CLI diagnostics remain available when you want a repeatable report:
 
@@ -201,12 +205,13 @@ npx intent-layer scan src --write-graph
 Latest `npm run eval` values:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.467ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 4.271ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
 first-run setup smoke: status 200, apply 200, language ko, workspace/settings/schema ready
-installed Vite apply refresh: 283.321ms
-installed Vite revert refresh: 204.204ms
-installed 3-file graph refresh: 135.331ms
+settings update smoke: language en, dock left, density compact, Agent commands from settings
+installed Vite apply refresh: 262.18ms
+installed Vite revert refresh: 1747.146ms
+installed 3-file graph refresh: 13.724ms
 package smoke: pass, 53 gates, 0 false
 ```
 

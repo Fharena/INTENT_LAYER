@@ -1,23 +1,21 @@
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { resolveAgentCommands } from "./setup";
 import type { AgentLaunchRequest, AgentLaunchResult, AgentProvider, PatchFailure } from "./types";
 
 interface ProviderConfig {
   commandEnv: string;
-  defaultCommand: string;
   argsBeforePrompt: string[];
 }
 
 const providerConfigs: Record<AgentProvider, ProviderConfig> = {
   codex: {
     commandEnv: "INTENT_LAYER_CODEX_COMMAND",
-    defaultCommand: "codex",
     argsBeforePrompt: ["exec", "--sandbox", "workspace-write"]
   },
   claude: {
     commandEnv: "INTENT_LAYER_CLAUDE_COMMAND",
-    defaultCommand: "claude",
     argsBeforePrompt: ["-p"]
   }
 };
@@ -106,12 +104,15 @@ export function launchAgentTask(rootDir: string, request: AgentLaunchRequest): A
 
   const relativeTaskFile = relativeFromRoot(rootDir, absoluteTaskFile);
   const config = providerConfigs[request.provider];
-  const executable = process.env[config.commandEnv]?.trim() || config.defaultCommand;
+  const resolvedCommands = resolveAgentCommands(rootDir);
+  const commandInfo = request.provider === "codex" ? resolvedCommands.codex : resolvedCommands.claude;
+  const executable = commandInfo.command;
   const command = [executable, ...config.argsBeforePrompt, promptForTask(relativeTaskFile)];
   const enabled = process.env.INTENT_LAYER_AGENT_RUN === "1";
   const executeRequested = request.execute === true;
   const guidance = [
-    `Provider command can be overridden with ${config.commandEnv}.`,
+    `Provider command can be changed in Intent Layer settings or with ${config.commandEnv}.`,
+    `Current provider command source: ${commandInfo.source}.`,
     "Direct execution is disabled unless INTENT_LAYER_AGENT_RUN=1 is set.",
     "The default path returns a command plan so the user can review it before running."
   ];
