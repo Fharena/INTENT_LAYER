@@ -138,11 +138,11 @@ npx intent-layer scan src --write-graph
 Latest `npm run eval` values:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 1.938ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.081ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-installed Vite apply refresh: 43.512ms
-installed Vite revert refresh: 22.674ms
-installed 3-file graph refresh: 12.485ms
+installed Vite apply refresh: 42.976ms
+installed Vite revert refresh: 45.163ms
+installed 3-file graph refresh: 125.897ms
 package smoke: pass
 ```
 

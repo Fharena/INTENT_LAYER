@@ -8,6 +8,7 @@ Current state:
 
 Documents:
 
+- `README_KR.md` - Korean README
 - `PRODUCT_PLAN_KR.md` - Korean detailed product plan
 - `PRODUCT_PLAN_EN.md` - English detailed product plan
 - `LAUNCH_MVP_KR.md` - Korean expanded launch MVP plan

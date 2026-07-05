@@ -108,10 +108,10 @@ revert는 source 복원과 undo artifact 기록을 포함하므로 MVP gate는 `
 
 | 항목 | 값 |
 | --- | ---: |
-| installed transform hook | 5.305ms |
-| installed apply refresh | 43.512ms |
-| installed revert refresh | 22.674ms |
-| installed 3-file refresh | 12.485ms |
+| installed transform hook | 4.696ms |
+| installed apply refresh | 42.976ms |
+| installed revert refresh | 45.163ms |
+| installed 3-file refresh | 125.897ms |
 
 ## 알려진 한계
 
@@ -120,7 +120,7 @@ revert는 source 복원과 undo artifact 기록을 포함하므로 MVP gate는 `
 - 브라우저 QA는 현재 한 로컬 머신과 in-app browser desktop/mobile sample 기준이다.
 - 두 번째 브라우저 runtime으로 Chrome을 시도했지만, 현재 환경에서 Codex Chrome Extension/native host 연결을 사용할 수 없었다. 근거는 `reports/performance/browser-runtime-availability.json`에 남겼다.
 - npm registry publish와 registry 기준 install copy는 아직 하지 않았다.
-- 현재 Codex sandbox에서는 `.git` 쓰기가 막혀 있다. `git add`가 `Unable to create '.git/index.lock': Permission denied`로 실패했다. commit은 일반 shell 또는 `.git` 쓰기 권한이 있는 Codex 세션에서 만든다.
+- 현재 workspace에서는 `origin/main` 기준으로 Git write와 push를 진행하면 된다.
 
 ## 다음 작업
 
@@ -128,4 +128,4 @@ revert는 source 복원과 undo artifact 기록을 포함하므로 MVP gate는 `
 2. strict revert 50ms 이하를 후속 성능 최적화 목표로 유지한다.
 3. 사용자용 MVP walkthrough를 위해 demo/package 문구를 정리한다.
 4. 외부/product-sized TSX에서 component snapshot false-positive/false-negative를 재측정한다.
-5. `.git` 쓰기 권한이 있는 환경에서 현재 작업을 focused commit 단위로 남긴다.
+5. 별도 PR branch 요청이 없으면 후속 작업도 focused commit 단위로 `origin/main`에 바로 push한다.

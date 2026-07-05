@@ -15,6 +15,7 @@
     "src/intent/",
     "vite.cjs",
     "README.md",
+    "README_KR.md",
     "DEMO_WALKTHROUGH_EN.md",
     "DEMO_WALKTHROUGH_KR.md",
     "INSTALL_EN.md",

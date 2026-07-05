@@ -108,10 +108,10 @@ Latest package smoke highlights:
 
 | Metric | Value |
 | --- | ---: |
-| installed transform hook | 5.305ms |
-| installed apply refresh | 43.512ms |
-| installed revert refresh | 22.674ms |
-| installed 3-file refresh | 12.485ms |
+| installed transform hook | 4.696ms |
+| installed apply refresh | 42.976ms |
+| installed revert refresh | 45.163ms |
+| installed 3-file refresh | 125.897ms |
 
 ## Known Limits
 
@@ -120,7 +120,7 @@ Latest package smoke highlights:
 - Browser QA is currently one local machine plus in-app browser desktop/mobile samples.
 - Chrome was attempted as a second browser runtime, but the Codex Chrome Extension/native host was unavailable in this environment. See `reports/performance/browser-runtime-availability.json`.
 - npm registry publish and registry-oriented install copy are not done.
-- `.git` write access is blocked in the current Codex sandbox: `git add` failed with `Unable to create '.git/index.lock': Permission denied`. Create commits from a normal shell or a Codex session with `.git` write access.
+- Git writes and push are expected to run from this workspace against `origin/main`.
 
 ## Next Work
 
@@ -128,4 +128,4 @@ Latest package smoke highlights:
 2. Keep strict revert under 50ms as a performance optimization target.
 3. Clean up the demo/package copy for a user-facing MVP walkthrough.
 4. Re-measure component snapshot false positives/false negatives on external/product-sized TSX.
-5. Commit the current work in focused units from an environment with `.git` write access.
+5. Keep committing focused follow-up work directly to `origin/main` unless a PR branch is explicitly requested.
