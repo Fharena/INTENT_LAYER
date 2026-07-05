@@ -135,7 +135,7 @@ Agent tasks can now be turned into Codex/Claude launch plans from the overlay or
 | Claude plan time | 0.403ms |
 | Default execution state | `executed=false` |
 
-Direct process spawning is allowed only when `INTENT_LAYER_AGENT_RUN=1` is set. The default UX is safe command planning.
+Direct process spawning is allowed only when Agent run is enabled in `.intent/settings.json` or when `INTENT_LAYER_AGENT_RUN=1` is set. The default UX is safe command planning.
 
 ## Known Limits
 

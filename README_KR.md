@@ -175,7 +175,7 @@ npm run analyze:external-corpus
 - safe non-top revert
 - revert conflict artifact
 - agent handoff task/result markdown
-- `.intent/agent/task_*.md` 기반 Codex/Claude launch plan; 실제 spawn은 `INTENT_LAYER_AGENT_RUN=1` 필요
+- `.intent/agent/task_*.md` 기반 Codex/Claude launch plan; 실제 spawn은 설정의 Agent 실행 허용 또는 `INTENT_LAYER_AGENT_RUN=1` 필요
 - source hash validation
 - operation/diff artifact output
 - related source snapshot/diff for read-only handoff

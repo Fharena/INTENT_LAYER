@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { resolveAgentCommands } from "./setup";
+import { resolveAgentCommands, resolveAgentRunMode } from "./setup";
 import type { AgentLaunchRequest, AgentLaunchResult, AgentProvider, PatchFailure } from "./types";
 
 interface ProviderConfig {
@@ -108,12 +108,14 @@ export function launchAgentTask(rootDir: string, request: AgentLaunchRequest): A
   const commandInfo = request.provider === "codex" ? resolvedCommands.codex : resolvedCommands.claude;
   const executable = commandInfo.command;
   const command = [executable, ...config.argsBeforePrompt, promptForTask(relativeTaskFile)];
-  const enabled = process.env.INTENT_LAYER_AGENT_RUN === "1";
+  const runMode = resolveAgentRunMode(rootDir);
+  const enabled = runMode.enabled;
   const executeRequested = request.execute === true;
   const guidance = [
     `Provider command can be changed in Intent Layer settings or with ${config.commandEnv}.`,
     `Current provider command source: ${commandInfo.source}.`,
-    "Direct execution is disabled unless INTENT_LAYER_AGENT_RUN=1 is set.",
+    `Direct execution is ${enabled ? `enabled by ${runMode.source}` : "disabled"}.`,
+    "Enable Agent run in Intent Layer settings, or set INTENT_LAYER_AGENT_RUN=1 for automation.",
     "The default path returns a command plan so the user can review it before running."
   ];
 

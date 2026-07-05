@@ -1488,7 +1488,7 @@ Interpretation:
 - `diff` summarizes `.intent-diff.yml` as JSON so CLI/CI can inspect the latest intent diff.
 - `agent-context` summarizes the full graph and selected binding into AI-ready markdown.
 - `agent-task` takes a binding id from `.intent/graph.intent.json` plus a desired change and creates structured handoff markdown.
-- `agent-launch` turns `.intent/agent/task_*.md` into a Codex/Claude headless CLI command plan. The default result is `executed=false`; direct spawning is allowed only with `INTENT_LAYER_AGENT_RUN=1`.
+- `agent-launch` turns `.intent/agent/task_*.md` into a Codex/Claude headless CLI command plan. The default result is `executed=false`; direct spawning is allowed only when Agent run is enabled in `.intent/settings.json` or with `INTENT_LAYER_AGENT_RUN=1`.
 - `agent-result` takes a task file, result summary, changed files, and checks, then creates result markdown plus `.intent-diff.yml`.
 - The current CLI MVP implements `init`/`doctor`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-launch`/`agent-result`.
 

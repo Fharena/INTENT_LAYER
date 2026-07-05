@@ -1487,7 +1487,7 @@ agent-result gate:
 - `diff`는 `.intent-diff.yml`을 JSON으로 요약해 CLI/CI에서 최근 intent diff를 확인할 수 있게 한다.
 - `agent-context`는 graph 전체와 선택 binding을 AI용 markdown으로 요약한다.
 - `agent-task`는 `.intent/graph.intent.json`의 binding id와 desired change를 받아 구조화된 handoff markdown을 생성한다.
-- `agent-launch`는 `.intent/agent/task_*.md`를 Codex/Claude headless CLI command plan으로 바꾼다. 기본값은 `executed=false`이며, 실제 spawn은 `INTENT_LAYER_AGENT_RUN=1`일 때만 허용한다.
+- `agent-launch`는 `.intent/agent/task_*.md`를 Codex/Claude headless CLI command plan으로 바꾼다. 기본값은 `executed=false`이며, 실제 spawn은 `.intent/settings.json`의 Agent 실행 허용 또는 `INTENT_LAYER_AGENT_RUN=1`일 때만 허용한다.
 - `agent-result`는 task file, result summary, changed files, checks를 받아 result markdown과 `.intent-diff.yml`을 생성한다.
 - 현재 CLI MVP는 `init`/`doctor`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-launch`/`agent-result`를 구현했다.
 

@@ -160,7 +160,7 @@ Agent handoff -> Create task -> Plan Codex / Plan Claude
 Agent handoff -> Run Codex / Run Claude
 ```
 
-`Plan`은 `.intent/agent/task_*.md`에서 실행 명령만 만든다. 외부 process는 시작하지 않는다. `Run`은 같은 계획을 사용하지만, 대상 프로젝트에 `INTENT_LAYER_AGENT_RUN=1`이 설정되어 있을 때만 실제 spawn한다.
+`Plan`은 `.intent/agent/task_*.md`에서 실행 명령만 만든다. 외부 process는 시작하지 않는다. `Run`은 같은 계획을 사용하지만, 대상 프로젝트 설정에서 Agent 실행이 켜져 있거나 `INTENT_LAYER_AGENT_RUN=1`이 설정되어 있을 때만 실제 spawn한다.
 
 현재 기본 command plan:
 

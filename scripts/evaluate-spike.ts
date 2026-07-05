@@ -103,6 +103,9 @@ interface PackageSmokeResult {
   installedViteDevServerSettingsDensity: string | null;
   installedViteDevServerSettingsDefaultCollapsed: boolean;
   installedViteDevServerSettingsAutoOpenSetup: boolean;
+  installedViteDevServerSettingsAgentRunEnabled: boolean;
+  installedViteDevServerSetupAgentRunEnabled: boolean;
+  installedViteDevServerSetupAgentRunSource: string | null;
   installedViteDevServerSettingsCodexCommand: string | null;
   installedViteDevServerSettingsClaudeCommand: string | null;
   installedViteDevServerSettingsCommandSource: string | null;
@@ -592,6 +595,7 @@ function packageSmoke(): PackageSmokeResult {
       "      autoOpenSetup: false",
       "    },",
       "    agent: {",
+      "      runEnabled: true,",
       "      codexCommand: \"codex-custom\",",
       "      claudeCommand: \"claude-custom\"",
       "    }",
@@ -605,6 +609,9 @@ function packageSmoke(): PackageSmokeResult {
       "    settingsAfterJson?.settings?.overlay?.density === \"compact\" &&",
       "    settingsAfterJson?.settings?.overlay?.defaultCollapsed === true &&",
       "    settingsAfterJson?.settings?.overlay?.autoOpenSetup === false &&",
+      "    settingsAfterJson?.settings?.agent?.runEnabled === true &&",
+      "    settingsAfterJson?.agent?.runEnabled === true &&",
+      "    settingsAfterJson?.agent?.runEnabledSource === \"settings\" &&",
       "    settingsAfterJson?.settings?.agent?.codexCommand === \"codex-custom\" &&",
       "    settingsAfterJson?.settings?.agent?.claudeCommand === \"claude-custom\" &&",
       "    settingsAfterJson?.agent?.codexCommand === \"codex-custom\" &&",
@@ -810,6 +817,9 @@ function packageSmoke(): PackageSmokeResult {
       "    settingsDensity: settingsAfterJson?.settings?.overlay?.density ?? null,",
       "    settingsDefaultCollapsed: settingsAfterJson?.settings?.overlay?.defaultCollapsed === true,",
       "    settingsAutoOpenSetup: settingsAfterJson?.settings?.overlay?.autoOpenSetup === true,",
+      "    settingsAgentRunEnabled: settingsAfterJson?.settings?.agent?.runEnabled ?? null,",
+      "    setupAgentRunEnabled: settingsAfterJson?.agent?.runEnabled ?? null,",
+      "    setupAgentRunSource: settingsAfterJson?.agent?.runEnabledSource ?? null,",
       "    settingsCodexCommand: settingsAfterJson?.settings?.agent?.codexCommand ?? null,",
       "    settingsClaudeCommand: settingsAfterJson?.settings?.agent?.claudeCommand ?? null,",
       "    settingsCommandSource: settingsAfterJson?.agent?.codexCommandSource ?? null,",
@@ -887,6 +897,9 @@ function packageSmoke(): PackageSmokeResult {
       "    settingsDensity: null,",
       "    settingsDefaultCollapsed: false,",
       "    settingsAutoOpenSetup: false,",
+      "    settingsAgentRunEnabled: false,",
+      "    setupAgentRunEnabled: false,",
+      "    setupAgentRunSource: null,",
       "    settingsCodexCommand: null,",
       "    settingsClaudeCommand: null,",
       "    settingsCommandSource: null,",
@@ -960,6 +973,9 @@ function packageSmoke(): PackageSmokeResult {
     settingsDensity?: string | null;
     settingsDefaultCollapsed?: boolean;
     settingsAutoOpenSetup?: boolean;
+    settingsAgentRunEnabled?: boolean | null;
+    setupAgentRunEnabled?: boolean | null;
+    setupAgentRunSource?: string | null;
     settingsCodexCommand?: string | null;
     settingsClaudeCommand?: string | null;
     settingsCommandSource?: string | null;
@@ -1089,6 +1105,12 @@ function packageSmoke(): PackageSmokeResult {
       installedViteDevServerReport.settingsDefaultCollapsed === true,
     installedViteDevServerSettingsAutoOpenSetup:
       installedViteDevServerReport.settingsAutoOpenSetup === true,
+    installedViteDevServerSettingsAgentRunEnabled:
+      installedViteDevServerReport.settingsAgentRunEnabled === true,
+    installedViteDevServerSetupAgentRunEnabled:
+      installedViteDevServerReport.setupAgentRunEnabled === true,
+    installedViteDevServerSetupAgentRunSource:
+      installedViteDevServerReport.setupAgentRunSource ?? null,
     installedViteDevServerSettingsCodexCommand:
       installedViteDevServerReport.settingsCodexCommand ?? null,
     installedViteDevServerSettingsClaudeCommand:
@@ -5636,6 +5658,9 @@ const report = {
       packageInstallSmoke.installedViteDevServerSettingsDensity === "compact" &&
       packageInstallSmoke.installedViteDevServerSettingsDefaultCollapsed &&
       !packageInstallSmoke.installedViteDevServerSettingsAutoOpenSetup &&
+      packageInstallSmoke.installedViteDevServerSettingsAgentRunEnabled &&
+      packageInstallSmoke.installedViteDevServerSetupAgentRunEnabled &&
+      packageInstallSmoke.installedViteDevServerSetupAgentRunSource === "settings" &&
       packageInstallSmoke.installedViteDevServerSettingsCodexCommand === "codex-custom" &&
       packageInstallSmoke.installedViteDevServerSettingsClaudeCommand === "claude-custom" &&
       packageInstallSmoke.installedViteDevServerSettingsCommandSource === "settings" &&

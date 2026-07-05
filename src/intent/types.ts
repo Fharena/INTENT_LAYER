@@ -78,6 +78,7 @@ export type IntentLayerLanguage = "ko" | "en";
 export type IntentOverlayDock = "left" | "right";
 export type IntentOverlayDensity = "comfortable" | "compact";
 export type IntentAgentCommandSource = "settings" | "env" | "default";
+export type IntentAgentRunSource = "settings" | "env" | "locked";
 
 export interface IntentOverlaySettings {
   dock: IntentOverlayDock;
@@ -87,6 +88,7 @@ export interface IntentOverlaySettings {
 }
 
 export interface IntentAgentSettings {
+  runEnabled: boolean;
   codexCommand: string | null;
   claudeCommand: string | null;
 }
@@ -120,6 +122,7 @@ export interface IntentSetupStatus {
   checks: IntentSetupCheck[];
   agent: {
     runEnabled: boolean;
+    runEnabledSource: IntentAgentRunSource;
     codexCommand: string;
     codexCommandSource: IntentAgentCommandSource;
     codexAvailable: boolean;

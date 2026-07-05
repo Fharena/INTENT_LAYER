@@ -35,7 +35,7 @@ Keep this file updated when the user's operating preferences change.
 - First-run setup should happen in the browser overlay whenever possible: language choice, `.intent` workspace creation, and Agent hook readiness should be visible without extra CLI steps.
 - The same overlay path should remain usable as mid-session Settings: language, panel preferences, onboarding reset, and Agent command settings should be editable without extra CLI steps.
 - Korean UI support is a product requirement. Keep English available for external contributors, but make Korean practical and complete enough for the target user.
-- When integrating external agents, default to command planning. Directly spawning Codex/Claude must remain opt-in through `INTENT_LAYER_AGENT_RUN=1`.
+- When integrating external agents, default to command planning. Directly spawning Codex/Claude must remain opt-in through `.intent/settings.json` Agent run settings or `INTENT_LAYER_AGENT_RUN=1`.
 - Reused component edits must clearly show shared-source scope. If one source binding affects multiple rendered instances, surface that count in the overlay.
 
 ## Documentation Rules

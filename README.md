@@ -141,7 +141,7 @@ The demo currently supports:
 - revert conflict artifact output at `.intent/conflicts/*.intent-conflict.json` when undo cannot safely restore the stored token
 - undo conflict list and discard-pending-undo resolution flow in the overlay
 - structured agent handoff task generation at `.intent/agent/task_*.md`
-- opt-in Codex/Claude launch planning from `.intent/agent/task_*.md`; direct spawn requires `INTENT_LAYER_AGENT_RUN=1`
+- opt-in Codex/Claude launch planning from `.intent/agent/task_*.md`; direct spawn requires Agent run enabled in settings or `INTENT_LAYER_AGENT_RUN=1`
 - structured agent result artifact generation at `.intent/agent/result_*.md`
 - source hash validation before patching
 - minimal `.intent/operations/*.intent-op.json` and `.intent/diffs/*.intent-diff.yml` output after patch apply

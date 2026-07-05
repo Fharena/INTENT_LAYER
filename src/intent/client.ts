@@ -58,6 +58,8 @@ type TextKey =
   | "agentResultPlaceholder"
   | "agentRunEnabled"
   | "agentRunLockedDetail"
+  | "agentRunToggle"
+  | "agentRunToggleDetail"
   | "agentSettings"
   | "autoOpenSetup"
   | "autoOpenSetupDetail"
@@ -158,7 +160,9 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     agentResult: "결과",
     agentResultPlaceholder: "Agent가 작업한 결과를 요약해 주세요",
     agentRunEnabled: "Agent 실행이 켜져 있습니다. Run 버튼이 로컬 CLI를 시작할 수 있습니다.",
-    agentRunLockedDetail: "Agent 실행은 env lock으로 보호됩니다. 명령은 저장할 수 있지만 실제 실행은 INTENT_LAYER_AGENT_RUN=1에서만 가능합니다.",
+    agentRunLockedDetail: "Agent 실행은 잠겨 있습니다. 설정에서 켜거나 INTENT_LAYER_AGENT_RUN=1을 사용하면 실제 CLI를 시작할 수 있습니다.",
+    agentRunToggle: "Agent 실행 허용",
+    agentRunToggleDetail: "켜면 Run Codex/Claude가 로컬 CLI를 시작할 수 있습니다. 꺼져 있으면 command plan만 만듭니다.",
     agentSettings: "Agent Hooks",
     autoOpenSetup: "설정 필요 시 자동 열기",
     autoOpenSetupDetail: "workspace나 onboarding이 비어 있으면 시작할 때 설정 화면을 엽니다.",
@@ -198,7 +202,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     ready: "준비됐습니다. 요소를 선택하세요.",
     resetOnboarding: "온보딩 다시 보기",
     resetOnboardingDone: "다음 실행 때 설정 화면이 다시 열립니다",
-    runLocked: "실행은 잠겨 있습니다. INTENT_LAYER_AGENT_RUN=1일 때만 Agent CLI가 실행됩니다.",
+    runLocked: "실행은 잠겨 있습니다. 설정에서 Agent 실행을 켜거나 INTENT_LAYER_AGENT_RUN=1일 때만 CLI가 실행됩니다.",
     saveSettings: "설정 저장",
     settingsSaved: "설정을 저장했습니다",
     selectSingle: "이 렌더 인스턴스에만 연결됩니다.",
@@ -231,7 +235,9 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     agentResult: "Result",
     agentResultPlaceholder: "Summarize the agent result",
     agentRunEnabled: "Agent run is enabled. Run buttons may start local CLIs.",
-    agentRunLockedDetail: "Agent run is protected by an env lock. Commands can be saved, but CLIs run only when INTENT_LAYER_AGENT_RUN=1 is set.",
+    agentRunLockedDetail: "Agent run is locked. Enable it in settings or set INTENT_LAYER_AGENT_RUN=1 to start local CLIs.",
+    agentRunToggle: "Enable Agent run",
+    agentRunToggleDetail: "When enabled, Run Codex/Claude may start local CLIs. When disabled, they only create command plans.",
     agentSettings: "Agent Hooks",
     autoOpenSetup: "Open setup when needed",
     autoOpenSetupDetail: "Open the setup view on startup when the workspace or onboarding is incomplete.",
@@ -271,7 +277,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     ready: "Ready. Start by picking an element.",
     resetOnboarding: "Show onboarding again",
     resetOnboardingDone: "Setup will open again on the next run",
-    runLocked: "Agent run is locked. Agent CLIs run only when INTENT_LAYER_AGENT_RUN=1 is set.",
+    runLocked: "Agent run is locked. Agent CLIs run only when enabled in settings or INTENT_LAYER_AGENT_RUN=1 is set.",
     saveSettings: "Save settings",
     settingsSaved: "Settings saved",
     selectSingle: "Affects this rendered instance.",
@@ -1244,6 +1250,7 @@ function renderSetupPanel(
     updatedAt: new Date().toISOString(),
     overlay: overlaySettings,
     agent: {
+      runEnabled: false,
       codexCommand: null,
       claudeCommand: null
     }
@@ -1253,6 +1260,7 @@ function renderSetupPanel(
   let draftDensity = settings.overlay.density;
   let draftDefaultCollapsed = settings.overlay.defaultCollapsed;
   let draftAutoOpenSetup = settings.overlay.autoOpenSetup;
+  let draftAgentRunEnabled = settings.agent.runEnabled;
   let draftCodexCommand = settings.agent.codexCommand ?? "";
   let draftClaudeCommand = settings.agent.claudeCommand ?? "";
 
@@ -1264,6 +1272,7 @@ function renderSetupPanel(
   });
 
   const currentAgentDraft = () => ({
+    runEnabled: draftAgentRunEnabled,
     codexCommand: draftCodexCommand.trim() || null,
     claudeCommand: draftClaudeCommand.trim() || null
   });
@@ -1421,6 +1430,13 @@ function renderSetupPanel(
   agentNote.textContent = status?.agent.runEnabled ? t("agentRunEnabled") : t("agentRunLockedDetail");
   const codexInput = createTextInput(settings.agent.codexCommand ?? "", t("commandInputPlaceholder"));
   const claudeInput = createTextInput(settings.agent.claudeCommand ?? "", t("commandInputPlaceholder"));
+  const runToggle = createToggleButton(draftAgentRunEnabled);
+  runToggle.addEventListener("click", () => {
+    draftAgentRunEnabled = !draftAgentRunEnabled;
+    draftCodexCommand = codexInput.value;
+    draftClaudeCommand = claudeInput.value;
+    void saveDraft(false);
+  });
   codexInput.addEventListener("input", () => {
     draftCodexCommand = codexInput.value;
   });
@@ -1440,11 +1456,18 @@ function renderSetupPanel(
     agent.textContent = [
       `Codex: ${status.agent.codexAvailable ? "ready" : "plan only"} (${status.agent.codexCommand}, ${status.agent.codexCommandSource})`,
       `Claude: ${status.agent.claudeAvailable ? "ready" : "plan only"} (${status.agent.claudeCommand}, ${status.agent.claudeCommandSource})`,
-      status.agent.runEnabled ? "agent run: enabled" : "agent run: locked"
+      status.agent.runEnabled
+        ? `agent run: enabled (${status.agent.runEnabledSource})`
+        : "agent run: locked"
     ].join("\n");
     commandGrid.appendChild(agent);
   }
-  agentSection.append(agentTitle, agentNote, commandGrid);
+  agentSection.append(
+    agentTitle,
+    agentNote,
+    createSettingRow(t("agentRunToggle"), t("agentRunToggleDetail"), runToggle),
+    commandGrid
+  );
 
   const actions = document.createElement("div");
   actions.className = "intent-layer-actions";
@@ -1486,7 +1509,7 @@ async function saveSetup(
   patch: {
     language?: IntentLayerLanguage;
     overlay?: IntentOverlaySettings;
-    agent?: { codexCommand: string | null; claudeCommand: string | null };
+    agent?: { runEnabled: boolean; codexCommand: string | null; claudeCommand: string | null };
     resetOnboarding?: boolean;
   } = {}
 ) {

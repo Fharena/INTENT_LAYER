@@ -82,11 +82,11 @@ On first run, the Intent Layer panel opens a setup view. Use it to:
 - create the `.intent/` workspace and schema files
 - write `.intent/settings.json`
 - see whether source bindings have been generated
-- see whether Codex/Claude are available and whether Agent run mode is locked
+- see whether Codex/Claude are available and whether Agent run mode is enabled or locked
 
 No `init` command is required for the default GUI path.
 
-After setup, reopen the same view with the panel header `Setup` button to change language, panel preferences, Agent commands, or to show onboarding again.
+After setup, reopen the same view with the panel header `Setup` button to change language, panel preferences, Agent run permission, Agent commands, or to show onboarding again.
 
 CLI diagnostics remain available when you want a repeatable report:
 
@@ -160,7 +160,7 @@ Agent handoff -> Create task -> Plan Codex / Plan Claude
 Agent handoff -> Run Codex / Run Claude
 ```
 
-`Plan` creates a command plan from `.intent/agent/task_*.md` without starting an external process. `Run` uses the same plan, but direct spawning is disabled unless the target project has `INTENT_LAYER_AGENT_RUN=1`.
+`Plan` creates a command plan from `.intent/agent/task_*.md` without starting an external process. `Run` uses the same plan, but direct spawning is disabled unless Agent run is enabled in the target project settings or `INTENT_LAYER_AGENT_RUN=1` is set.
 
 The current default command plans are:
 

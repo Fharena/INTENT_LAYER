@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type {
   IntentAgentCommandSource,
+  IntentAgentRunSource,
   IntentAgentSettings,
   IntentLayerLanguage,
   IntentLayerSettings,
@@ -64,6 +65,7 @@ export function defaultIntentSettings(language: IntentLayerLanguage = "en"): Int
       autoOpenSetup: true
     },
     agent: {
+      runEnabled: false,
       codexCommand: null,
       claudeCommand: null
     }
@@ -83,6 +85,7 @@ function normalizeOverlaySettings(value: unknown): IntentOverlaySettings {
 function normalizeAgentSettings(value: unknown): IntentAgentSettings {
   const raw = value && typeof value === "object" ? (value as Partial<IntentAgentSettings>) : {};
   return {
+    runEnabled: normalizeBoolean(raw.runEnabled, false),
     codexCommand: normalizeCommand(raw.codexCommand),
     claudeCommand: normalizeCommand(raw.claudeCommand)
   };
@@ -291,6 +294,20 @@ export function resolveAgentCommands(rootDir: string) {
   };
 }
 
+export function resolveAgentRunMode(rootDir: string): {
+  enabled: boolean;
+  source: IntentAgentRunSource;
+} {
+  const settings = readIntentSettings(rootDir) ?? defaultIntentSettings();
+  if (process.env.INTENT_LAYER_AGENT_RUN === "1") {
+    return { enabled: true, source: "env" };
+  }
+  if (settings.agent.runEnabled) {
+    return { enabled: true, source: "settings" };
+  }
+  return { enabled: false, source: "locked" };
+}
+
 export function intentSetupStatus(
   rootDir: string,
   options: { graphEntryCount?: number; language?: IntentLayerLanguage } = {}
@@ -316,6 +333,7 @@ export function intentSetupStatus(
   const graphEntryCount = options.graphEntryCount ?? 0;
   const graphReady = graphEntryCount > 0 || fs.existsSync(path.join(intentDir, "graph.intent.json"));
   const agentCommands = resolveAgentCommands(rootDir);
+  const agentRunMode = resolveAgentRunMode(rootDir);
   const codexCommand = agentCommands.codex.command;
   const claudeCommand = agentCommands.claude.command;
 
@@ -350,15 +368,16 @@ export function intentSetupStatus(
       },
       {
         name: "agent-run",
-        status: process.env.INTENT_LAYER_AGENT_RUN === "1" ? "ready" : "warn",
+        status: agentRunMode.enabled ? "ready" : "warn",
         detail:
-          process.env.INTENT_LAYER_AGENT_RUN === "1"
-            ? "Agent run is enabled. Run buttons may spawn local CLIs."
-            : "Agent run is locked. Run buttons will show command plans until INTENT_LAYER_AGENT_RUN=1 is set."
+          agentRunMode.enabled
+            ? `Agent run is enabled by ${agentRunMode.source}. Run buttons may spawn local CLIs.`
+            : "Agent run is locked. Enable it in settings or set INTENT_LAYER_AGENT_RUN=1 to spawn local CLIs."
       }
     ],
     agent: {
-      runEnabled: process.env.INTENT_LAYER_AGENT_RUN === "1",
+      runEnabled: agentRunMode.enabled,
+      runEnabledSource: agentRunMode.source,
       codexCommand,
       codexCommandSource: agentCommands.codex.source,
       codexAvailable: executableAvailable(codexCommand, rootDir),

@@ -10,9 +10,9 @@ Principles:
 
 - Once `intentLayer()` is registered in Vite, the browser panel guides setup.
 - The panel can create the `.intent/` workspace.
-- The panel stores language, panel position/density, startup collapse, setup auto-open, and Agent commands in `.intent/settings.json`.
+- The panel stores language, panel position/density, startup collapse, setup auto-open, Agent run permission, and Agent commands in `.intent/settings.json`.
 - Codex/Claude hooks default to command planning.
-- Direct Agent execution is only available when `INTENT_LAYER_AGENT_RUN=1` is set.
+- Direct Agent execution is only available when enabled in settings or when `INTENT_LAYER_AGENT_RUN=1` is set.
 
 ## New Vite Project Flow
 
@@ -37,6 +37,7 @@ The GUI can currently change:
 - Panel density: comfortable / compact
 - Start minimized
 - Open setup when needed
+- Enable Agent run
 - Codex command
 - Claude command
 - Show onboarding again
@@ -64,7 +65,7 @@ These produce a command plan only. No external process is started.
 Run Codex / Run Claude
 ```
 
-These use the same plan, but only spawn a local CLI when `INTENT_LAYER_AGENT_RUN=1` is set. Otherwise, the panel explains that execution is locked and shows the command plan.
+These use the same plan, but only spawn a local CLI when Agent run is enabled in settings or `INTENT_LAYER_AGENT_RUN=1` is set. Otherwise, the panel explains that execution is locked and shows the command plan.
 
 ## Files Written
 
@@ -94,6 +95,7 @@ Example `settings.json`:
     "autoOpenSetup": true
   },
   "agent": {
+    "runEnabled": false,
     "codexCommand": null,
     "claudeCommand": null
   }
@@ -103,6 +105,6 @@ Example `settings.json`:
 ## Remaining UX Work
 
 - The tool does not edit Vite config automatically yet. The user still registers the plugin once.
-- Direct Agent execution remains protected by the `INTENT_LAYER_AGENT_RUN=1` env lock, not by a GUI toggle.
+- Direct Agent execution is controlled by the GUI setting, with `INTENT_LAYER_AGENT_RUN=1` still available as an automation/CI override.
 - Next.js support remains a separate adapter task.
 - Custom component call-sites and forwarded `className` support belong to the next React compatibility roadmap.

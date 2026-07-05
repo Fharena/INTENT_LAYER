@@ -10,9 +10,9 @@
 
 - Vite 설정에 `intentLayer()`만 등록하면 브라우저 패널이 설정을 안내한다.
 - `.intent/` workspace 생성은 패널에서 처리한다.
-- 언어, 패널 위치/밀도, 시작 시 접기, setup 자동 열기, Agent command는 패널에서 바꾸고 `.intent/settings.json`에 저장한다.
+- 언어, 패널 위치/밀도, 시작 시 접기, setup 자동 열기, Agent 실행 허용, Agent command는 패널에서 바꾸고 `.intent/settings.json`에 저장한다.
 - Codex/Claude hook은 기본적으로 실행하지 않고 command plan을 보여준다.
-- 실제 Agent 실행은 `INTENT_LAYER_AGENT_RUN=1`이 설정된 경우에만 열린다.
+- 실제 Agent 실행은 설정에서 명시적으로 켜거나 `INTENT_LAYER_AGENT_RUN=1`이 설정된 경우에만 열린다.
 
 ## 새 Vite 프로젝트 기준 흐름
 
@@ -37,6 +37,7 @@
 - 패널 밀도: 기본 / 컴팩트
 - 시작 시 접기
 - 설정 필요 시 setup 자동 열기
+- Agent 실행 허용
 - Codex command
 - Claude command
 - 온보딩 다시 보기
@@ -64,7 +65,7 @@ Plan Codex / Plan Claude
 Run Codex / Run Claude
 ```
 
-같은 명령 계획을 사용하지만, 환경변수 `INTENT_LAYER_AGENT_RUN=1`이 있을 때만 실제 CLI를 spawn한다. 설정되지 않았다면 패널은 한국어로 실행 잠김 상태를 보여주고 command plan만 표시한다.
+같은 명령 계획을 사용하지만, 설정의 `Agent 실행 허용`이 켜져 있거나 환경변수 `INTENT_LAYER_AGENT_RUN=1`이 있을 때만 실제 CLI를 spawn한다. 둘 다 꺼져 있다면 패널은 한국어로 실행 잠김 상태를 보여주고 command plan만 표시한다.
 
 ## 저장되는 파일
 
@@ -94,6 +95,7 @@ Run Codex / Run Claude
     "autoOpenSetup": true
   },
   "agent": {
+    "runEnabled": false,
     "codexCommand": null,
     "claudeCommand": null
   }
@@ -103,6 +105,6 @@ Run Codex / Run Claude
 ## 아직 남은 UX 과제
 
 - Vite config 자동 수정은 아직 하지 않는다. 사용자가 plugin import/call을 한 번은 추가해야 한다.
-- Agent 실제 실행 허용은 GUI 설정이 아니라 여전히 `INTENT_LAYER_AGENT_RUN=1` env lock으로 보호한다.
+- Agent 실제 실행 허용은 GUI 설정에서 켤 수 있고, 자동화/CI에서는 `INTENT_LAYER_AGENT_RUN=1` env override로도 열 수 있다.
 - Next.js adapter는 아직 별도 과제다.
 - custom component call-site와 forwarded `className`은 다음 React compatibility roadmap에서 확장한다.

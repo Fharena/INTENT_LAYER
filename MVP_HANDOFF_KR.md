@@ -135,7 +135,7 @@ agent task는 overlay 또는 CLI에서 Codex/Claude 실행 계획으로 바로 �
 | Claude plan 시간 | 0.403ms |
 | 기본 실행 상태 | `executed=false` |
 
-실제 process spawn은 `INTENT_LAYER_AGENT_RUN=1`일 때만 허용한다. 기본 UX는 안전한 command plan 생성이다.
+실제 process spawn은 `.intent/settings.json`에서 Agent 실행이 켜져 있거나 `INTENT_LAYER_AGENT_RUN=1`일 때만 허용한다. 기본 UX는 안전한 command plan 생성이다.
 
 ## 알려진 한계
 
