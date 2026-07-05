@@ -187,7 +187,7 @@ npm run import:external-corpus -- <external-react-project-or-samples>
 npm run analyze:external-corpus
 ```
 
-외부 corpus 복사본은 `.intent/external-corpus/` 아래에 저장하고 커밋하지 않는다.
+외부 corpus 복사본은 `.intent/external-corpus*/` 아래에 저장하고 커밋하지 않는다.
 기본 리포트는 `reports/performance/external-corpus-audit.json`에 쓴다.
 
 `npm run eval`은 다음을 생성한다.
@@ -196,6 +196,9 @@ npm run analyze:external-corpus
 reports/performance/corpus-audit.json
 reports/performance/ai-corpus-audit.json
 reports/performance/spike-evaluation.json
+reports/performance/external-corpus-audit.json
+reports/performance/external-corpus-skateshop-audit.json
+reports/performance/external-corpus-chatbot-ui-audit.json
 ```
 
 ## 6. Context Pack 사용
@@ -230,12 +233,12 @@ static className: 320 / 390 = 82.05%
 simple cn/clsx: 20 / 390 = 5.13%
 partial cn/clsx: 10 / 390 = 2.56%
 read-only: 40 / 390 = 10.26%
-supported direct editable coverage: 78.76%
+supported direct editable coverage: 86.53%
 ```
 
 해석:
 
-- 50개 Codex-generated corpus에서는 직접 편집 가능한 token 표면적이 50% gate를 넘었다.
+- 50개 Codex-generated corpus에서는 직접 편집 가능한 token 표면적이 86.53%로 50% gate를 넘었다.
 - read-only의 주요 원인은 variable reference 20건, property access 10건, variant function 10건이다.
 - 이 corpus는 재현 가능한 로컬 benchmark이지만, 외부 프로젝트에서 독립 수집한 corpus는 아니다.
 
@@ -247,7 +250,7 @@ supported direct editable coverage: 78.76%
 
 - 입력으로 받은 외부 React/Tailwind TSX/JSX 파일을 스캔한다.
 - `className`이 없는 파일, test/spec/story 파일, build output, `node_modules`는 기본 제외한다.
-- 선택된 파일 복사본을 `.intent/external-corpus/files/`에 저장한다.
+- 선택된 파일 복사본을 `.intent/external-corpus*/files/`에 저장한다.
 - 원본 경로, 복사본 경로, SHA-256 hash, byte 수, `className` 수를 manifest로 남긴다.
 - 같은 `analyzeClassNames` 기준으로 coverage를 계산하고 gate 결과를 JSON으로 저장한다.
 - report에는 `sample.sourceKind`, read-only 비율, 상위 unsupported reason, `gateFailures`, `mvpEvidence.usableAsMvpEvidence`를 함께 기록한다.
@@ -262,7 +265,7 @@ selected files: 3
 files scanned: 3
 className occurrences: 6
 skipped story files: 1
-supported direct editable coverage: 75.76%
+supported direct editable coverage: 84.85%
 read-only className ratio: 16.67%
 top unsupported reason: variable-reference 1
 gate failures: 0
@@ -287,17 +290,18 @@ static className: 881 / 915 = 96.28%
 simple cn/clsx: 3 / 915 = 0.33%
 partial cn/clsx: 20 / 915 = 2.19%
 read-only: 11 / 915 = 1.20%
-supported direct editable coverage: 46.21%
-static + simple editable coverage: 46.35%
-mvp evidence usable: false
-mvp evidence decision: coverage-gate-failed
+supported direct editable coverage: 77.50%
+static + simple editable coverage: 79.05%
+mvp evidence usable: true
+mvp evidence decision: mvp-evidence-ready
 ```
 
 해석:
 
-- 실패 원인은 동적 `className` 비율이 아니라 editable token taxonomy가 좁은 것이다.
-- 상위 non-editable token은 `flex`, `w-full`, `hidden`, `flex-1`, `absolute`, `h-*`, `size-*`, `relative`, `grid`, `overflow-*`, `ring-*` 계열이다.
-- 다음 단계는 agent handoff 확장이 아니라 MVP direct-edit token family를 어디까지 인정할지 정하고 같은 외부 corpus로 재측정하는 것이다.
+- 이전 실패 원인은 동적 `className` 비율이 아니라 editable token taxonomy가 좁은 것이었다.
+- spacing 변수 token, sizing, display, flex value를 좁게 추가한 뒤 독립 외부 baseline은 50% gate를 통과한다.
+- 이후 `sadmann7/skateshop` 100파일 79.46%, `mckaywrigley/chatbot-ui` 100파일 66.91%도 같은 50% gate를 통과했다.
+- 따라서 다음 단계는 token taxonomy 확대가 아니라 브라우저 환경 반복 검증과 packaging/demo cleanup이다.
 
 ### 3.3 Simple cn/clsx literal segment support
 
@@ -338,34 +342,34 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - related semantic token diff는 단순 quoted 변수 선언, imported 변수 선언, simple `cn()` / `clsx()` 변수 선언, 배열/object map/template literal literal segment를 fixture로 검증한다.
 - variant 함수 read-only binding은 같은 파일 안의 local `function` / `const` variant 선언, one-hop relative named import, tsconfig paths alias + one-hop/multi-hop named barrel re-export 뒤의 variant 선언을 related source snapshot으로 저장하고, result 기록 시 related source/semantic diff를 남긴다.
 - package smoke는 tarball install 뒤 `vite.cjs` wrapper 기반 `/vite` export로 외부 temp fixture를 transform하고 `data-intent-id`/`.intent/graph.intent.json` 생성까지 확인한다.
-- 같은 설치 폴더에서 실제 Vite dev server를 띄워 `/src/App.tsx` transform 결과, `/__intent/graph`, `/__intent/preview`, `/__intent/apply` endpoint 응답까지 HTTP로 확인한다.
-- 설치된 Vite dev server smoke는 `gap-4 -> gap-6` patch를 실제 source에 적용하고, operation/diff/log artifact 생성과 apply 후 module/graph refresh 51.556ms를 확인한다.
-- 설치된 Vite dev server smoke는 App/Header/Card 3개 TSX 파일을 graph에 올린 뒤 Card만 `gap-4 -> gap-8`로 바꾸고, graph entry 3개 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경, module/graph refresh 118.416ms를 확인한다.
+- 같은 설치 폴더에서 실제 Vite dev server를 띄워 `/src/App.tsx` transform 결과, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last` endpoint 응답까지 HTTP로 확인한다.
+- 설치된 Vite dev server smoke는 `gap-4 -> gap-6` patch를 실제 source에 적용하고, operation/diff/log artifact 생성, pending undo history, apply 후 module/graph refresh 43.512ms를 확인한다.
+- 같은 설치형 Vite dev server smoke는 `/__intent/revert-last`를 호출해 source/module/graph가 `gap-4`로 돌아오고 pending undo history가 비워지며, revert refresh가 22.674ms에 끝나는지 확인한다.
+- 설치된 Vite dev server smoke는 App/Header/Card 3개 TSX 파일을 graph에 올린 뒤 Card만 `gap-4 -> gap-8`로 바꾸고, graph entry 3개 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경, module/graph refresh 12.485ms를 확인한다.
 - `doctor` missing-plugin fixture는 Vite config에 `intentLayer()`가 빠졌을 때 exit code 1, `vite-plugin` fail 1건, `intent-layer/vite` guidance 포함을 확인한다.
 - `INSTALL_KR/EN.md`와 `FAILURE_MODES_KR/EN.md`는 package tarball에 포함되어 local tarball 설치와 실패 대응을 외부 사용자용 문구로 제공한다.
 - agent result는 선택 source window와 선택 component 범위에서 `className` semantic token diff를 기록한다.
 - component snapshot fixture는 function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens, memo, forwardRef, HOC, namespace object export 8개 case를 검증한다.
 - 아직 전체 파일 의미 변화, props/data flow 변화, variant 함수 의미 변화까지 자동 추론하지는 않는다.
 - 실제 브라우저 click-to-panel, preview, apply, revert 시간은 overlay가 `performance.now()`로 측정해 `/__intent/client-metric`에 기록한다.
-- 최신 브라우저 측정은 desktop 3회, mobile 390x844 viewport 3회로 반복했다.
-- Codex-generated 50개 React/Tailwind corpus에서는 supported direct editable coverage 78.76%를 기록했다.
-- 외부 corpus import/analyze harness는 `.intent/external-corpus/` 로컬 복사본, manifest, coverage gate를 생성할 수 있고, eval smoke에서 3개 샘플/75.76% coverage로 통과했다.
-- 독립 외부 `shadcn-ui/ui` 100파일 baseline에서는 supported direct editable coverage 46.21%로 50% gate를 통과하지 못했다.
+- 최신 브라우저 측정은 desktop 3회, mobile 390x844 viewport 3회로 반복했고, apply는 50ms 이하, revert는 MVP interaction gate 100ms 이하를 통과했다.
+- Codex-generated 50개 React/Tailwind corpus에서는 supported direct editable coverage 86.53%를 기록했다.
+- 외부 corpus import/analyze harness는 `.intent/external-corpus*/` 로컬 복사본, manifest, coverage gate를 생성할 수 있고, eval smoke에서 3개 샘플/84.85% coverage로 통과했다.
+- 독립 외부 baseline은 `shadcn-ui/ui` 77.50%, `sadmann7/skateshop` 79.46%, `mckaywrigley/chatbot-ui` 66.91%로 모두 50% gate를 통과했다.
 - 현재 fixture에서는 warm transform 5ms 목표와 cold transform 10ms 목표를 만족했다.
 - 100개 카드/401개 binding을 가진 대형 TSX stress fixture는 20ms 목표를 만족했다.
 - 100개 카드/401개 binding 반복 transform fixture에서는 semantic graph fingerprint 기반 write throttling이 통과했다.
-- 24개 TSX 파일/624개 binding generated product-sized fixture에서는 한 파일만 `gap-4 -> gap-8`로 변경해도 graph entry 수 유지, 변경 파일 token 갱신, 미변경 파일 유지, 동일 입력 `generatedAt` 안정성, changed-file transform 23.043ms를 확인했다.
-- 실제 외부 프로젝트 기반 제품급 multi-file HMR 세션에서는 cache, changed-file filtering, graph write throttling을 실제 import graph로 추가 재측정해야 한다.
+- 24개 TSX 파일/624개 binding generated product-sized fixture에서는 한 파일만 `gap-4 -> gap-8`로 변경해도 graph entry 수 유지, 변경 파일 token 갱신, 미변경 파일 유지, 동일 입력 `generatedAt` 안정성, changed-file transform 19.294ms를 확인했다.
+- 3개 독립 외부 corpus copied-file graph refresh에서는 각 24개 파일을 측정했고 `shadcn-ui/ui` 2.923ms, `sadmann7/skateshop` 2.347ms, `mckaywrigley/chatbot-ui` 3.559ms changed-file transform으로 모두 50ms 목표를 통과했다.
 
 ## 8. 다음 작업
 
 우선순위:
 
-1. `shadcn-ui/ui` 100파일 baseline의 46.21% 실패를 기준으로 MVP direct-edit Tailwind token family를 재정의한다.
-2. token taxonomy 수정 뒤 같은 독립 외부 corpus로 coverage gate를 재측정한다.
-3. external npm package source 분석 경계와 임의 깊이 cross-file/transitive variable data flow에 대한 agent handoff 문맥은 당분간 더 넓히지 않는다.
-4. 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative를 재측정한다.
-5. 실제 제품급 대형 TSX 파일과 HMR 세션에서 cache, changed-file filtering, graph write throttling을 검증한다.
+1. 다른 브라우저/runtime 환경에서 browser QA를 한 번 더 반복하고, strict revert 50ms 관측치를 계속 표시한다.
+2. 외부 corpus와 제품급 TSX 파일에서 component snapshot false-positive/false-negative를 재측정한다.
+3. MVP handoff를 위해 demo/package 경로를 정리하고 최신 수치와 한계를 같이 남긴다.
+4. 필요하면 독립 외부 corpus를 추가하되, token taxonomy 확대를 기본 다음 작업으로 두지는 않는다.
 
 ## 9. Agent Handoff와 Result
 
@@ -509,10 +513,12 @@ DELETE /__intent/client-metrics
 
 ```text
 samples: 6 total = 3 desktop + 3 mobile
-click-to-panel max: 2.3ms
-preview round trip max: 5.9ms
-apply round trip max: 32.3ms
-revert round trip max: 36.5ms
+click-to-panel max: 1.3ms
+preview round trip max: 4.9ms
+apply round trip max: 48.4ms
+revert round trip max: 53.6ms
+revert MVP gate: <= 100ms
+strict revert 50ms 관측: false
 ```
 
 결과는 `reports/performance/browser-click-metric.json`에 저장한다.

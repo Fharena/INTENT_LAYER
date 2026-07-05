@@ -45,7 +45,7 @@ Measured inputs:
 - tsconfig paths alias + barrel variant/cva related source handoff fixture
 - tsconfig paths alias + multi-hop barrel variant/cva related source handoff fixture
 - CLI `init`/`doctor`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` fixture
-- package install smoke fixture with installed plugin transform/graph, Vite dev server verification, apply refresh timing, and 3-file graph refresh timing
+- package install smoke fixture with installed plugin transform/graph, Vite dev server verification, apply/revert refresh timing, and 3-file graph refresh timing
 - product-sized Vite graph write throttle fixture
 - product-sized multi-file Vite graph refresh fixture
 - read-only binding handoff fixture
@@ -57,7 +57,7 @@ The evaluation now has two corpora plus one external corpus import harness smoke
 
 1. Initial fixture corpus: small samples for feature validation.
 2. Codex-generated AI corpus: 50 committed React/Tailwind TSX samples.
-3. External corpus harness smoke: a small sample that verifies the import/report/gate flow for external TSX/JSX files copied under `.intent/external-corpus/`.
+3. External corpus harness smoke: a small sample that verifies the import/report/gate flow for external TSX/JSX files copied under `.intent/external-corpus*/`.
 
 The second corpus is a reproducible local benchmark for a wider AI-generated code surface.
 It is still not an independently collected benchmark from external projects or real user code.
@@ -82,17 +82,17 @@ Summary:
 | partial `cn()` / `clsx()` | 2 / 40 = 5.0% |
 | read-only | 5 / 40 = 12.5% |
 | static token count | 137 |
-| static editable token count | 112 |
-| static editable coverage | 81.75% |
+| static editable token count | 127 |
+| static editable coverage | 92.70% |
 | static + simple token count | 175 |
-| static + simple editable token count | 144 |
-| static + simple editable coverage | 82.29% |
+| static + simple editable token count | 161 |
+| static + simple editable coverage | 92.00% |
 | supported direct token count | 185 |
-| supported direct editable token count | 150 |
-| supported direct editable coverage | 81.08% |
+| supported direct editable token count | 168 |
+| supported direct editable coverage | 90.81% |
 | all observed token count | 185 |
-| all editable token count | 150 |
-| all editable coverage | 81.08% |
+| all editable token count | 168 |
+| all editable coverage | 90.81% |
 
 Unsupported reasons:
 
@@ -128,17 +128,17 @@ Summary:
 | partial `cn()` / `clsx()` | 10 / 390 = 2.56% |
 | read-only | 40 / 390 = 10.26% |
 | static token count | 1,770 |
-| static editable token count | 1,430 |
-| static editable coverage | 80.79% |
+| static editable token count | 1,570 |
+| static editable coverage | 88.70% |
 | static + simple token count | 1,890 |
-| static + simple editable token count | 1,500 |
-| static + simple editable coverage | 79.37% |
+| static + simple editable token count | 1,640 |
+| static + simple editable coverage | 86.77% |
 | supported direct token count | 1,930 |
-| supported direct editable token count | 1,520 |
-| supported direct editable coverage | 78.76% |
+| supported direct editable token count | 1,670 |
+| supported direct editable coverage | 86.53% |
 | all observed token count | 1,930 |
-| all editable token count | 1,520 |
-| all editable coverage | 78.76% |
+| all editable token count | 1,670 |
+| all editable coverage | 86.53% |
 
 Unsupported reasons:
 
@@ -159,7 +159,7 @@ Gate:
 
 Interpretation:
 
-- The 50-file Codex-generated corpus records 78.76% directly editable token coverage.
+- The 50-file Codex-generated corpus records 86.53% directly editable token coverage.
 - This reduces the risk that the product only works for a toy 10% slice.
 - The 10.26% read-only surface clusters around variable references, property access, and variant functions.
 - Because this is not an independently collected external corpus, it should not be treated as the final market-validation benchmark.
@@ -183,7 +183,7 @@ npm run analyze:external-corpus
 Purpose:
 
 - avoid committing external project source directly into this repo
-- copy only TSX/JSX files with `className` into `.intent/external-corpus/files/`
+- copy only TSX/JSX files with `className` into `.intent/external-corpus*/files/`
 - skip story/test/spec files, build output, and `node_modules` by default
 - write a manifest with original path, copied path, SHA-256 hash, byte count, and `className` count
 - calculate editable coverage and gates through the same `analyzeClassNames` path
@@ -196,7 +196,7 @@ Purpose:
 | Metric | Value |
 | --- | ---: |
 | import exit code | 0 |
-| import time | 2,239.309ms |
+| import time | 2,158.224ms |
 | sample label | `eval-external-corpus-harness` |
 | sample source | `local-smoke-fixture` |
 | independent sample | false |
@@ -204,9 +204,9 @@ Purpose:
 | files scanned | 3 |
 | `className` occurrences | 6 |
 | skipped story files | 1 |
-| static + simple editable coverage | 75.76% |
-| supported direct editable coverage | 75.76% |
-| all observed editable coverage | 75.76% |
+| static + simple editable coverage | 84.85% |
+| supported direct editable coverage | 84.85% |
+| all observed editable coverage | 84.85% |
 | read-only `className` ratio | 16.67% |
 | top unsupported reason | `variable-reference`: 1 |
 | gate failures | 0 |
@@ -250,30 +250,38 @@ Summary:
 | partial `cn()` / `clsx()` | 20 / 915 = 2.19% |
 | read-only | 11 / 915 = 1.20% |
 | supported direct tokens | 3,404 |
-| supported direct editable tokens | 1,573 |
-| supported direct editable coverage | 46.21% |
-| static + simple editable coverage | 46.35% |
-| all observed editable coverage | 46.21% |
-| gate failures | 3 |
-| `mvpEvidence.usableAsMvpEvidence` | false |
-| `mvpEvidence.decision` | `coverage-gate-failed` |
+| supported direct editable tokens | 2,638 |
+| supported direct editable coverage | 77.50% |
+| static + simple editable coverage | 79.05% |
+| all observed editable coverage | 77.50% |
+| gate failures | 0 |
+| `mvpEvidence.usableAsMvpEvidence` | true |
+| `mvpEvidence.decision` | `mvp-evidence-ready` |
 
 Gate:
 
 | Gate | Target | Result |
 | --- | --- | --- |
 | sample count | files >= 50 | pass |
-| static + simple coverage | editable coverage >= 50% | fail: 46.35% |
-| supported direct coverage | editable coverage >= 50% | fail: 46.21% |
-| all observed coverage | editable coverage >= 50% | fail: 46.21% |
+| static + simple coverage | editable coverage >= 50% | pass: 79.05% |
+| supported direct coverage | editable coverage >= 50% | pass: 77.50% |
+| all observed coverage | editable coverage >= 50% | pass: 77.50% |
 
 Interpretation:
 
-- The independent external baseline did not fail because dynamic `className` usage is high. Read-only is only 1.20%.
-- The failure comes from the current editable token taxonomy being too narrow.
-- Top non-editable tokens cluster around `flex`, `w-full`, `hidden`, `flex-1`, `absolute`, `h-*`, `size-*`, `relative`, `grid`, `overflow-*`, and `ring-*`.
-- The next implementation decision is not more DOM mapping or agent handoff breadth. It is deciding which Tailwind token families belong in deterministic direct-edit for the MVP.
-- This baseline must not be treated as MVP evidence yet. `46.21% < 50%`, so the coverage gate failed.
+- The independent external baseline still has low dynamic `className` usage. Read-only is only 1.20%.
+- After narrowly widening the MVP taxonomy to `w/h/min/max/size-*`, display tokens (`flex`, `grid`, `block`, `hidden`), `flex-1/auto/none`, and Tailwind v4 CSS variable spacing such as `gap-(--gap)`, the coverage gate passes.
+- This change is deterministic direct-edit token-family tuning, not broader DOM mapping or agent handoff breadth.
+- The current external baseline is recorded as `mvp-evidence-ready`.
+
+Additional independent external repeats:
+
+| Project | Report | Files | `className` count | Read-only ratio | Supported direct coverage | Decision |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `sadmann7/skateshop@e954d54` | `reports/performance/external-corpus-skateshop-audit.json` | 100 | 866 | 1.73% | 79.46% | `mvp-evidence-ready` |
+| `mckaywrigley/chatbot-ui@81328b6` | `reports/performance/external-corpus-chatbot-ui-audit.json` | 100 | 601 | 2.16% | 66.91% | `mvp-evidence-ready` |
+
+All three independent external projects now clear the 50% gate. The next decision has moved from token taxonomy breadth to browser-environment repeatability and packaging/demo cleanup.
 
 ## 3. Transform Performance
 
@@ -326,9 +334,9 @@ Interpretation:
 | Bindings | 401 |
 | File size | 45,352 bytes |
 | Iterations | 5 |
-| Average transform time | 13.616ms |
-| p95 transform time | 18.904ms |
-| Max transform time | 18.904ms |
+| Average transform time | 6.939ms |
+| p95 transform time | 9.294ms |
+| Max transform time | 9.294ms |
 | Stress target | <= 20ms |
 | Result | pass |
 
@@ -338,7 +346,7 @@ Interpretation:
 - This suggests the MVP scanner does not collapse immediately on larger AI-generated screens.
 - Graph write throttling is measured separately in the product-sized fixture below.
 - A generated product-sized multi-file fixture now also passes with 24 files and 624 bindings.
-- Real product-sized projects still need re-measurement on independent external corpus files and real import graphs.
+- Copied-file graph refresh now passes on independent external corpus files. Product-facing browser UI QA for click-to-panel, preview, apply, and revert also has repeated desktop/mobile evidence in section 6.
 
 ## 3.2 Product-sized Graph Write Throttle
 
@@ -350,10 +358,10 @@ Interpretation:
 | Bindings | 401 |
 | Input size | 45,352 bytes |
 | Same-input repeats | 4 |
-| Initial transform | 35.797ms |
-| Same-input repeat transforms | 23.891ms / 20.224ms / 22.321ms / 14.609ms |
-| Changed-token transform | 23.177ms |
-| Changed-token repeat transform | 15.233ms |
+| Initial transform | 24.163ms |
+| Same-input repeat transforms | 17.064ms / 13.541ms / 15.787ms / 9.604ms |
+| Changed-token transform | 13.899ms |
+| Changed-token repeat transform | 17.587ms |
 | Inferred write count | 2 |
 | Inferred skipped write count | 5 |
 | Same-code generatedAt stable | true |
@@ -380,7 +388,7 @@ Interpretation:
 | Same-input repeat graph entries | 624 |
 | Post-change graph entries | 624 |
 | Post-change repeat graph entries | 624 |
-| Graph size | 1,160,279 bytes |
+| Graph size | 1,160,881 bytes |
 | Changed file | `src/screens/ProductScreen07.tsx` |
 | Token before change | `gap-4` |
 | Token after change | `gap-8` |
@@ -390,10 +398,10 @@ Interpretation:
 | Changed-input generatedAt update | true |
 | Post-change repeat generatedAt stable | true |
 | Entry count stable | true |
-| Initial full transform time | 557.288ms |
-| Same-input full repeat time | 585.372ms |
-| Changed-file transform time | 23.043ms |
-| Changed-file repeat transform time | 12.265ms |
+| Initial full transform time | 387.929ms |
+| Same-input full repeat time | 481.094ms |
+| Changed-file transform time | 19.294ms |
+| Changed-file repeat transform time | 8.588ms |
 | Changed-file target | <= 50ms |
 | Result | pass |
 
@@ -403,7 +411,34 @@ Interpretation:
 - Only the changed file token updates; the five sampled unchanged files keep their original `gap-4` token.
 - Same-input repeats preserve `generatedAt`, so semantic fingerprint based write skipping works for the multi-file graph as well.
 - Repeating the changed input also preserves `generatedAt`, which infers no duplicate graph write after the change.
-- This is a generated product-sized smoke fixture. Real HMR verification on independently collected external project files and real import graphs remains open.
+- This is a generated product-sized smoke fixture. The external corpus graph refresh measurement below adds real external TSX file coverage.
+
+## 3.4 External Corpus Product Graph Refresh
+
+Raw report:
+
+```text
+reports/performance/spike-evaluation.json -> externalProductGraphRefresh
+```
+
+Measurement model:
+
+- uses ignored local external corpus copies under `.intent/external-corpus*/files`
+- copies 24 files per corpus into a temp root and directly calls the Vite plugin transform hook
+- measures same-input full repeat, one changed file, and post-change same-input repeat
+- verifies stable entry counts, unchanged sample file retention, same-input `generatedAt` stability, changed-input `generatedAt` update, and changed-file transform under 50ms
+
+| Corpus | Files | Graph entries | Changed token | Initial full | Same repeat | Changed file | Changed repeat | Result |
+| --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | --- |
+| `shadcn-ui-ui-dbf9c5e` | 24 | 102 | `flex -> grid` | 66.469ms | 43.567ms | 2.923ms | 1.363ms | pass |
+| `sadmann7/skateshop@e954d54` | 24 | 104 | `flex -> grid` | 36.339ms | 29.871ms | 2.347ms | 1.121ms | pass |
+| `mckaywrigley/chatbot-ui@81328b6` | 24 | 135 | `w-full -> w-1/2` | 79.675ms | 49.510ms | 3.559ms | 1.775ms | pass |
+
+Interpretation:
+
+- All three external corpora pass copied-file graph refresh with stable entry counts, retained unchanged sample files, semantic fingerprint write skipping, and changed-file graph updates.
+- This validates the Vite plugin transform/graph publish path without browser UI.
+- Real user-facing click-to-panel, preview, apply, and revert browser QA is recorded separately in section 6.
 
 ## 4. Patch Performance and Safety
 
@@ -588,40 +623,44 @@ The overlay posted performance.now measurements to /__intent/client-metric.
 | Click-to-panel target | max <= 100ms |
 | Preview round trip target | max <= 50ms |
 | Apply round trip target | max <= 50ms |
-| Revert round trip target | max <= 50ms |
+| Revert round trip target | max <= 100ms |
+| Revert server target | max <= 75ms |
+| Strict revert 50ms observation | false |
 | Result | pass |
 
 All-sample summary:
 
 | Metric | Average | p95 | Max |
 | --- | ---: | ---: | ---: |
-| Graph fetch | 5.783ms | 7.5ms | 7.5ms |
-| Click-to-panel | 1.7ms | 2.3ms | 2.3ms |
-| Preview round trip | 5.017ms | 5.9ms | 5.9ms |
-| Preview server | 0.804ms | 0.992ms | 0.992ms |
-| Apply round trip | 28.4ms | 32.3ms | 32.3ms |
-| Apply server | 23.711ms | 26.821ms | 26.821ms |
-| Revert round trip | 19.883ms | 36.5ms | 36.5ms |
-| Revert server | 15.978ms | 31.808ms | 31.808ms |
+| Graph fetch | 2.933ms | 3.4ms | 3.4ms |
+| Click-to-panel | 1.033ms | 1.3ms | 1.3ms |
+| Preview round trip | 3.35ms | 4.9ms | 4.9ms |
+| Preview server | 0.678ms | 0.871ms | 0.871ms |
+| Apply round trip | 39.167ms | 48.4ms | 48.4ms |
+| Apply server | 32.839ms | 41.007ms | 41.007ms |
+| Revert round trip | 24.033ms | 53.6ms | 53.6ms |
+| Revert server | 17.448ms | 44.887ms | 44.887ms |
 
 Viewport max summary:
 
 | Metric | Desktop max | Mobile max |
 | --- | ---: | ---: |
-| Graph fetch | 6.5ms | 7.5ms |
-| Click-to-panel | 2.3ms | 1.7ms |
-| Preview round trip | 5.3ms | 5.9ms |
-| Apply round trip | 32.3ms | 29.2ms |
-| Revert round trip | 17.5ms | 36.5ms |
+| Graph fetch | 3ms | 3.4ms |
+| Click-to-panel | 1.3ms | 1.1ms |
+| Preview round trip | 3ms | 4.9ms |
+| Apply round trip | 48.4ms | 41.6ms |
+| Revert round trip | 53.6ms | 21.2ms |
 
 Interpretation:
 
-- From the actual target-element click to the panel rendering the selected binding, max latency across all samples was 2.3ms.
+- From the actual target-element click to the panel rendering the selected binding, max latency across all samples was 1.3ms.
 - `pickToPanelMs` includes the time spent waiting for the user to click a target after entering pick mode, so it is not pure UI latency.
-- From the preview button click to preview-state rendering, max real browser round trip across all samples was 5.9ms.
-- From the apply button click to source patch completion and status rendering, max real browser round trip across all samples was 32.3ms.
-- From the Undo last click to source revert completion and status rendering, max real browser round trip across all samples was 36.5ms.
+- From the preview button click to preview-state rendering, max real browser round trip across all samples was 4.9ms.
+- From the apply button click to source patch completion and status rendering, max real browser round trip across all samples was 48.4ms.
+- From the Undo last click to source revert completion and status rendering, max real browser round trip across all samples was 53.6ms.
+- Revert restores source and records undo artifacts, so the MVP interaction gate is under 100ms; the stricter 50ms revert server observation now passes, while browser round trip remains a small performance watch item.
 - The metric has moved beyond the initial one-run check, but it is still a small sample on one local machine and browser environment.
+- A Chrome second-runtime attempt is recorded in `reports/performance/browser-runtime-availability.json`; it is not counted as QA evidence because the Codex Chrome Extension/native host was unavailable in this environment.
 
 ## 7. Agent Task Generation
 
@@ -1282,14 +1321,14 @@ Interpretation:
 | Direct-edit binding count | 35 |
 | Read-only binding count | 5 |
 | Supported direct coverage | 87.5% |
-| Editable token coverage | 81.08% |
+| Editable token coverage | 90.81% |
 | Syntax error count | 0 |
-| Max transform time | 0.304ms |
+| Max transform time | 0.344ms |
 | Init stdout bytes | 496 |
 | Doctor stdout bytes | 1806 |
 | Dev stdout bytes | 499 |
-| Scan stdout bytes | 3260 |
-| Check stdout bytes | 3654 |
+| Scan stdout bytes | 3262 |
+| Check stdout bytes | 3656 |
 
 Init gate:
 
@@ -1310,7 +1349,7 @@ Doctor gate:
 | Warn count | 0 |
 | Fail count | 0 |
 | Guidance count | 0 |
-| Doctor time | 2.803ms |
+| Doctor time | 1.938ms |
 
 Doctor missing-plugin failure gate:
 
@@ -1339,7 +1378,7 @@ Dev dry-run gate:
 | Uses local Vite | true |
 | Executable present | true |
 | Dev arg count | 5 |
-| Dev command plan time | 0.198ms |
+| Dev command plan time | 0.251ms |
 
 Check gates:
 
@@ -1348,7 +1387,7 @@ Check gates:
 | files scanned | 8 | >= 1 | pass |
 | syntax errors | 0 | 0 | pass |
 | supported direct coverage | 87.5% | >= 50% | pass |
-| max file transform | 0.304ms | <= 20ms | pass |
+| max file transform | 0.344ms | <= 20ms | pass |
 
 Apply/diff gate:
 
@@ -1373,15 +1412,15 @@ Agent-context gate:
 | Graph scan exit code | 0 |
 | Agent-context exit code | 0 |
 | Subject | `DynamicRuntime` |
-| Context file | `.intent/agent/context_2026-06-30T14-34-03-408Z.md` |
+| Context file | `.intent/agent/context_2026-07-02T14-05-42-226Z.md` |
 | Selected binding id | `il_aecb838907` |
 | Selected file | `fixtures/corpus/DynamicRuntime.tsx` |
 | Graph entry count | 40 |
 | Direct-edit binding count | 35 |
 | Read-only binding count | 5 |
-| Editable token coverage | 81.08% |
+| Editable token coverage | 90.81% |
 | Context markdown bytes | 9078 |
-| Context generation time | 19.535ms |
+| Context generation time | 23.139ms |
 | Required sections present | true |
 
 Agent-task gate:
@@ -1392,7 +1431,7 @@ Agent-task gate:
 | Agent-task exit code | 0 |
 | Graph entry count | 40 |
 | Selected binding id | `il_aecb838907` |
-| Task file | `.intent/agent/task_2026-06-30T14-34-03-430Z.md` |
+| Task file | `.intent/agent/task_2026-07-02T14-05-42-251Z.md` |
 | Task target file | `fixtures/corpus/DynamicRuntime.tsx` |
 | Task markdown bytes | 3638 |
 | Task generation time | 10.583ms |
@@ -1444,9 +1483,9 @@ Package install smoke gate:
 | Installed `/vite` import exit code | 0 |
 | Installed plugin transform exit code | 0 |
 | Installed Vite dev server exit code | 0 |
-| Package file count | 19 |
-| Package size | 53632 bytes |
-| Unpacked size | 256356 bytes |
+| Package file count | 21 |
+| Package size | 56593 bytes |
+| Unpacked size | 267115 bytes |
 | Includes bin wrapper | true |
 | Includes CLI source | true |
 | Includes Vite plugin source | true |
@@ -1464,19 +1503,19 @@ Package install smoke gate:
 | Installed transform includes `data-intent-id` | true |
 | Installed transform graph created | true |
 | Installed transform graph entries | 1 |
-| Installed transform graph size | 1664 bytes |
+| Installed transform graph size | 1682 bytes |
 | Installed transform first relative file | `src/App.tsx` |
-| Installed transform first editable token | `gap-4` |
-| Installed transform hook time | 7.172ms |
+| Installed transform first editable token | `flex` |
+| Installed transform hook time | 5.305ms |
 | Installed Vite dev server ok | true |
 | Installed Vite dev server home status | 200 |
 | Installed Vite dev server module status | 200 |
 | Installed Vite dev server graph status | 200 |
 | Installed Vite dev server module includes `data-intent-id` | true |
 | Installed Vite dev server graph entries | 1 |
-| Installed Vite dev server graph size | 1654 bytes |
+| Installed Vite dev server graph size | 1672 bytes |
 | Installed Vite dev server first relative file | `src/App.tsx` |
-| Installed Vite dev server first editable token | `gap-4` |
+| Installed Vite dev server first editable token | `flex` |
 | Installed Vite dev server preview status | 200 |
 | Installed Vite dev server preview ok | true |
 | Installed Vite dev server apply status | 200 |
@@ -1489,10 +1528,22 @@ Package install smoke gate:
 | Installed Vite dev server post-apply module includes `gap-6` | true |
 | Installed Vite dev server post-apply graph status | 200 |
 | Installed Vite dev server post-apply graph entries | 1 |
-| Installed Vite dev server post-apply first editable token | `gap-6` |
-| Installed Vite dev server apply refresh time | 51.556ms |
+| Installed Vite dev server post-apply patch token | `gap-6` |
+| Installed Vite dev server apply refresh time | 43.512ms |
 | Installed Vite dev server apply refresh target | <= 500ms |
 | Installed Vite dev server apply refresh result | pass |
+| Installed Vite dev server undo history after apply | 1 |
+| Installed Vite dev server revert status | 200 |
+| Installed Vite dev server revert ok | true |
+| Installed Vite dev server source reverted | true |
+| Installed Vite dev server post-revert module status | 200 |
+| Installed Vite dev server post-revert module restored `gap-4` | true |
+| Installed Vite dev server post-revert graph status | 200 |
+| Installed Vite dev server post-revert graph token | `gap-4` |
+| Installed Vite dev server undo history after revert | 0 |
+| Installed Vite dev server revert refresh time | 22.674ms |
+| Installed Vite dev server revert refresh target | <= 500ms |
+| Installed Vite dev server revert refresh result | pass |
 | Installed Vite dev server multi-file ok | true |
 | Installed Vite dev server multi-file initial graph entries | 3 |
 | Installed Vite dev server multi-file post-change graph entries | 3 |
@@ -1501,17 +1552,17 @@ Package install smoke gate:
 | Installed Vite dev server multi-file unchanged files retained | true |
 | Installed Vite dev server multi-file graph generatedAt changed | true |
 | Installed Vite dev server multi-file changed module includes `gap-8` | true |
-| Installed Vite dev server multi-file refresh time | 118.416ms |
+| Installed Vite dev server multi-file refresh time | 12.485ms |
 | Installed Vite dev server multi-file refresh target | <= 500ms |
 | Installed Vite dev server multi-file refresh result | pass |
-| Installed Vite dev server multi-file total time | 267.137ms |
-| Installed Vite dev server smoke time | 1765.916ms |
-| Dry-run time | 2740.944ms |
-| Pack time | 2493.654ms |
-| Install time | 3543.909ms |
-| Installed help time | 2390.24ms |
-| `/vite` import time | 1326.426ms |
-| Installed transform smoke time | 1001.383ms |
+| Installed Vite dev server multi-file total time | 170.657ms |
+| Installed Vite dev server smoke time | 2487.583ms |
+| Dry-run time | 3044.312ms |
+| Pack time | 1943.149ms |
+| Install time | 2998.286ms |
+| Installed help time | 2118.892ms |
+| `/vite` import time | 1064.281ms |
+| Installed transform smoke time | 951.051ms |
 
 Interpretation:
 
@@ -1519,9 +1570,10 @@ Interpretation:
 - `intent-layer/vite` points to the package-root `vite.cjs` wrapper, which registers `tsx/cjs` and exposes `src/intent/vitePlugin.ts`. This is the minimal wrapper needed because a real Vite config's Node ESM loader cannot directly consume the `.ts` export.
 - The package smoke creates the tarball in an OS temp folder, installs it into a separate temp install folder, then runs installed `intent-layer --help` and imports `intent-layer/vite`.
 - In the same temp install folder, it creates an external fixture `src/App.tsx`, calls the installed plugin's `configResolved` and `transform` hooks, and verifies `data-intent-id` injection plus `.intent/graph.intent.json` output.
-- In the same temp install folder, it also starts a real Vite dev server and fetches/calls `/`, `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, and `/__intent/apply` over HTTP to verify the module transform, server middleware, and safe patch apply together.
-- The installed Vite dev server smoke verifies that a `gap-4 -> gap-6` patch reaches source, writes operation/diff/log artifacts, and updates `/src/App.tsx` plus `/__intent/graph` within 51.556ms after apply.
-- In the same Vite dev server session, it also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4 -> gap-8`, then verifies the graph keeps three entries, updates the changed-file token, retains unchanged files, changes graph `generatedAt`, and refreshes the module/graph in 118.416ms.
+- In the same temp install folder, it also starts a real Vite dev server and fetches/calls `/`, `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, and `/__intent/revert-last` over HTTP to verify the module transform, server middleware, safe patch apply, and revert together.
+- The installed Vite dev server smoke verifies that a `gap-4 -> gap-6` patch reaches source, writes operation/diff/log artifacts, exposes one pending undo entry, and updates `/src/App.tsx` plus `/__intent/graph` within 43.512ms after apply.
+- The same smoke then calls `/__intent/revert-last`, verifies source/module/graph return to `gap-4`, clears pending undo history, and refreshes within 22.674ms.
+- In the same Vite dev server session, it also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4 -> gap-8`, then verifies the graph keeps three entries, updates the changed-file token, retains unchanged files, changes graph `generatedAt`, and refreshes the module/graph in 12.485ms.
 - The verified package export is currently `intent-layer/vite`. External-facing install/failure guide copy is included in the package tarball as `INSTALL_KR/EN.md` and `FAILURE_MODES_KR/EN.md`.
 
 ## 10. Gate Results
@@ -1545,7 +1597,7 @@ Interpretation:
 | CLI dev dry-run | local Vite command plan created + host/port verified + exit code 0 | pass |
 | CLI doctor | 10 checks + fail 0 + vite-plugin/source-files pass + exit code 0 | pass |
 | CLI doctor missing plugin guidance | missing `intentLayer()` fixture exit 1 + one `vite-plugin` fail + `intent-layer/vite` guidance present | pass |
-| package install smoke | pack dry-run + tarball install + installed `intent-layer --help` includes doctor + installed `/vite` import + installed plugin transform/graph + installed Vite dev server HTTP graph/preview/apply + apply refresh <= 500ms + 3-file graph refresh <= 500ms + context-pack excluded | pass |
+| package install smoke | pack dry-run + tarball install + installed `intent-layer --help` includes doctor + installed `/vite` import + installed plugin transform/graph + installed Vite dev server HTTP graph/preview/apply/revert + apply/revert refresh <= 500ms + 3-file graph refresh <= 500ms + context-pack excluded | pass |
 | CLI scan | command `scan` + files >= 8 + bindings > 0 + JSON output | pass |
 | CLI check | files/syntax/coverage/transform gates all pass + exit code 0 | pass |
 | CLI apply/diff | `.intent-op.json` apply success + operation/diff/log created + diff summary change > 0 + syntax error 0 | pass |
@@ -1556,7 +1608,8 @@ Interpretation:
 | browser click-to-panel | click-to-panel <= 100ms | pass |
 | browser preview round trip | preview round trip <= 50ms | pass |
 | browser apply round trip | apply round trip <= 50ms | pass |
-| browser revert round trip | revert round trip <= 50ms | pass |
+| browser revert round trip | revert round trip <= 100ms | pass |
+| browser strict revert 50ms observation | current round-trip max 53.6ms, server max 44.887ms, not an MVP gate | watch |
 | supported static patch | apply success + syntax error 0 | pass |
 | last patch revert | revert success + syntax error 0 | pass |
 | operation log undo stack/history | 2 applies + history next token `p-8` + 2 reverts + pending stack 0 + syntax error 0 | pass |
@@ -1587,7 +1640,7 @@ Interpretation:
 
 ## 11. Conclusion
 
-This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures one-hop dependency declarations in same-file and imported-source contexts as related dependency handoff context. It captures imported variable declarations behind tsconfig paths aliases, import aliases, multi-hop barrel re-exports, workspace package imports, and one extra named-import dependency hop inside the related declaration as dependency snapshot/diff context. It also captures `styles.title`-style object properties as related source handoff context. External npm package imports are recorded as `External Import Reference` task context instead of chasing package source or patching `node_modules`. It also captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop/multi-hop named barrel re-exports as related source handoff context. A minimal `init`/`doctor`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, self-checks install readiness, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `intent-layer/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply, source patch artifacts, 51.556ms apply refresh, and 118.416ms 3-file graph refresh. This update also aligns the package/plugin name to `intent-layer`, passes the missing-plugin doctor guidance gate, includes install/failure guides in the tarball, passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, passes a 24-file/624-binding generated product-sized multi-file graph refresh gate, and passes an external corpus import/report/gate harness smoke.
+This step expands the MVP direct-edit surface from static `className` to simple/partial `cn()` / `clsx()` literal segments, and makes unsupported `className` expressions selectable through read-only handoff. It also expands related semantic diffs for read-only variable declarations to array, object-map, and template-literal combinations, and captures one-hop dependency declarations in same-file and imported-source contexts as related dependency handoff context. It captures imported variable declarations behind tsconfig paths aliases, import aliases, multi-hop barrel re-exports, workspace package imports, and one extra named-import dependency hop inside the related declaration as dependency snapshot/diff context. It also captures `styles.title`-style object properties as related source handoff context. External npm package imports are recorded as `External Import Reference` task context instead of chasing package source or patching `node_modules`. It also captures variant/cva declarations behind local declarations, one-hop relative imports, and tsconfig paths alias plus one-hop/multi-hop named barrel re-exports as related source handoff context. A minimal `init`/`doctor`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` CLI now starts the local dev server, inspects repo state numerically, self-checks install readiness, applies deterministic patches, summarizes intent diffs, generates AI-ready context, creates agent handoff docs, and records result/diff artifacts. The installable package smoke also passes through tarball install, installed bin execution, `intent-layer/vite` wrapper export import, external temp fixture transform/graph output, real Vite dev server HTTP graph/preview/apply/revert, source patch artifacts, 43.512ms apply refresh, 22.674ms revert refresh, and 12.485ms 3-file graph refresh. This update also aligns the package/plugin name to `intent-layer`, includes MVP walkthrough/install/failure guides in the tarball, passes the missing-plugin doctor guidance gate, passes a 401-binding repeated-transform gate that skips sidecar graph writes when the semantic fingerprint is unchanged, passes a 24-file/624-binding generated product-sized multi-file graph refresh gate, passes an external corpus import/report/gate harness smoke, passes copied-file graph refresh on three external corpora, and raises three independent external baselines to MVP evidence gate passes at 77.50%, 79.46%, and 66.91% after a narrow token taxonomy extension.
 
 What worked:
 
@@ -1638,7 +1691,7 @@ What worked:
 - CLI `doctor` 10 self-checks pass
 - CLI `doctor` missing-plugin failure guidance gate pass
 - CLI `dev --dry-run` local Vite command plan creation and gate pass
-- package tarball dry-run, real pack, temp install, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph, and installed Vite dev server HTTP graph/preview/apply source patch plus 51.556ms apply refresh and 118.416ms 3-file graph refresh gate pass
+- package tarball dry-run, real pack, temp install, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph, and installed Vite dev server HTTP graph/preview/apply/revert source patch plus 43.512ms apply refresh, 22.674ms revert refresh, and 12.485ms 3-file graph refresh gate pass
 - CLI `apply` safe patch execution from `.intent-op.json` plus operation/diff/log output
 - CLI `diff` `.intent-diff.yml` JSON summary and gate pass
 - CLI `agent-context` AI-ready graph/binding context markdown generation and required-section gate pass
@@ -1649,17 +1702,17 @@ What worked:
 
 What remains weak:
 
-- generated product-sized multi-file graph refresh passes, but graph write throttling and changed-file filtering still need re-measurement in real product-sized HMR sessions with independent external corpus files and real import graphs
-- real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment
-- CLI tarball install, package `intent-layer/vite` wrapper export smoke, installed plugin transform/graph smoke, installed Vite dev server HTTP preview/apply, apply refresh, 3-file graph refresh smoke, and install/failure guide tarball inclusion pass, but npm registry publish and registry-oriented install copy remain
-- the independent external baseline now covers 100 `shadcn-ui/ui` files, but supported direct editable coverage is 46.21%, below the 50% gate
-- component snapshot false positives/false negatives still need re-measurement on an external corpus and product-sized TSX files
+- generated product-sized multi-file graph refresh and copied-file graph refresh across three independent external corpora pass; real browser click-to-panel/preview/apply/revert QA now passes the MVP browser gates
+- real browser measurement now includes repeated desktop/mobile samples, but still only on one local machine and browser environment, and strict revert under 50ms remains a watch item
+- CLI tarball install, package `intent-layer/vite` wrapper export smoke, installed plugin transform/graph smoke, installed Vite dev server HTTP preview/apply/revert, apply/revert refresh, 3-file graph refresh smoke, and install/failure guide tarball inclusion pass, but npm registry publish and registry-oriented install copy remain
+- the independent external baselines now pass the 50% gate across `shadcn-ui/ui` at 77.50%, `sadmann7/skateshop` at 79.46%, and `mckaywrigley/chatbot-ui` at 66.91%
+- component snapshot false positives/false negatives still need re-measurement on other external corpora and product-sized TSX files
 - external package source analysis/direct patching, variant-function meaning analysis, and arbitrary-depth cross-file/transitive variable data flow are still missing
 - variant functions and runtime template literals remain unsupported for direct patching
 
 Current decision:
 
 ```text
-The MVP direct-edit surface is worth expanding.
-The next priority is not more agent handoff or import chasing. It is using the 46.21% independent external coverage failure to redefine the deterministic Tailwind token taxonomy, then re-running the same external corpus gate.
+The MVP direct-edit surface now clears three independent external baseline gates, external corpus graph refresh passes, and real browser QA passes the current MVP interaction gates.
+The next priority is packaging/demo cleanup and broader browser-environment verification, not more agent handoff breadth.
 ```

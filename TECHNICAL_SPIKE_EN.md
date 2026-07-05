@@ -188,7 +188,7 @@ npm run import:external-corpus -- <external-react-project-or-samples>
 npm run analyze:external-corpus
 ```
 
-External corpus copies are stored under `.intent/external-corpus/` and should not be committed.
+External corpus copies are stored under `.intent/external-corpus*/` and should not be committed.
 The default report is written to `reports/performance/external-corpus-audit.json`.
 
 `npm run eval` writes:
@@ -197,6 +197,9 @@ The default report is written to `reports/performance/external-corpus-audit.json
 reports/performance/corpus-audit.json
 reports/performance/ai-corpus-audit.json
 reports/performance/spike-evaluation.json
+reports/performance/external-corpus-audit.json
+reports/performance/external-corpus-skateshop-audit.json
+reports/performance/external-corpus-chatbot-ui-audit.json
 ```
 
 ## 6. Context Pack Usage
@@ -231,12 +234,12 @@ static className: 320 / 390 = 82.05%
 simple cn/clsx: 20 / 390 = 5.13%
 partial cn/clsx: 10 / 390 = 2.56%
 read-only: 40 / 390 = 10.26%
-supported direct editable coverage: 78.76%
+supported direct editable coverage: 86.53%
 ```
 
 Interpretation:
 
-- In the 50-file Codex-generated corpus, directly editable token surface clears the 50% gate.
+- In the 50-file Codex-generated corpus, directly editable token surface reaches 86.53% and clears the 50% gate.
 - Read-only cases are mainly variable references (20), property access references (10), and variant functions (10).
 - This corpus is a reproducible local benchmark, not an independently collected external benchmark.
 
@@ -248,7 +251,7 @@ Behavior:
 
 - scans external React/Tailwind TSX/JSX files from user-provided inputs
 - skips files without `className`, test/spec/story files, build output, and `node_modules` by default
-- stores selected file copies under `.intent/external-corpus/files/`
+- stores selected file copies under `.intent/external-corpus*/files/`
 - records original path, copied path, SHA-256 hash, byte count, and `className` count in a manifest
 - computes coverage with the same `analyzeClassNames` path and writes JSON gate results
 - records `sample.sourceKind`, read-only ratio, top unsupported reasons, `gateFailures`, and `mvpEvidence.usableAsMvpEvidence` in the report
@@ -263,7 +266,7 @@ selected files: 3
 files scanned: 3
 className occurrences: 6
 skipped story files: 1
-supported direct editable coverage: 75.76%
+supported direct editable coverage: 84.85%
 read-only className ratio: 16.67%
 top unsupported reason: variable-reference 1
 gate failures: 0
@@ -288,17 +291,18 @@ static className: 881 / 915 = 96.28%
 simple cn/clsx: 3 / 915 = 0.33%
 partial cn/clsx: 20 / 915 = 2.19%
 read-only: 11 / 915 = 1.20%
-supported direct editable coverage: 46.21%
-static + simple editable coverage: 46.35%
-mvp evidence usable: false
-mvp evidence decision: coverage-gate-failed
+supported direct editable coverage: 77.50%
+static + simple editable coverage: 79.05%
+mvp evidence usable: true
+mvp evidence decision: mvp-evidence-ready
 ```
 
 Interpretation:
 
-- The failure is not caused by dynamic `className` usage. It comes from a narrow editable token taxonomy.
-- Top non-editable tokens cluster around `flex`, `w-full`, `hidden`, `flex-1`, `absolute`, `h-*`, `size-*`, `relative`, `grid`, `overflow-*`, and `ring-*`.
-- The next step is not broader agent handoff. It is deciding which Tailwind token families count as deterministic MVP direct-edit, then re-running the same external corpus.
+- The earlier failure was not caused by dynamic `className` usage. It came from a narrow editable token taxonomy.
+- After narrowly adding spacing variable tokens, sizing, display, and flex values, the independent external baseline clears the 50% gate.
+- `sadmann7/skateshop` also passes the same 50% gate at 79.46% over 100 files, and `mckaywrigley/chatbot-ui` passes at 66.91% over 100 files.
+- The next step is therefore broader browser-environment repeats and packaging/demo cleanup, not more token taxonomy breadth.
 
 ### 3.3 Simple cn/clsx literal segment support
 
@@ -339,34 +343,34 @@ Support model:
 - Related semantic token diffing is covered by fixtures for simple quoted variable declarations, imported variable declarations, simple `cn()` / `clsx()` declarations, and array/object-map/template-literal declaration segments.
 - Variant-function read-only bindings store same-file local `function` / `const` variant declarations, one-hop relative named imports, and variant declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports as related source snapshots, then record related source and semantic diffs on result.
 - The package smoke now transforms an external temp fixture through the installed `vite.cjs` wrapper-backed `/vite` export after tarball install and verifies `data-intent-id` plus `.intent/graph.intent.json` output.
-- In the same install folder, it starts a real Vite dev server and verifies the `/src/App.tsx` transform response plus the `/__intent/graph`, `/__intent/preview`, and `/__intent/apply` endpoints over HTTP.
-- The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts plus post-apply module/graph refresh in 51.556ms.
-- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4` to `gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, graph `generatedAt` changes, and module/graph refresh completes in 118.416ms.
+- In the same install folder, it starts a real Vite dev server and verifies the `/src/App.tsx` transform response plus the `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, and `/__intent/revert-last` endpoints over HTTP.
+- The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts, pending undo history, and post-apply module/graph refresh in 43.512ms.
+- The same installed Vite dev server smoke calls `/__intent/revert-last`, verifies source/module/graph return to `gap-4`, clears pending undo history, and completes revert refresh in 22.674ms.
+- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4` to `gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, graph `generatedAt` changes, and module/graph refresh completes in 12.485ms.
 - The `doctor` missing-plugin fixture verifies exit code 1, one `vite-plugin` failure, and guidance that mentions `intent-layer/vite` when `intentLayer()` is missing from the Vite config.
 - `INSTALL_KR/EN.md` and `FAILURE_MODES_KR/EN.md` are included in the package tarball so local tarball setup and failure recovery have external-facing copy.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
 - Component snapshot fixtures cover 8 cases: function + nested/map/conditional/fragment, arrow block, arrow parenthesized expression, arrow JSX no-parens, memo, forwardRef, HOC, and namespace object export.
 - They still do not infer whole-file semantic changes, props/data-flow changes, or variant-function meaning automatically.
 - Real browser click-to-panel, preview, apply, and revert times are measured in the overlay with `performance.now()` and posted to `/__intent/client-metric`.
-- The latest browser measurement repeats 3 desktop samples and 3 mobile 390x844 viewport samples.
-- The Codex-generated 50-file React/Tailwind corpus records 78.76% supported direct editable coverage.
-- The external corpus import/analyze harness can create local `.intent/external-corpus/` copies, a manifest, and coverage gates; its eval smoke passes with 3 samples and 75.76% supported direct coverage.
-- The independent external `shadcn-ui/ui` 100-file baseline records 46.21% supported direct editable coverage and fails the 50% gate.
+- The latest browser measurement repeats 3 desktop samples and 3 mobile 390x844 viewport samples, with apply under 50ms and revert under the 100ms MVP interaction gate.
+- The Codex-generated 50-file React/Tailwind corpus records 86.53% supported direct editable coverage.
+- The external corpus import/analyze harness can create local `.intent/external-corpus*/` copies, a manifest, and coverage gates; its eval smoke passes with 3 samples and 84.85% supported direct coverage.
+- Independent external baselines pass the 50% gate across `shadcn-ui/ui` at 77.50%, `sadmann7/skateshop` at 79.46%, and `mckaywrigley/chatbot-ui` at 66.91%.
 - Current fixtures now meet the 5ms warm transform target and the 10ms cold transform target.
 - The large TSX stress fixture with 100 cards and 401 bindings meets the 20ms stress target.
 - The repeated-transform fixture with 100 cards and 401 bindings now passes semantic graph fingerprint based write throttling.
-- A generated product-sized fixture with 24 TSX files and 624 bindings now verifies that changing only one file from `gap-4` to `gap-8` preserves graph entry count, updates the changed-file token, retains unchanged-file tokens, keeps same-input `generatedAt` stable, and completes the changed-file transform in 23.043ms.
-- Real external-project product-sized multi-file HMR sessions still need cache, changed-file filtering, and graph write throttling re-measurement with real import graphs.
+- A generated product-sized fixture with 24 TSX files and 624 bindings now verifies that changing only one file from `gap-4` to `gap-8` preserves graph entry count, updates the changed-file token, retains unchanged-file tokens, keeps same-input `generatedAt` stable, and completes the changed-file transform in 19.294ms.
+- Copied-file graph refresh across 3 independent external corpora measured 24 files each and passed the 50ms changed-file target: `shadcn-ui/ui` 2.923ms, `sadmann7/skateshop` 2.347ms, and `mckaywrigley/chatbot-ui` 3.559ms.
 
 ## 8. Next Work
 
 Priority order:
 
-1. Use the `shadcn-ui/ui` 100-file baseline's 46.21% failure to redefine the MVP direct-edit Tailwind token families.
-2. Re-run the same independent external corpus gate after the token taxonomy change.
-3. Do not widen external npm package source analysis or arbitrary-depth cross-file/transitive handoff context for now.
-4. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
-5. Validate caching, changed-file filtering, and graph write throttling on real product-sized TSX files and HMR sessions.
+1. Re-run browser QA in at least one more browser/runtime environment and keep the 50ms strict revert observation visible.
+2. Re-measure component snapshot false positives/false negatives on an external corpus and product-sized TSX files.
+3. Clean up the demo/package path for an MVP handoff, including current metrics and known limitations.
+4. Add more independent external corpora only if needed; do not make token taxonomy breadth the default next task.
 
 ## 9. Agent Handoff And Result
 
@@ -510,10 +514,12 @@ Summary:
 
 ```text
 samples: 6 total = 3 desktop + 3 mobile
-click-to-panel max: 2.3ms
-preview round trip max: 5.9ms
-apply round trip max: 32.3ms
-revert round trip max: 36.5ms
+click-to-panel max: 1.3ms
+preview round trip max: 4.9ms
+apply round trip max: 48.4ms
+revert round trip max: 53.6ms
+revert MVP gate: <= 100ms
+strict revert 50ms observation: false
 ```
 
 The result is stored in `reports/performance/browser-click-metric.json`.

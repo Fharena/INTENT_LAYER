@@ -138,14 +138,23 @@ npx intent-layer scan src --write-graph
 Latest `npm run eval` values:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.803ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 1.938ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-installed Vite apply refresh: 51.556ms
-installed 3-file graph refresh: 118.416ms
+installed Vite apply refresh: 43.512ms
+installed Vite revert refresh: 22.674ms
+installed 3-file graph refresh: 12.485ms
 package smoke: pass
 ```
 
-These are local smoke fixture numbers. Independent 50-100 project/sample validation still needs to be run separately.
+Current independent external baseline coverage:
+
+```text
+shadcn-ui/ui: 100 files, 915 className occurrences, 77.50% supported direct editable coverage
+sadmann7/skateshop: 100 files, 866 className occurrences, 79.46% supported direct editable coverage
+mckaywrigley/chatbot-ui: 100 files, 601 className occurrences, 66.91% supported direct editable coverage
+```
+
+These package numbers are local smoke fixture measurements. The external coverage reports are copied-file corpus measurements stored under `reports/performance/`; they do not commit third-party source.
 
 ## 8. Safety Boundaries
 
@@ -160,3 +169,5 @@ Direct patching runs only when:
 If those conditions are not met, the tool should create a `.intent/agent/task_*.md` handoff instead of patching directly.
 
 If something fails, start with [FAILURE_MODES_EN.md](./FAILURE_MODES_EN.md).
+
+For a user-facing demo path, follow [DEMO_WALKTHROUGH_EN.md](./DEMO_WALKTHROUGH_EN.md).

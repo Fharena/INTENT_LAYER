@@ -138,14 +138,23 @@ npx intent-layer scan src --write-graph
 최근 `npm run eval` 기준:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.803ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 1.938ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-installed Vite apply refresh: 51.556ms
-installed 3-file graph refresh: 118.416ms
+installed Vite apply refresh: 43.512ms
+installed Vite revert refresh: 22.674ms
+installed 3-file graph refresh: 12.485ms
 package smoke: pass
 ```
 
-이 수치는 local smoke fixture 기준이다. 독립 외부 프로젝트 50-100개 검증은 별도로 수행해야 한다.
+현재 독립 외부 baseline coverage:
+
+```text
+shadcn-ui/ui: 100 files, 915 className occurrences, supported direct editable coverage 77.50%
+sadmann7/skateshop: 100 files, 866 className occurrences, supported direct editable coverage 79.46%
+mckaywrigley/chatbot-ui: 100 files, 601 className occurrences, supported direct editable coverage 66.91%
+```
+
+package 수치는 local smoke fixture 기준이다. 외부 coverage report는 `reports/performance/` 아래 copied-file corpus 측정값이며, third-party source는 commit하지 않는다.
 
 ## 8. 안전 경계
 
@@ -160,3 +169,5 @@ package smoke: pass
 조건을 만족하지 않으면 직접 patch 대신 `.intent/agent/task_*.md` handoff를 만든다.
 
 문제가 생기면 [FAILURE_MODES_KR.md](./FAILURE_MODES_KR.md)를 먼저 확인한다.
+
+사용자에게 보여줄 데모 흐름은 [DEMO_WALKTHROUGH_KR.md](./DEMO_WALKTHROUGH_KR.md)를 따른다.

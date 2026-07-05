@@ -1,8 +1,11 @@
 import type { IntentToken, IntentTokenCategory } from "./types";
 
 const spacingPattern =
-  /^-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-[\w.[\]/%-]+$/;
+  /^-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-[\w.[\]/%()!-]+$/;
 const radiusPattern = /^rounded(?:-[trbl]{1,2})?(?:-[\w.[\]/%-]+)?$/;
+const sizingPattern = /^(?:w|h|min-w|min-h|max-w|max-h|size)-[\w.[\]/%()!-]+$/;
+const displayPattern = /^(?:flex|grid|block|inline|inline-block|inline-flex|hidden)$/;
+const flexValuePattern = /^flex-(?:1|auto|initial|none)$/;
 const layoutPattern =
   /^(?:grid-cols-\d+|flex-(?:row|col|wrap|nowrap)|items-[\w-]+|justify-[\w-]+|content-[\w-]+|self-[\w-]+)$/;
 const typographyPattern =
@@ -10,6 +13,9 @@ const typographyPattern =
 const colorPattern = /^(?:bg|text|border)-[\w/.[\]-]+$/;
 
 const spacingValues = ["0", "1", "2", "3", "4", "5", "6", "8", "10", "12", "16"];
+const sizingValues = ["0", "1", "2", "3", "4", "5", "6", "8", "10", "12", "16", "20", "24", "32", "40", "full"];
+const displayValues = ["block", "inline-block", "flex", "inline-flex", "grid", "hidden"];
+const flexValues = ["1", "auto", "initial", "none"];
 const radiusValues = ["none", "sm", "md", "lg", "xl", "2xl", "3xl", "full"];
 const gridColumnValues = ["1", "2", "3", "4", "5", "6"];
 const textSizeValues = ["xs", "sm", "base", "lg", "xl", "2xl", "3xl", "4xl"];
@@ -43,6 +49,7 @@ export function categorizeTailwindToken(token: string): IntentTokenCategory | nu
   let category: IntentTokenCategory | null = null;
   if (spacingPattern.test(base)) category = "spacing";
   else if (radiusPattern.test(base)) category = "radius";
+  else if (sizingPattern.test(base) || displayPattern.test(base) || flexValuePattern.test(base)) category = "layout";
   else if (layoutPattern.test(base)) category = "layout";
   else if (typographyPattern.test(base)) category = "typography";
   else if (colorPattern.test(base)) category = "color";
@@ -86,10 +93,24 @@ export function candidatesForToken(token: string): string[] {
   const { base } = splitVariant(token);
 
   const spacingMatch = base.match(
-    /^(-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y))-([\w.[\]/%-]+)$/
+    /^(-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y))-([\w.[\]/%()!-]+)$/
   );
   if (spacingMatch) {
     return spacingValues.map((value) => withVariant(token, `${spacingMatch[1]}-${value}`));
+  }
+
+  const sizingMatch = base.match(/^((?:w|h|min-w|min-h|max-w|max-h|size))-([\w.[\]/%()!-]+)$/);
+  if (sizingMatch) {
+    return sizingValues.map((value) => withVariant(token, `${sizingMatch[1]}-${value}`));
+  }
+
+  if (displayPattern.test(base)) {
+    return displayValues.map((value) => withVariant(token, value));
+  }
+
+  const flexMatch = base.match(/^(flex)-(1|auto|initial|none)$/);
+  if (flexMatch) {
+    return flexValues.map((value) => withVariant(token, `${flexMatch[1]}-${value}`));
   }
 
   const radiusMatch = base.match(/^(rounded(?:-[trbl]{1,2})?)(?:-([\w.[\]/%-]+))?$/);

@@ -16,10 +16,14 @@ Documents:
 - `TECHNICAL_SPIKE_EN.md` - English technical spike notes
 - `PERFORMANCE_EVALUATION_KR.md` - Korean numeric evaluation
 - `PERFORMANCE_EVALUATION_EN.md` - English numeric evaluation
+- `DEMO_WALKTHROUGH_KR.md` - Korean MVP demo walkthrough
+- `DEMO_WALKTHROUGH_EN.md` - English MVP demo walkthrough
 - `INSTALL_KR.md` - Korean install guide
 - `INSTALL_EN.md` - English install guide
 - `FAILURE_MODES_KR.md` - Korean failure mode guide
 - `FAILURE_MODES_EN.md` - English failure mode guide
+- `MVP_HANDOFF_KR.md` - Korean MVP candidate status and handoff
+- `MVP_HANDOFF_EN.md` - English MVP candidate status and handoff
 - `AGENTS.md` - instructions for AI coding agents working on this product
 - `codex.md` - Codex-specific working notes and user preferences
 
@@ -87,11 +91,19 @@ npm run import:external-corpus -- <external-react-project-or-samples>
 npm run analyze:external-corpus
 ```
 
-External corpus copies are written under `.intent/external-corpus/`, and the numeric report is written to `reports/performance/external-corpus-audit.json`. The report records `sample.sourceKind`, `gateFailures`, read-only ratio, top unsupported reasons, and `mvpEvidence.usableAsMvpEvidence` so local smoke fixtures are not mistaken for independent external validation. It intentionally omits per-record external `className` source strings.
+External corpus copies are written under `.intent/external-corpus*/`, and numeric reports are written under `reports/performance/`. The reports record `sample.sourceKind`, `gateFailures`, read-only ratio, top unsupported reasons, and `mvpEvidence.usableAsMvpEvidence` so local smoke fixtures are not mistaken for independent external validation. They intentionally omit per-record external `className` source strings.
 
-Current independent external baseline: `shadcn-ui/ui` at `dbf9c5e`, 100 files, 915 `className` occurrences, 46.21% supported direct editable coverage, and `mvpEvidence.decision = coverage-gate-failed`. The read-only ratio is only 1.20%, so the next MVP decision is the deterministic Tailwind token taxonomy rather than broader dynamic `className` chasing.
+Current independent external baselines all clear the 50% MVP evidence gate:
 
-`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, apply refresh, and a 3-file graph refresh after one TSX file changes. It also verifies a missing-plugin `doctor` failure guidance fixture, generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture, a 24-file/624-binding multi-file fixture, and an external corpus import/report smoke marked as `local-smoke-fixture`.
+| Project | Files | `className` count | Supported direct editable coverage |
+| --- | ---: | ---: | ---: |
+| `shadcn-ui/ui@dbf9c5e` | 100 | 915 | 77.50% |
+| `sadmann7/skateshop@e954d54` | 100 | 866 | 79.46% |
+| `mckaywrigley/chatbot-ui@81328b6` | 100 | 601 | 66.91% |
+
+The current MVP decision has moved past token taxonomy breadth: direct-edit coverage, package smoke, graph refresh, and real browser click-to-patch QA all have numeric evidence. Remaining watch items are broader browser-environment repeats, packaging/demo cleanup, and strict revert latency under 50ms.
+
+`npm run eval` also performs a package smoke test: `npm pack --dry-run`, real tarball creation, temp-folder `npm install`, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph output against an external temp fixture, and a real Vite dev server HTTP smoke for `/src/App.tsx`, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last`, apply/revert refresh, and a 3-file graph refresh after one TSX file changes. It also verifies a missing-plugin `doctor` failure guidance fixture, generated product-sized graph refresh measurements for a 401-binding single-file throttle fixture, a 24-file/624-binding multi-file fixture, and an external corpus import/report smoke marked as `local-smoke-fixture`.
 
 The demo currently supports:
 
@@ -105,8 +117,8 @@ The demo currently supports:
 - direct Tailwind token replacement for literal segments inside simple `cn()` / `clsx()` calls
 - read-only bindings for unsupported `className` expressions so agent handoff still works
 - minimal `intent-layer init` / `doctor` / `dev` / `scan` / `check` / `apply` / `diff` / `agent-context` / `agent-task` / `agent-result` CLI surface through `src/intent/cli.ts`
-- installable `intent-layer` bin wrapper through `bin/intent-layer.cjs`, plus package `/vite` wrapper export, installed plugin transform smoke, installed Vite dev server preview/apply smoke, apply refresh timing, and installed multi-file graph refresh metrics in `reports/performance/spike-evaluation.json`
-- packaged Korean/English install guides and failure mode guides for local tarball setup, `intent-layer/vite` registration, `doctor`, safe patch rejection, read-only handoff, and external corpus evidence boundaries
+- installable `intent-layer` bin wrapper through `bin/intent-layer.cjs`, plus package `/vite` wrapper export, installed plugin transform smoke, installed Vite dev server preview/apply/revert smoke, apply/revert refresh timing, and installed multi-file graph refresh metrics in `reports/performance/spike-evaluation.json`
+- packaged Korean/English MVP walkthrough, install guides, and failure mode guides for local tarball setup, `intent-layer/vite` registration, `doctor`, safe patch rejection, read-only handoff, and external corpus evidence boundaries
 - Codex-generated 50-file React/Tailwind corpus audit for reproducible editable coverage measurement
 - operation-log-backed undo stack and pending undo history display for applied patches
 - pending undo discard and safe non-top revert controls for branch undo handling
@@ -128,8 +140,9 @@ The demo currently supports:
 - large TSX transform stress reporting for a generated 401-binding fixture
 - product-sized Vite graph write throttling measurement for repeated 401-binding transforms
 - product-sized multi-file Vite graph refresh measurement for 24 TSX files / 624 bindings with one changed file
-- external corpus import/analyze harness with local `.intent/external-corpus/` copies, manifest output, and coverage gates
-- independent `shadcn-ui/ui` external corpus baseline report showing 46.21% supported direct editable coverage against the current token taxonomy
+- copied-file external corpus graph refresh measurement for 3 independent corpora / 24 files each
+- external corpus import/analyze harness with local `.intent/external-corpus*/` copies, manifest output, and coverage gates
+- independent external corpus baseline reports showing 77.50%, 79.46%, and 66.91% supported direct editable coverage against the current token taxonomy
 
 The first evaluation result is stored in:
 
@@ -138,7 +151,10 @@ reports/performance/corpus-audit.json
 reports/performance/ai-corpus-audit.json
 reports/performance/spike-evaluation.json
 reports/performance/browser-click-metric.json
+reports/performance/browser-runtime-availability.json
 reports/performance/external-corpus-audit.json
+reports/performance/external-corpus-skateshop-audit.json
+reports/performance/external-corpus-chatbot-ui-audit.json
 ```
 
 `reports/performance/external-corpus-audit.json` is regenerated when `npm run import:external-corpus -- <path>` or `npm run analyze:external-corpus` is run against local external samples.

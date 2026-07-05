@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-30T14:33:58.895Z",
+  "generatedAt": "2026-07-03T07:18:39.964Z",
   "filesScanned": 8,
   "classNameOccurrences": 40,
   "classification": {
@@ -16,19 +16,19 @@
   },
   "tokenTotals": {
     "static": 137,
-    "staticEditable": 112,
+    "staticEditable": 127,
     "staticAndSimple": 175,
-    "staticAndSimpleEditable": 144,
+    "staticAndSimpleEditable": 161,
     "supportedDirect": 185,
-    "supportedDirectEditable": 150,
+    "supportedDirectEditable": 168,
     "all": 185,
-    "allEditable": 150
+    "allEditable": 168
   },
   "editableCoverage": {
-    "staticOnly": 0.8175,
-    "staticAndSimpleCnClsx": 0.8229,
-    "supportedDirect": 0.8108,
-    "allObservedTokens": 0.8108
+    "staticOnly": 0.927,
+    "staticAndSimpleCnClsx": 0.92,
+    "supportedDirect": 0.9081,
+    "allObservedTokens": 0.9081
   },
   "unsupportedReasons": {
     "variable-reference": 2,
@@ -73,7 +73,7 @@
         "grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3"
       ],
       "tokenCount": 7,
-      "editableTokenCount": 6
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/corpus/ResponsivePatterns.tsx",
@@ -140,7 +140,7 @@
         "flex flex-col gap-2"
       ],
       "tokenCount": 3,
-      "editableTokenCount": 2
+      "editableTokenCount": 3
     },
     {
       "file": "fixtures/corpus/ShadcnLikeCard.tsx",
@@ -174,7 +174,7 @@
         "bg-teal-50"
       ],
       "tokenCount": 6,
-      "editableTokenCount": 5
+      "editableTokenCount": 6
     },
     {
       "file": "fixtures/corpus/SimpleCnClsx.tsx",
@@ -210,7 +210,7 @@
         "grid grid-cols-3 gap-4 p-6"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/corpus/StaticDashboard.tsx",
@@ -221,7 +221,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 p-5"
       ],
       "tokenCount": 7,
-      "editableTokenCount": 5
+      "editableTokenCount": 6
     },
     {
       "file": "fixtures/corpus/StaticDashboard.tsx",
@@ -254,7 +254,7 @@
         "min-h-screen bg-slate-50 px-8 py-10 text-slate-950"
       ],
       "tokenCount": 5,
-      "editableTokenCount": 4
+      "editableTokenCount": 5
     },
     {
       "file": "fixtures/corpus/StaticLanding.tsx",
@@ -265,7 +265,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-2xl bg-white p-8 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 6
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/corpus/StaticLanding.tsx",
@@ -287,7 +287,7 @@
         "max-w-2xl text-base leading-7 text-slate-600"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/corpus/StaticLanding.tsx",
@@ -309,7 +309,7 @@
         "flex gap-4 p-6"
       ],
       "tokenCount": 3,
-      "editableTokenCount": 2
+      "editableTokenCount": 3
     },
     {
       "file": "fixtures/corpus/VariantPatterns.tsx",
@@ -338,7 +338,7 @@
         "min-h-screen bg-slate-50 px-8 py-10 text-slate-950"
       ],
       "tokenCount": 5,
-      "editableTokenCount": 4
+      "editableTokenCount": 5
     },
     {
       "file": "src/App.tsx",
@@ -349,7 +349,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8"
       ],
       "tokenCount": 5,
-      "editableTokenCount": 3
+      "editableTokenCount": 5
     },
     {
       "file": "src/App.tsx",
@@ -360,7 +360,7 @@
         "flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 6
+      "editableTokenCount": 7
     },
     {
       "file": "src/App.tsx",
@@ -393,7 +393,7 @@
         "max-w-2xl text-base leading-7 text-slate-600"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "src/App.tsx",
@@ -404,7 +404,7 @@
         "grid grid-cols-3 gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 6
+      "editableTokenCount": 7
     },
     {
       "file": "src/App.tsx",
@@ -416,7 +416,7 @@
         "ring-2 ring-teal-200"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 6
+      "editableTokenCount": 7
     },
     {
       "file": "src/App.tsx",
@@ -427,7 +427,7 @@
         "flex items-center justify-between gap-3"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "src/App.tsx",

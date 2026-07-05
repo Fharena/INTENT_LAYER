@@ -15,6 +15,8 @@
     "src/intent/",
     "vite.cjs",
     "README.md",
+    "DEMO_WALKTHROUGH_EN.md",
+    "DEMO_WALKTHROUGH_KR.md",
     "INSTALL_EN.md",
     "INSTALL_KR.md",
     "FAILURE_MODES_EN.md",

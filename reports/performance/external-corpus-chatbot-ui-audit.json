@@ -1,0 +1,107 @@
+{
+  "generatedAt": "2026-07-02T14:23:09.021Z",
+  "available": true,
+  "mode": "import",
+  "sample": {
+    "label": "mckaywrigley/chatbot-ui@81328b6",
+    "sourceKind": "independent-external",
+    "independent": true,
+    "localSmokeFixture": false,
+    "generatedFixture": false
+  },
+  "filesDir": ".intent/external-corpus-chatbot-ui/files",
+  "manifestFile": ".intent/external-corpus-chatbot-ui/manifest.json",
+  "sourceRoots": [
+    ".intent/tmp/external-repos/chatbot-ui-20260702232254"
+  ],
+  "selectedFileCount": 100,
+  "skipped": {
+    "non-jsx-tsx": 166,
+    "ignored-dir:.git": 1,
+    "no-className": 24
+  },
+  "gates": {
+    "minFilesPass": true,
+    "staticAndSimpleCoveragePass": true,
+    "supportedDirectCoveragePass": true,
+    "allObservedCoveragePass": true
+  },
+  "targets": {
+    "minFiles": 50,
+    "editableCoverage": 0.5,
+    "mvpIndependentFiles": 50
+  },
+  "summary": {
+    "classNameOccurrences": 601,
+    "directEditClassNameCount": 588,
+    "readOnlyClassNameCount": 13,
+    "readOnlyClassNameRatio": 0.0216,
+    "averageClassNamesPerFile": 6.01,
+    "editableTokenCoverage": 0.6691,
+    "topUnsupportedReasons": [
+      {
+        "reason": "complex-cn-runtime-expression",
+        "count": 6
+      },
+      {
+        "reason": "variable-reference",
+        "count": 4
+      },
+      {
+        "reason": "template-expression",
+        "count": 2
+      },
+      {
+        "reason": "property-access-reference",
+        "count": 1
+      }
+    ]
+  },
+  "gateFailures": [],
+  "mvpEvidence": {
+    "usableAsMvpEvidence": true,
+    "decision": "mvp-evidence-ready",
+    "reason": "Independent external corpus gates passed with enough files for MVP coverage evidence.",
+    "nextStep": "Use this report as the current external corpus baseline and re-run after widening direct-edit support."
+  },
+  "analysis": {
+    "generatedAt": "2026-07-02T14:23:09.020Z",
+    "filesScanned": 100,
+    "classNameOccurrences": 601,
+    "classification": {
+      "static": 487,
+      "simple-cn-clsx": 17,
+      "partial-cn-clsx": 84,
+      "read-only": 13
+    },
+    "classificationRatio": {
+      "static": 0.8103,
+      "simple-cn-clsx": 0.0283,
+      "partial-cn-clsx": 0.1398,
+      "read-only": 0.0216
+    },
+    "tokenTotals": {
+      "static": 1585,
+      "staticEditable": 1145,
+      "staticAndSimple": 1682,
+      "staticAndSimpleEditable": 1217,
+      "supportedDirect": 2421,
+      "supportedDirectEditable": 1620,
+      "all": 2421,
+      "allEditable": 1620
+    },
+    "editableCoverage": {
+      "staticOnly": 0.7224,
+      "staticAndSimpleCnClsx": 0.7235,
+      "supportedDirect": 0.6691,
+      "allObservedTokens": 0.6691
+    },
+    "unsupportedReasons": {
+      "property-access-reference": 1,
+      "variable-reference": 4,
+      "template-expression": 2,
+      "complex-cn-runtime-expression": 6
+    }
+  },
+  "caveat": "External corpus copies are local measurement artifacts under .intent/ and should not be committed without checking source licenses. This report keeps aggregate metrics and omits per-record className source strings."
+}

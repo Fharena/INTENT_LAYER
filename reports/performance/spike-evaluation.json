@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-30T14:34:18.881Z",
+  "generatedAt": "2026-07-03T07:18:56.253Z",
   "contextPackUsed": true,
   "corpus": {
-    "generatedAt": "2026-06-30T14:33:58.895Z",
+    "generatedAt": "2026-07-03T07:18:39.964Z",
     "filesScanned": 8,
     "classNameOccurrences": 40,
     "classification": {
@@ -19,19 +19,19 @@
     },
     "tokenTotals": {
       "static": 137,
-      "staticEditable": 112,
+      "staticEditable": 127,
       "staticAndSimple": 175,
-      "staticAndSimpleEditable": 144,
+      "staticAndSimpleEditable": 161,
       "supportedDirect": 185,
-      "supportedDirectEditable": 150,
+      "supportedDirectEditable": 168,
       "all": 185,
-      "allEditable": 150
+      "allEditable": 168
     },
     "editableCoverage": {
-      "staticOnly": 0.8175,
-      "staticAndSimpleCnClsx": 0.8229,
-      "supportedDirect": 0.8108,
-      "allObservedTokens": 0.8108
+      "staticOnly": 0.927,
+      "staticAndSimpleCnClsx": 0.92,
+      "supportedDirect": 0.9081,
+      "allObservedTokens": 0.9081
     },
     "unsupportedReasons": {
       "variable-reference": 2,
@@ -76,7 +76,7 @@
           "grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3"
         ],
         "tokenCount": 7,
-        "editableTokenCount": 6
+        "editableTokenCount": 7
       },
       {
         "file": "fixtures/corpus/ResponsivePatterns.tsx",
@@ -143,7 +143,7 @@
           "flex flex-col gap-2"
         ],
         "tokenCount": 3,
-        "editableTokenCount": 2
+        "editableTokenCount": 3
       },
       {
         "file": "fixtures/corpus/ShadcnLikeCard.tsx",
@@ -177,7 +177,7 @@
           "bg-teal-50"
         ],
         "tokenCount": 6,
-        "editableTokenCount": 5
+        "editableTokenCount": 6
       },
       {
         "file": "fixtures/corpus/SimpleCnClsx.tsx",
@@ -213,7 +213,7 @@
           "grid grid-cols-3 gap-4 p-6"
         ],
         "tokenCount": 4,
-        "editableTokenCount": 3
+        "editableTokenCount": 4
       },
       {
         "file": "fixtures/corpus/StaticDashboard.tsx",
@@ -224,7 +224,7 @@
           "flex flex-col gap-3 rounded-xl border border-slate-200 p-5"
         ],
         "tokenCount": 7,
-        "editableTokenCount": 5
+        "editableTokenCount": 6
       },
       {
         "file": "fixtures/corpus/StaticDashboard.tsx",
@@ -257,7 +257,7 @@
           "min-h-screen bg-slate-50 px-8 py-10 text-slate-950"
         ],
         "tokenCount": 5,
-        "editableTokenCount": 4
+        "editableTokenCount": 5
       },
       {
         "file": "fixtures/corpus/StaticLanding.tsx",
@@ -268,7 +268,7 @@
           "mx-auto flex max-w-5xl flex-col gap-8 rounded-2xl bg-white p-8 shadow-sm"
         ],
         "tokenCount": 9,
-        "editableTokenCount": 6
+        "editableTokenCount": 8
       },
       {
         "file": "fixtures/corpus/StaticLanding.tsx",
@@ -290,7 +290,7 @@
           "max-w-2xl text-base leading-7 text-slate-600"
         ],
         "tokenCount": 4,
-        "editableTokenCount": 3
+        "editableTokenCount": 4
       },
       {
         "file": "fixtures/corpus/StaticLanding.tsx",
@@ -312,7 +312,7 @@
           "flex gap-4 p-6"
         ],
         "tokenCount": 3,
-        "editableTokenCount": 2
+        "editableTokenCount": 3
       },
       {
         "file": "fixtures/corpus/VariantPatterns.tsx",
@@ -341,7 +341,7 @@
           "min-h-screen bg-slate-50 px-8 py-10 text-slate-950"
         ],
         "tokenCount": 5,
-        "editableTokenCount": 4
+        "editableTokenCount": 5
       },
       {
         "file": "src/App.tsx",
@@ -352,7 +352,7 @@
           "mx-auto flex max-w-5xl flex-col gap-8"
         ],
         "tokenCount": 5,
-        "editableTokenCount": 3
+        "editableTokenCount": 5
       },
       {
         "file": "src/App.tsx",
@@ -363,7 +363,7 @@
           "flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
         ],
         "tokenCount": 9,
-        "editableTokenCount": 6
+        "editableTokenCount": 7
       },
       {
         "file": "src/App.tsx",
@@ -396,7 +396,7 @@
           "max-w-2xl text-base leading-7 text-slate-600"
         ],
         "tokenCount": 4,
-        "editableTokenCount": 3
+        "editableTokenCount": 4
       },
       {
         "file": "src/App.tsx",
@@ -407,7 +407,7 @@
           "grid grid-cols-3 gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
         ],
         "tokenCount": 9,
-        "editableTokenCount": 6
+        "editableTokenCount": 7
       },
       {
         "file": "src/App.tsx",
@@ -419,7 +419,7 @@
           "ring-2 ring-teal-200"
         ],
         "tokenCount": 11,
-        "editableTokenCount": 6
+        "editableTokenCount": 7
       },
       {
         "file": "src/App.tsx",
@@ -430,7 +430,7 @@
           "flex items-center justify-between gap-3"
         ],
         "tokenCount": 4,
-        "editableTokenCount": 3
+        "editableTokenCount": 4
       },
       {
         "file": "src/App.tsx",
@@ -480,7 +480,7 @@
     ]
   },
   "aiGeneratedCorpus": {
-    "generatedAt": "2026-06-30T14:33:58.979Z",
+    "generatedAt": "2026-07-03T07:18:40.015Z",
     "filesScanned": 50,
     "classNameOccurrences": 390,
     "classification": {
@@ -497,19 +497,19 @@
     },
     "tokenTotals": {
       "static": 1770,
-      "staticEditable": 1430,
+      "staticEditable": 1570,
       "staticAndSimple": 1890,
-      "staticAndSimpleEditable": 1500,
+      "staticAndSimpleEditable": 1640,
       "supportedDirect": 1930,
-      "supportedDirectEditable": 1520,
+      "supportedDirectEditable": 1670,
       "all": 1930,
-      "allEditable": 1520
+      "allEditable": 1670
     },
     "editableCoverage": {
-      "staticOnly": 0.8079,
-      "staticAndSimpleCnClsx": 0.7937,
-      "supportedDirect": 0.7876,
-      "allObservedTokens": 0.7876
+      "staticOnly": 0.887,
+      "staticAndSimpleCnClsx": 0.8677,
+      "supportedDirect": 0.8653,
+      "allObservedTokens": 0.8653
     },
     "unsupportedReasons": {
       "variable-reference": 20,
@@ -530,8 +530,8 @@
   },
   "externalCorpusHarness": {
     "importExitCode": 0,
-    "importMs": 1914.436,
-    "stdoutBytes": 4727,
+    "importMs": 1220.518,
+    "stdoutBytes": 2606,
     "stderrBytes": 0,
     "available": true,
     "sample": {
@@ -547,9 +547,9 @@
     "filesScanned": 3,
     "classNameOccurrences": 6,
     "skippedStoryFiles": 1,
-    "staticAndSimpleCoverage": 0.7576,
-    "supportedDirectCoverage": 0.7576,
-    "allObservedCoverage": 0.7576,
+    "staticAndSimpleCoverage": 0.8485,
+    "supportedDirectCoverage": 0.8485,
+    "allObservedCoverage": 0.8485,
     "readOnlyClassNameRatio": 0.1667,
     "topUnsupportedReasons": [
       {
@@ -584,37 +584,37 @@
         "file": "src/App.tsx",
         "entries": 13,
         "samples": [
-          5.414,
-          1.122,
-          0.796,
-          0.759,
-          0.942
+          3.076,
+          0.528,
+          0.422,
+          0.315,
+          0.431
         ],
-        "averageMs": 1.807,
-        "p95Ms": 5.414,
-        "maxMs": 5.414
+        "averageMs": 0.954,
+        "p95Ms": 3.076,
+        "maxMs": 3.076
       },
       {
         "file": "src/main.tsx",
         "entries": 0,
         "samples": [
-          0.012,
-          0.007,
-          0.006,
+          0.008,
           0.005,
-          0.005
+          0.004,
+          0.004,
+          0.004
         ],
-        "averageMs": 0.007,
-        "p95Ms": 0.012,
-        "maxMs": 0.012
+        "averageMs": 0.005,
+        "p95Ms": 0.008,
+        "maxMs": 0.008
       }
     ],
-    "averageMs": 0.907,
-    "p95Ms": 5.414,
-    "maxMs": 5.414,
-    "warmAverageMs": 0.455,
-    "warmP95Ms": 1.122,
-    "warmMaxMs": 1.122,
+    "averageMs": 0.48,
+    "p95Ms": 3.076,
+    "maxMs": 3.076,
+    "warmAverageMs": 0.214,
+    "warmP95Ms": 0.528,
+    "warmMaxMs": 0.528,
     "warmTargetMs": 5,
     "coldTargetMs": 10
   },
@@ -625,15 +625,15 @@
     "bytes": 45352,
     "iterations": 5,
     "samples": [
-      16.993,
-      9.902,
-      8.67,
-      18.254,
-      9.06
+      9.294,
+      5.403,
+      6.353,
+      9.231,
+      4.412
     ],
-    "averageMs": 12.576,
-    "p95Ms": 18.254,
-    "maxMs": 18.254,
+    "averageMs": 6.939,
+    "p95Ms": 9.294,
+    "maxMs": 9.294,
     "targetMs": 20,
     "pass": true
   },
@@ -647,70 +647,70 @@
     "samples": [
       {
         "label": "initial",
-        "transformMs": 28.002,
+        "transformMs": 15.658,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.005Z",
+        "generatedAt": "2026-07-03T07:18:41.300Z",
         "entries": 401,
-        "graphBytes": 754915
+        "graphBytes": 755218
       },
       {
         "label": "repeat-1",
-        "transformMs": 16.411,
+        "transformMs": 8.916,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.005Z",
+        "generatedAt": "2026-07-03T07:18:41.300Z",
         "entries": 401,
-        "graphBytes": 754915
+        "graphBytes": 755218
       },
       {
         "label": "repeat-2",
-        "transformMs": 15.591,
+        "transformMs": 7.822,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.005Z",
+        "generatedAt": "2026-07-03T07:18:41.300Z",
         "entries": 401,
-        "graphBytes": 754915
+        "graphBytes": 755218
       },
       {
         "label": "repeat-3",
-        "transformMs": 18.927,
+        "transformMs": 10.593,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.005Z",
+        "generatedAt": "2026-07-03T07:18:41.300Z",
         "entries": 401,
-        "graphBytes": 754915
+        "graphBytes": 755218
       },
       {
         "label": "repeat-4",
-        "transformMs": 12.436,
+        "transformMs": 7.249,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.005Z",
+        "generatedAt": "2026-07-03T07:18:41.300Z",
         "entries": 401,
-        "graphBytes": 754915
+        "graphBytes": 755218
       },
       {
         "label": "changed-token",
-        "transformMs": 20.386,
+        "transformMs": 11.706,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.136Z",
+        "generatedAt": "2026-07-03T07:18:41.374Z",
         "entries": 401,
-        "graphBytes": 754915
+        "graphBytes": 755218
       },
       {
         "label": "changed-token-repeat",
-        "transformMs": 13.66,
+        "transformMs": 7.2,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.136Z",
+        "generatedAt": "2026-07-03T07:18:41.374Z",
         "entries": 401,
-        "graphBytes": 754915
+        "graphBytes": 755218
       }
     ],
-    "firstGeneratedAt": "2026-06-30T14:34:01.005Z",
+    "firstGeneratedAt": "2026-07-03T07:18:41.300Z",
     "repeatedGeneratedAt": [
-      "2026-06-30T14:34:01.005Z",
-      "2026-06-30T14:34:01.005Z",
-      "2026-06-30T14:34:01.005Z",
-      "2026-06-30T14:34:01.005Z"
+      "2026-07-03T07:18:41.300Z",
+      "2026-07-03T07:18:41.300Z",
+      "2026-07-03T07:18:41.300Z",
+      "2026-07-03T07:18:41.300Z"
     ],
-    "changedGeneratedAt": "2026-06-30T14:34:01.136Z",
-    "changedRepeatGeneratedAt": "2026-06-30T14:34:01.136Z",
+    "changedGeneratedAt": "2026-07-03T07:18:41.374Z",
+    "changedRepeatGeneratedAt": "2026-07-03T07:18:41.374Z",
     "sameCodeStable": true,
     "changedCodeUpdates": true,
     "changedRepeatStable": true,
@@ -729,7 +729,7 @@
     "repeatEntryCount": 624,
     "changedEntryCount": 624,
     "changedRepeatEntryCount": 624,
-    "graphBytes": 1160383,
+    "graphBytes": 1160907,
     "changedFile": "src/screens/ProductScreen07.tsx",
     "changedFileTokenBefore": "gap-4",
     "changedFileTokenAfter": "gap-8",
@@ -741,10 +741,10 @@
       "src/screens/ProductScreen04.tsx"
     ],
     "unchangedFilesRetained": true,
-    "generatedAtInitial": "2026-06-30T14:34:01.674Z",
-    "generatedAtRepeat": "2026-06-30T14:34:01.674Z",
-    "generatedAtChanged": "2026-06-30T14:34:02.325Z",
-    "generatedAtChangedRepeat": "2026-06-30T14:34:02.325Z",
+    "generatedAtInitial": "2026-07-03T07:18:41.685Z",
+    "generatedAtRepeat": "2026-07-03T07:18:41.685Z",
+    "generatedAtChanged": "2026-07-03T07:18:42.040Z",
+    "generatedAtChangedRepeat": "2026-07-03T07:18:42.040Z",
     "sameCodeStable": true,
     "changedCodeUpdates": true,
     "changedRepeatStable": true,
@@ -752,418 +752,547 @@
     "initialSamples": [
       {
         "relativeFile": "src/screens/ProductScreen00.tsx",
-        "transformMs": 2.593,
+        "transformMs": 1.42,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.187Z",
+        "generatedAt": "2026-07-03T07:18:41.405Z",
         "entries": 26,
-        "graphBytes": 48431
+        "graphBytes": 48455
       },
       {
         "relativeFile": "src/screens/ProductScreen01.tsx",
-        "transformMs": 3.664,
+        "transformMs": 1.746,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.193Z",
+        "generatedAt": "2026-07-03T07:18:41.408Z",
         "entries": 52,
-        "graphBytes": 96753
+        "graphBytes": 96827
       },
       {
         "relativeFile": "src/screens/ProductScreen02.tsx",
-        "transformMs": 5.308,
+        "transformMs": 3.042,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.201Z",
+        "generatedAt": "2026-07-03T07:18:41.413Z",
         "entries": 78,
-        "graphBytes": 145101
+        "graphBytes": 145199
       },
       {
         "relativeFile": "src/screens/ProductScreen03.tsx",
-        "transformMs": 5.785,
+        "transformMs": 2.79,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.211Z",
+        "generatedAt": "2026-07-03T07:18:41.418Z",
         "entries": 104,
-        "graphBytes": 193449
+        "graphBytes": 193571
       },
       {
         "relativeFile": "src/screens/ProductScreen04.tsx",
-        "transformMs": 6.272,
+        "transformMs": 3.296,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.221Z",
+        "generatedAt": "2026-07-03T07:18:41.423Z",
         "entries": 130,
-        "graphBytes": 241797
+        "graphBytes": 241943
       },
       {
         "relativeFile": "src/screens/ProductScreen05.tsx",
-        "transformMs": 6.554,
+        "transformMs": 3.824,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.241Z",
+        "generatedAt": "2026-07-03T07:18:41.437Z",
         "entries": 156,
-        "graphBytes": 290145
+        "graphBytes": 290315
       },
       {
         "relativeFile": "src/screens/ProductScreen06.tsx",
-        "transformMs": 8.664,
+        "transformMs": 4.443,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.253Z",
+        "generatedAt": "2026-07-03T07:18:41.444Z",
         "entries": 182,
-        "graphBytes": 338493
+        "graphBytes": 338687
       },
       {
         "relativeFile": "src/screens/ProductScreen07.tsx",
-        "transformMs": 9.463,
+        "transformMs": 5.705,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.267Z",
+        "generatedAt": "2026-07-03T07:18:41.452Z",
         "entries": 208,
-        "graphBytes": 386841
+        "graphBytes": 387059
       },
       {
         "relativeFile": "src/screens/ProductScreen08.tsx",
-        "transformMs": 11.115,
+        "transformMs": 5.269,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.281Z",
+        "generatedAt": "2026-07-03T07:18:41.461Z",
         "entries": 234,
-        "graphBytes": 435189
+        "graphBytes": 435431
       },
       {
         "relativeFile": "src/screens/ProductScreen09.tsx",
-        "transformMs": 10.956,
+        "transformMs": 5.934,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.300Z",
+        "generatedAt": "2026-07-03T07:18:41.470Z",
         "entries": 260,
-        "graphBytes": 483485
+        "graphBytes": 483803
       },
       {
         "relativeFile": "src/screens/ProductScreen10.tsx",
-        "transformMs": 12.43,
+        "transformMs": 6.475,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.319Z",
+        "generatedAt": "2026-07-03T07:18:41.480Z",
         "entries": 286,
-        "graphBytes": 531833
+        "graphBytes": 532149
       },
       {
         "relativeFile": "src/screens/ProductScreen11.tsx",
-        "transformMs": 11.729,
+        "transformMs": 6.78,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.342Z",
+        "generatedAt": "2026-07-03T07:18:41.493Z",
         "entries": 312,
-        "graphBytes": 580181
+        "graphBytes": 580521
       },
       {
         "relativeFile": "src/screens/ProductScreen12.tsx",
-        "transformMs": 13.087,
+        "transformMs": 8.06,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.362Z",
+        "generatedAt": "2026-07-03T07:18:41.504Z",
         "entries": 338,
-        "graphBytes": 628529
+        "graphBytes": 628893
       },
       {
         "relativeFile": "src/screens/ProductScreen13.tsx",
-        "transformMs": 12.559,
+        "transformMs": 9.545,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.383Z",
+        "generatedAt": "2026-07-03T07:18:41.518Z",
         "entries": 364,
-        "graphBytes": 676877
+        "graphBytes": 677265
       },
       {
         "relativeFile": "src/screens/ProductScreen14.tsx",
-        "transformMs": 13.113,
+        "transformMs": 8.142,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.404Z",
+        "generatedAt": "2026-07-03T07:18:41.532Z",
         "entries": 390,
-        "graphBytes": 725225
+        "graphBytes": 725637
       },
       {
         "relativeFile": "src/screens/ProductScreen15.tsx",
-        "transformMs": 12.804,
+        "transformMs": 8.796,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.425Z",
+        "generatedAt": "2026-07-03T07:18:41.545Z",
         "entries": 416,
-        "graphBytes": 773573
+        "graphBytes": 774009
       },
       {
         "relativeFile": "src/screens/ProductScreen16.tsx",
-        "transformMs": 17.845,
+        "transformMs": 12.193,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.448Z",
+        "generatedAt": "2026-07-03T07:18:41.561Z",
         "entries": 442,
-        "graphBytes": 821869
+        "graphBytes": 822355
       },
       {
         "relativeFile": "src/screens/ProductScreen17.tsx",
-        "transformMs": 19.182,
+        "transformMs": 11.396,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.479Z",
+        "generatedAt": "2026-07-03T07:18:41.578Z",
         "entries": 468,
-        "graphBytes": 870217
+        "graphBytes": 870727
       },
       {
         "relativeFile": "src/screens/ProductScreen18.tsx",
-        "transformMs": 17.216,
+        "transformMs": 9.738,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.508Z",
+        "generatedAt": "2026-07-03T07:18:41.595Z",
         "entries": 494,
-        "graphBytes": 918539
+        "graphBytes": 919099
       },
       {
         "relativeFile": "src/screens/ProductScreen19.tsx",
-        "transformMs": 18.651,
+        "transformMs": 10.445,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.534Z",
+        "generatedAt": "2026-07-03T07:18:41.611Z",
         "entries": 520,
-        "graphBytes": 966861
+        "graphBytes": 967445
       },
       {
         "relativeFile": "src/screens/ProductScreen20.tsx",
-        "transformMs": 20.569,
+        "transformMs": 11.736,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.563Z",
+        "generatedAt": "2026-07-03T07:18:41.628Z",
         "entries": 546,
-        "graphBytes": 1015209
+        "graphBytes": 1015817
       },
       {
         "relativeFile": "src/screens/ProductScreen21.tsx",
-        "transformMs": 19.196,
+        "transformMs": 11.85,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.594Z",
+        "generatedAt": "2026-07-03T07:18:41.646Z",
         "entries": 572,
-        "graphBytes": 1063557
+        "graphBytes": 1064189
       },
       {
         "relativeFile": "src/screens/ProductScreen22.tsx",
-        "transformMs": 25.24,
+        "transformMs": 11.861,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.634Z",
+        "generatedAt": "2026-07-03T07:18:41.666Z",
         "entries": 598,
-        "graphBytes": 1111879
+        "graphBytes": 1112561
       },
       {
         "relativeFile": "src/screens/ProductScreen23.tsx",
-        "transformMs": 26.147,
+        "transformMs": 12.575,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       }
     ],
     "repeatSamples": [
       {
         "relativeFile": "src/screens/ProductScreen00.tsx",
-        "transformMs": 11.269,
+        "transformMs": 6.307,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen01.tsx",
-        "transformMs": 11.474,
+        "transformMs": 6.373,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen02.tsx",
-        "transformMs": 12.92,
+        "transformMs": 6.464,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen03.tsx",
-        "transformMs": 17.214,
+        "transformMs": 6.207,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen04.tsx",
-        "transformMs": 13.402,
+        "transformMs": 6.266,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen05.tsx",
-        "transformMs": 17.225,
+        "transformMs": 6.262,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen06.tsx",
-        "transformMs": 15.741,
+        "transformMs": 6.164,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen07.tsx",
-        "transformMs": 14.78,
+        "transformMs": 6.331,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen08.tsx",
-        "transformMs": 11.984,
+        "transformMs": 6.583,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen09.tsx",
-        "transformMs": 12.247,
+        "transformMs": 6.293,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen10.tsx",
-        "transformMs": 13.363,
+        "transformMs": 7.018,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen11.tsx",
-        "transformMs": 12.727,
+        "transformMs": 7.449,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen12.tsx",
-        "transformMs": 12.166,
+        "transformMs": 6.353,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen13.tsx",
-        "transformMs": 11.381,
+        "transformMs": 6.115,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen14.tsx",
-        "transformMs": 11.113,
+        "transformMs": 6.103,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen15.tsx",
-        "transformMs": 10.581,
+        "transformMs": 6.175,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen16.tsx",
-        "transformMs": 8.505,
+        "transformMs": 6.102,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen17.tsx",
-        "transformMs": 9.836,
+        "transformMs": 6.343,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen18.tsx",
-        "transformMs": 10.065,
+        "transformMs": 6.405,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen19.tsx",
-        "transformMs": 8.551,
+        "transformMs": 6.367,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen20.tsx",
-        "transformMs": 11.555,
+        "transformMs": 6.334,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen21.tsx",
-        "transformMs": 9.014,
+        "transformMs": 6.2,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen22.tsx",
-        "transformMs": 10.255,
+        "transformMs": 6.238,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       },
       {
         "relativeFile": "src/screens/ProductScreen23.tsx",
-        "transformMs": 11.59,
+        "transformMs": 6.449,
         "transformReturnedCode": true,
-        "generatedAt": "2026-06-30T14:34:01.674Z",
+        "generatedAt": "2026-07-03T07:18:41.685Z",
         "entries": 624,
-        "graphBytes": 1160227
+        "graphBytes": 1160933
       }
     ],
     "changedSample": {
       "relativeFile": "src/screens/ProductScreen07.tsx",
-      "transformMs": 18.389,
+      "transformMs": 12.937,
       "transformReturnedCode": true,
-      "generatedAt": "2026-06-30T14:34:02.325Z",
+      "generatedAt": "2026-07-03T07:18:42.040Z",
       "entries": 624,
-      "graphBytes": 1160383
+      "graphBytes": 1160907
     },
     "changedRepeatSample": {
       "relativeFile": "src/screens/ProductScreen07.tsx",
-      "transformMs": 11.345,
+      "transformMs": 6.319,
       "transformReturnedCode": true,
-      "generatedAt": "2026-06-30T14:34:02.325Z",
+      "generatedAt": "2026-07-03T07:18:42.040Z",
       "entries": 624,
-      "graphBytes": 1160383
+      "graphBytes": 1160907
     },
-    "initialTotalMs": 512.547,
-    "repeatTotalMs": 599.026,
-    "changedFileTransformMs": 18.389,
-    "changedRepeatTransformMs": 11.345,
+    "initialTotalMs": 293.846,
+    "repeatTotalMs": 322.724,
+    "changedFileTransformMs": 12.937,
+    "changedRepeatTransformMs": 6.319,
     "changedFileTargetMs": 50,
     "pass": true
   },
+  "externalProductGraphRefresh": {
+    "fileLimitPerCorpus": 24,
+    "availableCorpusCount": 3,
+    "passCount": 3,
+    "corpora": [
+      {
+        "label": "shadcn-ui-ui-dbf9c5e",
+        "corpusDir": ".intent/external-corpus",
+        "filesDir": ".intent/external-corpus/files",
+        "available": true,
+        "unavailableReason": null,
+        "sourceFileCount": 100,
+        "measuredFileCount": 24,
+        "graphFile": ".intent/tmp/external-product-graph-refresh-shadcn-ui-ui-dbf9c5e/.intent/graph.intent.json",
+        "initialEntryCount": 102,
+        "repeatEntryCount": 102,
+        "changedEntryCount": 102,
+        "changedRepeatEntryCount": 102,
+        "graphBytes": 169758,
+        "changedFile": "src/external/001-external-001-apps-v4-app-app-root-cards-account-access.tsx",
+        "changedTokenBefore": "flex",
+        "changedTokenAfter": "grid",
+        "unchangedSampleFiles": [
+          "src/external/002-external-002-apps-v4-app-app-root-cards-analytics-card.tsx",
+          "src/external/003-external-003-apps-v4-app-app-root-cards-claimable-balance.tsx",
+          "src/external/004-external-004-apps-v4-app-app-root-cards-contribution-history.tsx",
+          "src/external/005-external-005-apps-v4-app-app-root-cards-dividend-income.tsx",
+          "src/external/006-external-006-apps-v4-app-app-root-cards-empty-distribute-track.tsx"
+        ],
+        "unchangedFilesRetained": true,
+        "generatedAtInitial": "2026-07-03T07:18:42.169Z",
+        "generatedAtRepeat": "2026-07-03T07:18:42.169Z",
+        "generatedAtChanged": "2026-07-03T07:18:42.219Z",
+        "generatedAtChangedRepeat": "2026-07-03T07:18:42.219Z",
+        "sameCodeStable": true,
+        "changedCodeUpdates": true,
+        "changedRepeatStable": true,
+        "entryCountStable": true,
+        "initialTotalMs": 66.469,
+        "repeatTotalMs": 43.567,
+        "changedFileTransformMs": 2.923,
+        "changedRepeatTransformMs": 1.363,
+        "changedFileTargetMs": 50,
+        "pass": true
+      },
+      {
+        "label": "sadmann7/skateshop@e954d54",
+        "corpusDir": ".intent/external-corpus-skateshop",
+        "filesDir": ".intent/external-corpus-skateshop/files",
+        "available": true,
+        "unavailableReason": null,
+        "sourceFileCount": 100,
+        "measuredFileCount": 24,
+        "graphFile": ".intent/tmp/external-product-graph-refresh-sadmann7-skateshop-e954d54/.intent/graph.intent.json",
+        "initialEntryCount": 104,
+        "repeatEntryCount": 104,
+        "changedEntryCount": 104,
+        "changedRepeatEntryCount": 104,
+        "graphBytes": 171941,
+        "changedFile": "src/external/001-external-001-src-app-auth-components-logout-buttons.tsx",
+        "changedTokenBefore": "flex",
+        "changedTokenAfter": "grid",
+        "unchangedSampleFiles": [
+          "src/external/002-external-002-src-app-auth-components-oauth-signin.tsx",
+          "src/external/003-external-003-src-app-auth-components-reset-password-confirm-form.tsx",
+          "src/external/004-external-004-src-app-auth-components-reset-password-form.tsx",
+          "src/external/005-external-005-src-app-auth-components-signin-form.tsx",
+          "src/external/006-external-006-src-app-auth-components-signup-form.tsx"
+        ],
+        "unchangedFilesRetained": true,
+        "generatedAtInitial": "2026-07-03T07:18:42.285Z",
+        "generatedAtRepeat": "2026-07-03T07:18:42.285Z",
+        "generatedAtChanged": "2026-07-03T07:18:42.321Z",
+        "generatedAtChangedRepeat": "2026-07-03T07:18:42.321Z",
+        "sameCodeStable": true,
+        "changedCodeUpdates": true,
+        "changedRepeatStable": true,
+        "entryCountStable": true,
+        "initialTotalMs": 36.339,
+        "repeatTotalMs": 29.871,
+        "changedFileTransformMs": 2.347,
+        "changedRepeatTransformMs": 1.121,
+        "changedFileTargetMs": 50,
+        "pass": true
+      },
+      {
+        "label": "mckaywrigley/chatbot-ui@81328b6",
+        "corpusDir": ".intent/external-corpus-chatbot-ui",
+        "filesDir": ".intent/external-corpus-chatbot-ui/files",
+        "available": true,
+        "unavailableReason": null,
+        "sourceFileCount": 100,
+        "measuredFileCount": 24,
+        "graphFile": ".intent/tmp/external-product-graph-refresh-mckaywrigley-chatbot-ui-81328b6/.intent/graph.intent.json",
+        "initialEntryCount": 135,
+        "repeatEntryCount": 135,
+        "changedEntryCount": 135,
+        "changedRepeatEntryCount": 135,
+        "graphBytes": 219215,
+        "changedFile": "src/external/001-external-001-app-locale-workspaceid-chat-page.tsx",
+        "changedTokenBefore": "w-full",
+        "changedTokenAfter": "w-1/2",
+        "unchangedSampleFiles": [
+          "src/external/002-external-002-app-locale-workspaceid-page.tsx",
+          "src/external/003-external-003-app-locale-help-page.tsx",
+          "src/external/004-external-004-app-locale-layout.tsx",
+          "src/external/005-external-005-app-locale-loading.tsx",
+          "src/external/006-external-006-app-locale-login-page.tsx"
+        ],
+        "unchangedFilesRetained": true,
+        "generatedAtInitial": "2026-07-03T07:18:42.427Z",
+        "generatedAtRepeat": "2026-07-03T07:18:42.427Z",
+        "generatedAtChanged": "2026-07-03T07:18:42.486Z",
+        "generatedAtChangedRepeat": "2026-07-03T07:18:42.486Z",
+        "sameCodeStable": true,
+        "changedCodeUpdates": true,
+        "changedRepeatStable": true,
+        "entryCountStable": true,
+        "initialTotalMs": 79.675,
+        "repeatTotalMs": 49.51,
+        "changedFileTransformMs": 3.559,
+        "changedRepeatTransformMs": 1.775,
+        "changedFileTargetMs": 50,
+        "pass": true
+      }
+    ],
+    "pass": true,
+    "note": "Optional external graph refresh measurement uses local ignored corpus copies and does not commit third-party source."
+  },
   "graphLookupProxy": {
     "iterations": 1000,
-    "totalMs": 0.058,
-    "averageMs": 0.000058,
+    "totalMs": 0.071,
+    "averageMs": 0.000071,
     "note": "This measures id-to-binding graph lookup only, not a real browser click event."
   },
   "cli": {
@@ -1199,7 +1328,7 @@
     "doctorFailCount": 0,
     "doctorCheckCount": 10,
     "doctorGuidanceCount": 0,
-    "doctorMs": 2.803,
+    "doctorMs": 1.938,
     "doctorMissingPluginExitCode": 1,
     "doctorMissingPluginOk": false,
     "doctorMissingPluginPassCount": 7,
@@ -1210,7 +1339,7 @@
     "doctorMissingPluginHasVitePluginFailure": true,
     "doctorMissingPluginSourceFilesPass": true,
     "doctorMissingPluginGuidanceIncludesVite": true,
-    "doctorMissingPluginMs": 2.436,
+    "doctorMissingPluginMs": 1.558,
     "devOk": true,
     "devDryRun": true,
     "devHost": "127.0.0.1",
@@ -1219,15 +1348,15 @@
     "devUsesLocalVite": true,
     "devExecutablePresent": true,
     "devArgCount": 5,
-    "devMs": 0.198,
+    "devMs": 0.173,
     "filesScanned": 8,
     "bindingCount": 40,
     "directEditBindingCount": 35,
     "readOnlyBindingCount": 5,
     "supportedDirectCoverage": 0.875,
-    "editableTokenCoverage": 0.8108,
+    "editableTokenCoverage": 0.9081,
     "syntaxErrorCount": 0,
-    "maxTransformMs": 0.304,
+    "maxTransformMs": 0.185,
     "gates": {
       "filesScanned": {
         "pass": true,
@@ -1246,7 +1375,7 @@
       },
       "maxFileTransformMs": {
         "pass": true,
-        "actual": 0.304,
+        "actual": 0.185,
         "max": 20
       }
     },
@@ -1254,31 +1383,31 @@
     "graphEntryCount": 40,
     "agentContextSubject": "DynamicRuntime",
     "agentContextOk": true,
-    "agentContextFile": ".intent/agent/context_2026-06-30T14-34-03-408Z.md",
+    "agentContextFile": ".intent/agent/context_2026-07-03T07-18-43-098Z.md",
     "agentContextSelectedBindingId": "il_aecb838907",
     "agentContextSelectedRelativeFile": "fixtures/corpus/DynamicRuntime.tsx",
     "agentContextGraphEntryCount": 40,
     "agentContextDirectEditBindingCount": 35,
     "agentContextReadOnlyBindingCount": 5,
-    "agentContextEditableTokenCoverage": 0.8108,
+    "agentContextEditableTokenCoverage": 0.9081,
     "agentContextMarkdownBytes": 9078,
-    "agentContextMs": 19.535,
+    "agentContextMs": 13.282,
     "agentContextSectionsPresent": true,
     "agentTaskBindingId": "il_aecb838907",
     "agentTaskOk": true,
-    "agentTaskFile": ".intent/agent/task_2026-06-30T14-34-03-430Z.md",
+    "agentTaskFile": ".intent/agent/task_2026-07-03T07-18-43-113Z.md",
     "agentTaskRelativeFile": "fixtures/corpus/DynamicRuntime.tsx",
     "agentTaskMarkdownBytes": 3638,
-    "agentTaskMs": 10.583,
+    "agentTaskMs": 0.968,
     "agentTaskSectionsPresent": true,
     "agentResultGraphScanExitCode": 0,
     "agentResultTaskExitCode": 0,
     "agentResultOk": true,
-    "agentResultFile": ".intent/agent/result_2026-06-30T14-34-03-454Z.md",
-    "agentResultDiffFile": ".intent/diffs/2026-06-30T14-34-03-454Z_agent.intent-diff.yml",
+    "agentResultFile": ".intent/agent/result_2026-07-03T07-18-43-121Z.md",
+    "agentResultDiffFile": ".intent/diffs/2026-07-03T07-18-43-121Z_agent.intent-diff.yml",
     "agentResultRelativeFile": ".intent/tmp/CliAgentResultFixture.tsx",
     "agentResultMarkdownBytes": 2607,
-    "agentResultMs": 6.7,
+    "agentResultMs": 3.982,
     "agentResultSourceDiffLineCount": 2,
     "agentResultSemanticChangeCount": 1,
     "agentResultSectionsPresent": true,
@@ -1286,26 +1415,26 @@
     "applyBindingId": "il_d1c483e267",
     "applyOk": true,
     "applyRelativeFile": ".intent/tmp/CliApplyFixture.tsx",
-    "applyOperationFile": ".intent/operations/2026-06-30T14-34-03-478Z.intent-op.json",
-    "applyDiffFile": ".intent/diffs/2026-06-30T14-34-03-478Z.intent-diff.yml",
+    "applyOperationFile": ".intent/operations/2026-07-03T07-18-43-141Z.intent-op.json",
+    "applyDiffFile": ".intent/diffs/2026-07-03T07-18-43-141Z.intent-diff.yml",
     "applyOperationLogFile": ".intent/operations/operation-log.json",
-    "applyMs": 3.749,
+    "applyMs": 2.568,
     "applySyntaxErrors": 0,
     "diffOk": true,
-    "diffFile": ".intent/diffs/2026-06-30T14-34-03-478Z.intent-diff.yml",
+    "diffFile": ".intent/diffs/2026-07-03T07-18-43-141Z.intent-diff.yml",
     "diffBytes": 229,
     "diffChangeCount": 1,
     "initStdoutBytes": 496,
     "devStdoutBytes": 499,
-    "scanStdoutBytes": 3262,
-    "checkStdoutBytes": 3658,
+    "scanStdoutBytes": 3261,
+    "checkStdoutBytes": 3656,
     "applyStdoutBytes": 642,
     "diffStdoutBytes": 366,
     "doctorStdoutBytes": 1806,
     "doctorMissingPluginStdoutBytes": 2158,
     "agentContextStdoutBytes": 578,
-    "agentTaskStdoutBytes": 375,
-    "agentResultStdoutBytes": 719
+    "agentTaskStdoutBytes": 374,
+    "agentResultStdoutBytes": 721
   },
   "packageInstall": {
     "packageName": "intent-layer",
@@ -1319,13 +1448,13 @@
     "viteImportExitCode": 0,
     "installedViteTransformExitCode": 0,
     "installedViteDevServerExitCode": 0,
-    "packageFileCount": 19,
-    "packageSize": 53632,
-    "packageUnpackedSize": 256356,
-    "tarballFile": "<os-tmp>/intent-layer-package-smoke-Ivv4Mt/intent-layer-0.0.1.tgz",
-    "installDir": "<os-tmp>/intent-layer-package-smoke-Ivv4Mt/install",
-    "binFile": "<os-tmp>/intent-layer-package-smoke-Ivv4Mt/install/node_modules/.bin/intent-layer.cmd",
-    "tsxBinFile": "<os-tmp>/intent-layer-package-smoke-Ivv4Mt/install/node_modules/.bin/tsx.cmd",
+    "packageFileCount": 21,
+    "packageSize": 56593,
+    "packageUnpackedSize": 267115,
+    "tarballFile": ".intent/tmp/package-smoke/intent-layer-package-smoke-nekxnl/intent-layer-0.0.1.tgz",
+    "installDir": ".intent/tmp/package-smoke/intent-layer-package-smoke-nekxnl/install",
+    "binFile": ".intent/tmp/package-smoke/intent-layer-package-smoke-nekxnl/install/node_modules/.bin/intent-layer.cmd",
+    "tsxBinFile": ".intent/tmp/package-smoke/intent-layer-package-smoke-nekxnl/install/node_modules/.bin/tsx.cmd",
     "hasBinWrapper": true,
     "hasCliSource": true,
     "hasVitePluginSource": true,
@@ -1343,20 +1472,20 @@
     "installedViteTransformIncludesIntentId": true,
     "installedViteTransformGraphExists": true,
     "installedViteTransformGraphEntryCount": 1,
-    "installedViteTransformGraphBytes": 1664,
+    "installedViteTransformGraphBytes": 1682,
     "installedViteTransformFirstRelativeFile": "src/App.tsx",
-    "installedViteTransformFirstToken": "gap-4",
-    "installedViteTransformHookMs": 7.172,
+    "installedViteTransformFirstToken": "flex",
+    "installedViteTransformHookMs": 5.462,
     "installedViteDevServerOk": true,
-    "installedViteDevServerPort": 10618,
+    "installedViteDevServerPort": 64570,
     "installedViteDevServerHomeStatus": 200,
     "installedViteDevServerModuleStatus": 200,
     "installedViteDevServerGraphStatus": 200,
     "installedViteDevServerModuleIncludesIntentId": true,
     "installedViteDevServerGraphEntryCount": 1,
-    "installedViteDevServerGraphBytes": 1654,
+    "installedViteDevServerGraphBytes": 1672,
     "installedViteDevServerFirstRelativeFile": "src/App.tsx",
-    "installedViteDevServerFirstToken": "gap-4",
+    "installedViteDevServerFirstToken": "flex",
     "installedViteDevServerPreviewStatus": 200,
     "installedViteDevServerPreviewOk": true,
     "installedViteDevServerApplyStatus": 200,
@@ -1370,9 +1499,23 @@
     "installedViteDevServerGraphAfterApplyStatus": 200,
     "installedViteDevServerGraphAfterApplyEntryCount": 1,
     "installedViteDevServerGraphAfterApplyFirstToken": "gap-6",
-    "installedViteDevServerApplyRefreshMs": 51.556,
+    "installedViteDevServerApplyRefreshMs": 43.512,
     "installedViteDevServerApplyRefreshTargetMs": 500,
     "installedViteDevServerApplyRefreshTargetPass": true,
+    "installedViteDevServerUndoHistoryAfterApplyStatus": 200,
+    "installedViteDevServerUndoHistoryAfterApplyCount": 1,
+    "installedViteDevServerRevertStatus": 200,
+    "installedViteDevServerRevertOk": true,
+    "installedViteDevServerSourceReverted": true,
+    "installedViteDevServerModuleAfterRevertStatus": 200,
+    "installedViteDevServerModuleAfterRevertIncludesOldToken": true,
+    "installedViteDevServerGraphAfterRevertStatus": 200,
+    "installedViteDevServerGraphAfterRevertFirstToken": "gap-4",
+    "installedViteDevServerUndoHistoryAfterRevertStatus": 200,
+    "installedViteDevServerUndoHistoryAfterRevertCount": 0,
+    "installedViteDevServerRevertRefreshMs": 22.674,
+    "installedViteDevServerRevertRefreshTargetMs": 500,
+    "installedViteDevServerRevertRefreshTargetPass": true,
     "installedViteDevServerMultiFileOk": true,
     "installedViteDevServerMultiFileInitialEntryCount": 3,
     "installedViteDevServerMultiFileAfterChangeEntryCount": 3,
@@ -1381,35 +1524,35 @@
     "installedViteDevServerMultiFileUnchangedFilesRetained": true,
     "installedViteDevServerMultiFileGraphGeneratedAtChanged": true,
     "installedViteDevServerMultiFileModuleAfterChangeIncludesNextToken": true,
-    "installedViteDevServerMultiFileRefreshMs": 118.416,
+    "installedViteDevServerMultiFileRefreshMs": 12.485,
     "installedViteDevServerMultiFileRefreshTargetMs": 500,
     "installedViteDevServerMultiFileRefreshTargetPass": true,
-    "installedViteDevServerMultiFileMs": 267.137,
-    "installedViteDevServerMs": 1765.916,
-    "dryRunMs": 2740.944,
-    "packMs": 2493.654,
-    "installMs": 3543.909,
-    "helpMs": 2390.24,
-    "viteImportMs": 1326.426,
-    "installedViteTransformMs": 1001.383,
-    "stdoutBytes": 6755,
+    "installedViteDevServerMultiFileMs": 42.214,
+    "installedViteDevServerMs": 2316.214,
+    "dryRunMs": 1901.528,
+    "packMs": 1837.134,
+    "installMs": 2982.246,
+    "helpMs": 1980.26,
+    "viteImportMs": 1034.477,
+    "installedViteTransformMs": 932.944,
+    "stdoutBytes": 7565,
     "stderrBytes": 0
   },
   "patch": {
     "previewOk": true,
-    "previewMs": 1.037,
-    "previewRoundTripMs": 1.448,
+    "previewMs": 0.736,
+    "previewRoundTripMs": 1.007,
     "applyOk": true,
-    "applyMs": 4.574,
+    "applyMs": 2.547,
     "syntaxErrorsAfterPatch": 0,
     "revertOk": true,
-    "revertMs": 3.835,
+    "revertMs": 8.068,
     "syntaxErrorsAfterRevert": 0,
     "staleRejectionOk": true,
     "staleRejectionReason": "source-hash-mismatch",
     "simpleCnClsx": {
       "applyOk": true,
-      "applyMs": 3.727,
+      "applyMs": 2.22,
       "syntaxErrorsAfterPatch": 0,
       "bindingKind": "call-literals",
       "callee": "cn",
@@ -1437,7 +1580,7 @@
     "pendingAfterApply": 2,
     "historyAfterApplyCount": 2,
     "discardOk": true,
-    "discardMs": 4.797,
+    "discardMs": 2.65,
     "discardedToken": "gap-6",
     "pendingAfterDiscard": 1,
     "historyAfterDiscardCount": 1,
@@ -1453,7 +1596,7 @@
     "pendingAfterApply": 2,
     "historyAfterApplyCount": 2,
     "nonTopRevertOk": true,
-    "nonTopRevertMs": 4.491,
+    "nonTopRevertMs": 2.045,
     "nonTopRestoredToken": "gap-4",
     "pendingAfterNonTopRevert": 1,
     "historyAfterNonTopRevertCount": 1,
@@ -1470,7 +1613,7 @@
     "applyOk": true,
     "revertOk": false,
     "revertReason": "revert-token-mismatch",
-    "conflictFile": ".intent/conflicts/2026-06-30T14-34-03-189Z.intent-conflict.json",
+    "conflictFile": ".intent/conflicts/2026-07-03T07-18-42-983Z.intent-conflict.json",
     "conflictFileExists": true,
     "conflictKind": "revert-conflict",
     "conflictExpectedToken": "gap-6",
@@ -1481,7 +1624,7 @@
     "activeConflictCountBeforeResolve": 1,
     "resolveOk": true,
     "resolveAction": "discard-pending-undo",
-    "resolveMs": 5.016,
+    "resolveMs": 7.621,
     "resolvedAtPresent": true,
     "resolutionAction": "discard-pending-undo",
     "pendingAfterResolve": 0,
@@ -1490,17 +1633,17 @@
   },
   "agentTask": {
     "ok": true,
-    "taskMs": 4.255,
+    "taskMs": 2.454,
     "sectionsPresent": true,
-    "taskFile": ".intent/agent/task_2026-06-30T14-34-02-485Z.md"
+    "taskFile": ".intent/agent/task_2026-07-03T07-18-42-559Z.md"
   },
   "agentResult": {
     "ok": true,
-    "resultMs": 10.227,
+    "resultMs": 6.21,
     "sectionsPresent": true,
     "filesExist": true,
-    "resultFile": ".intent/agent/result_2026-06-30T14-34-02-489Z.md",
-    "diffFile": ".intent/diffs/2026-06-30T14-34-02-489Z_agent.intent-diff.yml",
+    "resultFile": ".intent/agent/result_2026-07-03T07-18-42-561Z.md",
+    "diffFile": ".intent/diffs/2026-07-03T07-18-42-561Z_agent.intent-diff.yml",
     "sourceHashChanged": true,
     "snapshotAvailable": true,
     "diffLineCount": 2,
@@ -1528,7 +1671,7 @@
         "entryCreated": true,
         "entryCount": 3,
         "taskOk": true,
-        "taskMs": 2.517,
+        "taskMs": 1.297,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotFunction",
         "markersPresent": true,
@@ -1540,7 +1683,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 2.581,
+        "taskMs": 1.559,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowBlock",
         "markersPresent": true,
@@ -1552,7 +1695,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 1.947,
+        "taskMs": 1.326,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowParen",
         "markersPresent": true,
@@ -1564,7 +1707,7 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 1.921,
+        "taskMs": 1.458,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowJsx",
         "markersPresent": true,
@@ -1576,7 +1719,7 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 2.254,
+        "taskMs": 1.35,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotMemo",
         "markersPresent": true,
@@ -1588,7 +1731,7 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 2.758,
+        "taskMs": 1.388,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotForwardRef",
         "markersPresent": true,
@@ -1600,7 +1743,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 2.393,
+        "taskMs": 1.243,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotHoc",
         "markersPresent": true,
@@ -1612,7 +1755,7 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 2.054,
+        "taskMs": 1.539,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotNamespace",
         "markersPresent": true,
@@ -1626,9 +1769,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 2.539,
+    "taskMs": 1.798,
     "resultOk": true,
-    "resultMs": 8.098,
+    "resultMs": 6.178,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -1648,9 +1791,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 2.113,
+    "taskMs": 1.776,
     "resultOk": true,
-    "resultMs": 9.28,
+    "resultMs": 5.159,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -1670,9 +1813,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 2.456,
+    "taskMs": 1.538,
     "resultOk": true,
-    "resultMs": 8.924,
+    "resultMs": 5.744,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -1693,7 +1836,7 @@
     "value": "cardClass",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 2.749,
+    "taskMs": 1.59,
     "dependencySnapshotCount": 2,
     "dependencySnapshotFiles": [
       ".intent/tmp/CrossVariableDependencyFixture.tsx",
@@ -1706,7 +1849,7 @@
     "dependencySnapshotsReferenceCardClass": true,
     "dependencySnapshotsIncludeClassTokens": true,
     "resultOk": true,
-    "resultMs": 10.103,
+    "resultMs": 6.239,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -1729,14 +1872,14 @@
     "value": "shellClass",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 11.427,
+    "taskMs": 6.782,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/styles/cardClass.ts",
     "relatedSnapshotKind": "variable-declaration",
     "relatedSnapshotIdentifier": "cardClass",
     "relatedSnapshotIncludesClass": true,
     "resultOk": true,
-    "resultMs": 8.989,
+    "resultMs": 5.226,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -1758,7 +1901,7 @@
     "value": "shellClass",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 8.844,
+    "taskMs": 5.427,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/styles/cardClass.ts",
     "relatedSnapshotKind": "variable-declaration",
@@ -1777,7 +1920,7 @@
     "dependencySnapshotsAreImportedSource": true,
     "dependencySnapshotsIncludeClassTokens": true,
     "resultOk": true,
-    "resultMs": 9.22,
+    "resultMs": 6.519,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -1803,7 +1946,7 @@
     "value": "shellClass",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 14.767,
+    "taskMs": 8.343,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/styles/cardClass.ts",
     "relatedSnapshotKind": "variable-declaration",
@@ -1822,7 +1965,7 @@
     "dependencySnapshotsAreImportedTokenSource": true,
     "dependencySnapshotsIncludeClassTokens": true,
     "resultOk": true,
-    "resultMs": 9.754,
+    "resultMs": 6.187,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -1847,14 +1990,14 @@
     "value": "cardStyles.title",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 10.326,
+    "taskMs": 5.55,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/styles/titleStyles.ts",
     "relatedSnapshotKind": "object-property",
     "relatedSnapshotIdentifier": "styles.title",
     "relatedSnapshotIncludesPropertyClass": true,
     "resultOk": true,
-    "resultMs": 7.571,
+    "resultMs": 4.935,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -1876,7 +2019,7 @@
     "value": "buttonVariants({ variant: \"primary\" })",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 3.681,
+    "taskMs": 2.432,
     "relatedSnapshotAvailable": false,
     "externalReferenceAvailable": true,
     "externalReferenceKind": "external-package-import",
@@ -1894,7 +2037,7 @@
     "taskMentionsNodeModules": true,
     "taskMentionsExternalEditGuard": true,
     "resultOk": true,
-    "resultMs": 7.283,
+    "resultMs": 4.527,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -1913,7 +2056,7 @@
     "value": "packageCardClass",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 5.27,
+    "taskMs": 3.756,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "packages/ui/src/styles.ts",
     "relatedSnapshotKind": "variable-declaration",
@@ -1921,7 +2064,7 @@
     "relatedSnapshotIncludesClass": true,
     "relatedSnapshotIsWorkspacePackageSource": true,
     "resultOk": true,
-    "resultMs": 7.23,
+    "resultMs": 5.105,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -1942,13 +2085,13 @@
     "value": "buttonVariants({ variant: \"primary\" })",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 2.81,
+    "taskMs": 1.552,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotKind": "variant-function",
     "relatedSnapshotIdentifier": "buttonVariants",
     "relatedSnapshotIncludesCva": true,
     "resultOk": true,
-    "resultMs": 16.958,
+    "resultMs": 4.637,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -1969,14 +2112,14 @@
     "value": "buttonVariants({ variant: \"primary\" })",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 3.683,
+    "taskMs": 2.378,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": ".intent/tmp/ImportedVariantDefinition.ts",
     "relatedSnapshotKind": "variant-function",
     "relatedSnapshotIdentifier": "buttonVariants",
     "relatedSnapshotIncludesCva": true,
     "resultOk": true,
-    "resultMs": 7.487,
+    "resultMs": 4.712,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -1998,14 +2141,14 @@
     "value": "buttonVariants({ variant: \"primary\" })",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 6.414,
+    "taskMs": 4.064,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/ui/buttonVariants.ts",
     "relatedSnapshotKind": "variant-function",
     "relatedSnapshotIdentifier": "buttonVariants",
     "relatedSnapshotIncludesCva": true,
     "resultOk": true,
-    "resultMs": 7.664,
+    "resultMs": 4.732,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -2027,14 +2170,14 @@
     "value": "actionVariants({ variant: \"primary\" })",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 10.099,
+    "taskMs": 4.91,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/tokens/buttonVariants.ts",
     "relatedSnapshotKind": "variant-function",
     "relatedSnapshotIdentifier": "buttonVariants",
     "relatedSnapshotIncludesCva": true,
     "resultOk": true,
-    "resultMs": 7.503,
+    "resultMs": 5.186,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,

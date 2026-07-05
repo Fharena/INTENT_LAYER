@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-07-03T07:13:41.000Z",
+  "contextPackUsed": true,
+  "targetRuntime": "Codex Chrome Extension / Google Chrome",
+  "status": "unavailable",
+  "usableAsSecondBrowserQa": false,
+  "checks": {
+    "browserClientList": {
+      "ok": true,
+      "availableBrowserCount": 0
+    },
+    "installedBrowsers": {
+      "ok": true,
+      "chromeInstalled": true,
+      "chromeVersion": "149.0.7827.197"
+    },
+    "chromeRunningCheck": {
+      "ok": false,
+      "exitCode": 2,
+      "reason": "process-list access denied in the current sandbox"
+    },
+    "extensionInstalledCheck": {
+      "ok": false,
+      "exitCode": 3,
+      "reason": "selected Chrome user data directory was not available in this environment"
+    },
+    "nativeHostManifestCheck": {
+      "ok": false,
+      "exitCode": 1,
+      "reason": "Chrome native messaging host registry key was not available"
+    }
+  },
+  "decision": "Do not count this as a second browser/runtime QA pass.",
+  "nextAction": "Run the browser click QA again after the Codex Chrome Extension and native host are available, or run an explicitly approved manual Chrome QA session."
+}

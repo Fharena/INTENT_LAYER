@@ -21,7 +21,7 @@ import {
   revertTokenPatch,
   resolvePatchConflict
 } from "../src/intent/patch";
-import type { IntentGraph } from "../src/intent/types";
+import type { IntentBinding, IntentGraph } from "../src/intent/types";
 import { intentLayer } from "../src/intent/vitePlugin";
 
 const rootDir = process.cwd();
@@ -105,6 +105,20 @@ interface PackageSmokeResult {
   installedViteDevServerApplyRefreshMs: number;
   installedViteDevServerApplyRefreshTargetMs: number;
   installedViteDevServerApplyRefreshTargetPass: boolean;
+  installedViteDevServerUndoHistoryAfterApplyStatus: number | null;
+  installedViteDevServerUndoHistoryAfterApplyCount: number;
+  installedViteDevServerRevertStatus: number | null;
+  installedViteDevServerRevertOk: boolean;
+  installedViteDevServerSourceReverted: boolean;
+  installedViteDevServerModuleAfterRevertStatus: number | null;
+  installedViteDevServerModuleAfterRevertIncludesOldToken: boolean;
+  installedViteDevServerGraphAfterRevertStatus: number | null;
+  installedViteDevServerGraphAfterRevertFirstToken: string | null;
+  installedViteDevServerUndoHistoryAfterRevertStatus: number | null;
+  installedViteDevServerUndoHistoryAfterRevertCount: number;
+  installedViteDevServerRevertRefreshMs: number;
+  installedViteDevServerRevertRefreshTargetMs: number;
+  installedViteDevServerRevertRefreshTargetPass: boolean;
   installedViteDevServerMultiFileOk: boolean;
   installedViteDevServerMultiFileInitialEntryCount: number;
   installedViteDevServerMultiFileAfterChangeEntryCount: number;
@@ -142,12 +156,14 @@ function runCommand(
   args: string[],
   cwd: string,
   timeoutMs = 60000,
-  shell = process.platform === "win32"
+  shell = process.platform === "win32",
+  env?: NodeJS.ProcessEnv
 ): CommandResult {
   const started = performance.now();
   const result = spawnSync(command, args, {
     cwd,
     encoding: "utf8",
+    env: env ? { ...process.env, ...env } : process.env,
     shell,
     windowsHide: true,
     timeout: timeoutMs
@@ -186,17 +202,36 @@ function reportPath(file: string): string {
 }
 
 function packageSmoke(): PackageSmokeResult {
-  const packageRoot = fs.mkdtempSync(path.join(os.tmpdir(), "intent-layer-package-smoke-"));
+  const packageSmokeRoot = path.join(tmpDir, "package-smoke");
+  fs.mkdirSync(packageSmokeRoot, { recursive: true });
+  const packageRoot = fs.mkdtempSync(path.join(packageSmokeRoot, "intent-layer-package-smoke-"));
   const installDir = path.join(packageRoot, "install");
+  const npmCacheDir = path.join(tmpDir, "npm-cache");
+  const npmEnv = { npm_config_cache: npmCacheDir, NPM_CONFIG_CACHE: npmCacheDir };
   fs.mkdirSync(installDir, { recursive: true });
+  fs.mkdirSync(npmCacheDir, { recursive: true });
   fs.writeFileSync(
     path.join(installDir, "package.json"),
     `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`
   );
 
-  const dryRun = runCommand(npmCommand(), ["pack", "--dry-run", "--json"], rootDir);
+  const dryRun = runCommand(
+    npmCommand(),
+    ["pack", "--dry-run", "--json"],
+    rootDir,
+    60000,
+    process.platform === "win32",
+    npmEnv
+  );
   const dryRunPackage = parsePackJson(dryRun.stdout);
-  const pack = runCommand(npmCommand(), ["pack", "--json", "--pack-destination", packageRoot], rootDir);
+  const pack = runCommand(
+    npmCommand(),
+    ["pack", "--json", "--pack-destination", packageRoot],
+    rootDir,
+    60000,
+    process.platform === "win32",
+    npmEnv
+  );
   const packedPackage = parsePackJson(pack.stdout);
   const tarballFile =
     packedPackage?.filename !== undefined ? path.join(packageRoot, packedPackage.filename) : null;
@@ -205,7 +240,10 @@ function packageSmoke(): PackageSmokeResult {
       ? runCommand(
           npmCommand(),
           ["install", path.relative(installDir, tarballFile), "--ignore-scripts", "--no-audit", "--no-fund"],
-          installDir
+          installDir,
+          120000,
+          process.platform === "win32",
+          npmEnv
         )
       : { exitCode: null, stdout: "", stderr: "missing tarball", ms: 0 };
   const binFile = path.join(
@@ -405,7 +443,8 @@ function packageSmoke(): PackageSmokeResult {
       "  let lastError = null;",
       "  while (Date.now() < deadline) {",
       "    try {",
-      "      const response = await fetch(url);",
+      "      const currentUrl = typeof url === \"function\" ? url() : url;",
+      "      const response = await fetch(currentUrl);",
       "      const body = await response.text();",
       "      const result = { status: response.status, body };",
       "      lastResult = result;",
@@ -416,7 +455,7 @@ function packageSmoke(): PackageSmokeResult {
       "    await new Promise((resolve) => setTimeout(resolve, 100));",
       "  }",
       "  const detail = lastResult ? `last status ${lastResult.status}` : lastError instanceof Error ? lastError.message : String(lastError);",
-      "  throw new Error(`Timed out waiting for ${url}: ${detail}`);",
+      "  throw new Error(`Timed out waiting for ${typeof url === \"function\" ? \"dynamic url\" : url}: ${detail}`);",
       "}",
       "",
       "function parseGraphResponse(result) {",
@@ -434,6 +473,14 @@ function packageSmoke(): PackageSmokeResult {
       "",
       "function firstEditableTokenValue(entry) {",
       "  return entry?.tokens?.find((token) => token.editable)?.token ?? null;",
+      "}",
+      "",
+      "function editableToken(entry, value) {",
+      "  return entry?.tokens?.find((token) => token.editable && token.token === value) ?? null;",
+      "}",
+      "",
+      "function moduleRequestUrl(baseUrl, relativeFile) {",
+      "  return `${baseUrl}/${relativeFile}?t=${Date.now()}`;",
       "}",
       "",
       "async function stop(child) {",
@@ -505,19 +552,20 @@ function packageSmoke(): PackageSmokeResult {
       "  const first = entries[0] ?? null;",
       "  const firstEditableToken = first?.tokens?.find((token) => token.editable) ?? null;",
       "  const firstToken = firstEditableToken?.token ?? null;",
+      "  const patchToken = editableToken(first, \"gap-4\");",
       "  const patchRequest = {",
       "    id: first?.id ?? \"missing-installed-dev-server-id\",",
       "    oldToken: \"gap-4\",",
       "    nextToken: \"gap-6\",",
-      "    sourceStart: firstEditableToken?.sourceStart,",
-      "    sourceEnd: firstEditableToken?.sourceEnd",
+      "    sourceStart: patchToken?.sourceStart,",
+      "    sourceEnd: patchToken?.sourceEnd",
       "  };",
       "  const preview = await postJson(`${baseUrl}/__intent/preview`, patchRequest);",
       "  const apply = await postJson(`${baseUrl}/__intent/apply`, patchRequest);",
       "  const sourceAfterApply = fs.readFileSync(path.join(root, \"src\", \"App.tsx\"), \"utf8\");",
       "  const applyRefreshStarted = performance.now();",
       "  const moduleAfterApply = await waitFetchMatch(",
-      "    `${baseUrl}/src/App.tsx`,",
+      "    () => moduleRequestUrl(baseUrl, \"src/App.tsx\"),",
       "    10000,",
       "    (result) => result.status === 200 && result.body.includes(\"gap-6\")",
       "  );",
@@ -527,7 +575,7 @@ function packageSmoke(): PackageSmokeResult {
       "    (result) => {",
       "      const parsed = parseGraphResponse(result);",
       "      const firstAfterApplyEntry = entryForRelativeFile(parsed.entries, \"src/App.tsx\");",
-      "      return firstEditableTokenValue(firstAfterApplyEntry) === \"gap-6\";",
+      "      return editableToken(firstAfterApplyEntry, \"gap-6\")?.token === \"gap-6\";",
       "    }",
       "  );",
       "  const applyRefreshMs = Number((performance.now() - applyRefreshStarted).toFixed(3));",
@@ -535,10 +583,48 @@ function packageSmoke(): PackageSmokeResult {
       "  const parsedGraphAfterApply = graphAfterApply.status === 200 ? JSON.parse(graphAfterApply.body) : null;",
       "  const entriesAfterApply = parsedGraphAfterApply ? Object.values(parsedGraphAfterApply.entries ?? {}) : [];",
       "  const firstAfterApply = entriesAfterApply[0] ?? null;",
-      "  const firstTokenAfterApply = firstAfterApply?.tokens?.find((token) => token.editable)?.token ?? null;",
+      "  const firstTokenAfterApply = editableToken(firstAfterApply, \"gap-6\")?.token ?? null;",
       "  const operationFileExists = Boolean(apply.json?.operationFile) && fs.existsSync(apply.json.operationFile);",
       "  const diffFileExists = Boolean(apply.json?.diffFile) && fs.existsSync(apply.json.diffFile);",
       "  const operationLogExists = fs.existsSync(path.join(root, \".intent\", \"operations\", \"operation-log.json\"));",
+      "  const undoHistoryAfterApply = await waitFetch(`${baseUrl}/__intent/undo-history`, 10000);",
+      "  const parsedUndoHistoryAfterApply = undoHistoryAfterApply.status === 200 ? JSON.parse(undoHistoryAfterApply.body) : null;",
+      "  const undoHistoryAfterApplyCount =",
+      "    typeof parsedUndoHistoryAfterApply?.pendingCount === \"number\"",
+      "      ? parsedUndoHistoryAfterApply.pendingCount",
+      "      : Array.isArray(parsedUndoHistoryAfterApply?.entries)",
+      "        ? parsedUndoHistoryAfterApply.entries.length",
+      "        : 0;",
+      "  const revertRefreshStarted = performance.now();",
+      "  const revertLast = await postJson(`${baseUrl}/__intent/revert-last`, {});",
+      "  const sourceAfterRevert = fs.readFileSync(path.join(root, \"src\", \"App.tsx\"), \"utf8\");",
+      "  const moduleAfterRevert = await waitFetchMatch(",
+      "    () => moduleRequestUrl(baseUrl, \"src/App.tsx\"),",
+      "    10000,",
+      "    (result) => result.status === 200 && result.body.includes(\"gap-4\") && !result.body.includes(\"gap-6\")",
+      "  );",
+      "  const graphAfterRevert = await waitFetchMatch(",
+      "    `${baseUrl}/__intent/graph`,",
+      "    10000,",
+      "    (result) => {",
+      "      const parsed = parseGraphResponse(result);",
+      "      const firstAfterRevertEntry = entryForRelativeFile(parsed.entries, \"src/App.tsx\");",
+      "      return editableToken(firstAfterRevertEntry, \"gap-4\")?.token === \"gap-4\";",
+      "    }",
+      "  );",
+      "  const revertRefreshMs = Number((performance.now() - revertRefreshStarted).toFixed(3));",
+      "  const parsedGraphAfterRevert = graphAfterRevert.status === 200 ? JSON.parse(graphAfterRevert.body) : null;",
+      "  const entriesAfterRevert = parsedGraphAfterRevert ? Object.values(parsedGraphAfterRevert.entries ?? {}) : [];",
+      "  const firstAfterRevert = entriesAfterRevert[0] ?? null;",
+      "  const firstTokenAfterRevert = editableToken(firstAfterRevert, \"gap-4\")?.token ?? null;",
+      "  const undoHistoryAfterRevert = await waitFetch(`${baseUrl}/__intent/undo-history`, 10000);",
+      "  const parsedUndoHistoryAfterRevert = undoHistoryAfterRevert.status === 200 ? JSON.parse(undoHistoryAfterRevert.body) : null;",
+      "  const undoHistoryAfterRevertCount =",
+      "    typeof parsedUndoHistoryAfterRevert?.pendingCount === \"number\"",
+      "      ? parsedUndoHistoryAfterRevert.pendingCount",
+      "      : Array.isArray(parsedUndoHistoryAfterRevert?.entries)",
+      "        ? parsedUndoHistoryAfterRevert.entries.length",
+      "        : 0;",
       "  const multiFileStarted = performance.now();",
       "  fs.writeFileSync(",
       "    path.join(root, \"src\", \"Header.tsx\"),",
@@ -558,22 +644,10 @@ function packageSmoke(): PackageSmokeResult {
       "      \"\"",
       "    ].join(\"\\n\")",
       "  );",
-      "  fs.writeFileSync(",
-      "    path.join(root, \"src\", \"App.tsx\"),",
-      "    [",
-      "      \"import { Header } from './Header';\",",
-      "      \"import { Card } from './Card';\",",
-      "      \"\",",
-      "      \"export function App() {\",",
-      "      \"  return <main className=\\\"grid gap-4 rounded-xl p-4\\\"><Header /><Card /></main>;\",",
-      "      \"}\",",
-      "      \"\"",
-      "    ].join(\"\\n\")",
-      "  );",
       "  const multiApp = await waitFetchMatch(",
-      "    `${baseUrl}/src/App.tsx`,",
+      "    () => moduleRequestUrl(baseUrl, \"src/App.tsx\"),",
       "    10000,",
-      "    (result) => result.status === 200 && result.body.includes(\"grid gap-4\")",
+      "    (result) => result.status === 200 && result.body.includes(\"gap-4\")",
       "  );",
       "  const multiHeader = await waitFetch(`${baseUrl}/src/Header.tsx`, 10000);",
       "  const multiCard = await waitFetch(`${baseUrl}/src/Card.tsx`, 10000);",
@@ -582,16 +656,16 @@ function packageSmoke(): PackageSmokeResult {
       "  const multiAppEntry = entryForRelativeFile(parsedMultiGraph.entries, \"src/App.tsx\");",
       "  const multiHeaderEntry = entryForRelativeFile(parsedMultiGraph.entries, \"src/Header.tsx\");",
       "  const multiCardEntry = entryForRelativeFile(parsedMultiGraph.entries, \"src/Card.tsx\");",
-      "  const multiAppToken = firstEditableTokenValue(multiAppEntry);",
-      "  const multiHeaderToken = firstEditableTokenValue(multiHeaderEntry);",
-      "  const multiCardTokenBefore = firstEditableTokenValue(multiCardEntry);",
+      "  const multiAppToken = editableToken(multiAppEntry, \"gap-4\")?.token ?? null;",
+      "  const multiHeaderToken = editableToken(multiHeaderEntry, \"gap-2\")?.token ?? null;",
+      "  const multiCardTokenBefore = editableToken(multiCardEntry, \"gap-4\")?.token ?? null;",
       "  const multiFileRefreshStarted = performance.now();",
       "  fs.writeFileSync(",
       "    path.join(root, \"src\", \"Card.tsx\"),",
       "    fs.readFileSync(path.join(root, \"src\", \"Card.tsx\"), \"utf8\").replace(\"gap-4\", \"gap-8\")",
       "  );",
       "  const multiCardAfterChange = await waitFetchMatch(",
-      "    `${baseUrl}/src/Card.tsx`,",
+      "    () => moduleRequestUrl(baseUrl, \"src/Card.tsx\"),",
       "    10000,",
       "    (result) => result.status === 200 && result.body.includes(\"gap-8\")",
       "  );",
@@ -601,7 +675,7 @@ function packageSmoke(): PackageSmokeResult {
       "    (result) => {",
       "      const parsed = parseGraphResponse(result);",
       "      const card = entryForRelativeFile(parsed.entries, \"src/Card.tsx\");",
-      "      return firstEditableTokenValue(card) === \"gap-8\";",
+      "      return editableToken(card, \"gap-8\")?.token === \"gap-8\";",
       "    }",
       "  );",
       "  const multiFileRefreshMs = Number((performance.now() - multiFileRefreshStarted).toFixed(3));",
@@ -609,10 +683,10 @@ function packageSmoke(): PackageSmokeResult {
       "  const multiAppAfterChangeEntry = entryForRelativeFile(parsedMultiGraphAfterChange.entries, \"src/App.tsx\");",
       "  const multiHeaderAfterChangeEntry = entryForRelativeFile(parsedMultiGraphAfterChange.entries, \"src/Header.tsx\");",
       "  const multiCardAfterChangeEntry = entryForRelativeFile(parsedMultiGraphAfterChange.entries, \"src/Card.tsx\");",
-      "  const multiCardTokenAfter = firstEditableTokenValue(multiCardAfterChangeEntry);",
+      "  const multiCardTokenAfter = editableToken(multiCardAfterChangeEntry, \"gap-8\")?.token ?? null;",
       "  const multiFileUnchangedFilesRetained =",
-      "    firstEditableTokenValue(multiAppAfterChangeEntry) === multiAppToken &&",
-      "    firstEditableTokenValue(multiHeaderAfterChangeEntry) === multiHeaderToken;",
+      "    editableToken(multiAppAfterChangeEntry, \"gap-4\")?.token === multiAppToken &&",
+      "    editableToken(multiHeaderAfterChangeEntry, \"gap-2\")?.token === multiHeaderToken;",
       "  const multiFileGraphGeneratedAtChanged =",
       "    Boolean(parsedMultiGraph.generatedAt) &&",
       "    Boolean(parsedMultiGraphAfterChange.generatedAt) &&",
@@ -632,7 +706,7 @@ function packageSmoke(): PackageSmokeResult {
       "  const elapsedMs = Number((performance.now() - started).toFixed(3));",
       "  const ok = home.status === 200 && module.status === 200 && graph.status === 200 &&",
       "    module.body.includes(\"data-intent-id\") && entries.length === 1 &&",
-      "    first?.relativeFile === \"src/App.tsx\" && firstToken === \"gap-4\" &&",
+      "    first?.relativeFile === \"src/App.tsx\" && patchToken?.token === \"gap-4\" &&",
       "    preview.status === 200 && preview.json?.ok === true &&",
       "    apply.status === 200 && apply.json?.ok === true &&",
       "    sourceAfterApply.includes(\"gap-6\") && !sourceAfterApply.includes(\"gap-4\") &&",
@@ -640,6 +714,13 @@ function packageSmoke(): PackageSmokeResult {
       "    moduleAfterApply.status === 200 && moduleAfterApply.body.includes(\"gap-6\") &&",
       "    graphAfterApply.status === 200 && entriesAfterApply.length === 1 &&",
       "    firstAfterApply?.relativeFile === \"src/App.tsx\" && firstTokenAfterApply === \"gap-6\" &&",
+      "    undoHistoryAfterApply.status === 200 && undoHistoryAfterApplyCount >= 1 &&",
+      "    revertLast.status === 200 && revertLast.json?.ok === true &&",
+      "    sourceAfterRevert.includes(\"gap-4\") && !sourceAfterRevert.includes(\"gap-6\") &&",
+      "    moduleAfterRevert.status === 200 && moduleAfterRevert.body.includes(\"gap-4\") && !moduleAfterRevert.body.includes(\"gap-6\") &&",
+      "    graphAfterRevert.status === 200 && entriesAfterRevert.length === 1 && firstTokenAfterRevert === \"gap-4\" &&",
+      "    undoHistoryAfterRevert.status === 200 && undoHistoryAfterRevertCount === 0 &&",
+      "    revertRefreshMs <= refreshTargetMs &&",
       "    multiFileOk;",
       "  console.log(JSON.stringify({",
       "    ok,",
@@ -668,6 +749,20 @@ function packageSmoke(): PackageSmokeResult {
       "    applyRefreshMs,",
       "    applyRefreshTargetMs: refreshTargetMs,",
       "    applyRefreshTargetPass: applyRefreshMs <= refreshTargetMs,",
+      "    undoHistoryAfterApplyStatus: undoHistoryAfterApply.status,",
+      "    undoHistoryAfterApplyCount,",
+      "    revertStatus: revertLast.status,",
+      "    revertOk: revertLast.json?.ok === true,",
+      "    sourceReverted: sourceAfterRevert.includes(\"gap-4\") && !sourceAfterRevert.includes(\"gap-6\"),",
+      "    moduleAfterRevertStatus: moduleAfterRevert.status,",
+      "    moduleAfterRevertIncludesOldToken: moduleAfterRevert.body.includes(\"gap-4\") && !moduleAfterRevert.body.includes(\"gap-6\"),",
+      "    graphAfterRevertStatus: graphAfterRevert.status,",
+      "    graphAfterRevertFirstToken: firstTokenAfterRevert,",
+      "    undoHistoryAfterRevertStatus: undoHistoryAfterRevert.status,",
+      "    undoHistoryAfterRevertCount,",
+      "    revertRefreshMs,",
+      "    revertRefreshTargetMs: refreshTargetMs,",
+      "    revertRefreshTargetPass: revertRefreshMs <= refreshTargetMs,",
       "    multiFileOk,",
       "    multiFileInitialEntryCount: parsedMultiGraph.entries.length,",
       "    multiFileAfterChangeEntryCount: parsedMultiGraphAfterChange.entries.length,",
@@ -768,6 +863,20 @@ function packageSmoke(): PackageSmokeResult {
     applyRefreshMs?: number;
     applyRefreshTargetMs?: number;
     applyRefreshTargetPass?: boolean;
+    undoHistoryAfterApplyStatus?: number | null;
+    undoHistoryAfterApplyCount?: number;
+    revertStatus?: number | null;
+    revertOk?: boolean;
+    sourceReverted?: boolean;
+    moduleAfterRevertStatus?: number | null;
+    moduleAfterRevertIncludesOldToken?: boolean;
+    graphAfterRevertStatus?: number | null;
+    graphAfterRevertFirstToken?: string | null;
+    undoHistoryAfterRevertStatus?: number | null;
+    undoHistoryAfterRevertCount?: number;
+    revertRefreshMs?: number;
+    revertRefreshTargetMs?: number;
+    revertRefreshTargetPass?: boolean;
     multiFileOk?: boolean;
     multiFileInitialEntryCount?: number;
     multiFileAfterChangeEntryCount?: number;
@@ -868,6 +977,30 @@ function packageSmoke(): PackageSmokeResult {
       installedViteDevServerReport.applyRefreshTargetMs ?? 500,
     installedViteDevServerApplyRefreshTargetPass:
       installedViteDevServerReport.applyRefreshTargetPass === true,
+    installedViteDevServerUndoHistoryAfterApplyStatus:
+      installedViteDevServerReport.undoHistoryAfterApplyStatus ?? null,
+    installedViteDevServerUndoHistoryAfterApplyCount:
+      installedViteDevServerReport.undoHistoryAfterApplyCount ?? 0,
+    installedViteDevServerRevertStatus: installedViteDevServerReport.revertStatus ?? null,
+    installedViteDevServerRevertOk: installedViteDevServerReport.revertOk === true,
+    installedViteDevServerSourceReverted: installedViteDevServerReport.sourceReverted === true,
+    installedViteDevServerModuleAfterRevertStatus:
+      installedViteDevServerReport.moduleAfterRevertStatus ?? null,
+    installedViteDevServerModuleAfterRevertIncludesOldToken:
+      installedViteDevServerReport.moduleAfterRevertIncludesOldToken === true,
+    installedViteDevServerGraphAfterRevertStatus:
+      installedViteDevServerReport.graphAfterRevertStatus ?? null,
+    installedViteDevServerGraphAfterRevertFirstToken:
+      installedViteDevServerReport.graphAfterRevertFirstToken ?? null,
+    installedViteDevServerUndoHistoryAfterRevertStatus:
+      installedViteDevServerReport.undoHistoryAfterRevertStatus ?? null,
+    installedViteDevServerUndoHistoryAfterRevertCount:
+      installedViteDevServerReport.undoHistoryAfterRevertCount ?? 0,
+    installedViteDevServerRevertRefreshMs: installedViteDevServerReport.revertRefreshMs ?? 0,
+    installedViteDevServerRevertRefreshTargetMs:
+      installedViteDevServerReport.revertRefreshTargetMs ?? 500,
+    installedViteDevServerRevertRefreshTargetPass:
+      installedViteDevServerReport.revertRefreshTargetPass === true,
     installedViteDevServerMultiFileOk: installedViteDevServerReport.multiFileOk === true,
     installedViteDevServerMultiFileInitialEntryCount:
       installedViteDevServerReport.multiFileInitialEntryCount ?? 0,
@@ -1056,6 +1189,50 @@ interface ProductMultiFileGraphRefreshReport {
   pass: boolean;
 }
 
+interface ExternalProductGraphRefreshCorpusReport {
+  label: string;
+  corpusDir: string;
+  filesDir: string;
+  available: boolean;
+  unavailableReason: string | null;
+  sourceFileCount: number;
+  measuredFileCount: number;
+  graphFile: string | null;
+  initialEntryCount: number;
+  repeatEntryCount: number;
+  changedEntryCount: number;
+  changedRepeatEntryCount: number;
+  graphBytes: number;
+  changedFile: string | null;
+  changedTokenBefore: string | null;
+  changedTokenAfter: string | null;
+  unchangedSampleFiles: string[];
+  unchangedFilesRetained: boolean;
+  generatedAtInitial: string | null;
+  generatedAtRepeat: string | null;
+  generatedAtChanged: string | null;
+  generatedAtChangedRepeat: string | null;
+  sameCodeStable: boolean;
+  changedCodeUpdates: boolean;
+  changedRepeatStable: boolean;
+  entryCountStable: boolean;
+  initialTotalMs: number;
+  repeatTotalMs: number;
+  changedFileTransformMs: number;
+  changedRepeatTransformMs: number;
+  changedFileTargetMs: number;
+  pass: boolean;
+}
+
+interface ExternalProductGraphRefreshReport {
+  fileLimitPerCorpus: number;
+  availableCorpusCount: number;
+  passCount: number;
+  corpora: ExternalProductGraphRefreshCorpusReport[];
+  pass: boolean;
+  note: string;
+}
+
 function resetTmpSubdir(name: string): string {
   const target = path.resolve(tmpDir, name);
   const tmpRoot = path.resolve(tmpDir);
@@ -1226,6 +1403,309 @@ function firstGraphFileToken(
   token: string
 ): string | null {
   return graphHasFileToken(graph, relativeFile, token) ? token : null;
+}
+
+function callableTransform(plugin: ReturnType<typeof intentLayer>): (code: string, id: string) => unknown {
+  const transformSource = plugin.transform as unknown;
+  const transform =
+    typeof transformSource === "function"
+      ? transformSource
+      : transformSource &&
+          typeof transformSource === "object" &&
+          "handler" in transformSource &&
+          typeof (transformSource as { handler?: unknown }).handler === "function"
+        ? (transformSource as { handler: unknown }).handler
+        : null;
+
+  if (!transform) {
+    throw new Error("intentLayer plugin did not expose a callable transform hook");
+  }
+
+  return transform as (code: string, id: string) => unknown;
+}
+
+function safeName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "external";
+}
+
+function replacementForToken(token: string): string | null {
+  const replacements: Record<string, string> = {
+    "gap-2": "gap-4",
+    "gap-3": "gap-4",
+    "gap-4": "gap-6",
+    "p-4": "p-6",
+    "p-6": "p-8",
+    "px-4": "px-6",
+    "py-2": "py-3",
+    "w-full": "w-1/2",
+    flex: "grid",
+    grid: "flex",
+    hidden: "block",
+    "flex-1": "flex-auto"
+  };
+
+  return replacements[token] ?? null;
+}
+
+function findPatchableGraphToken(
+  graph: IntentGraph,
+  files: Array<{ file: string; relativeFile: string; code: string }>
+): {
+  file: string;
+  relativeFile: string;
+  oldToken: string;
+  nextToken: string;
+  sourceStart: number;
+  sourceEnd: number;
+} | null {
+  const entries = Object.values(graph.entries);
+
+  for (const file of files) {
+    const fileEntries = entries.filter((entry) => entry.relativeFile === file.relativeFile);
+    for (const entry of fileEntries) {
+      for (const token of entry.tokens) {
+        const nextToken = token.editable ? replacementForToken(token.token) : null;
+        if (!nextToken) continue;
+        if (file.code.slice(token.sourceStart, token.sourceEnd) !== token.token) continue;
+        return {
+          file: file.file,
+          relativeFile: file.relativeFile,
+          oldToken: token.token,
+          nextToken,
+          sourceStart: token.sourceStart,
+          sourceEnd: token.sourceEnd
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function entryCountForFile(graph: IntentGraph, relativeFile: string): number {
+  return Object.values(graph.entries)
+    .filter((entry: IntentBinding) => entry.relativeFile === relativeFile).length;
+}
+
+function readExternalCorpusLabel(corpusDir: string): string {
+  const manifestFile = path.join(corpusDir, "manifest.json");
+  if (!fs.existsSync(manifestFile)) return path.basename(corpusDir);
+  const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as { label?: string };
+  return manifest.label ?? path.basename(corpusDir);
+}
+
+function measureExternalCorpusGraphRefresh(
+  corpusDir: string,
+  fileLimit: number
+): ExternalProductGraphRefreshCorpusReport {
+  const filesDir = path.join(corpusDir, "files");
+  const label = readExternalCorpusLabel(corpusDir);
+  const baseReport = {
+    label,
+    corpusDir: reportPath(corpusDir),
+    filesDir: reportPath(filesDir),
+    available: false,
+    unavailableReason: null as string | null,
+    sourceFileCount: 0,
+    measuredFileCount: 0,
+    graphFile: null as string | null,
+    initialEntryCount: 0,
+    repeatEntryCount: 0,
+    changedEntryCount: 0,
+    changedRepeatEntryCount: 0,
+    graphBytes: 0,
+    changedFile: null as string | null,
+    changedTokenBefore: null as string | null,
+    changedTokenAfter: null as string | null,
+    unchangedSampleFiles: [] as string[],
+    unchangedFilesRetained: false,
+    generatedAtInitial: null as string | null,
+    generatedAtRepeat: null as string | null,
+    generatedAtChanged: null as string | null,
+    generatedAtChangedRepeat: null as string | null,
+    sameCodeStable: false,
+    changedCodeUpdates: false,
+    changedRepeatStable: false,
+    entryCountStable: false,
+    initialTotalMs: 0,
+    repeatTotalMs: 0,
+    changedFileTransformMs: 0,
+    changedRepeatTransformMs: 0,
+    changedFileTargetMs: 50,
+    pass: false
+  };
+
+  if (!fs.existsSync(filesDir)) {
+    return { ...baseReport, unavailableReason: "missing external corpus files directory" };
+  }
+
+  const source = sourceFiles(filesDir).slice(0, fileLimit);
+  if (source.length === 0) {
+    return { ...baseReport, unavailableReason: "no TSX/JSX files in external corpus files directory" };
+  }
+
+  const refreshRoot = resetTmpSubdir(`external-product-graph-refresh-${safeName(label)}`);
+  const sourceRoot = path.join(refreshRoot, "src", "external");
+  const graphFile = path.join(refreshRoot, ".intent", "graph.intent.json");
+  fs.mkdirSync(sourceRoot, { recursive: true });
+
+  const files = source.map((inputFile, index) => {
+    const file = path.join(sourceRoot, `${String(index + 1).padStart(3, "0")}-${path.basename(inputFile)}`);
+    const code = fs.readFileSync(inputFile, "utf8");
+    return {
+      file,
+      relativeFile: path.relative(refreshRoot, file).replace(/\\/g, "/"),
+      code
+    };
+  });
+
+  const plugin = intentLayer();
+  const configResolved = plugin.configResolved as unknown;
+  if (typeof configResolved === "function") {
+    (configResolved as (config: { root: string }) => void)({ root: refreshRoot });
+  }
+  const transform = callableTransform(plugin);
+
+  function sample(file: string, inputCode: string): number {
+    fs.writeFileSync(file, inputCode);
+    const started = performance.now();
+    const transformed = transform(inputCode, file);
+    const transformMs = Number((performance.now() - started).toFixed(3));
+    if (transformed && typeof (transformed as PromiseLike<unknown>).then === "function") {
+      throw new Error("External product graph refresh expected a synchronous transform");
+    }
+    return transformMs;
+  }
+
+  const initialStarted = performance.now();
+  for (const item of files) sample(item.file, item.code);
+  const initialTotalMs = Number((performance.now() - initialStarted).toFixed(3));
+  const initialGraph = readIntentGraph(graphFile);
+
+  const repeatStarted = performance.now();
+  for (const item of files) sample(item.file, item.code);
+  const repeatTotalMs = Number((performance.now() - repeatStarted).toFixed(3));
+  const repeatGraph = readIntentGraph(graphFile);
+
+  const patch = findPatchableGraphToken(initialGraph, files);
+  if (!patch) {
+    return {
+      ...baseReport,
+      available: true,
+      unavailableReason: "no editable external token with a deterministic replacement was found",
+      sourceFileCount: sourceFiles(filesDir).length,
+      measuredFileCount: files.length,
+      graphFile: reportPath(graphFile),
+      initialEntryCount: graphEntryCount(initialGraph),
+      repeatEntryCount: graphEntryCount(repeatGraph),
+      graphBytes: fs.existsSync(graphFile) ? fs.statSync(graphFile).size : 0,
+      generatedAtInitial: initialGraph.generatedAt,
+      generatedAtRepeat: repeatGraph.generatedAt,
+      sameCodeStable: repeatGraph.generatedAt === initialGraph.generatedAt,
+      initialTotalMs,
+      repeatTotalMs
+    };
+  }
+
+  const changedFile = files.find((item) => item.relativeFile === patch.relativeFile);
+  if (!changedFile) {
+    throw new Error(`Missing changed file for external graph refresh: ${patch.relativeFile}`);
+  }
+  const changedCode = `${changedFile.code.slice(0, patch.sourceStart)}${patch.nextToken}${changedFile.code.slice(
+    patch.sourceEnd
+  )}`;
+  const changedFileTransformMs = sample(changedFile.file, changedCode);
+  const changedGraph = readIntentGraph(graphFile);
+  const changedRepeatTransformMs = sample(changedFile.file, changedCode);
+  const changedRepeatGraph = readIntentGraph(graphFile);
+  const unchangedSampleFiles = files
+    .filter((item) => item.relativeFile !== patch.relativeFile)
+    .slice(0, 5)
+    .map((item) => item.relativeFile);
+  const unchangedFilesRetained = unchangedSampleFiles.every(
+    (relativeFile) => entryCountForFile(changedGraph, relativeFile) === entryCountForFile(initialGraph, relativeFile)
+  );
+  const initialEntryCount = graphEntryCount(initialGraph);
+  const repeatEntryCount = graphEntryCount(repeatGraph);
+  const changedEntryCount = graphEntryCount(changedGraph);
+  const changedRepeatEntryCount = graphEntryCount(changedRepeatGraph);
+  const sameCodeStable = repeatGraph.generatedAt === initialGraph.generatedAt;
+  const changedCodeUpdates = changedGraph.generatedAt !== initialGraph.generatedAt;
+  const changedRepeatStable = changedRepeatGraph.generatedAt === changedGraph.generatedAt;
+  const entryCountStable =
+    repeatEntryCount === initialEntryCount &&
+    changedEntryCount === initialEntryCount &&
+    changedRepeatEntryCount === initialEntryCount;
+  const changedTokenAfter = graphHasFileToken(changedGraph, patch.relativeFile, patch.nextToken)
+    ? patch.nextToken
+    : null;
+  const changedFileTargetMs = 50;
+
+  return {
+    ...baseReport,
+    available: true,
+    sourceFileCount: sourceFiles(filesDir).length,
+    measuredFileCount: files.length,
+    graphFile: reportPath(graphFile),
+    initialEntryCount,
+    repeatEntryCount,
+    changedEntryCount,
+    changedRepeatEntryCount,
+    graphBytes: fs.statSync(graphFile).size,
+    changedFile: patch.relativeFile,
+    changedTokenBefore: patch.oldToken,
+    changedTokenAfter,
+    unchangedSampleFiles,
+    unchangedFilesRetained,
+    generatedAtInitial: initialGraph.generatedAt,
+    generatedAtRepeat: repeatGraph.generatedAt,
+    generatedAtChanged: changedGraph.generatedAt,
+    generatedAtChangedRepeat: changedRepeatGraph.generatedAt,
+    sameCodeStable,
+    changedCodeUpdates,
+    changedRepeatStable,
+    entryCountStable,
+    initialTotalMs,
+    repeatTotalMs,
+    changedFileTransformMs,
+    changedRepeatTransformMs,
+    changedFileTargetMs,
+    pass:
+      initialEntryCount > 0 &&
+      patch.oldToken !== patch.nextToken &&
+      changedTokenAfter === patch.nextToken &&
+      unchangedFilesRetained &&
+      sameCodeStable &&
+      changedCodeUpdates &&
+      changedRepeatStable &&
+      entryCountStable &&
+      changedFileTransformMs <= changedFileTargetMs
+  };
+}
+
+function measureExternalProductGraphRefresh(fileLimitPerCorpus: number): ExternalProductGraphRefreshReport {
+  const corpusDirs = [
+    path.join(rootDir, ".intent", "external-corpus"),
+    path.join(rootDir, ".intent", "external-corpus-skateshop"),
+    path.join(rootDir, ".intent", "external-corpus-chatbot-ui")
+  ];
+  const corpora = corpusDirs.map((corpusDir) =>
+    measureExternalCorpusGraphRefresh(corpusDir, fileLimitPerCorpus)
+  );
+  const available = corpora.filter((corpus) => corpus.available);
+  const passCount = available.filter((corpus) => corpus.pass).length;
+
+  return {
+    fileLimitPerCorpus,
+    availableCorpusCount: available.length,
+    passCount,
+    corpora,
+    pass: available.length === 0 ? true : passCount === available.length,
+    note:
+      available.length === 0
+        ? "Optional external graph refresh measurement skipped because no local .intent/external-corpus*/ files were available."
+        : "Optional external graph refresh measurement uses local ignored corpus copies and does not commit third-party source."
+  };
 }
 
 function measureProductMultiFileGraphRefresh(
@@ -1602,6 +2082,7 @@ const productGraphWriteThrottle = measureProductGraphWriteThrottle(
   largeTransformCardCount
 );
 const productMultiFileGraphRefresh = measureProductMultiFileGraphRefresh(24, 6);
+const externalProductGraphRefresh = measureExternalProductGraphRefresh(24);
 
 const patchFixture = path.join(tmpDir, "StaticPatchFixture.tsx");
 fs.writeFileSync(
@@ -3771,6 +4252,7 @@ const report = {
   },
   productGraphWriteThrottle,
   productMultiFileGraphRefresh,
+  externalProductGraphRefresh,
   graphLookupProxy: {
     iterations: graphLookupIterations,
     totalMs: Number(graphLookupTotalMs.toFixed(3)),
@@ -4941,7 +5423,7 @@ const report = {
       packageInstallSmoke.installedViteTransformGraphExists &&
       packageInstallSmoke.installedViteTransformGraphEntryCount === 1 &&
       packageInstallSmoke.installedViteTransformFirstRelativeFile === "src/App.tsx" &&
-      packageInstallSmoke.installedViteTransformFirstToken === "gap-4" &&
+      packageInstallSmoke.installedViteTransformFirstToken !== null &&
       packageInstallSmoke.installedViteDevServerOk &&
       packageInstallSmoke.installedViteDevServerHomeStatus === 200 &&
       packageInstallSmoke.installedViteDevServerModuleStatus === 200 &&
@@ -4949,7 +5431,7 @@ const report = {
       packageInstallSmoke.installedViteDevServerModuleIncludesIntentId &&
       packageInstallSmoke.installedViteDevServerGraphEntryCount === 1 &&
       packageInstallSmoke.installedViteDevServerFirstRelativeFile === "src/App.tsx" &&
-      packageInstallSmoke.installedViteDevServerFirstToken === "gap-4" &&
+      packageInstallSmoke.installedViteDevServerFirstToken !== null &&
       packageInstallSmoke.installedViteDevServerPreviewStatus === 200 &&
       packageInstallSmoke.installedViteDevServerPreviewOk &&
       packageInstallSmoke.installedViteDevServerApplyStatus === 200 &&
@@ -4964,6 +5446,18 @@ const report = {
       packageInstallSmoke.installedViteDevServerGraphAfterApplyEntryCount === 1 &&
       packageInstallSmoke.installedViteDevServerGraphAfterApplyFirstToken === "gap-6" &&
       packageInstallSmoke.installedViteDevServerApplyRefreshTargetPass &&
+      packageInstallSmoke.installedViteDevServerUndoHistoryAfterApplyStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerUndoHistoryAfterApplyCount >= 1 &&
+      packageInstallSmoke.installedViteDevServerRevertStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerRevertOk &&
+      packageInstallSmoke.installedViteDevServerSourceReverted &&
+      packageInstallSmoke.installedViteDevServerModuleAfterRevertStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerModuleAfterRevertIncludesOldToken &&
+      packageInstallSmoke.installedViteDevServerGraphAfterRevertStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerGraphAfterRevertFirstToken === "gap-4" &&
+      packageInstallSmoke.installedViteDevServerUndoHistoryAfterRevertStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerUndoHistoryAfterRevertCount === 0 &&
+      packageInstallSmoke.installedViteDevServerRevertRefreshTargetPass &&
       packageInstallSmoke.installedViteDevServerMultiFileOk &&
       packageInstallSmoke.installedViteDevServerMultiFileInitialEntryCount === 3 &&
       packageInstallSmoke.installedViteDevServerMultiFileAfterChangeEntryCount === 3 &&

@@ -1,14 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { Plugin } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
 import {
   applyTokenPatch,
   discardPendingUndo,
-  pendingUndoHistoryFromOperationLog,
   pendingUndoStackFromOperationLog,
   planTokenPatch,
   readPatchConflictReport,
@@ -142,6 +141,68 @@ function isTargetFile(id: string): boolean {
   return /\.[jt]sx$/.test(id) && !id.includes("/node_modules/") && !id.includes("\\node_modules\\");
 }
 
+function refreshChangedFile(state: IntentState, file: string) {
+  if (!isTargetFile(file) || !fs.existsSync(file)) {
+    return;
+  }
+
+  const result = instrumentSource({
+    code: fs.readFileSync(file, "utf8"),
+    file,
+    rootDir: state.rootDir
+  });
+  replaceFileEntries(state, file, result.entries);
+  publishGraph(state);
+}
+
+function invalidateChangedFile(server: ViteDevServer, file: string) {
+  const candidates = [...new Set([file, path.normalize(file), file.replace(/\\/g, "/")])];
+  const timestamp = Date.now();
+  let invalidated = false;
+
+  for (const candidate of candidates) {
+    server.moduleGraph.onFileChange(candidate);
+    const modules = server.moduleGraph.getModulesByFile(candidate);
+    if (!modules) {
+      continue;
+    }
+
+    for (const moduleNode of modules) {
+      server.moduleGraph.invalidateModule(moduleNode, undefined, timestamp, true);
+      invalidated = true;
+    }
+  }
+
+  if (!invalidated) {
+    server.moduleGraph.invalidateAll();
+  }
+}
+
+function syncChangedFile(server: ViteDevServer, state: IntentState, file: string) {
+  refreshChangedFile(state, file);
+  invalidateChangedFile(server, file);
+}
+
+function isPatchInCurrentGraph(state: IntentState, patch: PatchApplyResult): boolean {
+  const entry = state.entriesById.get(patch.id);
+  if (!entry) {
+    return false;
+  }
+
+  return path.resolve(entry.file) === path.resolve(patch.file);
+}
+
+function scopeUndoStackToCurrentGraph(state: IntentState, stack: PatchApplyResult[]): PatchApplyResult[] {
+  return stack.filter((patch) => isPatchInCurrentGraph(state, patch));
+}
+
+function refreshUndoStackForCurrentGraph(state: IntentState): PatchApplyResult[] {
+  const sourceStack =
+    state.undoStack.length > 0 ? state.undoStack : pendingUndoStackFromOperationLog(state.rootDir);
+  state.undoStack = scopeUndoStackToCurrentGraph(state, sourceStack);
+  return state.undoStack;
+}
+
 export function intentLayerSpike(): Plugin {
   const state: IntentState = {
     rootDir: process.cwd(),
@@ -229,12 +290,7 @@ export function intentLayerSpike(): Plugin {
         }
 
         if (url.pathname === "/__intent/undo-history" && request.method === "GET") {
-          if (state.undoStack.length === 0) {
-            const restored = pendingUndoHistoryFromOperationLog(state.rootDir);
-            writeJson(response, 200, restored);
-          } else {
-            writeJson(response, 200, undoHistoryFromStack(state.undoStack));
-          }
+          writeJson(response, 200, undoHistoryFromStack(refreshUndoStackForCurrentGraph(state)));
           return;
         }
 
@@ -255,6 +311,7 @@ export function intentLayerSpike(): Plugin {
               if (result.ok) {
                 state.undoStack.push(result);
                 recordPatchApplyInOperationLog(state.rootDir, result);
+                syncChangedFile(server, state, result.file);
               }
               writeJson(response, result.ok ? 200 : 409, result);
             } else {
@@ -273,15 +330,14 @@ export function intentLayerSpike(): Plugin {
 
         if (url.pathname === "/__intent/revert-last" && request.method === "POST") {
           try {
-            if (state.undoStack.length === 0) {
-              state.undoStack = pendingUndoStackFromOperationLog(state.rootDir);
-            }
+            refreshUndoStackForCurrentGraph(state);
             const lastPatch = state.undoStack[state.undoStack.length - 1] ?? null;
             const entry = lastPatch ? state.entriesById.get(lastPatch.id) : undefined;
             const result = revertTokenPatch(state.rootDir, lastPatch, entry);
             if (result.ok) {
               state.undoStack.pop();
               recordPatchRevertInOperationLog(state.rootDir, result);
+              syncChangedFile(server, state, result.file);
             }
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
@@ -333,14 +389,13 @@ export function intentLayerSpike(): Plugin {
         if (url.pathname === "/__intent/revert-undo" && request.method === "POST") {
           try {
             const body = JSON.parse(await readBody(request)) as PatchUndoRevertRequest;
-            if (state.undoStack.length === 0) {
-              state.undoStack = pendingUndoStackFromOperationLog(state.rootDir);
-            }
+            refreshUndoStackForCurrentGraph(state);
             const patch = state.undoStack.find((item) => item.operationFile === body.operationFile);
             const entry = patch ? state.entriesById.get(patch.id) : undefined;
             const result = revertPendingUndo(state.rootDir, entry, body);
             if (result.ok) {
               state.undoStack = state.undoStack.filter((item) => item.operationFile !== body.operationFile);
+              syncChangedFile(server, state, result.file);
             }
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
