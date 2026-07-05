@@ -66,16 +66,29 @@ export default defineConfig({
 
 `intent-layer/vite` is the currently verified package export.
 
-## 4. Initialize Intent Workspace
+## 4. Browser Setup Wizard
 
-Run these from the target project root.
+Start the Vite dev server after registering the plugin. Open the local URL in the browser.
 
 ```bash
-npx intent-layer init
-npx intent-layer doctor
+npm run dev
 ```
 
-`init` creates the `.intent/` folders and lightweight schema files.
+On first run, the Intent Layer panel opens a setup view. Use it to:
+
+- choose Korean or English
+- create the `.intent/` workspace and schema files
+- write `.intent/settings.json`
+- see whether source bindings have been generated
+- see whether Codex/Claude are available and whether Agent run mode is locked
+
+No `init` command is required for the default GUI path.
+
+CLI diagnostics remain available when you want a repeatable report:
+
+```bash
+npx intent-layer doctor
+```
 
 `doctor` checks these items as JSON:
 
@@ -97,9 +110,17 @@ npx intent-layer scan src --write-graph
 npx intent-layer doctor
 ```
 
+For more detail, see [ONBOARDING_EN.md](./ONBOARDING_EN.md).
+
 ## 5. Run The Dev Server
 
-Use the wrapper instead of the raw Vite command when you want the default MVP setup.
+You can use the project's normal Vite script:
+
+```bash
+npm run dev
+```
+
+The CLI wrapper remains available when you want an explicit host/port default:
 
 ```bash
 npx intent-layer dev
@@ -180,12 +201,13 @@ npx intent-layer scan src --write-graph
 Latest `npm run eval` values:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.694ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.467ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-installed Vite apply refresh: 194.581ms
-installed Vite revert refresh: 127.724ms
-installed 3-file graph refresh: 123.273ms
-package smoke: pass
+first-run setup smoke: status 200, apply 200, language ko, workspace/settings/schema ready
+installed Vite apply refresh: 283.321ms
+installed Vite revert refresh: 204.204ms
+installed 3-file graph refresh: 135.331ms
+package smoke: pass, 53 gates, 0 false
 ```
 
 The installed Vite dev server refresh smoke target is 2500ms because temp installs and OS file watchers are noisier than the main browser UX loop. Real browser UX gates are measured separately at click-to-panel 100ms, preview/apply 50ms, and revert 100ms.

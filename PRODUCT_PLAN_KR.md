@@ -140,6 +140,8 @@ AI Integration: optional Codex/Cursor/Claude command plan / plugin
 
 이 사용자층에서는 GUI가 1차 조작면이어야 한다. CLI는 설치, 진단, 반복 평가, 자동화용 보조 수단으로 둔다.
 
+첫 실행 설정도 GUI-first여야 한다. Vite plugin 등록 후 브라우저 overlay에서 한국어/영어 선택, `.intent` workspace 생성, source binding 상태 확인, Codex/Claude hook 실행 잠금 상태 확인까지 끝내는 흐름을 기본값으로 둔다.
+
 ### 6.2 2차 사용자
 
 - 프론트엔드 개발자

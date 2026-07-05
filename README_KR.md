@@ -33,6 +33,8 @@ INTENT_LAYER는 AI가 만든 React/Tailwind UI를 사람이 브라우저에서 �
 - `DEMO_WALKTHROUGH_EN.md` - 영어 MVP 데모 절차
 - `INSTALL_KR.md` - 설치 가이드
 - `INSTALL_EN.md` - 영어 설치 가이드
+- `ONBOARDING_KR.md` - GUI-first 온보딩 흐름
+- `ONBOARDING_EN.md` - 영어 GUI-first 온보딩 흐름
 - `FAILURE_MODES_KR.md` - 실패 모드와 대응
 - `FAILURE_MODES_EN.md` - 영어 실패 모드 가이드
 - `MVP_HANDOFF_KR.md` - MVP 후보 상태와 handoff
@@ -53,6 +55,14 @@ npm install
 ```bash
 npm run dev
 ```
+
+브라우저 첫 설정:
+
+```text
+Vite dev URL 열기 -> Intent Layer 설정 -> 한국어/영어 선택 -> 설정 완료
+```
+
+설정 화면은 브라우저 패널에서 `.intent/` schema와 `.intent/settings.json`을 만든다. CLI는 진단과 반복 검증용으로 남기지만, 일상적인 시각 편집의 기본 흐름은 GUI-first다.
 
 검증 명령:
 
@@ -118,7 +128,7 @@ npm run analyze:external-corpus
 - 실제 브라우저 click-to-patch QA
 - package tarball install smoke
 - preview/apply/revert endpoint smoke
-- KR/EN install, failure mode, demo walkthrough 문서
+- KR/EN onboarding, install, failure mode, demo walkthrough 문서
 
 남은 watch 항목:
 
@@ -137,7 +147,7 @@ npm run analyze:external-corpus
 - 설치된 `intent-layer/vite` import
 - 설치된 Vite plugin transform/graph output
 - 실제 Vite dev server HTTP smoke
-- `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last`
+- `/__intent/graph`, `/__intent/setup`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last`
 - apply/revert refresh timing
 - 3-file graph refresh
 - Codex/Claude agent launch dry-run 계획
@@ -152,6 +162,7 @@ npm run analyze:external-corpus
 - compile-time `data-intent-id` injection
 - `.intent/graph.intent.json` sidecar graph
 - floating browser overlay
+- 첫 실행 브라우저 setup wizard와 한국어/영어 언어 선택
 - overlay 수동 minimize/expand
 - 같은 intent id를 가진 렌더 DOM 전체 outline과 shared source scope 표시
 - patch preview before apply

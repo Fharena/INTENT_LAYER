@@ -74,6 +74,57 @@ export interface ClientMetricsReport {
   metrics: ClientMetric[];
 }
 
+export type IntentLayerLanguage = "ko" | "en";
+
+export interface IntentLayerSettings {
+  version: 1;
+  language: IntentLayerLanguage;
+  onboardingCompletedAt: string | null;
+}
+
+export interface IntentSetupCheck {
+  name: string;
+  status: "ready" | "warn" | "missing";
+  detail: string;
+}
+
+export interface IntentSetupStatus {
+  version: 1;
+  generatedAt: string;
+  root: string;
+  language: IntentLayerLanguage;
+  workspaceReady: boolean;
+  settingsReady: boolean;
+  graphReady: boolean;
+  graphEntryCount: number;
+  setupRequired: boolean;
+  checks: IntentSetupCheck[];
+  agent: {
+    runEnabled: boolean;
+    codexCommand: string;
+    codexAvailable: boolean;
+    claudeCommand: string;
+    claudeAvailable: boolean;
+  };
+}
+
+export interface IntentSetupRequest {
+  language?: IntentLayerLanguage;
+  createWorkspace?: boolean;
+  completeOnboarding?: boolean;
+}
+
+export interface IntentSetupResult {
+  ok: true;
+  status: IntentSetupStatus;
+  createdPaths: string[];
+  existingPaths: string[];
+  settingsFile: string;
+  metrics: {
+    setupMs: number;
+  };
+}
+
 export interface PatchRequest {
   id: string;
   oldToken: string;

@@ -17,6 +17,9 @@ import type {
   PatchRevertResult,
   PatchUndoDiscardResult,
   PatchUndoRevertResult,
+  IntentLayerLanguage,
+  IntentSetupResult,
+  IntentSetupStatus,
   UndoHistoryReport
 } from "./types";
 
@@ -31,11 +34,66 @@ type ConflictReportResponse = PatchConflictReport;
 type ConflictResolveResponse = PatchConflictResolveResult | PatchFailure;
 type UndoDiscardResponse = PatchUndoDiscardResult | PatchFailure;
 type UndoRevertResponse = PatchUndoRevertResult | PatchFailure;
+type SetupResponse = IntentSetupStatus;
+type SetupApplyResponse = IntentSetupResult | PatchFailure;
 
 interface RenderScope {
   renderedInstanceCount: number;
   isShared: boolean;
 }
+
+type OverlayView = "editor" | "setup";
+
+type TextKey =
+  | "agentCreate"
+  | "agentCreated"
+  | "agentHandoff"
+  | "agentLaunchPlan"
+  | "agentLaunchRunLocked"
+  | "agentPlaceholder"
+  | "agentRecord"
+  | "agentResult"
+  | "agentResultPlaceholder"
+  | "apply"
+  | "applyAll"
+  | "codexSubtool"
+  | "commandPlan"
+  | "conflicts"
+  | "conflictsEmpty"
+  | "directEditEmpty"
+  | "dynamicArgs"
+  | "elementSelected"
+  | "english"
+  | "expand"
+  | "inspectableNoTokens"
+  | "korean"
+  | "language"
+  | "minimize"
+  | "noBinding"
+  | "noIntentElement"
+  | "pick"
+  | "pickHint"
+  | "pickMode"
+  | "preview"
+  | "ready"
+  | "runLocked"
+  | "selectSingle"
+  | "setup"
+  | "setupApply"
+  | "setupComplete"
+  | "setupGraphReady"
+  | "setupGraphWaiting"
+  | "setupIntro"
+  | "setupOpen"
+  | "setupStatus"
+  | "setupTitle"
+  | "setupWorkspaceReady"
+  | "setupWorkspaceWaiting"
+  | "sharedSource"
+  | "singleRender"
+  | "undo"
+  | "undoHistory"
+  | "undoHistoryEmpty";
 
 const lastAgentTaskFileByIntentId = new Map<string, string>();
 const overlayStyleId = "intent-layer-overlay-style";
@@ -43,6 +101,9 @@ const overlayBaseBottom = 18;
 const overlayAvoidanceGap = 14;
 let overlayPlacementFrame: number | null = null;
 let overlayCollapsed = false;
+let overlayView: OverlayView = "editor";
+let overlayLanguage: IntentLayerLanguage = detectInitialLanguage();
+let latestSetupStatus: IntentSetupStatus | null = null;
 const devToolCandidateSelector = [
   "nextjs-portal",
   "vite-error-overlay",
@@ -57,6 +118,135 @@ const devToolCandidateSelector = [
 declare global {
   interface Window {
     __intentMetrics?: ClientMetric[];
+  }
+}
+
+const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
+  ko: {
+    agentCreate: "작업 만들기",
+    agentCreated: "Agent 작업 생성",
+    agentHandoff: "Agent 전달",
+    agentLaunchPlan: "실행 계획",
+    agentLaunchRunLocked: "실행 잠김",
+    agentPlaceholder: "복잡하거나 직접 수정이 어려운 변경사항을 적어주세요",
+    agentRecord: "결과 기록",
+    agentResult: "결과",
+    agentResultPlaceholder: "Agent가 작업한 결과를 요약해 주세요",
+    apply: "적용",
+    applyAll: "전체 적용",
+    codexSubtool: "Codex 보조 도구",
+    commandPlan: "명령 계획",
+    conflicts: "되돌리기 충돌",
+    conflictsEmpty: "해결되지 않은 충돌이 없습니다.",
+    directEditEmpty: "직접 수정 가능한 토큰이 아직 없습니다.",
+    dynamicArgs: "동적 인자 read-only",
+    elementSelected: "요소를 선택했습니다",
+    english: "English",
+    expand: "펼치기",
+    inspectableNoTokens: "이 요소는 inspect 가능하지만 아직 직접 수정 가능한 토큰이 없습니다.",
+    korean: "한국어",
+    language: "언어",
+    minimize: "접기",
+    noBinding: "이 요소의 binding을 찾지 못했습니다",
+    noIntentElement: "Intent binding이 있는 요소가 아닙니다",
+    pick: "선택",
+    pickHint: "선택을 누른 뒤 페이지에서 수정할 UI를 클릭하세요.",
+    pickMode: "선택 모드입니다",
+    preview: "미리보기",
+    ready: "준비됐습니다. 요소를 선택하세요.",
+    runLocked: "실행은 잠겨 있습니다. INTENT_LAYER_AGENT_RUN=1일 때만 Agent CLI가 실행됩니다.",
+    selectSingle: "이 렌더 인스턴스에만 연결됩니다.",
+    setup: "설정",
+    setupApply: "설정 완료",
+    setupComplete: "설정이 완료됐습니다",
+    setupGraphReady: "소스 binding이 준비됐습니다.",
+    setupGraphWaiting: "Vite가 TSX/JSX를 변환하면 binding이 생깁니다.",
+    setupIntro: "Vite dev server 안에서 CLI 없이 Intent Layer 기본 설정을 마칩니다.",
+    setupOpen: "설정 화면",
+    setupStatus: "설정 상태",
+    setupTitle: "처음 설정",
+    setupWorkspaceReady: ".intent 워크스페이스가 준비됐습니다.",
+    setupWorkspaceWaiting: ".intent 워크스페이스를 생성해야 합니다.",
+    sharedSource: "공유 source",
+    singleRender: "단일 렌더",
+    undo: "되돌리기",
+    undoHistory: "되돌리기 기록",
+    undoHistoryEmpty: "대기 중인 되돌리기 작업이 없습니다."
+  },
+  en: {
+    agentCreate: "Create task",
+    agentCreated: "Agent task created",
+    agentHandoff: "Agent handoff",
+    agentLaunchPlan: "Command plan",
+    agentLaunchRunLocked: "Run locked",
+    agentPlaceholder: "Describe a complex or unsupported edit",
+    agentRecord: "Record result",
+    agentResult: "Result",
+    agentResultPlaceholder: "Summarize the agent result",
+    apply: "Apply",
+    applyAll: "Apply all",
+    codexSubtool: "Codex subtool",
+    commandPlan: "Command plan",
+    conflicts: "Undo conflicts",
+    conflictsEmpty: "No unresolved undo conflicts.",
+    directEditEmpty: "No direct-edit tokens yet.",
+    dynamicArgs: "dynamic args read-only",
+    elementSelected: "Element selected",
+    english: "English",
+    expand: "Expand",
+    inspectableNoTokens: "This element is inspectable, but it has no direct-edit tokens yet.",
+    korean: "Korean",
+    language: "Language",
+    minimize: "Minimize",
+    noBinding: "No binding found for that element",
+    noIntentElement: "No intent binding on this element",
+    pick: "Pick",
+    pickHint: "Click Pick, then choose something on the page to edit.",
+    pickMode: "Pick mode active",
+    preview: "Preview",
+    ready: "Ready. Start by picking an element.",
+    runLocked: "Agent run is locked. Agent CLIs run only when INTENT_LAYER_AGENT_RUN=1 is set.",
+    selectSingle: "Affects this rendered instance.",
+    setup: "Setup",
+    setupApply: "Finish setup",
+    setupComplete: "Setup complete",
+    setupGraphReady: "Source bindings are ready.",
+    setupGraphWaiting: "Bindings appear after Vite transforms TSX/JSX files.",
+    setupIntro: "Finish Intent Layer setup inside the Vite dev server, without extra CLI steps.",
+    setupOpen: "Setup view",
+    setupStatus: "Setup status",
+    setupTitle: "First setup",
+    setupWorkspaceReady: ".intent workspace is ready.",
+    setupWorkspaceWaiting: ".intent workspace needs to be created.",
+    sharedSource: "Shared source",
+    singleRender: "Single render",
+    undo: "Undo",
+    undoHistory: "Undo history",
+    undoHistoryEmpty: "No pending undo operations."
+  }
+};
+
+function detectInitialLanguage(): IntentLayerLanguage {
+  try {
+    const stored = window.localStorage.getItem("intent-layer-language");
+    if (stored === "ko" || stored === "en") return stored;
+  } catch {
+    // Ignore storage failures in embedded previews.
+  }
+
+  return navigator.language.toLowerCase().startsWith("ko") ? "ko" : "en";
+}
+
+function t(key: TextKey): string {
+  return texts[overlayLanguage][key];
+}
+
+function setOverlayLanguage(language: IntentLayerLanguage) {
+  overlayLanguage = language;
+  try {
+    window.localStorage.setItem("intent-layer-language", language);
+  } catch {
+    // Ignore storage failures in embedded previews.
   }
 }
 
@@ -176,7 +366,7 @@ function ensureOverlayStyles() {
 }
 
 .intent-layer-header-actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
 }
 
 [data-intent-overlay-root][data-intent-collapsed="true"] {
@@ -226,6 +416,43 @@ function ensureOverlayStyles() {
   display: grid !important;
   gap: 10px !important;
   padding: 12px 13px 13px !important;
+}
+
+.intent-layer-setup-grid {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.intent-layer-check-row {
+  display: grid !important;
+  grid-template-columns: auto 1fr !important;
+  gap: 8px !important;
+  align-items: start !important;
+}
+
+.intent-layer-check-dot {
+  width: 8px !important;
+  height: 8px !important;
+  margin-top: 5px !important;
+  border-radius: 999px !important;
+  background: #94a3b8 !important;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.13) !important;
+}
+
+.intent-layer-check-dot[data-intent-status="ready"] {
+  background: #55e6a5 !important;
+  box-shadow: 0 0 0 3px rgba(85, 230, 165, 0.12) !important;
+}
+
+.intent-layer-check-dot[data-intent-status="warn"] {
+  background: #ffd166 !important;
+  box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.12) !important;
+}
+
+.intent-layer-language-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
 }
 
 .intent-layer-section {
@@ -567,8 +794,8 @@ function renderTokenRow(
     select.appendChild(option);
   }
 
-  const preview = createButton("Preview");
-  const apply = createButton(scope?.isShared ? "Apply all" : "Apply");
+  const preview = createButton(t("preview"));
+  const apply = createButton(scope?.isShared ? t("applyAll") : t("apply"));
   if (scope?.isShared) {
     const title = `This source binding is rendered ${scope.renderedInstanceCount} times on the page.`;
     preview.title = title;
@@ -643,7 +870,9 @@ function renderTokenRow(
     const responseAt = performance.now();
     const renderStartedAt = performance.now();
     if (result.ok) {
-      const scopeNote = scope?.isShared ? `; affects ${scope.renderedInstanceCount} rendered instances` : "";
+      const scopeNote = scope?.isShared
+        ? `; ${overlayLanguage === "ko" ? "영향 렌더 수" : "affects"} ${scope.renderedInstanceCount}`
+        : "";
       rerender(`Applied ${result.oldToken} -> ${result.nextToken} in ${result.metrics.applyMs}ms${scopeNote}`);
     } else {
       setStatus(`Rejected: ${result.reason}`);
@@ -679,14 +908,14 @@ function renderAgentTaskForm(
   wrapper.style.borderTop = "1px solid #e2e8f0";
 
   const label = document.createElement("label");
-  label.textContent = "Agent handoff";
+  label.textContent = t("agentHandoff");
   label.style.display = "block";
   label.style.fontSize = "12px";
   label.style.fontWeight = "800";
   label.style.marginBottom = "6px";
 
   const textarea = document.createElement("textarea");
-  textarea.placeholder = "Describe a complex or unsupported edit";
+  textarea.placeholder = t("agentPlaceholder");
   textarea.rows = 3;
   textarea.style.width = "100%";
   textarea.style.boxSizing = "border-box";
@@ -696,7 +925,7 @@ function renderAgentTaskForm(
   textarea.style.fontSize = "12px";
   textarea.style.resize = "vertical";
 
-  const create = createButton("Create task");
+  const create = createButton(t("agentCreate"));
   create.style.marginTop = "8px";
   create.addEventListener("click", async () => {
     const response = await fetch("/__intent/agent-task", {
@@ -712,7 +941,7 @@ function renderAgentTaskForm(
       lastAgentTaskFileByIntentId.set(binding.id, result.taskFile);
       launchBox.style.display = "block";
       launchBox.textContent = `Task file\n${result.taskFile}`;
-      setStatus(`Agent task created in ${result.metrics.taskMs}ms: ${result.taskFile}`);
+      setStatus(`${t("agentCreated")} ${result.metrics.taskMs}ms: ${result.taskFile}`);
     } else {
       setStatus(`Agent task rejected: ${result.reason}`);
     }
@@ -745,10 +974,14 @@ function renderAgentTaskForm(
     if (result.ok) {
       lastAgentTaskFileByIntentId.set(binding.id, result.taskFile);
       launchBox.textContent = [
-        result.executed ? `${provider} started` : `${provider} command plan`,
+        result.executed ? `${provider} started` : `${provider} ${t("commandPlan")}`,
         `task: ${result.taskFile}`,
         `cwd: ${result.cwd}`,
-        result.executed ? `pid: ${result.pid ?? "unknown"}` : "execution: not started",
+        result.executed
+          ? `pid: ${result.pid ?? "unknown"}`
+          : overlayLanguage === "ko"
+            ? "execution: 시작하지 않음"
+            : "execution: not started",
         result.stdoutFile ? `stdout: ${result.stdoutFile}` : null,
         result.stderrFile ? `stderr: ${result.stderrFile}` : null,
         "",
@@ -759,9 +992,9 @@ function renderAgentTaskForm(
       if (result.executed) {
         setStatus(`${provider} launched in ${result.metrics.launchMs}ms: ${result.taskFile}`);
       } else if (execute && !result.enabled) {
-        setStatus(`${provider} run disabled; set INTENT_LAYER_AGENT_RUN=1 to execute. Command planned.`);
+        setStatus(`${provider}: ${t("runLocked")}`);
       } else {
-        setStatus(`${provider} command planned in ${result.metrics.launchMs}ms: ${result.taskFile}`);
+        setStatus(`${provider} ${t("agentLaunchPlan")} ${result.metrics.launchMs}ms: ${result.taskFile}`);
       }
     } else {
       launchBox.textContent = result.detail ?? result.reason;
@@ -792,7 +1025,7 @@ function renderAgentTaskForm(
   launchActions.append(planCodex, runCodex, planClaude, runClaude);
 
   const resultLabel = document.createElement("label");
-  resultLabel.textContent = "Result";
+  resultLabel.textContent = t("agentResult");
   resultLabel.style.display = "block";
   resultLabel.style.fontSize = "12px";
   resultLabel.style.fontWeight = "800";
@@ -800,7 +1033,7 @@ function renderAgentTaskForm(
   resultLabel.style.marginBottom = "6px";
 
   const resultTextarea = document.createElement("textarea");
-  resultTextarea.placeholder = "Summarize the agent result";
+  resultTextarea.placeholder = t("agentResultPlaceholder");
   resultTextarea.rows = 3;
   resultTextarea.style.width = "100%";
   resultTextarea.style.boxSizing = "border-box";
@@ -810,7 +1043,7 @@ function renderAgentTaskForm(
   resultTextarea.style.fontSize = "12px";
   resultTextarea.style.resize = "vertical";
 
-  const record = createButton("Record result");
+  const record = createButton(t("agentRecord"));
   record.style.marginTop = "8px";
   record.addEventListener("click", async () => {
     const response = await fetch("/__intent/agent-result", {
@@ -836,6 +1069,149 @@ function renderAgentTaskForm(
   root.appendChild(wrapper);
 }
 
+function renderSetupPanel(
+  root: HTMLElement,
+  panel: HTMLElement,
+  setStatus: (message: string) => void
+) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "intent-layer-section";
+
+  const title = document.createElement("div");
+  title.className = "intent-layer-section-title";
+  title.textContent = t("setupTitle");
+
+  const intro = document.createElement("p");
+  intro.textContent = t("setupIntro");
+
+  const languageLabel = document.createElement("label");
+  languageLabel.textContent = t("language");
+
+  const languageGrid = document.createElement("div");
+  languageGrid.className = "intent-layer-language-grid";
+
+  const korean = createButton(t("korean"), overlayLanguage === "ko" ? "primary" : "secondary");
+  korean.addEventListener("click", () => {
+    setOverlayLanguage("ko");
+    void saveSetup(panel, setStatus, false);
+  });
+
+  const english = createButton(t("english"), overlayLanguage === "en" ? "primary" : "secondary");
+  english.addEventListener("click", () => {
+    setOverlayLanguage("en");
+    void saveSetup(panel, setStatus, false);
+  });
+
+  languageGrid.append(korean, english);
+
+  const checks = document.createElement("div");
+  checks.className = "intent-layer-setup-grid";
+
+  const status = latestSetupStatus;
+  const setupChecks =
+    status?.checks ??
+    [
+      {
+        name: "workspace",
+        status: "warn" as const,
+        detail: t("setupWorkspaceWaiting")
+      }
+    ];
+
+  for (const check of setupChecks) {
+    const row = document.createElement("div");
+    row.className = "intent-layer-check-row";
+    const dot = document.createElement("span");
+    dot.className = "intent-layer-check-dot";
+    dot.dataset.intentStatus = check.status;
+    const body = document.createElement("div");
+    const name = document.createElement("div");
+    name.className = "intent-layer-section-title";
+    name.textContent =
+      check.name === "workspace"
+        ? "Workspace"
+        : check.name === "language"
+          ? t("language")
+          : check.name === "graph"
+            ? "Graph"
+            : "Agent";
+    const detail = document.createElement("p");
+    if (check.name === "workspace") {
+      detail.textContent = status?.workspaceReady ? t("setupWorkspaceReady") : t("setupWorkspaceWaiting");
+    } else if (check.name === "graph") {
+      detail.textContent = status?.graphReady
+        ? `${t("setupGraphReady")} (${status.graphEntryCount})`
+        : t("setupGraphWaiting");
+    } else if (check.name === "agent-run") {
+      detail.textContent = t("runLocked");
+    } else {
+      detail.textContent = check.detail;
+    }
+    body.append(name, detail);
+    row.append(dot, body);
+    checks.appendChild(row);
+  }
+
+  if (status) {
+    const agent = document.createElement("pre");
+    agent.className = "intent-layer-preview-box";
+    agent.textContent = [
+      `Codex: ${status.agent.codexAvailable ? "ready" : "plan only"} (${status.agent.codexCommand})`,
+      `Claude: ${status.agent.claudeAvailable ? "ready" : "plan only"} (${status.agent.claudeCommand})`,
+      status.agent.runEnabled ? "agent run: enabled" : "agent run: locked"
+    ].join("\n");
+    checks.appendChild(agent);
+  }
+
+  const apply = createButton(t("setupApply"), "primary");
+  apply.addEventListener("click", () => {
+    void saveSetup(panel, setStatus, true);
+  });
+
+  wrapper.append(title, intro, languageLabel, languageGrid, checks, apply);
+  root.appendChild(wrapper);
+}
+
+async function fetchSetupStatus(language = overlayLanguage): Promise<IntentSetupStatus | null> {
+  try {
+    const response = await fetch(`/__intent/setup?language=${encodeURIComponent(language)}`);
+    const status = (await response.json()) as SetupResponse;
+    latestSetupStatus = status;
+    setOverlayLanguage(status.language);
+    return status;
+  } catch {
+    return null;
+  }
+}
+
+async function saveSetup(
+  panel: HTMLElement,
+  setStatus: (message: string) => void,
+  completeOnboarding: boolean
+) {
+  const response = await fetch("/__intent/setup", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      language: overlayLanguage,
+      createWorkspace: true,
+      completeOnboarding
+    })
+  });
+  const result = (await response.json()) as SetupApplyResponse;
+  if (result.ok) {
+    latestSetupStatus = result.status;
+    setOverlayLanguage(result.status.language);
+    setStatus(completeOnboarding ? `${t("setupComplete")} (${result.metrics.setupMs}ms)` : t("setupOpen"));
+    if (completeOnboarding) {
+      overlayView = "editor";
+    }
+    renderBinding(panel, null, completeOnboarding ? t("ready") : t("setupOpen"));
+  } else {
+    setStatus(result.detail ?? result.reason);
+  }
+}
+
 function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => void) {
   const wrapper = document.createElement("div");
   wrapper.className = "intent-layer-section";
@@ -845,7 +1221,7 @@ function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => vo
 
   const header = document.createElement("div");
   header.className = "intent-layer-section-title";
-  header.textContent = "Undo history";
+  header.textContent = t("undoHistory");
   header.style.fontSize = "12px";
   header.style.fontWeight = "800";
 
@@ -864,7 +1240,7 @@ function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => vo
     .then((history) => {
       body.innerHTML = "";
       if (history.pendingCount === 0) {
-        body.textContent = "No pending undo operations.";
+        body.textContent = t("undoHistoryEmpty");
         return;
       }
 
@@ -952,7 +1328,7 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
 
   const header = document.createElement("div");
   header.className = "intent-layer-section-title";
-  header.textContent = "Undo conflicts";
+  header.textContent = t("conflicts");
   header.style.fontSize = "12px";
   header.style.fontWeight = "800";
 
@@ -971,7 +1347,7 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
     .then((report) => {
       body.innerHTML = "";
       if (report.conflictCount === 0) {
-        body.textContent = "No unresolved undo conflicts.";
+        body.textContent = t("conflictsEmpty");
         return;
       }
 
@@ -1053,7 +1429,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
 
   const pill = document.createElement("span");
   pill.className = "intent-layer-pill";
-  pill.textContent = "Codex subtool";
+  pill.textContent = t("codexSubtool");
 
   brand.append(mark, title, pill);
   header.appendChild(brand);
@@ -1066,24 +1442,27 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   const actions = document.createElement("div");
   actions.className = "intent-layer-actions intent-layer-header-actions";
 
-  const pick = createButton("Pick", "primary");
+  const pick = createButton(t("pick"), "primary");
   pick.title = "Pick an element on the page";
   pick.addEventListener("click", () => {
+    overlayView = "editor";
     panel.dispatchEvent(new CustomEvent("intent:start-pick"));
   });
   actions.appendChild(pick);
 
-  const toggle = createButton(overlayCollapsed ? "Expand" : "Minimize");
-  toggle.title = overlayCollapsed ? "Expand the Intent Layer panel" : "Minimize the Intent Layer panel";
-  toggle.addEventListener("click", () => {
-    overlayCollapsed = !overlayCollapsed;
-    renderBinding(panel, binding, overlayCollapsed ? "Panel minimized" : status, scope);
+  const setup = createButton(t("setup"));
+  setup.title = t("setupOpen");
+  setup.addEventListener("click", () => {
+    overlayView = overlayView === "setup" ? "editor" : "setup";
+    overlayCollapsed = false;
+    renderBinding(panel, binding, overlayView === "setup" ? t("setupOpen") : status, scope);
   });
-  actions.appendChild(toggle);
+  actions.appendChild(setup);
 
-  const undo = createButton("Undo last");
+  const undo = createButton(t("undo"));
   undo.title = "Revert the latest direct patch";
   undo.addEventListener("click", async () => {
+    overlayView = "editor";
     const startedAt = performance.now();
     const response = await fetch("/__intent/revert-last", {
       method: "POST"
@@ -1117,6 +1496,14 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     });
   });
   actions.appendChild(undo);
+
+  const toggle = createButton(overlayCollapsed ? t("expand") : t("minimize"));
+  toggle.title = overlayCollapsed ? "Expand the Intent Layer panel" : "Minimize the Intent Layer panel";
+  toggle.addEventListener("click", () => {
+    overlayCollapsed = !overlayCollapsed;
+    renderBinding(panel, binding, overlayCollapsed ? "Panel minimized" : status, scope);
+  });
+  actions.appendChild(toggle);
   header.appendChild(actions);
   panel.appendChild(header);
 
@@ -1129,9 +1516,13 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   content.className = "intent-layer-content";
   panel.appendChild(content);
 
-  if (!binding) {
+  if (overlayView === "setup") {
+    renderSetupPanel(content, panel, (message) => {
+      statusLine.textContent = message;
+    });
+  } else if (!binding) {
     const hint = document.createElement("p");
-    hint.textContent = "Click Pick element, then choose something on the page to edit its Tailwind tokens.";
+    hint.textContent = t("pickHint");
     hint.style.fontSize = "12px";
     hint.style.lineHeight = "1.5";
     content.appendChild(hint);
@@ -1146,8 +1537,8 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
         binding.className.callee ? ` (${binding.className.callee})` : ""
       }`,
       binding.className.dynamicSegments > 0
-        ? `dynamic args read-only: ${binding.className.dynamicSegments}`
-        : "dynamic args read-only: 0",
+        ? `${t("dynamicArgs")}: ${binding.className.dynamicSegments}`
+        : `${t("dynamicArgs")}: 0`,
       binding.className.unsupportedReason
         ? `unsupported: ${binding.className.unsupportedReason}`
         : "unsupported: none"
@@ -1168,18 +1559,20 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     scopeBox.className = "intent-layer-section";
     const scopeTitle = document.createElement("div");
     scopeTitle.className = "intent-layer-section-title";
-    scopeTitle.textContent = effectiveScope.isShared ? "Shared source" : "Single render";
+    scopeTitle.textContent = effectiveScope.isShared ? t("sharedSource") : t("singleRender");
     const scopeText = document.createElement("p");
     scopeText.textContent = effectiveScope.isShared
-      ? `Affects ${effectiveScope.renderedInstanceCount} rendered instances.`
-      : "Affects this rendered instance.";
+      ? overlayLanguage === "ko"
+        ? `${effectiveScope.renderedInstanceCount}개 렌더 인스턴스에 반영됩니다.`
+        : `Affects ${effectiveScope.renderedInstanceCount} rendered instances.`
+      : t("selectSingle");
     scopeBox.append(scopeTitle, scopeText);
     content.appendChild(scopeBox);
 
     const editableTokens = binding.tokens.filter((item) => item.editable);
     if (editableTokens.length === 0) {
       const empty = document.createElement("p");
-      empty.textContent = "This element is inspectable, but it has no direct-edit tokens yet.";
+      empty.textContent = t("inspectableNoTokens");
       empty.style.fontSize = "12px";
       empty.style.lineHeight = "1.5";
       content.appendChild(empty);
@@ -1246,9 +1639,19 @@ export function initIntentOverlay() {
     renderBinding(panel, selectedBinding, message, selectedScope);
   }
 
-  renderBinding(panel, null, "Ready. Start by picking an element.");
+  renderBinding(panel, null, t("ready"));
+  void fetchSetupStatus().then((status) => {
+    if (!status) return;
+    if (status.setupRequired) {
+      overlayView = "setup";
+      renderBinding(panel, null, t("setupOpen"));
+    } else {
+      renderBinding(panel, selectedBinding, t("ready"), selectedScope);
+    }
+  });
 
   panel.addEventListener("intent:start-pick", async () => {
+    overlayView = "editor";
     const graphStartedAt = performance.now();
     const response = await fetch("/__intent/graph");
     graph = (await response.json()) as IntentGraph;
@@ -1256,7 +1659,7 @@ export function initIntentOverlay() {
     pickStartedAt = performance.now();
     pickMode = true;
     document.body.dataset.intentLayerPicking = "true";
-    setStatus("Pick mode active");
+    setStatus(t("pickMode"));
   });
 
   document.addEventListener(
@@ -1279,7 +1682,7 @@ export function initIntentOverlay() {
         selectedBinding = null;
         selectedScope = null;
         const renderStartedAt = performance.now();
-        setStatus("No intent binding on this element");
+        setStatus(t("noIntentElement"));
         const renderedAt = performance.now();
         recordClientMetric({
           kind: "click-to-panel",
@@ -1306,7 +1709,7 @@ export function initIntentOverlay() {
       renderBinding(
         panel,
         selectedBinding,
-        selectedBinding ? "Element selected" : "No binding found for that element",
+        selectedBinding ? t("elementSelected") : t("noBinding"),
         selectedScope
       );
       const renderedAt = performance.now();

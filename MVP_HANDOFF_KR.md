@@ -103,17 +103,21 @@ revert는 source 복원과 undo artifact 기록을 포함하므로 MVP gate는 `
 - 설치된 `intent-layer --help`
 - 설치된 `intent-layer/vite` import
 - 설치된 plugin transform/graph output
-- 실제 설치형 Vite dev server HTTP graph/preview/apply/revert
+- 실제 설치형 Vite dev server HTTP graph/setup/preview/apply/revert
+- first-run setup status와 `.intent/settings.json`/schema 생성
 - TSX 파일 하나가 바뀐 뒤 3-file graph refresh
 
 최신 package smoke 핵심 수치:
 
 | 항목 | 값 |
 | --- | ---: |
-| installed transform hook | 6.851ms |
-| installed apply refresh | 194.581ms |
-| installed revert refresh | 127.724ms |
-| installed 3-file refresh | 123.273ms |
+| installed transform hook | 7.389ms |
+| setup status / apply status | 200 / 200 |
+| setup language | `ko` |
+| setup workspace/settings/schema ready | true |
+| installed apply refresh | 283.321ms |
+| installed revert refresh | 204.204ms |
+| installed 3-file refresh | 135.331ms |
 | installed refresh target | 2500ms |
 
 ## Agent Launch
@@ -125,8 +129,8 @@ agent task는 overlay 또는 CLI에서 Codex/Claude 실행 계획으로 바로 �
 | CLI agent launch gate | 통과 |
 | 전체 eval gate 수 | 53 |
 | false gate 수 | 0 |
-| Codex plan 시간 | 0.605ms |
-| Claude plan 시간 | 0.206ms |
+| Codex plan 시간 | 0.712ms |
+| Claude plan 시간 | 0.315ms |
 | 기본 실행 상태 | `executed=false` |
 
 실제 process spawn은 `INTENT_LAYER_AGENT_RUN=1`일 때만 허용한다. 기본 UX는 안전한 command plan 생성이다.

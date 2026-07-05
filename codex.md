@@ -32,6 +32,8 @@ Keep this file updated when the user's operating preferences change.
 - Avoid over-engineering. Prefer small in-repo implementations, including low-level scanners/parsers where they are sufficient.
 - Do not introduce external services or heavy dependencies just because they exist; use them only when they clearly reduce risk or implementation time.
 - The target user is a vibe-coder. Prefer GUI-first workflows; keep npm/CLI steps available but avoid making them the primary day-to-day UX.
+- First-run setup should happen in the browser overlay whenever possible: language choice, `.intent` workspace creation, and Agent hook readiness should be visible without extra CLI steps.
+- Korean UI support is a product requirement. Keep English available for external contributors, but make Korean practical and complete enough for the target user.
 - When integrating external agents, default to command planning. Directly spawning Codex/Claude must remain opt-in through `INTENT_LAYER_AGENT_RUN=1`.
 - Reused component edits must clearly show shared-source scope. If one source binding affects multiple rendered instances, surface that count in the overlay.
 

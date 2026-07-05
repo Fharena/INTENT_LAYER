@@ -103,17 +103,21 @@ The install smoke verifies:
 - installed `intent-layer --help`
 - installed `intent-layer/vite` import
 - installed plugin transform/graph output
-- real installed Vite dev server HTTP graph/preview/apply/revert
+- real installed Vite dev server HTTP graph/setup/preview/apply/revert
+- first-run setup status plus `.intent/settings.json` and schema creation
 - 3-file graph refresh after one changed TSX file
 
 Latest package smoke highlights:
 
 | Metric | Value |
 | --- | ---: |
-| installed transform hook | 6.851ms |
-| installed apply refresh | 194.581ms |
-| installed revert refresh | 127.724ms |
-| installed 3-file refresh | 123.273ms |
+| installed transform hook | 7.389ms |
+| setup status / apply status | 200 / 200 |
+| setup language | `ko` |
+| setup workspace/settings/schema ready | true |
+| installed apply refresh | 283.321ms |
+| installed revert refresh | 204.204ms |
+| installed 3-file refresh | 135.331ms |
 | installed refresh target | 2500ms |
 
 ## Agent Launch
@@ -125,8 +129,8 @@ Agent tasks can now be turned into Codex/Claude launch plans from the overlay or
 | CLI agent launch gate | pass |
 | Total eval gates | 53 |
 | False gates | 0 |
-| Codex plan time | 0.605ms |
-| Claude plan time | 0.206ms |
+| Codex plan time | 0.712ms |
+| Claude plan time | 0.315ms |
 | Default execution state | `executed=false` |
 
 Direct process spawning is allowed only when `INTENT_LAYER_AGENT_RUN=1` is set. The default UX is safe command planning.

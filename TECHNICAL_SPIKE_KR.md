@@ -344,10 +344,11 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - related semantic token diff는 단순 quoted 변수 선언, imported 변수 선언, simple `cn()` / `clsx()` 변수 선언, 배열/object map/template literal literal segment를 fixture로 검증한다.
 - variant 함수 read-only binding은 같은 파일 안의 local `function` / `const` variant 선언, one-hop relative named import, tsconfig paths alias + one-hop/multi-hop named barrel re-export 뒤의 variant 선언을 related source snapshot으로 저장하고, result 기록 시 related source/semantic diff를 남긴다.
 - package smoke는 tarball install 뒤 `vite.cjs` wrapper 기반 `/vite` export로 외부 temp fixture를 transform하고 `data-intent-id`/`.intent/graph.intent.json` 생성까지 확인한다.
-- 같은 설치 폴더에서 실제 Vite dev server를 띄워 `/src/App.tsx` transform 결과, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last` endpoint 응답까지 HTTP로 확인한다.
-- 설치된 Vite dev server smoke는 `gap-4 -> gap-6` patch를 실제 source에 적용하고, operation/diff/log artifact 생성, pending undo history, apply 후 module/graph refresh 194.581ms를 확인한다.
-- 같은 설치형 Vite dev server smoke는 `/__intent/revert-last`를 호출해 source/module/graph가 `gap-4`로 돌아오고 pending undo history가 비워지며, revert refresh가 127.724ms에 끝나는지 확인한다.
-- 설치된 Vite dev server smoke는 App/Header/Card 3개 TSX 파일을 graph에 올린 뒤 Card만 `gap-4 -> gap-8`로 바꾸고, graph entry 3개 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경, module/graph refresh 123.273ms를 확인한다.
+- 같은 설치 폴더에서 실제 Vite dev server를 띄워 `/src/App.tsx` transform 결과, `/__intent/graph`, `/__intent/setup`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last` endpoint 응답까지 HTTP로 확인한다.
+- 설치된 Vite dev server smoke는 `/__intent/setup`을 호출해 한국어 first-run setup을 적용하고 `.intent/settings.json`, schema output, workspace readiness, settings readiness, graph readiness를 확인한다.
+- 설치된 Vite dev server smoke는 `gap-4 -> gap-6` patch를 실제 source에 적용하고, operation/diff/log artifact 생성, pending undo history, apply 후 module/graph refresh 283.321ms를 확인한다.
+- 같은 설치형 Vite dev server smoke는 `/__intent/revert-last`를 호출해 source/module/graph가 `gap-4`로 돌아오고 pending undo history가 비워지며, revert refresh가 204.204ms에 끝나는지 확인한다.
+- 설치된 Vite dev server smoke는 App/Header/Card 3개 TSX 파일을 graph에 올린 뒤 Card만 `gap-4 -> gap-8`로 바꾸고, graph entry 3개 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경, module/graph refresh 135.331ms를 확인한다.
 - `doctor` missing-plugin fixture는 Vite config에 `intentLayer()`가 빠졌을 때 exit code 1, `vite-plugin` fail 1건, `intent-layer/vite` guidance 포함을 확인한다.
 - `INSTALL_KR/EN.md`와 `FAILURE_MODES_KR/EN.md`는 package tarball에 포함되어 local tarball 설치와 실패 대응을 외부 사용자용 문구로 제공한다.
 - agent result는 선택 source window와 선택 component 범위에서 `className` semantic token diff를 기록한다.

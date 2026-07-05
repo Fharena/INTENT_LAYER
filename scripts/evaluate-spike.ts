@@ -89,6 +89,14 @@ interface PackageSmokeResult {
   installedViteDevServerGraphBytes: number;
   installedViteDevServerFirstRelativeFile: string | null;
   installedViteDevServerFirstToken: string | null;
+  installedViteDevServerSetupStatus: number | null;
+  installedViteDevServerSetupApplyStatus: number | null;
+  installedViteDevServerSetupLanguage: string | null;
+  installedViteDevServerSetupWorkspaceReady: boolean;
+  installedViteDevServerSetupSettingsReady: boolean;
+  installedViteDevServerSetupGraphReady: boolean;
+  installedViteDevServerSetupSettingsFileExists: boolean;
+  installedViteDevServerSetupSchemaExists: boolean;
   installedViteDevServerPreviewStatus: number | null;
   installedViteDevServerPreviewOk: boolean;
   installedViteDevServerApplyStatus: number | null;
@@ -552,6 +560,17 @@ function packageSmoke(): PackageSmokeResult {
       "  const first = entries[0] ?? null;",
       "  const firstEditableToken = first?.tokens?.find((token) => token.editable) ?? null;",
       "  const firstToken = firstEditableToken?.token ?? null;",
+      "  const setupBefore = await waitFetch(`${baseUrl}/__intent/setup?language=ko`, 10000);",
+      "  const setupBeforeJson = setupBefore.status === 200 ? JSON.parse(setupBefore.body) : null;",
+      "  const setupApply = await postJson(`${baseUrl}/__intent/setup`, {",
+      "    language: \"ko\",",
+      "    createWorkspace: true,",
+      "    completeOnboarding: true",
+      "  });",
+      "  const setupAfter = await waitFetch(`${baseUrl}/__intent/setup?language=ko`, 10000);",
+      "  const setupAfterJson = setupAfter.status === 200 ? JSON.parse(setupAfter.body) : null;",
+      "  const setupSettingsFileExists = fs.existsSync(path.join(root, \".intent\", \"settings.json\"));",
+      "  const setupSchemaExists = fs.existsSync(path.join(root, \".intent\", \"schema\", \"graph.intent.schema.json\"));",
       "  const patchToken = editableToken(first, \"gap-4\");",
       "  const patchRequest = {",
       "    id: first?.id ?? \"missing-installed-dev-server-id\",",
@@ -707,6 +726,11 @@ function packageSmoke(): PackageSmokeResult {
       "  const ok = home.status === 200 && module.status === 200 && graph.status === 200 &&",
       "    module.body.includes(\"data-intent-id\") && entries.length === 1 &&",
       "    first?.relativeFile === \"src/App.tsx\" && patchToken?.token === \"gap-4\" &&",
+      "    setupBefore.status === 200 && setupBeforeJson?.language === \"ko\" &&",
+      "    setupApply.status === 200 && setupApply.json?.ok === true &&",
+      "    setupAfter.status === 200 && setupAfterJson?.language === \"ko\" &&",
+      "    setupAfterJson?.workspaceReady === true && setupAfterJson?.settingsReady === true &&",
+      "    setupAfterJson?.graphReady === true && setupSettingsFileExists && setupSchemaExists &&",
       "    preview.status === 200 && preview.json?.ok === true &&",
       "    apply.status === 200 && apply.json?.ok === true &&",
       "    sourceAfterApply.includes(\"gap-6\") && !sourceAfterApply.includes(\"gap-4\") &&",
@@ -733,6 +757,14 @@ function packageSmoke(): PackageSmokeResult {
       "    graphBytes: Buffer.byteLength(graph.body),",
       "    firstRelativeFile: first?.relativeFile ?? null,",
       "    firstToken,",
+      "    setupStatus: setupBefore.status,",
+      "    setupApplyStatus: setupApply.status,",
+      "    setupLanguage: setupAfterJson?.language ?? null,",
+      "    setupWorkspaceReady: setupAfterJson?.workspaceReady === true,",
+      "    setupSettingsReady: setupAfterJson?.settingsReady === true,",
+      "    setupGraphReady: setupAfterJson?.graphReady === true,",
+      "    setupSettingsFileExists,",
+      "    setupSchemaExists,",
       "    previewStatus: preview.status,",
       "    previewOk: preview.json?.ok === true,",
       "    applyStatus: apply.status,",
@@ -792,6 +824,14 @@ function packageSmoke(): PackageSmokeResult {
       "    graphBytes: 0,",
       "    firstRelativeFile: null,",
       "    firstToken: null,",
+      "    setupStatus: null,",
+      "    setupApplyStatus: null,",
+      "    setupLanguage: null,",
+      "    setupWorkspaceReady: false,",
+      "    setupSettingsReady: false,",
+      "    setupGraphReady: false,",
+      "    setupSettingsFileExists: false,",
+      "    setupSchemaExists: false,",
       "    previewStatus: null,",
       "    previewOk: false,",
       "    applyStatus: null,",
@@ -847,6 +887,14 @@ function packageSmoke(): PackageSmokeResult {
     graphBytes?: number;
     firstRelativeFile?: string | null;
     firstToken?: string | null;
+    setupStatus?: number | null;
+    setupApplyStatus?: number | null;
+    setupLanguage?: string | null;
+    setupWorkspaceReady?: boolean;
+    setupSettingsReady?: boolean;
+    setupGraphReady?: boolean;
+    setupSettingsFileExists?: boolean;
+    setupSchemaExists?: boolean;
     previewStatus?: number | null;
     previewOk?: boolean;
     applyStatus?: number | null;
@@ -952,6 +1000,17 @@ function packageSmoke(): PackageSmokeResult {
     installedViteDevServerGraphBytes: installedViteDevServerReport.graphBytes ?? 0,
     installedViteDevServerFirstRelativeFile: installedViteDevServerReport.firstRelativeFile ?? null,
     installedViteDevServerFirstToken: installedViteDevServerReport.firstToken ?? null,
+    installedViteDevServerSetupStatus: installedViteDevServerReport.setupStatus ?? null,
+    installedViteDevServerSetupApplyStatus: installedViteDevServerReport.setupApplyStatus ?? null,
+    installedViteDevServerSetupLanguage: installedViteDevServerReport.setupLanguage ?? null,
+    installedViteDevServerSetupWorkspaceReady:
+      installedViteDevServerReport.setupWorkspaceReady === true,
+    installedViteDevServerSetupSettingsReady:
+      installedViteDevServerReport.setupSettingsReady === true,
+    installedViteDevServerSetupGraphReady: installedViteDevServerReport.setupGraphReady === true,
+    installedViteDevServerSetupSettingsFileExists:
+      installedViteDevServerReport.setupSettingsFileExists === true,
+    installedViteDevServerSetupSchemaExists: installedViteDevServerReport.setupSchemaExists === true,
     installedViteDevServerPreviewStatus: installedViteDevServerReport.previewStatus ?? null,
     installedViteDevServerPreviewOk: installedViteDevServerReport.previewOk === true,
     installedViteDevServerApplyStatus: installedViteDevServerReport.applyStatus ?? null,
@@ -5478,6 +5537,14 @@ const report = {
       packageInstallSmoke.installedViteDevServerGraphEntryCount === 1 &&
       packageInstallSmoke.installedViteDevServerFirstRelativeFile === "src/App.tsx" &&
       packageInstallSmoke.installedViteDevServerFirstToken !== null &&
+      packageInstallSmoke.installedViteDevServerSetupStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerSetupApplyStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerSetupLanguage === "ko" &&
+      packageInstallSmoke.installedViteDevServerSetupWorkspaceReady &&
+      packageInstallSmoke.installedViteDevServerSetupSettingsReady &&
+      packageInstallSmoke.installedViteDevServerSetupGraphReady &&
+      packageInstallSmoke.installedViteDevServerSetupSettingsFileExists &&
+      packageInstallSmoke.installedViteDevServerSetupSchemaExists &&
       packageInstallSmoke.installedViteDevServerPreviewStatus === 200 &&
       packageInstallSmoke.installedViteDevServerPreviewOk &&
       packageInstallSmoke.installedViteDevServerApplyStatus === 200 &&

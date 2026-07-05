@@ -66,16 +66,29 @@ export default defineConfig({
 
 `intent-layer/vite`는 현재 검증된 package export다.
 
-## 4. Intent Workspace 초기화
+## 4. 브라우저 Setup Wizard
 
-대상 프로젝트 루트에서 실행한다.
+plugin을 등록한 뒤 Vite dev server를 실행하고 브라우저에서 local URL을 연다.
 
 ```bash
-npx intent-layer init
-npx intent-layer doctor
+npm run dev
 ```
 
-`init`은 `.intent/` 폴더와 lightweight schema 파일을 만든다.
+첫 실행이면 Intent Layer 패널이 설정 화면을 연다. 여기서 다음을 처리한다.
+
+- 한국어/영어 선택
+- `.intent/` workspace와 schema 파일 생성
+- `.intent/settings.json` 저장
+- source binding 생성 여부 확인
+- Codex/Claude 사용 가능 여부와 Agent 실행 잠금 상태 확인
+
+기본 GUI 흐름에서는 `init` 명령이 필요 없다.
+
+반복 가능한 진단 리포트가 필요할 때만 CLI를 사용한다.
+
+```bash
+npx intent-layer doctor
+```
 
 `doctor`는 다음을 JSON으로 확인한다.
 
@@ -97,9 +110,17 @@ npx intent-layer scan src --write-graph
 npx intent-layer doctor
 ```
 
+자세한 흐름은 [ONBOARDING_KR.md](./ONBOARDING_KR.md)를 본다.
+
 ## 5. 개발 서버 실행
 
-기존 Vite dev server 대신 wrapper를 쓸 수 있다.
+프로젝트의 일반 Vite script를 그대로 쓸 수 있다.
+
+```bash
+npm run dev
+```
+
+명시적인 host/port 기본값이 필요하면 CLI wrapper도 사용할 수 있다.
 
 ```bash
 npx intent-layer dev
@@ -180,12 +201,13 @@ npx intent-layer scan src --write-graph
 최근 `npm run eval` 기준:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.694ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.467ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-installed Vite apply refresh: 194.581ms
-installed Vite revert refresh: 127.724ms
-installed 3-file graph refresh: 123.273ms
-package smoke: pass
+first-run setup smoke: status 200, apply 200, language ko, workspace/settings/schema ready
+installed Vite apply refresh: 283.321ms
+installed Vite revert refresh: 204.204ms
+installed 3-file graph refresh: 135.331ms
+package smoke: pass, 53 gates, 0 false
 ```
 
 설치형 Vite dev server refresh smoke target은 OS watcher와 temp install 환경의 흔들림을 고려해 2500ms로 둔다. 실제 브라우저 UX gate는 별도로 click-to-panel 100ms, preview/apply 50ms, revert 100ms 기준으로 본다.

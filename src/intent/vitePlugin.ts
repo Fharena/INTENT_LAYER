@@ -7,6 +7,7 @@ import { launchAgentTask } from "./agentLaunch";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
+import { applyIntentSetup, intentSetupStatus } from "./setup";
 import {
   applyTokenPatch,
   discardPendingUndo,
@@ -28,6 +29,7 @@ import type {
   ClientMetric,
   IntentBinding,
   IntentGraph,
+  IntentSetupRequest,
   PatchApplyResult,
   PatchConflictResolveRequest,
   PatchRequest,
@@ -318,6 +320,36 @@ export function intentLayerSpike(): Plugin {
 
         if (url.pathname === "/__intent/graph" && request.method === "GET") {
           writeJson(response, 200, toGraph(state));
+          return;
+        }
+
+        if (url.pathname === "/__intent/setup" && request.method === "GET") {
+          const language = url.searchParams.get("language") === "ko" ? "ko" : undefined;
+          writeJson(
+            response,
+            200,
+            intentSetupStatus(state.rootDir, {
+              graphEntryCount: state.entriesById.size,
+              language
+            })
+          );
+          return;
+        }
+
+        if (url.pathname === "/__intent/setup" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as IntentSetupRequest;
+            const result = applyIntentSetup(state.rootDir, body, {
+              graphEntryCount: state.entriesById.size
+            });
+            writeJson(response, 200, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
           return;
         }
 
