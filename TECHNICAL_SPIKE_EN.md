@@ -344,9 +344,9 @@ Support model:
 - Variant-function read-only bindings store same-file local `function` / `const` variant declarations, one-hop relative named imports, and variant declarations behind tsconfig paths aliases plus one-hop/multi-hop named barrel re-exports as related source snapshots, then record related source and semantic diffs on result.
 - The package smoke now transforms an external temp fixture through the installed `vite.cjs` wrapper-backed `/vite` export after tarball install and verifies `data-intent-id` plus `.intent/graph.intent.json` output.
 - In the same install folder, it starts a real Vite dev server and verifies the `/src/App.tsx` transform response plus the `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, and `/__intent/revert-last` endpoints over HTTP.
-- The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts, pending undo history, and post-apply module/graph refresh in 42.976ms.
-- The same installed Vite dev server smoke calls `/__intent/revert-last`, verifies source/module/graph return to `gap-4`, clears pending undo history, and completes revert refresh in 45.163ms.
-- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4` to `gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, graph `generatedAt` changes, and module/graph refresh completes in 125.897ms.
+- The installed Vite dev server smoke applies a real `gap-4 -> gap-6` source patch and verifies operation/diff/log artifacts, pending undo history, and post-apply module/graph refresh in 88.279ms.
+- The same installed Vite dev server smoke calls `/__intent/revert-last`, verifies source/module/graph return to `gap-4`, clears pending undo history, and completes revert refresh in 43.139ms.
+- The installed Vite dev server smoke also loads App/Header/Card as three TSX graph files, changes only Card from `gap-4` to `gap-8`, and verifies three entries remain, the changed-file token updates, unchanged files remain, graph `generatedAt` changes, and module/graph refresh completes in 132.441ms.
 - The `doctor` missing-plugin fixture verifies exit code 1, one `vite-plugin` failure, and guidance that mentions `intent-layer/vite` when `intentLayer()` is missing from the Vite config.
 - `INSTALL_KR/EN.md` and `FAILURE_MODES_KR/EN.md` are included in the package tarball so local tarball setup and failure recovery have external-facing copy.
 - Agent results record `className` semantic token diffs for both the selected source window and the selected component range.
@@ -360,8 +360,8 @@ Support model:
 - Current fixtures now meet the 5ms warm transform target and the 10ms cold transform target.
 - The large TSX stress fixture with 100 cards and 401 bindings meets the 20ms stress target.
 - The repeated-transform fixture with 100 cards and 401 bindings now passes semantic graph fingerprint based write throttling.
-- A generated product-sized fixture with 24 TSX files and 624 bindings now verifies that changing only one file from `gap-4` to `gap-8` preserves graph entry count, updates the changed-file token, retains unchanged-file tokens, keeps same-input `generatedAt` stable, and completes the changed-file transform in 14.222ms.
-- Copied-file graph refresh across 3 independent external corpora measured 24 files each and passed the 50ms changed-file target: `shadcn-ui/ui` 3.611ms, `sadmann7/skateshop` 2.912ms, and `mckaywrigley/chatbot-ui` 3.975ms.
+- A generated product-sized fixture with 24 TSX files and 624 bindings now verifies that changing only one file from `gap-4` to `gap-8` preserves graph entry count, updates the changed-file token, retains unchanged-file tokens, keeps same-input `generatedAt` stable, and completes the changed-file transform in 20.498ms.
+- Copied-file graph refresh across 3 independent external corpora measured 24 files each and passed the 50ms changed-file target: `shadcn-ui/ui` 5.701ms, `sadmann7/skateshop` 4.015ms, and `mckaywrigley/chatbot-ui` 5.79ms.
 
 ## 8. Next Work
 

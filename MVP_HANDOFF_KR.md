@@ -108,10 +108,10 @@ revert는 source 복원과 undo artifact 기록을 포함하므로 MVP gate는 `
 
 | 항목 | 값 |
 | --- | ---: |
-| installed transform hook | 4.696ms |
-| installed apply refresh | 42.976ms |
-| installed revert refresh | 45.163ms |
-| installed 3-file refresh | 125.897ms |
+| installed transform hook | 6.094ms |
+| installed apply refresh | 88.279ms |
+| installed revert refresh | 43.139ms |
+| installed 3-file refresh | 132.441ms |
 
 ## 알려진 한계
 

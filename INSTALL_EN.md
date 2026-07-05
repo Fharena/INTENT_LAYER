@@ -118,6 +118,17 @@ host: 127.0.0.1
 port: 5173
 ```
 
+Open the local URL in the browser. In dev mode, the Intent Layer panel appears in the bottom-right corner automatically.
+The panel uses a dark glass UI and automatically moves upward when it would overlap bottom fixed developer tools such as Next/Vite dev overlays.
+
+Primary GUI flow:
+
+```text
+Pick element -> choose a UI element -> Preview -> Apply -> Undo last
+```
+
+CLI commands are for setup, diagnostics, and repeatable checks. Day-to-day visual edits should start from the browser panel.
+
 ## 6. Pre-Launch Smoke Check
 
 Minimum checks in a target project:
@@ -138,11 +149,11 @@ npx intent-layer scan src --write-graph
 Latest `npm run eval` values:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.081ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 3.381ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-installed Vite apply refresh: 42.976ms
-installed Vite revert refresh: 45.163ms
-installed 3-file graph refresh: 125.897ms
+installed Vite apply refresh: 88.279ms
+installed Vite revert refresh: 43.139ms
+installed 3-file graph refresh: 132.441ms
 package smoke: pass
 ```
 

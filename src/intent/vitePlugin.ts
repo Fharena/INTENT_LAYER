@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import ts from "typescript";
 import type { Plugin, ViteDevServer } from "vite";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
@@ -31,6 +32,11 @@ import type {
   PatchUndoDiscardRequest,
   PatchUndoRevertRequest
 } from "./types";
+
+const virtualClientId = "virtual:intent-layer/client";
+const resolvedVirtualClientId = "\0virtual:intent-layer/client.ts";
+const virtualTailwindId = "virtual:intent-layer/tailwind";
+const resolvedVirtualTailwindId = "\0virtual:intent-layer/tailwind.ts";
 
 interface IntentState {
   rootDir: string;
@@ -203,7 +209,45 @@ function refreshUndoStackForCurrentGraph(state: IntentState): PatchApplyResult[]
   return state.undoStack;
 }
 
+function overlayBootstrapCode(code: string): string {
+  if (code.includes(virtualClientId)) {
+    return code;
+  }
+
+  return `${code}
+import { initIntentOverlay as __intentLayerInitOverlay } from "${virtualClientId}";
+if (import.meta.env.DEV) {
+  __intentLayerInitOverlay();
+}
+`;
+}
+
+function stripTypeImports(source: string): string {
+  return source.replace(/import type \{[\s\S]*?\} from "\.\/types";\r?\n/g, "");
+}
+
+function readClientModule() {
+  return stripTypeImports(
+    fs
+      .readFileSync(path.join(__dirname, "client.ts"), "utf8")
+      .replace("./tailwind", virtualTailwindId)
+  );
+}
+
+function transpileVirtualModule(source: string, fileName: string): string {
+  return ts.transpileModule(source, {
+    fileName,
+    compilerOptions: {
+      jsx: ts.JsxEmit.ReactJSX,
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2020,
+      useDefineForClassFields: true
+    }
+  }).outputText;
+}
+
 export function intentLayerSpike(): Plugin {
+  let isServe = false;
   const state: IntentState = {
     rootDir: process.cwd(),
     entriesByFile: new Map(),
@@ -220,6 +264,30 @@ export function intentLayerSpike(): Plugin {
 
     configResolved(config) {
       state.rootDir = config.root;
+      isServe = config.command === "serve";
+    },
+
+    resolveId(id) {
+      if (id === virtualClientId) {
+        return resolvedVirtualClientId;
+      }
+      if (id === virtualTailwindId) {
+        return resolvedVirtualTailwindId;
+      }
+      return null;
+    },
+
+    load(id) {
+      if (id === resolvedVirtualClientId) {
+        return transpileVirtualModule(readClientModule(), "intent-layer-client.ts");
+      }
+      if (id === resolvedVirtualTailwindId) {
+        return transpileVirtualModule(
+          stripTypeImports(fs.readFileSync(path.join(__dirname, "tailwind.ts"), "utf8")),
+          "intent-layer-tailwind.ts"
+        );
+      }
+      return null;
     },
 
     transform(code, id) {
@@ -241,7 +309,7 @@ export function intentLayerSpike(): Plugin {
       }
 
       return {
-        code: result.code,
+        code: isServe ? overlayBootstrapCode(result.code) : result.code,
         map: null
       };
     },

@@ -66,6 +66,7 @@ In-app browser로 확인했다.
 | 항목 | 결과 |
 | --- | --- |
 | desktop page load | 통과 |
+| auto overlay panel | 통과, 우하단 표시 |
 | H1 | `Lumina Atelier` |
 | section count | 4 |
 | image load | 5/5 complete |
@@ -80,3 +81,6 @@ In-app browser로 확인했다.
 
 이에 따라 `INSTALL_KR.md`와 `INSTALL_EN.md`의 Vite config 예시도 `plugins: [intentLayer(), react()]`로 수정했다.
 
+후속 UX 확인에서 overlay client 자동 주입을 추가했다. 이제 사용자는 별도 import 없이 dev server를 열면 우하단 `Intent Layer` 패널을 보고, `Pick element -> Preview -> Apply -> Undo last` 흐름으로 테스트할 수 있다.
+
+추가 UX 점검에서 패널을 Codex 보조 도구 느낌의 dark glass UI로 바꿨다. 초기 패널 높이는 177px로 줄였고, 선택 후에는 선택된 요소 outline, token row, undo/conflict section이 나타난다. 하단 fixed dev tool과 겹치면 패널이 자동으로 위로 이동하도록 배치 회피 로직도 추가했다.

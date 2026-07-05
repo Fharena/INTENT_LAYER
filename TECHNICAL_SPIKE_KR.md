@@ -343,9 +343,9 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - variant 함수 read-only binding은 같은 파일 안의 local `function` / `const` variant 선언, one-hop relative named import, tsconfig paths alias + one-hop/multi-hop named barrel re-export 뒤의 variant 선언을 related source snapshot으로 저장하고, result 기록 시 related source/semantic diff를 남긴다.
 - package smoke는 tarball install 뒤 `vite.cjs` wrapper 기반 `/vite` export로 외부 temp fixture를 transform하고 `data-intent-id`/`.intent/graph.intent.json` 생성까지 확인한다.
 - 같은 설치 폴더에서 실제 Vite dev server를 띄워 `/src/App.tsx` transform 결과, `/__intent/graph`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last` endpoint 응답까지 HTTP로 확인한다.
-- 설치된 Vite dev server smoke는 `gap-4 -> gap-6` patch를 실제 source에 적용하고, operation/diff/log artifact 생성, pending undo history, apply 후 module/graph refresh 42.976ms를 확인한다.
-- 같은 설치형 Vite dev server smoke는 `/__intent/revert-last`를 호출해 source/module/graph가 `gap-4`로 돌아오고 pending undo history가 비워지며, revert refresh가 45.163ms에 끝나는지 확인한다.
-- 설치된 Vite dev server smoke는 App/Header/Card 3개 TSX 파일을 graph에 올린 뒤 Card만 `gap-4 -> gap-8`로 바꾸고, graph entry 3개 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경, module/graph refresh 125.897ms를 확인한다.
+- 설치된 Vite dev server smoke는 `gap-4 -> gap-6` patch를 실제 source에 적용하고, operation/diff/log artifact 생성, pending undo history, apply 후 module/graph refresh 88.279ms를 확인한다.
+- 같은 설치형 Vite dev server smoke는 `/__intent/revert-last`를 호출해 source/module/graph가 `gap-4`로 돌아오고 pending undo history가 비워지며, revert refresh가 43.139ms에 끝나는지 확인한다.
+- 설치된 Vite dev server smoke는 App/Header/Card 3개 TSX 파일을 graph에 올린 뒤 Card만 `gap-4 -> gap-8`로 바꾸고, graph entry 3개 유지, 변경 파일 token 갱신, 미변경 파일 유지, graph generatedAt 변경, module/graph refresh 132.441ms를 확인한다.
 - `doctor` missing-plugin fixture는 Vite config에 `intentLayer()`가 빠졌을 때 exit code 1, `vite-plugin` fail 1건, `intent-layer/vite` guidance 포함을 확인한다.
 - `INSTALL_KR/EN.md`와 `FAILURE_MODES_KR/EN.md`는 package tarball에 포함되어 local tarball 설치와 실패 대응을 외부 사용자용 문구로 제공한다.
 - agent result는 선택 source window와 선택 component 범위에서 `className` semantic token diff를 기록한다.
@@ -359,8 +359,8 @@ className={clsx("rounded-lg px-4 py-2", selected && "bg-teal-700")}
 - 현재 fixture에서는 warm transform 5ms 목표와 cold transform 10ms 목표를 만족했다.
 - 100개 카드/401개 binding을 가진 대형 TSX stress fixture는 20ms 목표를 만족했다.
 - 100개 카드/401개 binding 반복 transform fixture에서는 semantic graph fingerprint 기반 write throttling이 통과했다.
-- 24개 TSX 파일/624개 binding generated product-sized fixture에서는 한 파일만 `gap-4 -> gap-8`로 변경해도 graph entry 수 유지, 변경 파일 token 갱신, 미변경 파일 유지, 동일 입력 `generatedAt` 안정성, changed-file transform 14.222ms를 확인했다.
-- 3개 독립 외부 corpus copied-file graph refresh에서는 각 24개 파일을 측정했고 `shadcn-ui/ui` 3.611ms, `sadmann7/skateshop` 2.912ms, `mckaywrigley/chatbot-ui` 3.975ms changed-file transform으로 모두 50ms 목표를 통과했다.
+- 24개 TSX 파일/624개 binding generated product-sized fixture에서는 한 파일만 `gap-4 -> gap-8`로 변경해도 graph entry 수 유지, 변경 파일 token 갱신, 미변경 파일 유지, 동일 입력 `generatedAt` 안정성, changed-file transform 20.498ms를 확인했다.
+- 3개 독립 외부 corpus copied-file graph refresh에서는 각 24개 파일을 측정했고 `shadcn-ui/ui` 5.701ms, `sadmann7/skateshop` 4.015ms, `mckaywrigley/chatbot-ui` 5.79ms changed-file transform으로 모두 50ms 목표를 통과했다.
 
 ## 8. 다음 작업
 

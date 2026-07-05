@@ -66,6 +66,7 @@ Checked with the in-app browser.
 | Check | Result |
 | --- | --- |
 | desktop page load | pass |
+| auto overlay panel | pass, bottom-right |
 | H1 | `Lumina Atelier` |
 | section count | 4 |
 | image load | 5/5 complete |
@@ -80,3 +81,6 @@ The cause was that intent bindings were generated after the React Refresh transf
 
 `INSTALL_KR.md` and `INSTALL_EN.md` were updated to show `plugins: [intentLayer(), react()]`.
 
+A follow-up UX check added automatic overlay client injection. Users can now open the dev server and start from the bottom-right `Intent Layer` panel without adding a manual client import.
+
+An additional UX pass changed the panel into a dark glass Codex-style subtool. The initial panel height is now 177px, and after selection it shows the selected-element outline, token rows, and undo/conflict sections. Placement avoidance also moves the panel upward when it would overlap bottom fixed developer tools.

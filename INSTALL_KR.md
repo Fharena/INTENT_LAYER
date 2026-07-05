@@ -118,6 +118,17 @@ host: 127.0.0.1
 port: 5173
 ```
 
+브라우저에서 local URL을 열면 dev mode에서 Intent Layer 패널이 우하단에 자동으로 뜬다.
+패널은 어두운 glass UI로 표시되며, Next/Vite dev tool처럼 하단 fixed 요소와 겹치면 가능한 범위에서 자동으로 위로 피한다.
+
+기본 GUI 흐름:
+
+```text
+Pick element -> UI 요소 선택 -> Preview -> Apply -> Undo last
+```
+
+CLI 명령은 setup, 진단, 반복 검증용이다. 일상적인 시각 편집은 브라우저 패널에서 시작하는 것이 기본 UX다.
+
 ## 6. 출시 전 Smoke Check
 
 대상 프로젝트에서 최소 확인:
@@ -138,11 +149,11 @@ npx intent-layer scan src --write-graph
 최근 `npm run eval` 기준:
 
 ```text
-doctor: 10 checks, 10 pass, 0 warn, 0 fail, 2.081ms
+doctor: 10 checks, 10 pass, 0 warn, 0 fail, 3.381ms
 missing-plugin doctor fixture: exit 1, fail 1, guidance 3, pass
-installed Vite apply refresh: 42.976ms
-installed Vite revert refresh: 45.163ms
-installed 3-file graph refresh: 125.897ms
+installed Vite apply refresh: 88.279ms
+installed Vite revert refresh: 43.139ms
+installed 3-file graph refresh: 132.441ms
 package smoke: pass
 ```
 
