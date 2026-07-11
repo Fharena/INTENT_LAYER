@@ -19,7 +19,7 @@ const radiusPattern = /^rounded(?:-[trbl]{1,2})?(?:-[\w.[\]/%-]+)?$/;
 const sizingPattern = /^(?:w|h|min-w|min-h|max-w|max-h|size)-[\w.[\]/%()!-]+$/;
 const displayPattern = /^(?:flex|grid|block|inline|inline-block|inline-flex|hidden)$/;
 const layoutPattern =
-  /^(?:grid-cols-\d+|flex-(?:1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)|items-[\w-]+|justify-[\w-]+|content-[\w-]+|self-[\w-]+)$/;
+  /^(?:grid-cols-\d+|col-(?:start|span)-\d+|flex-(?:1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)|items-[\w-]+|justify-[\w-]+|content-[\w-]+|self-[\w-]+)$/;
 const typographyPattern =
   /^(?:text-(?:xs|sm|base|lg|xl|[2-9]xl)|font-[\w-]+|leading-[\w.[\]/%-]+)$/;
 const effectPattern =
@@ -109,6 +109,43 @@ function splitVariant(token: string): { variantPrefix: string; base: string } {
 
 function withVariant(originalToken: string, nextBase: string): string {
   return `${splitVariant(originalToken).variantPrefix}${nextBase}`;
+}
+
+export type GridLayoutTokenProperty = "columns" | "columnStart" | "columnSpan";
+
+export interface GridLayoutToken {
+  breakpoint: string;
+  property: GridLayoutTokenProperty;
+  value: number;
+}
+
+export function parseGridLayoutToken(token: string): GridLayoutToken | null {
+  const { variantPrefix, base } = splitVariant(token);
+  const match = /^(grid-cols|col-start|col-span)-(\d+)$/.exec(base);
+  if (!match) return null;
+  const properties: Record<string, GridLayoutTokenProperty> = {
+    "grid-cols": "columns",
+    "col-start": "columnStart",
+    "col-span": "columnSpan"
+  };
+  return {
+    breakpoint: variantPrefix ? variantPrefix.slice(0, -1) : "base",
+    property: properties[match[1]],
+    value: Number(match[2])
+  };
+}
+
+export function gridLayoutToken(
+  property: GridLayoutTokenProperty,
+  value: number,
+  breakpoint = "base"
+): string {
+  const prefixes: Record<GridLayoutTokenProperty, string> = {
+    columns: "grid-cols",
+    columnStart: "col-start",
+    columnSpan: "col-span"
+  };
+  return `${breakpoint === "base" ? "" : `${breakpoint}:`}${prefixes[property]}-${value}`;
 }
 
 function uniqueCandidates(token: string, bases: string[]): string[] {
@@ -211,7 +248,7 @@ export function candidatesForToken(token: string): string[] {
     );
   }
 
-  const gridMatch = base.match(/^(grid-cols)-(\d+)$/);
+  const gridMatch = base.match(/^(grid-cols|col-start|col-span)-(\d+)$/);
   if (gridMatch) return uniqueCandidates(token, Array.from({ length: 12 }, (_, index) => `${gridMatch[1]}-${index + 1}`));
 
   const flexMatch = base.match(/^(flex)-(1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)$/);
@@ -324,6 +361,12 @@ function semanticParts(base: string): { property: string; value: string } | null
 
   const grid = base.match(/^grid-cols-(\d+)$/);
   if (grid) return { property: "layout.gridColumns", value: grid[1] };
+
+  const columnStart = base.match(/^col-start-(\d+)$/);
+  if (columnStart) return { property: "layout.columnStart", value: columnStart[1] };
+
+  const columnSpan = base.match(/^col-span-(\d+)$/);
+  if (columnSpan) return { property: "layout.columnSpan", value: columnSpan[1] };
 
   const flex = base.match(/^flex-(1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)$/);
   if (flex) {

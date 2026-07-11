@@ -222,7 +222,18 @@ npm run import:external-corpus -- <independent-react-tailwind-project-or-samples
 
 Codex 또는 Claude에 도구가 보이지 않으면 패널 설정의 AI 연결 상태와 프로젝트 `.codex/config.toml`/`.mcp.json`을 확인한 뒤 새 세션을 시작한다. 설정이 있는데도 `serverReady`가 false면 package 설치 또는 `dist/mcp.js` 빌드가 빠진 상태다. Intent Layer는 전역 provider 설정을 수정하지 않는다.
 
-## 13. Agent task가 오래 `claimed` 상태로 남음
+## 13. Grid 배치가 read-only로 표시됨
+
+- `repeated-grid-binding`: `.map()` 등으로 여러 직계 자식이 같은 source id를 공유한다. 각 인스턴스를 다르게 배치하려면 prop/variant 구조로 바꿔야 하므로 Agent 전달을 사용한다.
+- `cross-file-grid`: 부모와 직계 자식 구현이 다른 파일에 있다. 부분 적용을 피하기 위해 첫 버전은 같은 파일만 그룹 편집한다.
+- `dynamic-grid-classname`: 부모 또는 자식이 `cn()` 조건, 변수, `cva`, template expression을 사용한다. 정적 literal로 단순화할 수 없으면 Agent 전달을 사용한다.
+- `multiline-grid-classname` 또는 `noncanonical-grid-classname`: 줄바꿈이나 특수 공백을 보존하기 위해 첫 버전은 직접 편집하지 않는다.
+- `unbound-grid-child`: 직계 DOM 자식 중 source binding이 없는 요소가 있다. 해당 요소에 정적 className을 두고 다시 선택한다.
+- `repeated-grid-binding`, `cross-file-grid`, `dynamic-grid-classname`은 실패가 아니라 명시적인 지원 경계다. 이 상태에서 일부 자식만 직접 적용하지 않는다.
+- `grid-placement-overflow`: 시작 열과 span이 현재 열 수를 넘는다. placement strip 안쪽으로 범위를 다시 고른다.
+- `planned-range-mismatch` 또는 `source-hash-mismatch`: preview 뒤 파일이 바뀌었다. source write는 0건이며 새 preview를 만든다.
+
+## 14. Agent task가 오래 `claimed` 상태로 남음
 
 중단된 provider의 task를 queue로 돌린다.
 

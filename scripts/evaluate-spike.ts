@@ -8,8 +8,10 @@ import { runCli } from "../src/intent/cli";
 import { readAgentTaskMetadata, refreshAgentQueueSignal } from "../src/intent/agentQueue";
 import { recordAgentResult } from "../src/intent/agentResult";
 import { createAgentTask } from "../src/intent/agentTask";
+import { planGridLayout } from "../src/intent/gridLayout";
 import { instrumentSource } from "../src/intent/instrument";
 import {
+  applyPlannedPatch,
   applyTokenPatch,
   discardPendingUndo,
   pendingUndoHistoryFromOperationLog,
@@ -4564,6 +4566,76 @@ for (let index = 0; index < graphLookupIterations; index += 1) {
 }
 const graphLookupTotalMs = performance.now() - lookupStarted;
 
+const gridLayoutFixtureDir = path.join(tmpDir, "grid-layout-benchmark");
+const gridLayoutFixtureFile = path.join(gridLayoutFixtureDir, "src", "Grid.tsx");
+const gridLayoutChildCount = 8;
+const gridLayoutIterations = 20;
+const gridLayoutPreviewTargetMs = 20;
+const gridLayoutApplyTargetMs = 50;
+const gridLayoutSource = [
+  "export function Grid(){ return (",
+  '  <section className="grid grid-cols-12 gap-4">',
+  ...Array.from(
+    { length: gridLayoutChildCount },
+    (_, index) => `    <article className="col-span-1 rounded-lg bg-slate-${index + 1}00">${index + 1}</article>`
+  ),
+  "  </section>",
+  "); }"
+].join("\n");
+fs.rmSync(gridLayoutFixtureDir, { recursive: true, force: true });
+fs.mkdirSync(path.dirname(gridLayoutFixtureFile), { recursive: true });
+const gridLayoutPreviewTimes: number[] = [];
+const gridLayoutApplyTimes: number[] = [];
+const gridLayoutRevertTimes: number[] = [];
+let gridLayoutRoundTripsPassed = 0;
+let gridLayoutPartialWriteCount = 0;
+for (let iteration = 0; iteration < gridLayoutIterations; iteration += 1) {
+  fs.writeFileSync(gridLayoutFixtureFile, gridLayoutSource, "utf8");
+  const instrumented = instrumentSource({
+    code: gridLayoutSource,
+    file: gridLayoutFixtureFile,
+    rootDir: gridLayoutFixtureDir
+  });
+  const parent = instrumented.entries.find((entry) => entry.tokens.some((token) => token.token === "grid-cols-12"));
+  const children = instrumented.entries
+    .filter((entry) => entry.tagName === "article")
+    .sort((left, right) => left.className.start - right.className.start);
+  if (!parent || children.length !== gridLayoutChildCount) continue;
+  const entries = new Map(instrumented.entries.map((entry) => [entry.id, entry]));
+  const plan = planGridLayout((id) => entries.get(id), {
+    parentId: parent.id,
+    childIds: children.map((child) => child.id),
+    breakpoint: "base",
+    columns: 10,
+    items: children.map((child, index) => ({
+      id: child.id,
+      columnStart: (index % 5) + 1,
+      columnSpan: index % 2 === 0 ? 2 : 1
+    }))
+  });
+  if (!plan.ok) continue;
+  gridLayoutPreviewTimes.push(plan.patch.metrics.previewMs);
+  const applied = applyPlannedPatch(gridLayoutFixtureDir, parent, plan.patch);
+  if (!applied.ok) {
+    if (fs.readFileSync(gridLayoutFixtureFile, "utf8") !== gridLayoutSource) gridLayoutPartialWriteCount += 1;
+    continue;
+  }
+  gridLayoutApplyTimes.push(applied.metrics.applyMs);
+  const changedSource = fs.readFileSync(gridLayoutFixtureFile, "utf8");
+  const currentParent = instrumentSource({
+    code: changedSource,
+    file: gridLayoutFixtureFile,
+    rootDir: gridLayoutFixtureDir
+  }).entries.find((entry) => entry.id === parent.id);
+  const reverted = revertTokenPatch(gridLayoutFixtureDir, applied, currentParent);
+  if (!reverted.ok) continue;
+  gridLayoutRevertTimes.push(reverted.metrics.revertMs);
+  if (fs.readFileSync(gridLayoutFixtureFile, "utf8") === gridLayoutSource) gridLayoutRoundTripsPassed += 1;
+}
+const gridLayoutPreviewP95Ms = percentile(gridLayoutPreviewTimes, 0.95);
+const gridLayoutApplyP95Ms = percentile(gridLayoutApplyTimes, 0.95);
+const gridLayoutRevertP95Ms = percentile(gridLayoutRevertTimes, 0.95);
+
 const report = {
   generatedAt: new Date().toISOString(),
   contextPackUsed: true,
@@ -4655,6 +4727,32 @@ const report = {
     totalMs: Number(graphLookupTotalMs.toFixed(3)),
     averageMs: Number((graphLookupTotalMs / graphLookupIterations).toFixed(6)),
     note: "This measures id-to-binding graph lookup only, not a real browser click event."
+  },
+  gridLayout: {
+    iterations: gridLayoutIterations,
+    childCount: gridLayoutChildCount,
+    completedRoundTrips: gridLayoutRoundTripsPassed,
+    partialWriteCount: gridLayoutPartialWriteCount,
+    byteRestorePass: gridLayoutRoundTripsPassed === gridLayoutIterations,
+    preview: {
+      samples: gridLayoutPreviewTimes,
+      averageMs: average(gridLayoutPreviewTimes),
+      p95Ms: gridLayoutPreviewP95Ms,
+      targetMs: gridLayoutPreviewTargetMs,
+      pass: gridLayoutPreviewTimes.length === gridLayoutIterations && gridLayoutPreviewP95Ms <= gridLayoutPreviewTargetMs
+    },
+    apply: {
+      samples: gridLayoutApplyTimes,
+      averageMs: average(gridLayoutApplyTimes),
+      p95Ms: gridLayoutApplyP95Ms,
+      targetMs: gridLayoutApplyTargetMs,
+      pass: gridLayoutApplyTimes.length === gridLayoutIterations && gridLayoutApplyP95Ms <= gridLayoutApplyTargetMs
+    },
+    revert: {
+      samples: gridLayoutRevertTimes,
+      averageMs: average(gridLayoutRevertTimes),
+      p95Ms: gridLayoutRevertP95Ms
+    }
   },
   cli: {
     initExitCode: cliInit.exitCode,
@@ -5767,6 +5865,14 @@ const report = {
       : 0
   },
   gates: {
+    gridLayoutSafetyPass:
+      gridLayoutRoundTripsPassed === gridLayoutIterations && gridLayoutPartialWriteCount === 0,
+    gridLayoutPreviewPerformancePass:
+      gridLayoutPreviewTimes.length === gridLayoutIterations &&
+      gridLayoutPreviewP95Ms <= gridLayoutPreviewTargetMs,
+    gridLayoutApplyPerformancePass:
+      gridLayoutApplyTimes.length === gridLayoutIterations &&
+      gridLayoutApplyP95Ms <= gridLayoutApplyTargetMs,
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
     supportedDirectCoveragePass: corpus.editableCoverage.supportedDirect >= 0.5,

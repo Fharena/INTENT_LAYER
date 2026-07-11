@@ -44,7 +44,19 @@ MVP 데모에서는 이 좁은 시나리오를 사용한다.
 .intent/diffs/*.intent-diff.yml
 ```
 
-## 3. 대상 프로젝트 Tarball 데모
+## 3. Grid Layout Composer 흐름
+
+1. `선택`을 누르고 세 카드 중 아무 내부 텍스트나 클릭한다.
+2. 가장 가까운 source-bound grid 조상의 `Grid 배치`가 나타나는지 확인한다.
+3. `sm` breakpoint를 고른다. 데모의 12열, 5/3/4 배치가 mini grid와 placement strip에 표시된다.
+4. 첫 항목을 1~6열, 두 번째 항목을 7~9열로 드래그한다.
+5. `배치 미리보기`에서 두 className만 바뀌는지 확인한다.
+6. `배치 적용` 뒤 TSX와 HMR 렌더가 `sm:col-span-6 sm:col-start-1`, `sm:col-span-3 sm:col-start-7`을 반영하는지 확인한다.
+7. `되돌리기` 한 번으로 두 className이 함께 원복되고 pending undo가 비는지 확인한다.
+
+이 직접 편집은 부모와 직계 자식이 같은 파일의 정적 className일 때만 활성화된다. `.map()`으로 같은 source id가 반복되거나 자식 구현이 다른 파일이면 이유를 표시하고 source를 건드리지 않는다.
+
+## 4. 대상 프로젝트 Tarball 데모
 
 로컬 package tarball을 만든다.
 
@@ -81,7 +93,7 @@ npx intent-layer check src --min-supported-direct 0.5 --max-file-transform-ms 20
 npx intent-layer dev
 ```
 
-## 4. Codex/Claude MCP 데모
+## 5. Codex/Claude MCP 데모
 
 1. 패널 `설정 > AI 연결`에서 사용할 provider를 켠다.
 2. Codex 또는 Claude를 새 세션으로 시작한다.
@@ -93,7 +105,7 @@ npx intent-layer dev
 
 패키지 stdio 경로만 빠르게 검사할 때는 `npm run build:package && npm run test:mcp-package`를 사용한다.
 
-## 5. 데모 중 강조할 말
+## 6. 데모 중 강조할 말
 
 포지셔닝은 이렇게 잡는다.
 
@@ -103,8 +115,9 @@ npx intent-layer dev
 - AI도 raw source offset을 쓰지 않고 GUI와 같은 `IntentService`를 사용한다.
 - 브라우저가 연결돼 있으면 HMR 뒤 렌더된 class token까지 검증한다.
 - 적용된 patch는 review를 위해 operation과 intent diff artifact를 남긴다.
+- Grid 배치는 여러 className을 하나의 guarded operation으로 preview/apply/undo한다.
 
-## 6. 아직 데모하지 않을 것
+## 7. 아직 데모하지 않을 것
 
 다음 항목은 MVP ready flow처럼 말하지 않는다.
 
@@ -114,5 +127,6 @@ npx intent-layer dev
 - Figma import
 - `node_modules` 내부 직접 편집
 - 넓은 자연어 layout refactor를 deterministic patch처럼 처리하는 흐름
+- Grid row/absolute placement, DOM reorder, cross-file layout transaction
 
 지원하지 않는 케이스는 `handoff-required`와 정확한 source pointer로 보여준다. Markdown queue는 고급 호환성 데모에서만 사용한다.

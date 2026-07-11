@@ -3,10 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { IntentFileLockedError, withIntentFileLock, withIntentOperationLock } from "./fileLock";
 import { IntentGraphStore } from "./graphStore";
+import { inspectGridLayout as inspectGridLayoutRequest, planGridLayout } from "./gridLayout";
 import { sourceHash } from "./hash";
 import { queryRuntimeToken } from "./runtimeSession";
 import {
   applyTokenPatch,
+  applyPlannedPatch,
   discardPendingUndo,
   pendingUndoStackFromOperationLog,
   planTokenPatch,
@@ -23,6 +25,11 @@ import { describeTailwindToken } from "./tailwind";
 import type {
   IntentBinding,
   IntentGraph,
+  GridLayoutApplyRequest,
+  GridLayoutEditRequest,
+  GridLayoutInspectRequest,
+  GridLayoutInspection,
+  GridLayoutPreviewResult,
   PatchApplyResult,
   PatchConflictResolveRequest,
   PatchConflictResolveResult,
@@ -119,6 +126,11 @@ interface StoredPreview {
   expiresAtMs: number;
 }
 
+interface StoredGridLayoutPreview {
+  preview: GridLayoutPreviewResult;
+  expiresAtMs: number;
+}
+
 interface IdempotentApply {
   previewId: string;
   result: IntentSemanticApply;
@@ -150,6 +162,7 @@ export class IntentService {
   private sourceChanged: ((file: string) => void) | undefined;
   private undoStack: PatchApplyResult[] = [];
   private readonly previews = new Map<string, StoredPreview>();
+  private readonly gridLayoutPreviews = new Map<string, StoredGridLayoutPreview>();
   private readonly idempotentApplies = new Map<string, IdempotentApply>();
 
   constructor(readonly graphStore: IntentGraphStore, options: IntentServiceOptions = {}) {
@@ -323,6 +336,61 @@ export class IntentService {
         properties: this.propertiesFor(entry)
       }
     };
+  }
+
+  inspectGridLayout(request: GridLayoutInspectRequest): GridLayoutInspection | PatchFailure {
+    this.refreshGraph();
+    return inspectGridLayoutRequest((id) => this.graphStore.get(id), request);
+  }
+
+  previewGridLayout(request: GridLayoutEditRequest): GridLayoutPreviewResult | PatchFailure {
+    this.refreshGraph();
+    const plan = planGridLayout((id) => this.graphStore.get(id), request);
+    if (!plan.ok) return plan;
+    const previewId = randomUUID();
+    const expiresAtMs = Date.now() + this.previewTtlMs;
+    const preview: GridLayoutPreviewResult = {
+      ok: true,
+      previewId,
+      expiresAt: new Date(expiresAtMs).toISOString(),
+      parentId: request.parentId,
+      breakpoint: request.breakpoint,
+      affectedBindingCount: plan.affectedBindingCount,
+      patch: plan.patch
+    };
+    this.gridLayoutPreviews.set(previewId, { preview, expiresAtMs });
+    this.prunePreviews();
+    return preview;
+  }
+
+  applyGridLayout(request: GridLayoutApplyRequest): PatchApplyResult | PatchFailure {
+    const stored = this.gridLayoutPreviews.get(request.previewId);
+    if (!stored) return failure("missing-preview", "Grid layout preview not found. Create a new preview before applying.");
+    if (Date.now() > stored.expiresAtMs) {
+      this.gridLayoutPreviews.delete(request.previewId);
+      return failure("preview-expired", "The grid layout preview expired. Create a new preview before applying.");
+    }
+
+    const patch = stored.preview.patch;
+    const entry = this.getEntry(stored.preview.parentId);
+    if (!entry) return failure("missing-binding", "The selected grid parent no longer has a source binding.");
+    try {
+      return withIntentOperationLock(this.rootDir, () =>
+        withIntentFileLock(this.rootDir, patch.file, () => {
+          const result = applyPlannedPatch(this.rootDir, this.getEntry(stored.preview.parentId), patch);
+          if (result.ok) {
+            this.undoStack.push(result);
+            recordPatchApplyInOperationLog(this.rootDir, result);
+            this.gridLayoutPreviews.delete(request.previewId);
+            this.refreshChangedFile(result.file);
+          }
+          return result;
+        })
+      );
+    } catch (error) {
+      if (error instanceof IntentFileLockedError) return failure(error.code, error.message, stored.preview.parentId);
+      throw error;
+    }
   }
 
   previewSemanticEdit(
@@ -560,6 +628,9 @@ export class IntentService {
     const now = Date.now();
     for (const [id, preview] of this.previews) {
       if (preview.expiresAtMs < now) this.previews.delete(id);
+    }
+    for (const [id, preview] of this.gridLayoutPreviews) {
+      if (preview.expiresAtMs < now) this.gridLayoutPreviews.delete(id);
     }
   }
 }

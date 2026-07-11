@@ -241,8 +241,24 @@ export interface PatchRequest {
   sourceEnd?: number;
 }
 
+export interface PatchTextEdit {
+  id: string;
+  label: string;
+  range: {
+    start: number;
+    end: number;
+  };
+  appliedRange: {
+    start: number;
+    end: number;
+  };
+  oldText: string;
+  newText: string;
+}
+
 export interface PatchPreview {
   ok: true;
+  kind?: "tailwind-token-replace" | "tailwind-token-revert" | "grid-layout" | "grid-layout-revert";
   id: string;
   file: string;
   relativeFile: string;
@@ -256,9 +272,64 @@ export interface PatchPreview {
   after: string;
   sourceHashBefore: string;
   sourceHashAfter: string;
+  edits?: PatchTextEdit[];
   metrics: {
     previewMs: number;
   };
+}
+
+export type GridLayoutBreakpoint = "base" | "sm" | "md" | "lg";
+
+export interface GridLayoutInspectRequest {
+  parentId: string;
+  childIds: string[];
+  unboundChildCount?: number;
+  breakpoint: GridLayoutBreakpoint;
+}
+
+export interface GridLayoutResolvedValue {
+  explicit: number | null;
+  effective: number | null;
+}
+
+export interface GridLayoutInspection {
+  ok: true;
+  parentId: string;
+  relativeFile: string;
+  breakpoint: GridLayoutBreakpoint;
+  supportedBreakpoints: GridLayoutBreakpoint[];
+  columns: GridLayoutResolvedValue;
+  items: Array<{
+    id: string;
+    label: string;
+    columnStart: GridLayoutResolvedValue;
+    columnSpan: GridLayoutResolvedValue;
+  }>;
+}
+
+export interface GridLayoutItemEdit {
+  id: string;
+  columnStart?: number | null;
+  columnSpan?: number | null;
+}
+
+export interface GridLayoutEditRequest extends GridLayoutInspectRequest {
+  columns?: number | null;
+  items: GridLayoutItemEdit[];
+}
+
+export interface GridLayoutPreviewResult {
+  ok: true;
+  previewId: string;
+  expiresAt: string;
+  parentId: string;
+  breakpoint: GridLayoutBreakpoint;
+  affectedBindingCount: number;
+  patch: PatchPreview;
+}
+
+export interface GridLayoutApplyRequest {
+  previewId: string;
 }
 
 export interface PatchFailure {
@@ -372,6 +443,8 @@ export interface UndoHistoryItem {
   };
   operationFile: string;
   diffFile: string;
+  kind?: PatchPreview["kind"];
+  changeCount?: number;
 }
 
 export interface UndoHistoryReport {
@@ -384,6 +457,7 @@ export interface UndoHistoryReport {
 export interface PatchRevertResult {
   ok: true;
   reverted: true;
+  kind?: PatchPreview["kind"];
   id: string;
   file: string;
   relativeFile: string;
@@ -397,6 +471,7 @@ export interface PatchRevertResult {
   after: string;
   sourceHashBefore: string;
   sourceHashAfter: string;
+  edits?: PatchTextEdit[];
   operationFile: string;
   diffFile: string;
   metrics: {

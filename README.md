@@ -37,6 +37,8 @@ Open the Vite URL and use the Intent Layer panel:
 4. Choose a token candidate, preview it, and apply it.
 5. Use Undo if the result is not right.
 
+When the selected element is inside CSS Grid, the nearest source-bound ancestor opens `Grid layout` automatically. Choose a breakpoint, drag each child's column range, preview the grouped diff, then apply or undo it as one operation.
+
 Settings remain available from the panel. Enabling an AI connection merges only the Intent Layer entry into project-local `.codex/config.toml` or `.mcp.json`. Global settings are not modified.
 
 ## Install In Another Vite Project
@@ -69,12 +71,14 @@ Direct edits currently target static JSX `className` values, string literals ins
 
 - spacing: padding, margin, and gap across the standard Tailwind scale
 - sizing: width, height, min/max, and size
-- layout: display, grid columns, flex, alignment, and justification
+- layout: display, grid columns, flex, alignment, justification, and numeric `col-start`/`col-span`
 - radius and typography size, weight, and line height
 - standard Tailwind color families and shades while preserving variants and opacity
 - shadow, opacity, ring width, and transition
 
 A token is not presented as editable when its only candidate is itself. Arbitrary values, CSS variables, `cva`, runtime variables, property access, and template expressions remain inspectable but are not patched directly.
+
+The Grid Layout Composer directly edits only an existing grid and direct children with static `className` bindings in one TSX file. It can add, replace, or remove 1-12 track `grid-cols`, `col-start`, and `col-span` tokens at base/sm/md/lg. Repeated source ids, cross-file children, dynamic classNames, and DOM reordering safely remain read-only.
 
 ## Safety Model
 
@@ -86,6 +90,7 @@ A token is not presented as editable when its only candidate is itself. Arbitrar
 - Apply and undo from multiple Codex or Claude processes are serialized by a project operation lock, and the journal is written atomically.
 - Drift creates a conflict artifact under `.intent/conflicts/` instead of modifying the file.
 - Patches replace the original source range rather than regenerating a whole file.
+- A grouped grid edit validates every original className and the complete source hash, then writes the same file once. Undo validates every post-apply range and restores the group byte for byte.
 - Source-changing Vite HTTP requests require both a loopback connection and the overlay session token. A preview opened through a LAN address is readable but cannot edit source.
 
 ## Use From Codex Or Claude
@@ -126,7 +131,7 @@ Full release check:
 npm run eval
 ```
 
-`npm run eval` covers tarball installation, installed CLI and Vite exports, real Vite HTTP preview/apply/revert, multi-file graph refresh, external corpora, and performance gates. `test:mcp-package` starts the built stdio server with a real MCP client and checks all six tools. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
+`npm run eval` covers tarball installation, installed CLI and Vite exports, real Vite HTTP preview/apply/revert, multi-file graph refresh, an eight-child grouped Grid apply/undo, external corpora, and performance gates. `test:mcp-package` starts the built stdio server with a real MCP client and checks all six tools. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
 
 `npm run benchmark:mcp` records local mechanical latency for inspect, preview, apply, undo, and in-memory MCP calls in [mcp-alpha-evaluation.json](./reports/performance/mcp-alpha-evaluation.json). These numbers do not prove agent task success or product value.
 

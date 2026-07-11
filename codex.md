@@ -11,8 +11,9 @@ Priority order:
 1. source binding correctness
 2. minimal patch and guarded undo safety
 3. high-frequency Tailwind edit coverage and clear GUI feedback
-4. real regression tests, package smoke, and CI
-5. optional Codex/Claude handoff
+4. constrained GUI layout editing that is measurably faster than describing placement to AI
+5. real regression tests, package smoke, and CI
+6. optional Codex/Claude handoff
 
 Do not add speculative analyzers, document formats, queue commands, package boundaries, or framework adapters without a failing user workflow or test that requires them.
 
@@ -39,6 +40,8 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Experienced users see component, file, source hash, `className` mode, editable tokens, shared render count, and unsupported reason before patching.
 - Direct edit and Agent handoff stay visually distinct.
 - Reused component edits must show how many rendered instances share the source binding.
+- Selecting an element inside a source-bound CSS Grid should expose the nearest supported grid ancestor; users should not have to click a narrow gap to select the parent.
+- Grid layout UI stays constrained to existing CSS Grid and semantic placement controls. Do not expand it into an infinite canvas or DOM reorder tool without comparative user evidence.
 - Network and patch failures must produce visible feedback.
 - Stale overlay roots must be replaced during HMR client version changes.
 
@@ -51,6 +54,8 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Persist the post-apply source hash with the operation.
 - Undo only the latest pending patch when that hash still matches.
 - On drift, preserve the file and write a conflict artifact.
+- Grouped layout patches are direct only when the parent and all direct children have static className bindings in one source file. Validate every original className plus the whole-file hash, write once, and store post-apply ranges for grouped undo.
+- Repeated source ids, cross-file grid children, dynamic className participants, and unsupported templates are explicit read-only boundaries, never partial-success cases.
 
 ## Agent Boundary
 

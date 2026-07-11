@@ -26,6 +26,9 @@ import type {
   AgentTaskRequest,
   AgentTaskStatusUpdateRequest,
   ClientMetric,
+  GridLayoutApplyRequest,
+  GridLayoutEditRequest,
+  GridLayoutInspectRequest,
   IntentSetupRequest,
   IntentRuntimeSelectionRequest,
   IntentRuntimeTokenResult,
@@ -402,6 +405,57 @@ export function intentLayerSpike(): Plugin {
 
         if (url.pathname === "/__intent/conflicts" && request.method === "GET") {
           writeJson(response, 200, intentService.conflicts());
+          return;
+        }
+
+        if (url.pathname === "/__intent/grid-layout/inspect" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as GridLayoutInspectRequest;
+            const result = intentService.inspectGridLayout(body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/grid-layout/preview" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as GridLayoutEditRequest;
+            const result = intentService.previewGridLayout(body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/grid-layout/apply" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as GridLayoutApplyRequest;
+            const result = intentService.applyGridLayout(body);
+            writeJson(
+              response,
+              result.ok ? 200 : 409,
+              result.ok
+                ? { ...result, binding: intentService.getEntry(result.id) ?? null }
+                : result
+            );
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
           return;
         }
 

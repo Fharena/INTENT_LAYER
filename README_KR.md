@@ -37,6 +37,8 @@ npm run dev
 4. 토큰 후보를 고르고 `미리보기`, `적용` 순서로 확인한다.
 5. 문제가 있으면 `되돌리기`를 누른다.
 
+선택한 요소가 CSS Grid 안에 있으면 가장 가까운 grid 조상의 `Grid 배치`가 자동으로 열린다. breakpoint를 고르고 각 자식의 열 범위를 드래그한 뒤, 그룹 diff를 미리보고 한 번에 적용하거나 되돌릴 수 있다.
+
 설정은 나중에도 패널의 `설정`에서 바꿀 수 있다. AI 연결을 켜면 프로젝트 로컬 `.codex/config.toml` 또는 `.mcp.json`에 Intent Layer 항목만 병합한다. 전역 설정은 수정하지 않는다.
 
 ## 다른 Vite 프로젝트에 설치
@@ -69,12 +71,14 @@ export default defineConfig({
 
 - spacing: padding, margin, gap의 표준 Tailwind scale
 - sizing: width, height, min/max, size
-- layout: display, grid columns, flex, align/justify
+- layout: display, grid columns, flex, align/justify, numeric `col-start`/`col-span`
 - radius와 typography 크기/굵기/line-height
 - 표준 Tailwind color family와 shade, variant와 opacity 보존
 - shadow, opacity, ring width, transition
 
 후보가 자기 자신 하나뿐인 토큰은 편집 가능으로 표시하지 않는다. 임의 값, CSS 변수, `cva`, runtime 변수, property access, template expression은 inspect 가능하지만 직접 패치하지 않는다.
+
+Grid Layout Composer는 같은 TSX 파일의 정적 `className`을 가진 기존 grid와 직계 자식만 직접 편집한다. base/sm/md/lg에서 1~12열의 `grid-cols`, `col-start`, `col-span`을 그룹 작업으로 추가·교체·제거한다. 반복된 source id, 교차 파일 자식, 동적 className, DOM 순서 변경은 안전하게 read-only로 내린다.
 
 ## 안전 규칙
 
@@ -86,6 +90,7 @@ export default defineConfig({
 - 여러 Codex/Claude 프로세스의 apply와 undo는 프로젝트 operation lock으로 직렬화하며 저널은 atomic write한다.
 - drift가 있으면 파일 대신 `.intent/conflicts/`에 conflict artifact를 남긴다.
 - patch는 전체 파일 codegen이 아니라 원래 source range만 교체한다.
+- Grid 그룹 편집은 모든 className 원문과 source hash를 먼저 검증하고 같은 파일을 한 번만 쓴다. undo는 적용 후 range 전체를 검증한 뒤 그룹을 byte-for-byte 복원한다.
 - source를 바꾸는 Vite HTTP 요청은 loopback 연결과 overlay 세션 토큰을 모두 요구한다. LAN 주소로 연 preview는 읽을 수 있어도 편집은 거부된다.
 
 ## Codex와 Claude에서 사용
@@ -126,7 +131,7 @@ npm run test:mcp-package
 npm run eval
 ```
 
-`npm run eval`은 tarball 설치, 설치된 CLI와 Vite export, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, 외부 corpus와 성능 gate를 실행한다. `test:mcp-package`는 빌드된 stdio 서버를 실제 MCP client로 시작해 6개 도구를 확인한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록된다.
+`npm run eval`은 tarball 설치, 설치된 CLI와 Vite export, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, 8자식 Grid 그룹 apply/undo, 외부 corpus와 성능 gate를 실행한다. `test:mcp-package`는 빌드된 stdio 서버를 실제 MCP client로 시작해 6개 도구를 확인한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록된다.
 
 `npm run benchmark:mcp`는 inspect, preview, apply, undo와 in-memory MCP 호출의 로컬 기계 지연을 [mcp-alpha-evaluation.json](./reports/performance/mcp-alpha-evaluation.json)에 기록한다. 이 수치는 Agent 작업 성공률이나 제품 가치를 증명하지 않는다.
 

@@ -4,6 +4,11 @@ import type {
   AgentQueueSignal,
   ClientMetric,
   AgentTaskResult,
+  GridLayoutApplyRequest,
+  GridLayoutBreakpoint,
+  GridLayoutEditRequest,
+  GridLayoutInspection,
+  GridLayoutPreviewResult,
   IntentBinding,
   IntentGraph,
   IntentRuntimeSelectionRequest,
@@ -38,6 +43,9 @@ type UndoDiscardResponse = PatchUndoDiscardResult | PatchFailure;
 type UndoRevertResponse = (PatchUndoRevertResult & { binding?: IntentBinding | null }) | PatchFailure;
 type SetupResponse = IntentSetupStatus;
 type SetupApplyResponse = IntentSetupResult | PatchFailure;
+type GridLayoutInspectResponse = GridLayoutInspection | PatchFailure;
+type GridLayoutPreviewResponse = GridLayoutPreviewResult | PatchFailure;
+type GridLayoutApplyResponse = (PatchApplyResult & { binding?: IntentBinding | null }) | PatchFailure;
 
 const intentSessionToken = "__INTENT_LAYER_SESSION_TOKEN__";
 
@@ -123,6 +131,14 @@ type TextKey =
   | "intentMap"
   | "korean"
   | "language"
+  | "layoutAffected"
+  | "layoutApply"
+  | "layoutAuto"
+  | "layoutColumns"
+  | "layoutComposer"
+  | "layoutLoading"
+  | "layoutPreview"
+  | "layoutSpan"
   | "legacyAgent"
   | "minimize"
   | "nextStep"
@@ -263,6 +279,14 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     intentMap: "Intent 맵",
     korean: "한국어",
     language: "언어",
+    layoutAffected: "영향 source",
+    layoutApply: "배치 적용",
+    layoutAuto: "자동 배치로 되돌리기",
+    layoutColumns: "열 수",
+    layoutComposer: "Grid 배치",
+    layoutLoading: "Grid source binding을 확인하는 중입니다.",
+    layoutPreview: "배치 미리보기",
+    layoutSpan: "너비",
     legacyAgent: "기존 Agent 큐 (고급 호환성)",
     minimize: "접기",
     nextStep: "다음 행동",
@@ -374,6 +398,14 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     intentMap: "Intent map",
     korean: "Korean",
     language: "Language",
+    layoutAffected: "Affected source",
+    layoutApply: "Apply layout",
+    layoutAuto: "Reset to automatic placement",
+    layoutColumns: "Columns",
+    layoutComposer: "Grid layout",
+    layoutLoading: "Checking grid source bindings.",
+    layoutPreview: "Preview layout",
+    layoutSpan: "Span",
     legacyAgent: "Legacy agent queue (advanced compatibility)",
     minimize: "Minimize",
     nextStep: "Next step",
@@ -1030,6 +1062,176 @@ function ensureOverlayStyles() {
   display: none;
 }
 
+.intent-layer-layout-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-tabs button {
+  min-height: 27px !important;
+  padding: 4px 5px !important;
+  color: #9da8c1 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 10px !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-tabs button[data-intent-active="true"] {
+  border-color: rgba(98, 217, 255, 0.56) !important;
+  background: rgba(98, 217, 255, 0.12) !important;
+  color: #e9f8ff !important;
+}
+
+.intent-layer-layout-toolbar {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.intent-layer-layout-stepper {
+  display: grid !important;
+  grid-template-columns: 28px 34px 28px !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-stepper button {
+  width: 28px !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  font-size: 15px !important;
+}
+
+.intent-layer-layout-stepper output {
+  display: grid !important;
+  height: 28px !important;
+  place-items: center !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  background: rgba(3, 6, 14, 0.46) !important;
+  color: #f4f7ff !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+}
+
+.intent-layer-layout-canvas {
+  display: grid !important;
+  min-height: 76px !important;
+  grid-auto-flow: row dense !important;
+  grid-auto-rows: 28px !important;
+  gap: 5px !important;
+  padding: 7px !important;
+  border: 1px solid rgba(98, 217, 255, 0.2) !important;
+  border-radius: 7px !important;
+  background:
+    linear-gradient(rgba(98, 217, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(98, 217, 255, 0.055) 1px, transparent 1px),
+    rgba(3, 6, 14, 0.44) !important;
+  background-size: 18px 18px !important;
+  overflow: hidden !important;
+}
+
+.intent-layer-layout-block {
+  display: grid !important;
+  min-width: 0 !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(142, 130, 255, 0.5) !important;
+  border-radius: 5px !important;
+  background: linear-gradient(135deg, rgba(125, 109, 255, 0.68), rgba(75, 166, 255, 0.5)) !important;
+  color: #ffffff !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+}
+
+.intent-layer-layout-block:nth-child(3n + 2) {
+  border-color: rgba(85, 230, 165, 0.5) !important;
+  background: linear-gradient(135deg, rgba(37, 180, 160, 0.58), rgba(77, 201, 255, 0.45)) !important;
+}
+
+.intent-layer-layout-block:nth-child(3n) {
+  border-color: rgba(255, 209, 102, 0.48) !important;
+  background: linear-gradient(135deg, rgba(216, 154, 74, 0.56), rgba(193, 105, 181, 0.42)) !important;
+}
+
+.intent-layer-layout-items {
+  display: grid !important;
+}
+
+.intent-layer-layout-item {
+  display: grid !important;
+  gap: 6px !important;
+  padding: 8px 0 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.intent-layer-layout-item-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.intent-layer-layout-item-name {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: #eef2ff !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+}
+
+.intent-layer-layout-item-meta {
+  color: #9ea9c2 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 9px !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-auto {
+  width: 25px !important;
+  min-height: 25px !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+}
+
+.intent-layer-layout-strip {
+  display: grid !important;
+  gap: 3px !important;
+  touch-action: none !important;
+  user-select: none !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-cell {
+  min-width: 0 !important;
+  min-height: 20px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-cell[data-intent-selected="true"] {
+  border-color: rgba(98, 217, 255, 0.62) !important;
+  background: linear-gradient(135deg, rgba(126, 110, 255, 0.7), rgba(68, 185, 255, 0.62)) !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-cell[data-intent-auto="true"] {
+  border-style: dashed !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+}
+
+.intent-layer-layout-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 7px !important;
+}
+
 .intent-layer-list {
   display: grid !important;
   gap: 6px !important;
@@ -1076,6 +1278,20 @@ body[data-intent-layer-picking="true"] [data-intent-id]:hover {
 
   .intent-layer-token-row {
     grid-template-columns: 1fr 1fr !important;
+  }
+
+  .intent-layer-layout-item-head {
+    grid-template-columns: minmax(0, 1fr) 25px !important;
+  }
+
+  .intent-layer-layout-item-meta {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  .intent-layer-layout-auto {
+    grid-column: 2 !important;
+    grid-row: 1 / 3 !important;
   }
 }
 `;
@@ -1505,6 +1721,411 @@ function createPanel() {
   panel.style.color = "#0f172a";
   panel.style.padding = "12px";
   return panel;
+}
+
+interface RuntimeGridScope {
+  parentId: string;
+  renderedParentCount: number;
+  childIds: string[];
+  unboundChildCount: number;
+  labels: Map<string, string>;
+}
+
+interface GridComposerItemState {
+  id: string;
+  label: string;
+  start: number | null;
+  span: number;
+  startChanged: boolean;
+  spanChanged: boolean;
+}
+
+function runtimeGridScope(selectedId: string): RuntimeGridScope | null {
+  const selected = elementsForIntentId(selectedId)[0];
+  if (!selected) return null;
+  let parent: HTMLElement | null = selected;
+  while (parent) {
+    if (parent.hasAttribute("data-intent-id") && window.getComputedStyle(parent).display === "grid") break;
+    parent = parent.parentElement;
+  }
+  const parentId = parent?.getAttribute("data-intent-id");
+  if (!parent || !parentId) return null;
+  const childIds: string[] = [];
+  const labels = new Map<string, string>();
+  let unboundChildCount = 0;
+  for (const [index, child] of Array.from(parent.children).entries()) {
+    const id = child.getAttribute("data-intent-id");
+    if (!id) {
+      unboundChildCount += 1;
+      continue;
+    }
+    childIds.push(id);
+    const text = child.textContent?.replace(/\s+/g, " ").trim() ?? "";
+    labels.set(id, text ? `${index + 1}. ${text.slice(0, 28)}` : `${index + 1}. ${child.tagName.toLowerCase()}`);
+  }
+  return {
+    parentId,
+    renderedParentCount: elementsForIntentId(parentId).length,
+    childIds,
+    unboundChildCount,
+    labels
+  };
+}
+
+function viewportBreakpoint(): GridLayoutBreakpoint {
+  if (window.innerWidth >= 1024) return "lg";
+  if (window.innerWidth >= 768) return "md";
+  if (window.innerWidth >= 640) return "sm";
+  return "base";
+}
+
+function renderGridLayoutComposer(
+  binding: IntentBinding,
+  setStatus: (message: string) => void,
+  rerender: (message: string, binding?: IntentBinding | null) => void
+): HTMLElement | null {
+  const runtime = runtimeGridScope(binding.id);
+  if (!runtime) return null;
+
+  const section = createSection(t("layoutComposer"), "ready");
+  const tabs = document.createElement("div");
+  tabs.className = "intent-layer-layout-tabs";
+  const body = document.createElement("div");
+  body.className = "intent-layer-control-grid";
+  const loading = document.createElement("p");
+  loading.textContent = t("layoutLoading");
+  body.appendChild(loading);
+  section.append(tabs, body);
+
+  let activeBreakpoint = viewportBreakpoint();
+  let requestSequence = 0;
+  const tabButtons = new Map<GridLayoutBreakpoint, HTMLButtonElement>();
+  for (const breakpoint of ["base", "sm", "md", "lg"] as GridLayoutBreakpoint[]) {
+    const button = createButton(breakpoint);
+    button.dataset.intentActive = breakpoint === activeBreakpoint ? "true" : "false";
+    button.title = breakpoint === "base" ? "Base styles" : `${breakpoint}: responsive styles`;
+    button.addEventListener("click", () => {
+      if (breakpoint === activeBreakpoint) return;
+      activeBreakpoint = breakpoint;
+      for (const [value, tab] of tabButtons) tab.dataset.intentActive = value === breakpoint ? "true" : "false";
+      void loadInspection();
+    });
+    tabButtons.set(breakpoint, button);
+    tabs.appendChild(button);
+  }
+
+  async function loadInspection() {
+    const sequence = ++requestSequence;
+    body.innerHTML = "";
+    const nextLoading = document.createElement("p");
+    nextLoading.textContent = t("layoutLoading");
+    body.appendChild(nextLoading);
+    try {
+      const result = await requestJson<GridLayoutInspectResponse>("/__intent/grid-layout/inspect", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          parentId: runtime!.parentId,
+          childIds: runtime!.childIds,
+          unboundChildCount: runtime!.unboundChildCount,
+          breakpoint: activeBreakpoint
+        })
+      });
+      if (sequence !== requestSequence || !body.isConnected) return;
+      if (!result.ok) {
+        body.innerHTML = "";
+        const blocked = document.createElement("p");
+        blocked.textContent = result.detail ?? result.reason;
+        body.appendChild(blocked);
+        section.dataset.intentState = "warn";
+        return;
+      }
+      section.dataset.intentState = "ready";
+      renderEditor(result);
+    } catch (error) {
+      if (sequence !== requestSequence || !body.isConnected) return;
+      body.innerHTML = "";
+      const failed = document.createElement("p");
+      failed.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+      body.appendChild(failed);
+      section.dataset.intentState = "warn";
+    }
+  }
+
+  function renderEditor(inspection: GridLayoutInspection) {
+    let columns = inspection.columns.effective ?? 1;
+    const initialColumns = columns;
+    let columnsChanged = false;
+    let previewId: string | null = null;
+    const items: GridComposerItemState[] = inspection.items.map((item) => ({
+      id: item.id,
+      label: runtime!.labels.get(item.id) ?? item.label,
+      start: item.columnStart.effective,
+      span: item.columnSpan.effective ?? 1,
+      startChanged: false,
+      spanChanged: false
+    }));
+
+    function hasChanges() {
+      return columnsChanged || items.some((item) => item.startChanged || item.spanChanged);
+    }
+
+    function requestBody(): GridLayoutEditRequest {
+      const edit: GridLayoutEditRequest = {
+        parentId: runtime!.parentId,
+        childIds: runtime!.childIds,
+        unboundChildCount: runtime!.unboundChildCount,
+        breakpoint: inspection.breakpoint,
+        items: items
+          .filter((item) => item.startChanged || item.spanChanged)
+          .map((item) => ({
+            id: item.id,
+            ...(item.startChanged ? { columnStart: item.start } : {}),
+            ...(item.spanChanged ? { columnSpan: item.span } : {})
+          }))
+      };
+      if (columnsChanged) edit.columns = columns;
+      return edit;
+    }
+
+    body.innerHTML = "";
+    const toolbar = document.createElement("div");
+    toolbar.className = "intent-layer-layout-toolbar";
+    const columnsLabel = document.createElement("span");
+    columnsLabel.className = "intent-layer-section-title";
+    columnsLabel.textContent = t("layoutColumns");
+    const stepper = document.createElement("div");
+    stepper.className = "intent-layer-layout-stepper";
+    const removeColumn = createButton("−");
+    removeColumn.title = "Remove one grid column";
+    const columnOutput = document.createElement("output");
+    columnOutput.textContent = String(columns);
+    const addColumn = createButton("+");
+    addColumn.title = "Add one grid column";
+    stepper.append(removeColumn, columnOutput, addColumn);
+    toolbar.append(columnsLabel, stepper);
+
+    const canvas = document.createElement("div");
+    canvas.className = "intent-layer-layout-canvas";
+    const itemList = document.createElement("div");
+    itemList.className = "intent-layer-layout-items";
+    const actions = document.createElement("div");
+    actions.className = "intent-layer-layout-actions";
+    const preview = createButton(t("layoutPreview"));
+    const apply = createButton(t("layoutApply"), "primary");
+    apply.disabled = true;
+    const previewBox = document.createElement("pre");
+    previewBox.className = "intent-layer-code-box";
+    previewBox.style.display = "none";
+    actions.append(preview, apply);
+
+    function invalidatePreview() {
+      previewId = null;
+      apply.disabled = true;
+      previewBox.style.display = "none";
+      previewBox.textContent = "";
+    }
+
+    function drawCanvas() {
+      canvas.innerHTML = "";
+      canvas.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+      items.forEach((item, index) => {
+        const block = document.createElement("div");
+        block.className = "intent-layer-layout-block";
+        const safeSpan = Math.max(1, Math.min(item.span, columns));
+        block.style.gridColumn = item.start === null ? `span ${safeSpan}` : `${item.start} / span ${safeSpan}`;
+        block.textContent = String(index + 1);
+        block.title = `${item.label}; ${item.start === null ? "auto" : `column ${item.start}`}; span ${safeSpan}`;
+        canvas.appendChild(block);
+      });
+    }
+
+    function clampItemsToColumns() {
+      for (const item of items) {
+        if (item.span > columns) {
+          item.span = columns;
+          item.spanChanged = true;
+        }
+        if (item.start !== null && item.start + item.span - 1 > columns) {
+          item.start = Math.max(1, columns - item.span + 1);
+          item.startChanged = true;
+        }
+      }
+    }
+
+    function changeColumns(delta: number) {
+      const next = Math.max(1, Math.min(12, columns + delta));
+      if (next === columns) return;
+      columns = next;
+      columnsChanged = columns !== initialColumns;
+      columnOutput.textContent = String(columns);
+      clampItemsToColumns();
+      invalidatePreview();
+      drawCanvas();
+      renderItemControls();
+    }
+
+    removeColumn.addEventListener("click", () => changeColumns(-1));
+    addColumn.addEventListener("click", () => changeColumns(1));
+
+    function renderItemControls() {
+      itemList.innerHTML = "";
+      items.forEach((item) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "intent-layer-layout-item";
+        const head = document.createElement("div");
+        head.className = "intent-layer-layout-item-head";
+        const name = document.createElement("span");
+        name.className = "intent-layer-layout-item-name";
+        name.textContent = item.label;
+        name.title = item.label;
+        const meta = document.createElement("span");
+        meta.className = "intent-layer-layout-item-meta";
+        const auto = createButton("↺");
+        auto.className += " intent-layer-layout-auto";
+        auto.title = t("layoutAuto");
+        head.append(name, meta, auto);
+        const strip = document.createElement("div");
+        strip.className = "intent-layer-layout-strip";
+        strip.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+        const cells: HTMLButtonElement[] = [];
+        let dragStart: number | null = null;
+
+        function updateVisuals() {
+          meta.textContent = `${item.start === null ? "auto" : item.start} · ${t("layoutSpan")} ${item.span}`;
+          cells.forEach((cell, index) => {
+            const selected = item.start !== null && index + 1 >= item.start && index + 1 < item.start + item.span;
+            const autoWidth = item.start === null && index < item.span;
+            cell.dataset.intentSelected = selected ? "true" : "false";
+            cell.dataset.intentAuto = autoWidth ? "true" : "false";
+          });
+          drawCanvas();
+        }
+
+        function setRange(endIndex: number) {
+          if (dragStart === null) return;
+          const low = Math.min(dragStart, endIndex);
+          const high = Math.max(dragStart, endIndex);
+          item.start = low + 1;
+          item.span = high - low + 1;
+          item.startChanged = true;
+          item.spanChanged = true;
+          invalidatePreview();
+          updateVisuals();
+        }
+
+        strip.addEventListener("pointermove", (event) => {
+          if (dragStart === null) return;
+          const rect = strip.getBoundingClientRect();
+          const position = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
+          const endIndex = Math.max(0, Math.min(columns - 1, Math.floor((position / rect.width) * columns)));
+          setRange(endIndex);
+        });
+
+        for (let index = 0; index < columns; index += 1) {
+          const cell = createButton("");
+          cell.className += " intent-layer-layout-cell";
+          cell.title = `Column ${index + 1}`;
+          cell.setAttribute("aria-label", `Column ${index + 1}`);
+          cell.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            dragStart = index;
+            setRange(index);
+            window.addEventListener(
+              "pointerup",
+              () => {
+                dragStart = null;
+              },
+              { once: true }
+            );
+          });
+          cells.push(cell);
+          strip.appendChild(cell);
+        }
+        auto.addEventListener("click", () => {
+          item.start = null;
+          item.startChanged = true;
+          invalidatePreview();
+          updateVisuals();
+        });
+        updateVisuals();
+        wrapper.append(head, strip);
+        itemList.appendChild(wrapper);
+      });
+    }
+
+    preview.addEventListener("click", async () => {
+      if (!hasChanges()) {
+        setStatus(overlayLanguage === "ko" ? "바뀐 배치가 없습니다." : "The layout has not changed.");
+        return;
+      }
+      preview.disabled = true;
+      try {
+        const result = await requestJson<GridLayoutPreviewResponse>("/__intent/grid-layout/preview", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(requestBody())
+        });
+        previewBox.style.display = "block";
+        if (!result.ok) {
+          previewBox.textContent = result.detail ?? result.reason;
+          setStatus(`Grid preview rejected: ${result.reason}`);
+          return;
+        }
+        previewId = result.previewId;
+        apply.disabled = false;
+        const impact = runtime!.renderedParentCount > 1
+          ? ` · ${runtime!.renderedParentCount} ${overlayLanguage === "ko" ? "개 렌더" : "renders"}`
+          : "";
+        previewBox.textContent = [
+          `${t("layoutAffected")}: ${result.affectedBindingCount}${impact}`,
+          ...(result.patch.edits ?? []).flatMap((edit) => [`- ${edit.oldText}`, `+ ${edit.newText}`])
+        ].join("\n");
+        setStatus(
+          overlayLanguage === "ko"
+            ? `Grid 배치 ${result.affectedBindingCount}개 source 범위를 확인했습니다.`
+            : `Previewed ${result.affectedBindingCount} grid source ranges.`
+        );
+      } catch (error) {
+        previewBox.style.display = "block";
+        previewBox.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+        setStatus(previewBox.textContent);
+      } finally {
+        preview.disabled = false;
+      }
+    });
+
+    apply.addEventListener("click", async () => {
+      if (!previewId) return;
+      apply.disabled = true;
+      const applyRequest: GridLayoutApplyRequest = { previewId };
+      try {
+        const result = await requestJson<GridLayoutApplyResponse>("/__intent/grid-layout/apply", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(applyRequest)
+        });
+        if (!result.ok) {
+          setStatus(`Grid apply rejected: ${result.reason}`);
+          return;
+        }
+        const message =
+          overlayLanguage === "ko"
+            ? `Grid 배치를 ${result.edits?.length ?? 0}개 source 범위에 적용했습니다.`
+            : `Applied the grid layout across ${result.edits?.length ?? 0} source ranges.`;
+        rerender(message, result.binding ?? binding);
+      } catch (error) {
+        setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
+      }
+    });
+
+    drawCanvas();
+    renderItemControls();
+    body.append(toolbar, canvas, itemList, actions, previewBox);
+  }
+
+  void loadInspection();
+  return section;
 }
 
 function renderTokenRow(
@@ -2559,6 +3180,25 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     const editableTokens = binding.tokens.filter((item) => item.editable);
     renderWorkflowRail(content, binding, editableTokens.length);
     renderIntentMap(content, binding, effectiveScope, editableTokens);
+
+    const layoutComposer = renderGridLayoutComposer(
+      binding,
+      (message) => {
+        statusLine.textContent = message;
+      },
+      (message, refreshedBinding) => {
+        if (refreshedBinding) {
+          panel.dispatchEvent(
+            new CustomEvent<BindingRefreshDetail>("intent:binding-refreshed", {
+              detail: { binding: refreshedBinding, message }
+            })
+          );
+          return;
+        }
+        renderBinding(panel, binding, message, effectiveScope);
+      }
+    );
+    if (layoutComposer) content.appendChild(layoutComposer);
 
     const directSection = createSection(t("directEdit"), editableTokens.length > 0 ? "ready" : "warn");
     if (editableTokens.length === 0) {

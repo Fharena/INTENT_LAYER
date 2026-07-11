@@ -723,12 +723,12 @@ Priorities:
 1. Keep small direct edits such as spacing, color, and text local and free of model calls.
 2. Treat zero wrong-node edits, zero full-file rewrites, and no false runtime success as product trust metrics.
 3. Build an adapter that derives candidates from the project's Tailwind theme and CSS variables instead of expanding hard-coded palettes.
-4. Limit the next direct-edit experiment to guarded literal text. Structural or dynamic string changes remain agent handoffs.
+4. Limit the next direct-edit experiment to a `Grid Layout Composer` for existing CSS Grid. DOM reordering and dynamic repeated structures remain agent handoffs.
 5. Measure time to first successful edit, retries, wrong-node events, and undo usage against prompt-only workflows on held-out repositories before broadening scope.
 
 Not now:
 
-- infinite canvas, drag/drop, and sibling reorder
+- infinite canvas, freeform canvas, and sibling reorder. A constrained column-placement control for an existing CSS Grid is the exception.
 - simultaneous Next.js and multi-framework expansion
 - multiple AI-generated design variants
 - a general agent IDE or proprietary model runtime
@@ -740,7 +740,100 @@ Structurally, the roughly 3,700-line legacy Agent queue and launch layer should 
 - Selection is currently one project-wide file, so the latest selection from multiple browsers or routes overwrites the others. Formal multi-session support needs `sessionId`, freshness, and active-selection rules.
 - Each Vite process publishes its complete in-memory graph. Two dev servers visiting different lazy routes can let the last writer remove bindings seen only by the other session; session graphs need a file-level merge fixture.
 - Candidate lists in `tailwind.ts` are mostly static. Without reading the project theme, the product can steer users around their brand tokens, so a candidate-provider boundary should come first.
-- `client.ts` and `cli.ts` are large, but file size alone does not justify a rewrite. Extract only the request/render boundaries touched by the literal-text or theme-adapter work.
+- `client.ts` and `cli.ts` are large, but file size alone does not justify a rewrite. Extract only request/render boundaries shared by Grid Composer, literal-text, or theme-adapter work.
+
+### 14.5 Grid Layout Composer Design
+
+#### Job to Be Done
+
+When arranging asymmetric cards, users should not have to describe requests such as "put the second card at column four for five tracks, then make the third card fill the next row." They select each child's column range in the GUI and commit a small Tailwind patch.
+
+This is not a general page builder. It reads an existing CSS Grid and deterministically edits only:
+
+```text
+parent: grid-cols-N
+children: col-start-N, col-span-N
+variants: base, sm, md, lg
+```
+
+#### UX Flow
+
+1. The user selects a rendered grid parent.
+2. The panel reconciles its real direct children with source bindings.
+3. It shows breakpoint tabs and a column-count stepper.
+4. The user selects a start and span on a 1-12 column placement strip for each child.
+5. `Preview` shows affected source bindings and before/after className values.
+6. `Apply` writes one grouped operation.
+7. The existing `Undo` restores the entire group at once.
+
+When one source binding renders more than once, the panel shows the source-scope impact count first. An instance-only result requires a prop or variant refactor and is not applied directly.
+
+#### First Implementation Contract
+
+Direct edit:
+
+- a grid parent and every direct child have React/Vite `data-intent-id` bindings
+- parent and child bindings live in one source file
+- every participating `className` is a static string
+- the parent has base `grid` and `grid-cols-N` in the 1-12 range
+- one base/sm/md/lg breakpoint is edited at a time
+- add, replace, or remove `grid-cols`, `col-start`, and `col-span` tokens
+
+Read-only or agent handoff:
+
+- repeated direct-child source ids such as `.map()` output
+- child component implementations in other files
+- conditional `cn()`/`clsx()`, `cva`, variable references, or template expressions
+- DOM reordering, row or absolute placement, masonry, or subgrid
+- arbitrary grid templates over 12 columns
+
+#### Hard Problems and Decisions
+
+**Atomicity across multiple source ranges**
+
+Applying the parent and children separately can leave a half-edited layout. The first implementation accepts only bindings in one file, validates the full source hash and every original className, builds the complete result in memory, and writes the file once. Cross-file transactions require crash recovery and are intentionally deferred.
+
+**Token insertion/removal and offset drift**
+
+Single-token replacement cannot position a child that has no `col-start`. Each className literal becomes one minimal edit range, and the operation stores both its original and post-apply ranges. Apply processes original ranges in descending order; undo processes post-apply ranges in descending order.
+
+**Reusable components versus runtime instances**
+
+Three DOM children with one repeated source id cannot be positioned independently. Duplicate direct-child ids reject direct edit. Source-level edits that affect multiple renders expose their impact count.
+
+**Responsive inheritance**
+
+Without an `md:` token, base or sm values remain effective. Inspection separates explicit from effective values. Requests carry only properties the user changed, and `null` removes a token at that breakpoint. Otherwise the tool would accumulate redundant responsive classes.
+
+**DOM layout versus source layout**
+
+The browser sends only the selected parent id and ordered direct-child ids. The server resolves ids, files, class kinds, and tokens from the current graph. The browser never submits source offsets or raw patches.
+
+#### Internal Data Flow
+
+```text
+selected grid DOM
+  -> parent id + ordered direct-child ids
+  -> server-side support inspection
+  -> semantic layout request (breakpoint/start/span)
+  -> guarded grouped className preview
+  -> expiring preview id
+  -> operation lock + file lock + full validation
+  -> one source write + intent-op + intent-diff
+  -> graph refresh + HMR
+  -> grouped undo
+```
+
+#### Validation Gates
+
+- zero partial writes in supported fixtures
+- zero source writes after injected stale hash or one className mismatch
+- 100% byte-for-byte restoration after grouped undo
+- zero incorrect direct edits for repeated-id and cross-file fixtures
+- p95 preview under 20ms and apply under 50ms for 3-8 children
+- at least 30% improvement in either time to first success or retry count against prompt-only held-out tasks
+
+Do not add row placement, drag reordering, or cross-file transactions before these gates pass.
 
 ## 15. Productization Strategy
 
@@ -867,6 +960,7 @@ Can the architecture scale to large projects?
 - [x] provider-neutral local MCP
 - [x] loopback/session-token HTTP boundary
 - [x] multi-process operation journal
+- [x] same-file static Grid Layout Composer vertical slice
 - [ ] project Tailwind theme/CSS variable candidate adapter
 - [ ] guarded literal text edit spike
 - [ ] session-scoped selection and multi-Vite graph merge fixture

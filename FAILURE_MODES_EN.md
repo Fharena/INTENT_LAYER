@@ -222,7 +222,18 @@ The panel reports a stopped dev server, invalid HTTP response, or JSON parse fai
 
 If Codex or Claude does not list the tools, check AI connection status and the project-local `.codex/config.toml` or `.mcp.json`, then start a new session. If config exists but `serverReady` is false, the package install or built `dist/mcp.js` entry is missing. Intent Layer never edits global provider configuration.
 
-## 13. An Agent task remains `claimed`
+## 13. Grid layout appears as read-only
+
+- `repeated-grid-binding`: multiple direct children, commonly from `.map()`, share one source id. Per-instance placement needs a prop or variant refactor, so use agent handoff.
+- `cross-file-grid`: the parent and direct-child implementations live in different files. The first version limits grouped edits to one file to prevent partial apply.
+- `dynamic-grid-classname`: a parent or child uses conditional `cn()`, a variable, `cva`, or a template expression. Use agent handoff unless it can safely become a static literal.
+- `multiline-grid-classname` or `noncanonical-grid-classname`: the first version remains read-only so it does not normalize line breaks or unusual whitespace.
+- `unbound-grid-child`: at least one direct DOM child has no source binding. Give that element a static className and select again.
+- `repeated-grid-binding`, `cross-file-grid`, and `dynamic-grid-classname` are explicit support boundaries, not partial-success conditions. The tool never applies only a subset of children.
+- `grid-placement-overflow`: start plus span exceeds the active column count. Select a range inside the placement strip.
+- `planned-range-mismatch` or `source-hash-mismatch`: source changed after preview. The source-write count is zero; create a new preview.
+
+## 14. An Agent task remains `claimed`
 
 Return an abandoned provider task to the queue:
 

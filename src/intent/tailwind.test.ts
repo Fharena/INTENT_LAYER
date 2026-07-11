@@ -3,6 +3,8 @@ import {
   candidatesForToken,
   categorizeTailwindToken,
   describeTailwindToken,
+  gridLayoutToken,
+  parseGridLayoutToken,
   tokenizeClassName
 } from "./tailwind";
 
@@ -54,5 +56,19 @@ describe("Tailwind direct-edit candidates", () => {
       token: "hover:bg-blue-50/50"
     });
     expect(gap).toMatchObject({ property: "layout.gap", value: "4", variant: null });
+  });
+
+  it("round-trips numeric grid placement tokens", () => {
+    expect(parseGridLayoutToken("md:col-start-4")).toEqual({
+      breakpoint: "md",
+      property: "columnStart",
+      value: 4
+    });
+    expect(gridLayoutToken("columnSpan", 7, "lg")).toBe("lg:col-span-7");
+    expect(categorizeTailwindToken("col-span-5")).toBe("layout");
+    expect(describeTailwindToken("col-span-5")).toMatchObject({
+      property: "layout.columnSpan",
+      value: "5"
+    });
   });
 });

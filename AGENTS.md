@@ -63,6 +63,7 @@ Current module boundaries:
 ```text
 instrument.ts   TypeScript AST source binding
 tailwind.ts     token classification and candidates
+gridLayout.ts   constrained CSS Grid inspection and grouped className planning
 patch.ts        preview, apply, operation log, and guarded undo
 graphStore.ts   graph state, publish, and disk reload
 intentService.ts shared GUI, HTTP, CLI, and MCP use cases
@@ -133,6 +134,8 @@ For direct edits:
 7. Produce intent diff.
 
 If confidence is low, do not patch directly. Generate an agent handoff task instead.
+
+For grouped layout edits, require one source file, validate every original className plus the full source hash, write the file once, and store original and post-apply ranges for byte-for-byte grouped undo. Repeated runtime ids, cross-file children, or dynamic className participants are read-only boundaries.
 
 ## AI Tool Rules
 

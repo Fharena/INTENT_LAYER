@@ -725,12 +725,12 @@ semantic property -> guarded preview -> minimal patch -> source/runtime verify -
 1. spacing/color/text 같은 작은 직접 편집은 AI 호출 없이 로컬에서 계속 무료로 제공한다.
 2. wrong-node 0건, 전체 파일 rewrite 0건, unavailable runtime을 성공으로 표시하지 않는 것을 제품 신뢰 지표로 둔다.
 3. 하드코딩 palette를 늘리기보다 프로젝트 Tailwind theme와 CSS variable에서 후보를 읽는 adapter를 만든다.
-4. 다음 직접 편집 실험은 `literal text`로 한정한다. 구조 변경과 동적 문자열은 agent handoff로 내린다.
+4. 다음 직접 편집 실험은 기존 CSS Grid를 다루는 `Grid Layout Composer`로 한정한다. DOM 순서 변경과 동적 반복 구조는 agent handoff로 내린다.
 5. 독립 저장소에서 prompt-only 대비 첫 성공 시간, 재시도 횟수, wrong-node, undo 사용률을 측정한 뒤 기능 범위를 넓힌다.
 
 지금 하지 않을 것:
 
-- 무한 canvas, drag/drop, sibling reorder
+- 무한 canvas, 자유 배치 canvas, sibling reorder. 단, 기존 CSS Grid의 열 범위를 고르는 제한된 placement control은 예외다.
 - Next.js와 여러 framework 동시 확장
 - AI가 디자인 variant 여러 개를 생성하는 기능
 - 범용 agent IDE 또는 자체 모델 실행기
@@ -742,7 +742,100 @@ semantic property -> guarded preview -> minimal patch -> source/runtime verify -
 - 현재 selection은 프로젝트당 파일 하나라 여러 브라우저/route의 마지막 선택이 서로 덮어쓴다. multi-session을 정식 지원하기 전 `sessionId`, freshness, active selection 규칙이 필요하다.
 - 각 Vite process는 자기 in-memory graph 전체를 publish한다. lazy route를 서로 다르게 연 두 dev server에서는 마지막 writer가 다른 route binding을 지울 수 있으므로 session별 graph를 file 단위로 merge하는 검증이 필요하다.
 - `tailwind.ts` 후보는 정적 목록 중심이다. 프로젝트 theme를 읽지 않으면 실제 브랜드 token을 우회하도록 유도하므로 candidate provider 경계를 먼저 분리해야 한다.
-- `client.ts`와 `cli.ts`는 크지만 파일 크기만을 이유로 지금 재작성하지 않는다. literal text 또는 theme adapter를 추가할 때 함께 수정되는 request/render 부분만 추출한다.
+- `client.ts`와 `cli.ts`는 크지만 파일 크기만을 이유로 지금 재작성하지 않는다. Grid Composer, literal text 또는 theme adapter에서 함께 수정되는 request/render 부분만 추출한다.
+
+### 14.5 Grid Layout Composer 설계
+
+#### 해결하려는 작업
+
+사용자가 비대칭 카드 배치를 만들 때 `두 번째 카드는 4열부터 5칸, 세 번째 카드는 다음 줄 전체`처럼 길게 설명하지 않고, 실제 자식 블록의 열 범위를 GUI에서 고른 뒤 작은 Tailwind 패치로 확정한다.
+
+이 기능은 범용 페이지 빌더가 아니다. 이미 존재하는 CSS Grid의 의미를 읽고, 아래 속성만 결정론적으로 편집하는 좁은 도구다.
+
+```text
+부모: grid-cols-N
+자식: col-start-N, col-span-N
+variant: base, sm, md, lg
+```
+
+#### UX 흐름
+
+1. 사용자가 화면의 grid 부모를 선택한다.
+2. 패널은 실제 직계 자식과 source binding을 대조한다.
+3. breakpoint 탭과 열 수 stepper를 보여준다.
+4. 각 자식의 1~12열 placement strip에서 시작 열과 span을 선택한다.
+5. `미리보기`가 영향받는 source binding 수와 className 전후를 보여준다.
+6. `적용`은 하나의 그룹 작업으로 source를 한 번만 쓴다.
+7. 기존 `되돌리기`가 그룹 전체를 한 번에 복원한다.
+
+같은 source binding이 화면에 여러 번 렌더링되면 source scope 영향 수를 먼저 표시한다. 화면 한 인스턴스만 다르게 만들려면 prop/variant 구조 변경이 필요하므로 직접 적용하지 않는다.
+
+#### 첫 구현의 지원 계약
+
+직접 편집:
+
+- React/Vite가 만든 `data-intent-id`가 있는 grid 부모와 모든 직계 자식
+- 부모와 자식 binding이 한 source 파일에 있음
+- 부모와 자식의 `className`이 정적 문자열임
+- 부모에 base `grid`와 1~12 범위의 `grid-cols-N`이 있음
+- base/sm/md/lg 한 breakpoint씩 편집
+- `grid-cols`, `col-start`, `col-span` 토큰의 추가, 교체, 제거
+
+읽기 전용 또는 Agent 전달:
+
+- `.map()` 결과처럼 같은 source id가 직계 자식에서 반복됨
+- 자식 component 구현이 다른 파일에 있음
+- `cn()`/`clsx()`의 조건 분기, `cva`, 변수 참조, template expression
+- DOM 순서 변경, row/absolute placement, masonry, subgrid
+- 12열을 넘는 arbitrary grid template
+
+#### 가장 어려운 점과 결정
+
+**여러 source range의 원자성**
+
+부모와 여러 자식을 따로 적용하면 중간 실패 때 레이아웃이 반쪽만 바뀐다. 첫 구현은 모든 binding이 같은 파일일 때만 허용하고, 전체 source hash와 각 className 원문을 모두 검증한 뒤 메모리에서 결과를 만든 다음 파일을 한 번만 쓴다. 여러 파일 트랜잭션은 crash recovery까지 필요하므로 아직 지원하지 않는다.
+
+**토큰 추가/삭제와 offset 이동**
+
+기존 단일 토큰 교체만으로는 `col-start`가 없던 자식을 배치할 수 없다. 각 className literal을 하나의 최소 편집 범위로 만들고, 원본 range와 적용 후 range를 모두 operation에 저장한다. apply는 원본 range를 내림차순으로, undo는 적용 후 range를 내림차순으로 처리한다.
+
+**재사용 component와 runtime instance의 차이**
+
+DOM 자식이 세 개여도 source id가 같으면 세 개를 따로 배치할 수 없다. 직계 자식 id 중복을 검출해 direct edit을 거부하고, source-level 변경이 모든 렌더에 미치는 경우 영향 수를 표시한다.
+
+**반응형 상속**
+
+`md:` 값이 없으면 base/sm 값이 상속된다. inspect 결과는 explicit 값과 effective 값을 분리한다. 요청은 사용자가 실제로 바꾼 속성만 보내며, `null`은 해당 breakpoint 토큰 제거를 뜻한다. 이 구분 없이 effective 값을 다시 쓰면 불필요한 responsive token이 늘어난다.
+
+**DOM 배치와 source 배치의 불일치**
+
+브라우저는 선택된 부모의 실제 직계 자식 id만 전달하고, 서버는 현재 graph에서 id, 파일, class kind, token을 다시 해석한다. 브라우저가 source offset이나 raw patch를 보내지 못하게 한다.
+
+#### 내부 데이터 흐름
+
+```text
+selected grid DOM
+  -> parent id + ordered direct-child ids
+  -> server-side support inspection
+  -> semantic layout request (breakpoint/start/span)
+  -> guarded grouped className preview
+  -> expiring preview id
+  -> operation lock + file lock + full validation
+  -> one source write + intent-op + intent-diff
+  -> graph refresh + HMR
+  -> grouped undo
+```
+
+#### 검증 기준
+
+- 지원 fixture에서 부분 적용 0건
+- stale hash와 한 개 className mismatch 주입 시 source write 0건
+- 그룹 undo 후 byte-for-byte 원복 100%
+- 지원되지 않는 반복/교차 파일 fixture의 잘못된 direct edit 0건
+- 3~8개 자식 layout preview p95 20ms 이하, apply p95 50ms 이하
+- 독립 사용자 과제에서 prompt-only 대비 첫 성공 시간 또는 재시도 횟수 중 하나를 30% 이상 개선
+
+이 수치를 통과하기 전에는 row placement, drag reorder, 여러 파일 트랜잭션을 추가하지 않는다.
 
 ## 15. 제품화 전략
 
@@ -869,6 +962,7 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 - [x] provider-neutral local MCP
 - [x] loopback/session-token HTTP boundary
 - [x] multi-process operation journal
+- [x] 같은 파일 정적 Grid Layout Composer 수직 기능
 - [ ] project Tailwind theme/CSS variable candidate adapter
 - [ ] guarded literal text edit spike
 - [ ] session-scoped selection과 multi-Vite graph merge fixture
