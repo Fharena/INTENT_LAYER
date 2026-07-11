@@ -68,7 +68,7 @@ import { defineConfig } from "vite";
 import { intentLayer } from "intent-layer/vite";
 
 export default defineConfig({
-  plugins: [react(), intentLayer()]
+  plugins: [intentLayer(), react()]
 });
 ```
 
@@ -81,16 +81,30 @@ npx intent-layer check src --min-supported-direct 0.5 --max-file-transform-ms 20
 npx intent-layer dev
 ```
 
-## 4. What To Say During The Demo
+## 4. Codex/Claude MCP Demo
+
+1. Enable a provider under `Settings > AI connections`.
+2. Start a new Codex or Claude session.
+3. Select a card in the browser.
+4. Ask the AI to inspect the current card's gap candidates and preview value 6.
+5. Confirm that `inspect → preview` returns an exact one-line diff.
+6. After approval, run `apply → verify` and confirm both source and rendered instances are verified.
+7. Restore the source with `intent_undo_edit`.
+
+For a quick packaged-stdio check, run `npm run build:package && npm run test:mcp-package`.
+
+## 5. What To Say During The Demo
 
 Use this positioning:
 
 - Direct edits are deterministic range patches.
 - Simple Tailwind token changes do not call an LLM.
 - Unsupported dynamic `className` expressions degrade to read-only handoff instead of unsafe patching.
+- AI clients never submit raw source offsets and use the same `IntentService` as the GUI.
+- With a connected browser, verification checks rendered class tokens after HMR.
 - Every applied patch writes operation and intent diff artifacts for review.
 
-## 5. Do Not Demo Yet
+## 6. Do Not Demo Yet
 
 Do not position these as ready MVP flows:
 
@@ -101,4 +115,4 @@ Do not position these as ready MVP flows:
 - direct edits inside `node_modules`
 - broad natural-language layout refactors as deterministic patches
 
-For unsupported cases, show `.intent/agent/task_*.md` handoff instead.
+Show unsupported cases as `handoff-required` with an exact source pointer. Use the Markdown queue only in an advanced compatibility demo.

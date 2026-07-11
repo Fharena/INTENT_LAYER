@@ -10,12 +10,16 @@
 
 ### 0.1 Current Implementation Baseline (2026-07-11)
 
-The current state is a **working alpha**, not a universal product. Element selection, TypeScript AST source binding, Tailwind candidates, minimal range patches, and latest-first undo guarded by the post-apply source hash are supported as the core path. Agent handoff is optional and has not yet proven that it outperforms direct context passed to an agent.
+The current state is an **AI-native working alpha**, not a universal product. The browser GUI and local MCP share one `IntentService` for selection, TypeScript AST source binding, semantic Tailwind candidates, minimal range patches, and source-hash-guarded undo. The Markdown Agent queue is advanced compatibility rather than the default path.
 
 Current implementation rules:
 
 - JSX analysis uses one TypeScript AST path instead of parallel scanner and AST implementations.
+- Intrinsic JSX and `React.createElement()` are supported, while ambiguous `cloneElement` provenance is not guessed.
 - A token is editable only when it has more than one real candidate.
+- AI clients cannot submit source offsets or raw patches; they request `intentId + semantic property + candidate value`.
+- Apply validates an expiring preview, source hash, atomic file lock, and idempotency key.
+- With a connected browser, Vite HMR is followed by rendered-instance class-token verification.
 - Undo is latest-first rather than arbitrary branch undo.
 - Vitest regression tests, GitHub Actions CI, and evaluation gates that exit 1 on failure define release readiness.
 - npm tarballs ship built JavaScript under `dist/` instead of raw TypeScript execution.
@@ -25,7 +29,7 @@ Later package structures and v1 ideas in this document are hypotheses, not claim
 
 ## 1. One-line Definition
 
-`INTENT_LAYER` is a deterministic intent layer and visual patch tool that helps people inspect, understand, and safely edit AI-generated React/Tailwind UI through semantic controls.
+`INTENT_LAYER` is a deterministic UI actuator that lets people and AI clients share the same React/Tailwind source bindings and guarded patch engine.
 
 Short version:
 
@@ -153,7 +157,7 @@ This is closer to a **Prisma-like middle layer for UI intent** than a simple vis
 
 For this audience, the browser GUI should be the primary operating surface. CLI commands are supporting tools for install, diagnostics, repeatable evaluation, and automation.
 
-First-run setup should also be GUI-first. After the Vite plugin is registered, the browser overlay should handle Korean/English language choice, `.intent` workspace creation, source binding status, and Codex/Claude hook run-lock status as the default path. The same view should remain available as Settings after onboarding so users can change language, panel position/density, startup behavior, Agent commands, and onboarding reset without extra CLI steps.
+First-run setup should also be GUI-first. After the Vite plugin is registered, the browser overlay handles language, `.intent` workspace creation, source-binding status, and project-local Codex/Claude MCP connections. Only providers explicitly enabled by the user are configured, and global configuration is never modified. Settings remains available after onboarding, while the old Agent queue and CLI-spawn controls live under collapsed advanced compatibility.
 
 ### 6.2 Secondary Users
 
@@ -503,77 +507,48 @@ which can be replaced with a cryptographic hash before distribution if needed.
 
 ## 10. Internal Architecture
 
-### 10.1 Package Structure
+### 10.1 Current Alpha Structure
 
 ```text
-packages/
-  core/
-    intent schema
-    operation model
-    diff model
-    confidence model
-
-  tailwind/
-    token parser
-    scale resolver
-    token replacement
-
-  react/
-    JSX AST adapter
-    component/source mapping
-
-  vite/
-    Vite plugin
-    data-intent-id injection
-    HMR integration
-
-  server/
-    local intent server
-    source lookup
-    patch apply
-    cache
-
-  overlay/
-    browser overlay UI
-    element picker
-    knobs panel
-    patch preview
-    pending undo history and branch undo controls
-
-  cli/
-    init
-    dev
-    scan
-    diff
-    check
+src/intent/
+  types.ts           domain contracts
+  instrument.ts      TypeScript AST source binding
+  tailwind.ts        token and semantic-property adapter
+  graphStore.ts      graph revision, publish, and reload
+  intentService.ts   shared GUI/HTTP/MCP use cases
+  patch.ts           preview, apply, operation log, guarded undo
+  fileLock.ts        per-source atomic lock
+  runtimeSession.ts  selection and live Vite session
+  vitePlugin.ts      transform, HTTP, and HMR adapter
+  client.ts          browser overlay
+  mcp/               stdio tools, resources, and client setup
 ```
 
-The MVP implementation ships `init`/`doctor`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` first.
+The alpha stays in one package until a real external consumer needs independent versioning. Neither `vitePlugin.ts` nor MCP writes files directly; both call `IntentService`. Six MCP tools are exposed over local stdio only. Remote HTTP and OAuth servers are out of scope.
 
 ### 10.2 Dependency Principles
 
-`core` must not be tied to a specific framework.
+The service and patch core must not be tied to an AI provider or browser DOM.
 
 ```text
-Core should not directly know React, Vite, Tailwind, or VS Code.
-Adapters should normalize framework-specific data and pass it to core.
+IntentService should not directly know Codex, Claude, or MCP transport details.
+Vite, browser, Tailwind, and MCP adapters pass normalized data to the service.
 ```
 
 Good separation:
 
 ```text
 Core:
-  IntentNode
-  IntentProperty
-  SourceBinding
-  PatchOperation
-  ValidationResult
+  IntentGraphStore
+  IntentService
+  SourceBinding / semantic property
+  PatchOperation / ValidationResult
 
 Adapters:
-  React AST
-  Tailwind tokens
-  Vite HMR
-  Browser DOM
+  TypeScript React AST
+  Tailwind token semantics
+  Vite HTTP/HMR and Browser DOM
+  MCP stdio
 ```
 
 ## 11. Tracking and Performance Strategy

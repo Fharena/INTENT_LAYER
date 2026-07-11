@@ -10,12 +10,16 @@
 
 ### 0.1 현재 구현 기준선 (2026-07-11)
 
-현재 상태는 범용 제품이 아니라 **동작하는 alpha**다. 화면 선택, TypeScript AST source binding, Tailwind 후보, minimal range patch, apply 후 source hash 기반 최신 작업 undo는 코어 경로로 지원한다. Agent handoff는 선택 기능이며 직접 편집보다 유용하다는 비교 검증은 아직 없다.
+현재 상태는 범용 제품이 아니라 **AI-native 동작 alpha**다. 화면 선택, TypeScript AST source binding, 의미 기반 Tailwind 후보, minimal range patch, source hash 기반 undo를 브라우저 GUI와 로컬 MCP가 같은 `IntentService`를 통해 사용한다. Markdown Agent queue는 기본 경로가 아니라 고급 호환성 기능이다.
 
 현재 구현 원칙:
 
 - JSX 분석은 fast scanner와 AST 이중 구현이 아니라 TypeScript AST 한 경로를 사용한다.
+- intrinsic JSX와 `React.createElement()`은 지원하되 `cloneElement` provenance는 추측하지 않는다.
 - 후보가 실제로 둘 이상일 때만 토큰을 editable로 표시한다.
+- AI는 source offset이나 raw patch를 전달할 수 없고 `intentId + semantic property + candidate value`만 요청한다.
+- apply는 expiring preview, source hash, atomic file lock과 idempotency key를 검증한다.
+- 브라우저가 연결되어 있으면 Vite HMR 뒤 실제 렌더 인스턴스의 class token을 검증한다.
 - undo는 임의 순서 branch undo가 아니라 최신 pending patch부터 처리한다.
 - Vitest 회귀 테스트, GitHub Actions CI, 실패 시 exit 1인 평가 gate를 출시 기준으로 사용한다.
 - npm tarball은 raw TypeScript 대신 `dist/` JavaScript를 포함한다.
@@ -25,7 +29,7 @@
 
 ## 1. 한 줄 정의
 
-`INTENT_LAYER`는 AI가 만든 React/Tailwind UI를 사람이 화면에서 직접 선택하고, 의미 단위로 이해하고, 안전하게 수정할 수 있게 해주는 **코드-의도 중간 레이어**이자 **deterministic visual patch tool**이다.
+`INTENT_LAYER`는 사람과 AI가 같은 React/Tailwind source binding과 안전 패치 엔진을 사용하는 **결정론적 UI actuator**다.
 
 짧은 문장:
 
@@ -155,7 +159,7 @@ AI Integration: optional Codex/Cursor/Claude command plan / plugin
 
 이 사용자층에서는 GUI가 1차 조작면이어야 한다. CLI는 설치, 진단, 반복 평가, 자동화용 보조 수단으로 둔다.
 
-첫 실행 설정도 GUI-first여야 한다. Vite plugin 등록 후 브라우저 overlay에서 한국어/영어 선택, `.intent` workspace 생성, source binding 상태 확인, Codex/Claude hook 실행 잠금 상태 확인까지 끝내는 흐름을 기본값으로 둔다. 같은 화면은 완료 후에도 Settings로 재진입할 수 있어야 하며, 언어, 패널 위치/밀도, 시작 동작, Agent command, 온보딩 재표시를 CLI 없이 바꿀 수 있어야 한다.
+첫 실행 설정도 GUI-first여야 한다. Vite plugin 등록 후 브라우저 overlay에서 한국어/영어 선택, `.intent` workspace 생성, source binding 상태 확인과 프로젝트 로컬 Codex/Claude MCP 연결까지 처리한다. AI 연결은 사용자가 켠 provider만 설정하고 전역 config는 수정하지 않는다. 같은 화면은 완료 후에도 Settings로 재진입할 수 있어야 하며, 기존 Agent queue와 CLI spawn 설정은 접힌 고급 호환성으로 둔다.
 
 ### 6.2 2차 사용자
 
@@ -505,77 +509,48 @@ MVP 구현은 local deterministic source fingerprint를 사용하고,
 
 ## 10. 내부 아키텍처
 
-### 10.1 패키지 구조
+### 10.1 현재 alpha 구조
 
 ```text
-packages/
-  core/
-    intent schema
-    operation model
-    diff model
-    confidence model
-
-  tailwind/
-    token parser
-    scale resolver
-    token replacement
-
-  react/
-    JSX AST adapter
-    component/source mapping
-
-  vite/
-    Vite plugin
-    data-intent-id injection
-    HMR integration
-
-  server/
-    local intent server
-    source lookup
-    patch apply
-    cache
-
-  overlay/
-    browser overlay UI
-    element picker
-    knobs panel
-    patch preview
-    pending undo history and branch undo controls
-
-  cli/
-    init
-    dev
-    scan
-    diff
-    check
+src/intent/
+  types.ts           domain contract
+  instrument.ts      TypeScript AST source binding
+  tailwind.ts        token and semantic property adapter
+  graphStore.ts      graph revision, publish, reload
+  intentService.ts   GUI/HTTP/MCP shared use cases
+  patch.ts           preview, apply, operation log, guarded undo
+  fileLock.ts        per-source atomic lock
+  runtimeSession.ts  selection and live Vite session
+  vitePlugin.ts      transform, HTTP and HMR adapter
+  client.ts          browser overlay
+  mcp/               stdio tools, resources and client setup
 ```
 
-MVP 구현 순서는 `init`/`doctor`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result`를 먼저 제공한다.
+외부에서 독립 버전이 필요한 실제 consumer가 생기기 전에는 monorepo package 분리를 하지 않는다. `vitePlugin.ts`와 MCP는 파일을 직접 수정하지 않고 모두 `IntentService`를 호출한다. MCP의 6개 도구는 stdio로만 노출하며 remote HTTP/OAuth server는 현재 범위가 아니다.
 
 ### 10.2 의존성 원칙
 
-`core`는 특정 프레임워크에 묶이면 안 된다.
+서비스와 patch core는 특정 AI provider나 브라우저 DOM에 묶이면 안 된다.
 
 ```text
-core는 React, Vite, Tailwind, VS Code를 직접 알면 안 됨.
-adapter가 normalized data를 core에 넘김.
+IntentService는 Codex, Claude, MCP transport를 직접 알면 안 됨.
+Vite, browser, Tailwind, MCP adapter가 normalized data를 넘김.
 ```
 
 좋은 분리:
 
 ```text
 Core:
-  IntentNode
-  IntentProperty
-  SourceBinding
-  PatchOperation
-  ValidationResult
+  IntentGraphStore
+  IntentService
+  SourceBinding / semantic property
+  PatchOperation / ValidationResult
 
 Adapters:
-  React AST
-  Tailwind tokens
-  Vite HMR
-  Browser DOM
+  TypeScript React AST
+  Tailwind token semantics
+  Vite HTTP/HMR and Browser DOM
+  MCP stdio
 ```
 
 ## 11. 추적/성능 전략

@@ -12,7 +12,7 @@ The product helps users:
 2. Map them back to source code.
 3. Inspect semantic layout/style intent.
 4. Apply deterministic code patches for simple edits.
-5. Generate structured AI handoff tasks for complex edits.
+5. Expose the same guarded edit operations to Codex and Claude through local MCP.
 6. Review changes through intent diffs.
 
 ## Core Principle
@@ -64,9 +64,13 @@ Current module boundaries:
 instrument.ts   TypeScript AST source binding
 tailwind.ts     token classification and candidates
 patch.ts        preview, apply, operation log, and guarded undo
-vitePlugin.ts   Vite and HTTP adapter
+graphStore.ts   graph state, publish, and disk reload
+intentService.ts shared GUI, HTTP, CLI, and MCP use cases
+runtimeSession.ts browser selection and live verification
+vitePlugin.ts   Vite, HTTP, and HMR adapter
 client.ts       browser overlay
-agent*.ts       optional Agent handoff adapter
+mcp/            local stdio tools, resources, and provider setup
+agent*.ts       legacy Agent handoff compatibility
 ```
 
 Do not add another parser, semantic analyzer, queue command, or document format unless a failing user workflow or regression test requires it.
@@ -130,6 +134,21 @@ For direct edits:
 
 If confidence is low, do not patch directly. Generate an agent handoff task instead.
 
+## AI Tool Rules
+
+Codex and Claude should use the local MCP tools for supported edits:
+
+```text
+find -> inspect -> preview -> apply -> verify -> optional undo
+```
+
+- Never accept source offsets, raw patches, or arbitrary file paths from an AI client.
+- Resolve ranges from the current graph and semantic property on the server.
+- Require an expiring preview before apply.
+- Revalidate source hash inside a per-file atomic lock.
+- Treat browser runtime verification as unavailable, not successful, when Vite or the browser is disconnected.
+- Keep MCP on local stdio. Do not add remote HTTP, OAuth, or another agent scheduler without a demonstrated workflow.
+
 ## Agent Handoff Rules
 
 When a change is too complex for deterministic direct edit, create a markdown task under:
@@ -164,7 +183,9 @@ Agent tasks also use a shared queue signal:
 .intent/agent/locks/*.lock.json
 ```
 
-Default pickup model:
+The Markdown queue is advanced compatibility, not the default AI integration. Preserve it for existing projects, but do not add queue commands, analyzers, or UI unless a regression requires them.
+
+Legacy pickup model:
 
 - Codex uses `.agents/skills/intent-layer-task-runner/SKILL.md`.
 - Claude uses `.claude/settings.json` `FileChanged` hook when Claude Code is open.

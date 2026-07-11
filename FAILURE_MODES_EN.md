@@ -208,7 +208,18 @@ Re-measure with 50-100 independently collected samples.
 
 The panel reports a stopped dev server, invalid HTTP response, or JSON parse failure in its status area. Confirm that Vite is running and refresh the page. Buttons are temporarily disabled during requests, and a failed request does not modify source by itself.
 
-## 12. An Agent task remains `claimed`
+## 12. An MCP edit or verification is rejected
+
+- `preview-expired`: the five-minute preview expired; start again with `intent_preview_edit`.
+- `source-hash-mismatch`: the file changed after preview; inspect the current element again.
+- `file-locked`: the GUI or another AI operation is editing the same file; wait and create a new preview.
+- `idempotency-key-conflict`: the key already belongs to another preview; use a new operation key.
+- `runtime: unavailable`: source is verified but Vite or the browser is disconnected; do not report visual success.
+- `runtime: drifted`: source changed but at least one rendered instance lacks the new token; inspect HMR and dynamic class conditions.
+
+If Codex or Claude does not list the tools, check AI connection status and the project-local `.codex/config.toml` or `.mcp.json`, then start a new session. Intent Layer never edits global provider configuration.
+
+## 13. An Agent task remains `claimed`
 
 Return an abandoned provider task to the queue:
 

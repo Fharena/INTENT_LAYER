@@ -4,7 +4,7 @@
 
 INTENT_LAYER는 React/Tailwind 화면을 브라우저에서 클릭하고, 해당 JSX 소스와 Tailwind 토큰을 확인한 뒤 작은 변경을 결정론적으로 적용하는 개발 도구다.
 
-현재 제품 판단은 **동작하는 alpha**다. 클릭부터 최소 패치와 안전한 되돌리기까지의 코어 경로는 동작하지만, 모든 React 표현식이나 Tailwind 설정을 편집하는 범용 도구는 아니다. Agent handoff는 선택 기능이며 아직 직접 편집 경로만큼 제품 가치가 검증되지 않았다.
+현재 제품 판단은 **동작하는 alpha**다. 사람은 브라우저 패널을, Codex와 Claude는 같은 로컬 MCP 도구를 사용한다. 두 경로 모두 동일한 source binding, 최소 패치, hash 검증과 undo를 거치며, 모든 React 표현식이나 Tailwind 설정을 편집하는 범용 도구는 아니다.
 
 ## 핵심 흐름
 
@@ -14,7 +14,8 @@ INTENT_LAYER는 React/Tailwind 화면을 브라우저에서 클릭하고, 해당
   -> 편집 가능한 Tailwind 토큰 선택
   -> diff 미리보기
   -> 최소 range patch 적용
-  -> 최신 패치 되돌리기 또는 Agent 작업 생성
+  -> 소스와 렌더 결과 검증
+  -> 최신 패치 되돌리기
 ```
 
 간단한 토큰 교체에는 LLM을 호출하지 않는다. 소스 해시나 토큰 위치가 달라졌으면 파일을 수정하지 않고 거부한다.
@@ -30,17 +31,17 @@ npm run dev
 
 브라우저에서 Vite 주소를 열면 Intent Layer 패널이 나타난다.
 
-1. 첫 설정에서 언어와 패널 위치를 고른다.
+1. 첫 설정에서 언어와 패널 위치를 고르고, 필요하면 Codex 또는 Claude 연결을 켠다.
 2. `설정 완료`를 누른다.
 3. `선택`을 누르고 화면 요소를 클릭한다.
 4. 토큰 후보를 고르고 `미리보기`, `적용` 순서로 확인한다.
 5. 문제가 있으면 `되돌리기`를 누른다.
 
-설정은 나중에도 패널의 `설정`에서 바꿀 수 있다. 한국어/영어, 좌우 dock, 밀도, 시작 시 접기, Agent 실행 허용, Codex/Claude 명령과 자동 연결을 지원한다.
+설정은 나중에도 패널의 `설정`에서 바꿀 수 있다. AI 연결을 켜면 프로젝트 로컬 `.codex/config.toml` 또는 `.mcp.json`에 Intent Layer 항목만 병합한다. 전역 설정은 수정하지 않는다.
 
 ## 다른 Vite 프로젝트에 설치
 
-아직 npm registry에 출판하지 않았으므로 로컬 tarball로 검증한다.
+Node.js 20 이상이 필요하다. 아직 npm registry에 출판하지 않았으므로 로컬 tarball로 검증한다.
 
 ```bash
 npm pack
@@ -64,7 +65,7 @@ export default defineConfig({
 
 ## 직접 편집 범위
 
-현재 직접 편집은 정적 `className`과 `cn()`/`clsx()` 안의 문자열 리터럴을 대상으로 한다.
+현재 직접 편집은 JSX의 정적 `className`, `cn()`/`clsx()` 안의 문자열 리터럴과 intrinsic `React.createElement()`을 대상으로 한다.
 
 - spacing: padding, margin, gap의 표준 Tailwind scale
 - sizing: width, height, min/max, size
@@ -85,20 +86,24 @@ export default defineConfig({
 - drift가 있으면 파일 대신 `.intent/conflicts/`에 conflict artifact를 남긴다.
 - patch는 전체 파일 codegen이 아니라 원래 source range만 교체한다.
 
-## Agent Handoff
+## Codex와 Claude에서 사용
 
-직접 편집이 불가능한 변경은 선택한 요소의 소스 포인터와 제약을 `.intent/agent/task_*.md`에 기록할 수 있다. Codex와 Claude는 같은 queue와 lock을 사용하므로 동시에 열려 있어도 한 provider만 claim한다.
+설정에서 provider 연결을 켠 뒤 Codex 또는 Claude를 새로 시작하면 다음 로컬 MCP 도구를 사용할 수 있다.
 
-기본 경로는 task 생성과 자동 pickup이다. 로컬 CLI 직접 spawn은 설정에서 Agent 실행을 허용했을 때만 가능하다.
+- `intent_find_elements`, `intent_inspect_element`
+- `intent_preview_edit`, `intent_apply_edit`
+- `intent_verify_edit`, `intent_undo_edit`
 
-중단된 claim을 되돌리거나 오래된 완료 아티팩트를 정리할 때만 CLI를 사용한다.
+브라우저에서 선택한 요소는 `intent://selection/current`로 공유된다. AI는 source offset이나 raw patch를 보내지 않고 의미 속성과 후보 값만 요청한다. apply는 expiring preview, source hash, 파일 잠금과 idempotency key를 다시 검증한다. 브라우저가 연결돼 있으면 HMR 뒤 모든 렌더 인스턴스에 새 class token이 존재하는지도 확인한다.
+
+직접 지원하지 않는 구조 변경은 `handoff-required`로 내려가며, Agent가 일반 코드 편집으로 처리할 수 있도록 정확한 source pointer를 제공한다. 기존 Markdown queue는 고급 호환성 기능으로 한정한다.
+
+MCP 서버를 직접 확인할 때만 CLI를 사용한다.
 
 ```bash
-npm run intent:agent-queue -- --release --task .intent/agent/task_x.md
-npm run intent:agent-queue -- --prune-days 30
+npm run build:package
+node dist/cli.js mcp --root .
 ```
-
-prune은 오래된 `done`, `failed`, `cancelled` 작업만 삭제하며 queued/running 작업은 보존한다. Queue signal은 temp file과 rename으로 갱신하고, 카운트는 최근 50개 화면이 아니라 전체 task를 기준으로 계산한다.
 
 ## 검증
 
@@ -108,6 +113,7 @@ prune은 오래된 `done`, `failed`, `cancelled` 작업만 삭제하며 queued/r
 npm run typecheck
 npm run test
 npm run build
+npm run test:mcp-package
 ```
 
 출시 전 전체 검증:
@@ -116,7 +122,11 @@ npm run build
 npm run eval
 ```
 
-`npm run eval`은 tarball 설치, 설치된 CLI와 Vite export, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, agent queue, 외부 corpus와 성능 gate를 실행한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록되고 터미널에는 gate 요약만 출력한다.
+`npm run eval`은 tarball 설치, 설치된 CLI와 Vite export, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, 외부 corpus와 성능 gate를 실행한다. `test:mcp-package`는 빌드된 stdio 서버를 실제 MCP client로 시작해 6개 도구를 확인한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록된다.
+
+`npm run benchmark:mcp`는 inspect, preview, apply, undo와 in-memory MCP 호출의 로컬 기계 지연을 [mcp-alpha-evaluation.json](./reports/performance/mcp-alpha-evaluation.json)에 기록한다. 이 수치는 Agent 작업 성공률이나 제품 가치를 증명하지 않는다.
+
+실제 브라우저 선택부터 stdio MCP 적용, 3개 재사용 인스턴스 검증과 undo까지의 기록은 [mcp-browser-roundtrip.json](./reports/performance/mcp-browser-roundtrip.json)에 있다.
 
 외부 corpus 수치는 **현재 allowlist가 관찰된 토큰 중 몇 개에 후보를 제공하는지**를 나타낸다. 실제 편집 성공률이나 패치 품질을 뜻하지 않는다. 다음 제품 검증은 held-out 저장소에서 첫 편집 성공률과 프롬프트 대비 소요 시간을 측정해야 한다.
 
@@ -131,7 +141,7 @@ npm run intent:scan -- fixtures/corpus src/App.tsx --write-graph
 node dist/cli.js --help
 ```
 
-패키지는 `dist/cli.js`, `dist/vite.js`, browser virtual module bundle을 배포한다. 실행 시 raw TypeScript나 `tsx`에 의존하지 않는다.
+패키지는 `dist/cli.js`, `dist/vite.js`, `dist/mcp.js`와 browser virtual module bundle을 배포한다. 실행 시 raw TypeScript나 `tsx`에 의존하지 않는다.
 
 ## 문서
 
@@ -145,13 +155,15 @@ node dist/cli.js --help
 ## 현재 비범위
 
 - Next.js 정식 adapter
+- 특정 렌더 인스턴스만 바꾸기 위한 자동 prop/variant refactor
+- `cloneElement`의 모호한 provenance를 직접 편집
 - styled-components, Emotion, 전체 CSS cascade 편집
 - arbitrary Tailwind theme 자동 추론
 - 외부 npm package나 `node_modules` 직접 수정
 - Figma import
 - 자연어 레이아웃 refactor를 결정론적 패치처럼 적용하는 기능
 
-지원하지 않는 표현은 조용히 잘못 고치지 않고 read-only 또는 Agent handoff로 내려간다.
+지원하지 않는 표현은 조용히 잘못 고치지 않고 read-only 또는 `handoff-required`로 내려간다.
 
 ## 라이선스
 

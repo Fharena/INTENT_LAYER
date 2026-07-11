@@ -4,7 +4,7 @@
 
 INTENT_LAYER is a developer tool for clicking a React/Tailwind element in the browser, inspecting its JSX source and Tailwind intent, and applying small deterministic edits.
 
-The current product status is a **working alpha**. The core path from selection to minimal patch and guarded undo works, but this is not a universal editor for every React expression or Tailwind configuration. Agent handoff is optional and has not yet proven the same product value as direct editing.
+The current product status is a **working alpha**. Humans use the browser panel while Codex and Claude use the same local MCP tools. Both paths share source binding, minimal patching, hash validation, and undo. This is not a universal editor for every React expression or Tailwind configuration.
 
 ## Core Flow
 
@@ -14,7 +14,8 @@ Pick a rendered element
   -> choose an editable Tailwind token
   -> preview the diff
   -> apply a minimal range patch
-  -> undo the latest patch or create an Agent task
+  -> verify source and rendered output
+  -> undo the latest patch
 ```
 
 Simple token changes do not call an LLM. If the source hash or token range has drifted, the tool rejects the edit without touching the file.
@@ -30,17 +31,17 @@ npm run dev
 
 Open the Vite URL and use the Intent Layer panel:
 
-1. Choose the language and panel position in first-run setup.
+1. Choose the language and panel position, then optionally connect Codex or Claude.
 2. Finish setup.
 3. Click `Pick`, then choose an element on the page.
 4. Choose a token candidate, preview it, and apply it.
 5. Use Undo if the result is not right.
 
-Settings remain available from the panel. They cover Korean/English, left or right dock, density, startup collapse, Agent run permission, provider commands, and Codex/Claude integration.
+Settings remain available from the panel. Enabling an AI connection merges only the Intent Layer entry into project-local `.codex/config.toml` or `.mcp.json`. Global settings are not modified.
 
 ## Install In Another Vite Project
 
-The package is not published to npm yet, so use a local tarball:
+Node.js 20 or newer is required. The package is not published to npm yet, so use a local tarball:
 
 ```bash
 npm pack
@@ -64,7 +65,7 @@ Then start the normal Vite dev server. A separate initialization command is not 
 
 ## Direct-Edit Surface
 
-Direct edits currently target static `className` values and string literals inside `cn()` or `clsx()`.
+Direct edits currently target static JSX `className` values, string literals inside `cn()` or `clsx()`, and intrinsic `React.createElement()` calls.
 
 - spacing: padding, margin, and gap across the standard Tailwind scale
 - sizing: width, height, min/max, and size
@@ -85,20 +86,24 @@ A token is not presented as editable when its only candidate is itself. Arbitrar
 - Drift creates a conflict artifact under `.intent/conflicts/` instead of modifying the file.
 - Patches replace the original source range rather than regenerating a whole file.
 
-## Agent Handoff
+## Use From Codex Or Claude
 
-Unsupported edits can be written to `.intent/agent/task_*.md` with the selected element's source pointer and constraints. Codex and Claude share one queue and lock protocol, so only one provider can claim a task.
+After enabling a provider in Settings and starting a new Codex or Claude session, the client can use these local MCP tools:
 
-Task creation and automatic pickup are the default path. Spawning a local provider CLI is allowed only when Agent run is enabled in settings.
+- `intent_find_elements`, `intent_inspect_element`
+- `intent_preview_edit`, `intent_apply_edit`
+- `intent_verify_edit`, `intent_undo_edit`
 
-Use the CLI only for recovery and retention maintenance:
+The browser selection is exposed as `intent://selection/current`. AI clients submit semantic properties and candidate values, never source offsets or raw patches. Apply revalidates an expiring preview, source hash, file lock, and idempotency key. With a connected browser, verify also checks that every rendered source instance contains the new class token after HMR.
+
+Unsupported structural changes return `handoff-required` with an exact source pointer for normal agent editing. The Markdown queue remains available only as advanced compatibility.
+
+Use the CLI only when checking the MCP server directly:
 
 ```bash
-npm run intent:agent-queue -- --release --task .intent/agent/task_x.md
-npm run intent:agent-queue -- --prune-days 30
+npm run build:package
+node dist/cli.js mcp --root .
 ```
-
-Prune removes only old `done`, `failed`, or `cancelled` tasks. Queued and running work is preserved. The queue signal is written through a temp file and rename, and counts cover the full queue while the UI snapshot remains capped at 50 items.
 
 ## Verification
 
@@ -108,6 +113,7 @@ Everyday checks:
 npm run typecheck
 npm run test
 npm run build
+npm run test:mcp-package
 ```
 
 Full release check:
@@ -116,7 +122,11 @@ Full release check:
 npm run eval
 ```
 
-`npm run eval` covers tarball installation, installed CLI and Vite exports, real Vite HTTP preview/apply/revert, multi-file graph refresh, Agent queue behavior, external corpora, and performance gates. Any failed gate exits with code 1. Full results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json), while the terminal prints only the gate summary.
+`npm run eval` covers tarball installation, installed CLI and Vite exports, real Vite HTTP preview/apply/revert, multi-file graph refresh, external corpora, and performance gates. `test:mcp-package` starts the built stdio server with a real MCP client and checks all six tools. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
+
+`npm run benchmark:mcp` records local mechanical latency for inspect, preview, apply, undo, and in-memory MCP calls in [mcp-alpha-evaluation.json](./reports/performance/mcp-alpha-evaluation.json). These numbers do not prove agent task success or product value.
+
+The real browser-selection-to-stdio-MCP flow, including verification across three reused instances and undo, is recorded in [mcp-browser-roundtrip.json](./reports/performance/mcp-browser-roundtrip.json).
 
 External corpus percentages measure how many observed tokens receive a candidate from the current allowlist. They are not evidence of real edit success or patch quality. The next product proof must measure first-edit success and time-to-result against prompting on held-out repositories.
 
@@ -131,7 +141,7 @@ npm run intent:scan -- fixtures/corpus src/App.tsx --write-graph
 node dist/cli.js --help
 ```
 
-The package ships built `dist/cli.js`, `dist/vite.js`, and browser virtual-module bundles. Installed users do not execute raw TypeScript or depend on `tsx`.
+The package ships built `dist/cli.js`, `dist/vite.js`, `dist/mcp.js`, and browser virtual-module bundles. Installed users do not execute raw TypeScript or depend on `tsx`.
 
 ## Documentation
 
@@ -145,13 +155,15 @@ Historical spike, launch, and handoff notes remain available in Git history inst
 ## Out Of Scope
 
 - a formal Next.js adapter
+- automatic prop or variant refactors for one rendered instance
+- direct edits through ambiguous `cloneElement` provenance
 - styled-components, Emotion, or full CSS cascade editing
 - automatic inference for arbitrary Tailwind themes
 - direct edits to external packages or `node_modules`
 - Figma import
 - treating broad natural-language refactors as deterministic patches
 
-Unsupported expressions degrade to read-only inspection or Agent handoff instead of being edited with false confidence.
+Unsupported expressions degrade to read-only inspection or `handoff-required` instead of being edited with false confidence.
 
 ## License
 

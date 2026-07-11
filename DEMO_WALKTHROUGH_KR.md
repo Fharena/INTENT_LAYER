@@ -68,7 +68,7 @@ import { defineConfig } from "vite";
 import { intentLayer } from "intent-layer/vite";
 
 export default defineConfig({
-  plugins: [react(), intentLayer()]
+  plugins: [intentLayer(), react()]
 });
 ```
 
@@ -81,16 +81,30 @@ npx intent-layer check src --min-supported-direct 0.5 --max-file-transform-ms 20
 npx intent-layer dev
 ```
 
-## 4. 데모 중 강조할 말
+## 4. Codex/Claude MCP 데모
+
+1. 패널 `설정 > AI 연결`에서 사용할 provider를 켠다.
+2. Codex 또는 Claude를 새 세션으로 시작한다.
+3. 브라우저에서 카드를 선택한다.
+4. AI에게 현재 선택한 카드의 gap 후보를 확인하고 6으로 미리보기하라고 요청한다.
+5. `inspect → preview`가 정확한 한 줄 diff를 반환하는지 확인한다.
+6. 승인 뒤 `apply → verify`를 수행하고 source와 렌더 인스턴스가 모두 verified인지 확인한다.
+7. `intent_undo_edit`로 원복한다.
+
+패키지 stdio 경로만 빠르게 검사할 때는 `npm run build:package && npm run test:mcp-package`를 사용한다.
+
+## 5. 데모 중 강조할 말
 
 포지셔닝은 이렇게 잡는다.
 
 - 직접 편집은 deterministic range patch다.
 - 단순 Tailwind token 변경에는 LLM을 호출하지 않는다.
 - 지원하지 않는 동적 `className`은 위험하게 patch하지 않고 read-only handoff로 내려간다.
+- AI도 raw source offset을 쓰지 않고 GUI와 같은 `IntentService`를 사용한다.
+- 브라우저가 연결돼 있으면 HMR 뒤 렌더된 class token까지 검증한다.
 - 적용된 patch는 review를 위해 operation과 intent diff artifact를 남긴다.
 
-## 5. 아직 데모하지 않을 것
+## 6. 아직 데모하지 않을 것
 
 다음 항목은 MVP ready flow처럼 말하지 않는다.
 
@@ -101,4 +115,4 @@ npx intent-layer dev
 - `node_modules` 내부 직접 편집
 - 넓은 자연어 layout refactor를 deterministic patch처럼 처리하는 흐름
 
-지원하지 않는 케이스는 `.intent/agent/task_*.md` handoff로 보여준다.
+지원하지 않는 케이스는 `handoff-required`와 정확한 source pointer로 보여준다. Markdown queue는 고급 호환성 데모에서만 사용한다.
