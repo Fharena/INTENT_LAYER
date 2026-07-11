@@ -61,6 +61,7 @@ function tokenSummary(binding: IntentBinding): Record<IntentTokenCategory | "unk
     layout: 0,
     typography: 0,
     color: 0,
+    effect: 0,
     unknown: 0
   };
 

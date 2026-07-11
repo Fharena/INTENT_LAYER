@@ -3,5 +3,8 @@ import { defineConfig } from "vite";
 import { intentLayer } from "./src/intent/vitePlugin";
 
 export default defineConfig({
-  plugins: [intentLayer(), react()]
+  plugins: [intentLayer(), react()],
+  build: {
+    outDir: "demo-dist"
+  }
 });

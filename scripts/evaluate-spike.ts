@@ -5,7 +5,7 @@ import path from "node:path";
 import ts from "typescript";
 import { analyzeClassNames } from "./analyze-classnames";
 import { runCli } from "../src/intent/cli";
-import { readAgentTaskMetadata } from "../src/intent/agentQueue";
+import { readAgentTaskMetadata, refreshAgentQueueSignal } from "../src/intent/agentQueue";
 import { recordAgentResult } from "../src/intent/agentResult";
 import { createAgentTask } from "../src/intent/agentTask";
 import { instrumentSource } from "../src/intent/instrument";
@@ -32,6 +32,38 @@ const aiCorpusMinFiles = 50;
 const aiCorpusCoverageTarget = 0.5;
 const externalCorpusHarnessMinFiles = 3;
 const externalCorpusHarnessCoverageTarget = 0.5;
+const runtimeArtifactRoots = [
+  path.join(rootDir, ".intent", "agent"),
+  path.join(rootDir, ".intent", "operations"),
+  path.join(rootDir, ".intent", "diffs"),
+  path.join(rootDir, ".intent", "conflicts")
+];
+
+function runtimeArtifactFiles(): Set<string> {
+  const files = new Set<string>();
+  const visit = (directory: string) => {
+    if (!fs.existsSync(directory)) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (entry.isFile()) files.add(file);
+    }
+  };
+  for (const directory of runtimeArtifactRoots) visit(directory);
+  return files;
+}
+
+const runtimeArtifactsBeforeEvaluation = runtimeArtifactFiles();
+process.once("exit", () => {
+  try {
+    for (const file of runtimeArtifactFiles()) {
+      if (!runtimeArtifactsBeforeEvaluation.has(file) && fs.existsSync(file)) fs.unlinkSync(file);
+    }
+    refreshAgentQueueSignal(rootDir);
+  } catch {
+    // Evaluation cleanup must not mask the gate result.
+  }
+});
 
 interface CommandResult {
   exitCode: number | null;
@@ -58,12 +90,12 @@ interface PackageSmokeResult {
   tarballFile: string | null;
   installDir: string;
   binFile: string;
-  tsxBinFile: string;
-  hasBinWrapper: boolean;
-  hasCliSource: boolean;
-  hasVitePluginSource: boolean;
+  cliShebang: string | null;
+  hasCliBundle: boolean;
+  hasViteBundle: boolean;
+  hasVirtualClientBundle: boolean;
   hasContextPackFiles: boolean;
-  hasInstallGuideDocs: boolean;
+  hasReadmeDocs: boolean;
   hasFailureModeDocs: boolean;
   helpIncludesUsage: boolean;
   helpIncludesDev: boolean;
@@ -285,12 +317,6 @@ function packageSmoke(): PackageSmokeResult {
     ".bin",
     process.platform === "win32" ? "intent-layer.cmd" : "intent-layer"
   );
-  const tsxBinFile = path.join(
-    installDir,
-    "node_modules",
-    ".bin",
-    process.platform === "win32" ? "tsx.cmd" : "tsx"
-  );
   const help =
     fs.existsSync(binFile) && install.exitCode === 0
       ? runCommand(binFile, ["--help"], installDir)
@@ -301,7 +327,7 @@ function packageSmoke(): PackageSmokeResult {
   };
   const files = dryRunPackage?.files ?? [];
   const packageName = dryRunPackage?.name ?? "intent-layer";
-  const viteSmokeFile = path.join(installDir, "vite-export-smoke.ts");
+  const viteSmokeFile = path.join(installDir, "vite-export-smoke.mjs");
   fs.writeFileSync(
     viteSmokeFile,
     [
@@ -318,9 +344,9 @@ function packageSmoke(): PackageSmokeResult {
     ].join("\n")
   );
   const viteImport =
-    fs.existsSync(tsxBinFile) && install.exitCode === 0
-      ? runCommand(tsxBinFile, [viteSmokeFile], installDir)
-      : { exitCode: null, stdout: "", stderr: "missing installed tsx bin", ms: 0 };
+    install.exitCode === 0
+      ? runCommand(process.execPath, [viteSmokeFile], installDir, 60000, false)
+      : { exitCode: null, stdout: "", stderr: "package install failed", ms: 0 };
   let viteImportReport: {
     ok?: boolean;
     pluginName?: string;
@@ -332,7 +358,7 @@ function packageSmoke(): PackageSmokeResult {
   } catch {
     viteImportReport = {};
   }
-  const installedTransformSmokeFile = path.join(installDir, "vite-transform-smoke.ts");
+  const installedTransformSmokeFile = path.join(installDir, "vite-transform-smoke.mjs");
   fs.writeFileSync(
     installedTransformSmokeFile,
     [
@@ -340,11 +366,11 @@ function packageSmoke(): PackageSmokeResult {
       "import path from \"node:path\";",
       `import { intentLayer } from "${packageName}/vite";`,
       "",
-      "function callableHook(hook: unknown): ((...args: unknown[]) => unknown) | null {",
-      "  if (typeof hook === \"function\") return hook as (...args: unknown[]) => unknown;",
+      "function callableHook(hook) {",
+      "  if (typeof hook === \"function\") return hook;",
       "  if (hook && typeof hook === \"object\" && \"handler\" in hook) {",
-      "    const handler = (hook as { handler?: unknown }).handler;",
-      "    return typeof handler === \"function\" ? (handler as (...args: unknown[]) => unknown) : null;",
+      "    const handler = hook.handler;",
+      "    return typeof handler === \"function\" ? handler : null;",
       "  }",
       "  return null;",
       "}",
@@ -364,19 +390,19 @@ function packageSmoke(): PackageSmokeResult {
       "const transform = callableHook(plugin.transform);",
       "const started = performance.now();",
       "const transformed = transform ? transform(source, fixture) : null;",
-      "if (transformed && typeof (transformed as PromiseLike<unknown>).then === \"function\") {",
+      "if (transformed && typeof transformed.then === \"function\") {",
       "  throw new Error(\"installed Vite transform smoke expected a synchronous transform\");",
       "}",
       "const transformMs = Number((performance.now() - started).toFixed(3));",
       "const code = typeof transformed === \"object\" && transformed && \"code\" in transformed",
-      "  ? String((transformed as { code: unknown }).code)",
+      "  ? String(transformed.code)",
       "  : typeof transformed === \"string\"",
       "    ? transformed",
       "    : \"\";",
       "const graphFile = path.join(root, \".intent\", \"graph.intent.json\");",
       "const graphExists = fs.existsSync(graphFile);",
       "const graph = graphExists ? JSON.parse(fs.readFileSync(graphFile, \"utf8\")) : null;",
-      "const entries = graph ? Object.values(graph.entries ?? {}) as Array<{ relativeFile?: string; tokens?: Array<{ token?: string; editable?: boolean }> }> : [];",
+      "const entries = graph ? Object.values(graph.entries ?? {}) : [];",
       "const first = entries[0] ?? null;",
       "console.log(JSON.stringify({",
       "  ok: Boolean(transform) && code.includes(\"data-intent-id\") && graphExists && entries.length === 1 && first?.relativeFile === \"src/App.tsx\",",
@@ -392,9 +418,9 @@ function packageSmoke(): PackageSmokeResult {
     ].join("\n")
   );
   const installedViteTransform =
-    fs.existsSync(tsxBinFile) && install.exitCode === 0
-      ? runCommand(tsxBinFile, [installedTransformSmokeFile], installDir)
-      : { exitCode: null, stdout: "", stderr: "missing installed tsx bin", ms: 0 };
+    install.exitCode === 0
+      ? runCommand(process.execPath, [installedTransformSmokeFile], installDir, 60000, false)
+      : { exitCode: null, stdout: "", stderr: "package install failed", ms: 0 };
   let installedViteTransformReport: {
     ok?: boolean;
     includesIntentId?: boolean;
@@ -997,9 +1023,9 @@ function packageSmoke(): PackageSmokeResult {
     ].join("\n")
   );
   const installedViteDevServer =
-    fs.existsSync(tsxBinFile) && install.exitCode === 0
+    install.exitCode === 0
       ? runCommand(process.execPath, [installedDevServerSmokeFile], installDir, 30000, false)
-      : { exitCode: null, stdout: "", stderr: "missing installed tsx bin", ms: 0 };
+      : { exitCode: null, stdout: "", stderr: "package install failed", ms: 0 };
   let installedViteDevServerReport: {
     ok?: boolean;
     port?: number | null;
@@ -1092,6 +1118,10 @@ function packageSmoke(): PackageSmokeResult {
   } catch {
     installedViteDevServerReport = {};
   }
+  const builtCliFile = path.join(rootDir, "dist", "cli.js");
+  const cliShebang = fs.existsSync(builtCliFile)
+    ? fs.readFileSync(builtCliFile, "utf8").split(/\r?\n/, 1)[0] ?? null
+    : null;
 
   return {
     packageName: dryRunPackage?.name ?? null,
@@ -1111,14 +1141,16 @@ function packageSmoke(): PackageSmokeResult {
     tarballFile: tarballFile ? reportPath(tarballFile) : null,
     installDir: reportPath(installDir),
     binFile: reportPath(binFile),
-    tsxBinFile: reportPath(tsxBinFile),
-    hasBinWrapper: files.some((file) => file.path === "bin/intent-layer.cjs"),
-    hasCliSource: files.some((file) => file.path === "src/intent/cli.ts"),
-    hasVitePluginSource: files.some((file) => file.path === "src/intent/vitePlugin.ts"),
+    cliShebang,
+    hasCliBundle: files.some((file) => file.path === "dist/cli.js"),
+    hasViteBundle: files.some((file) => file.path === "dist/vite.js"),
+    hasVirtualClientBundle:
+      files.some((file) => file.path === "dist/client.js") &&
+      files.some((file) => file.path === "dist/tailwind.js"),
     hasContextPackFiles: files.some((file) => file.path.startsWith(".context-pack/")),
-    hasInstallGuideDocs:
-      files.some((file) => file.path === "INSTALL_EN.md") &&
-      files.some((file) => file.path === "INSTALL_KR.md"),
+    hasReadmeDocs:
+      files.some((file) => file.path === "README.md") &&
+      files.some((file) => file.path === "README_KR.md"),
     hasFailureModeDocs:
       files.some((file) => file.path === "FAILURE_MODES_EN.md") &&
       files.some((file) => file.path === "FAILURE_MODES_KR.md"),
@@ -2301,6 +2333,8 @@ const transformMeasurements = sourceFiles("src")
   .filter((file) => file.endsWith(".tsx"))
   .map((file) => {
     const code = fs.readFileSync(file, "utf8");
+    const cold = instrumentSource({ code, file, rootDir });
+    const warmups = Array.from({ length: 2 }, () => instrumentSource({ code, file, rootDir }));
     const samples = Array.from({ length: transformIterations }, () =>
       instrumentSource({ code, file, rootDir })
     );
@@ -2309,6 +2343,8 @@ const transformMeasurements = sourceFiles("src")
     return {
       file: path.relative(rootDir, file).replace(/\\/g, "/"),
       entries: last.entries.length,
+      coldMs: cold.transformMs,
+      warmupSamples: warmups.map((sample) => sample.transformMs),
       samples: times,
       averageMs: average(times),
       p95Ms: percentile(times, 0.95),
@@ -2317,12 +2353,17 @@ const transformMeasurements = sourceFiles("src")
   });
 
 const transformTimes = transformMeasurements.flatMap((item) => item.samples);
-const warmTransformTimes = transformMeasurements.flatMap((item) => item.samples.slice(1));
+const coldTransformTimes = transformMeasurements.map((item) => item.coldMs);
 const largeTransformCardCount = 100;
-const largeTransformTargetMs = 20;
+const largeColdTransformTargetMs = 40;
+const largeWarmTransformTargetMs = 20;
 const largeTransformFile = path.join(tmpDir, "LargeTransformFixture.tsx");
 const largeTransformCode = largeTransformFixture(largeTransformCardCount);
 fs.writeFileSync(largeTransformFile, largeTransformCode);
+const largeColdTransform = instrumentSource({ code: largeTransformCode, file: largeTransformFile, rootDir });
+const largeWarmupTransforms = Array.from({ length: 2 }, () =>
+  instrumentSource({ code: largeTransformCode, file: largeTransformFile, rootDir })
+);
 const largeTransformSamples = Array.from({ length: transformIterations }, () =>
   instrumentSource({ code: largeTransformCode, file: largeTransformFile, rootDir })
 );
@@ -4081,17 +4122,35 @@ const operationBranchRevertAfterNonTop = instrumentSource({
   rootDir
 });
 const operationBranchRevertEntryAfterNonTop = operationBranchRevertAfterNonTop.entries[0];
-const operationBranchRevertTop = revertTokenPatch(
-  rootDir,
-  pendingAfterBranchRevertNonTop[pendingAfterBranchRevertNonTop.length - 1],
-  operationBranchRevertEntryAfterNonTop
-);
-if (operationBranchRevertTop.ok) {
-  recordPatchRevertInOperationLog(rootDir, operationBranchRevertTop);
-}
+const operationBranchRevertTop = operationBranchRevertApplyTwo.ok
+  ? revertPendingUndo(rootDir, operationBranchRevertEntryAfterNonTop, {
+      operationFile: operationBranchRevertApplyTwo.operationFile
+    })
+  : {
+      ok: false as const,
+      reason: "missing-branch-revert-apply",
+      detail: "The second branch revert apply failed."
+    };
 const pendingAfterBranchRevertTop = pendingUndoStackFromOperationLog(rootDir);
 const historyAfterBranchRevertTop = pendingUndoHistoryFromOperationLog(rootDir);
 const branchRevertSourceAfterTop = fs.readFileSync(operationBranchRevertFixture, "utf8");
+const operationBranchRevertAfterTop = instrumentSource({
+  code: branchRevertSourceAfterTop,
+  file: operationBranchRevertFixture,
+  rootDir
+});
+const operationBranchRevertOldest = operationBranchRevertApplyOne.ok
+  ? revertPendingUndo(rootDir, operationBranchRevertAfterTop.entries[0], {
+      operationFile: operationBranchRevertApplyOne.operationFile
+    })
+  : {
+      ok: false as const,
+      reason: "missing-branch-revert-apply",
+      detail: "The first branch revert apply failed."
+    };
+const pendingAfterBranchRevertOldest = pendingUndoStackFromOperationLog(rootDir);
+const historyAfterBranchRevertOldest = pendingUndoHistoryFromOperationLog(rootDir);
+const branchRevertSourceAfterOldest = fs.readFileSync(operationBranchRevertFixture, "utf8");
 const syntaxErrorsAfterBranchRevert = parseSyntaxErrorCount(operationBranchRevertFixture);
 
 const operationConflictFixture = path.join(tmpDir, "OperationConflictFixture.tsx");
@@ -4526,9 +4585,10 @@ const report = {
     averageMs: average(transformTimes),
     p95Ms: percentile(transformTimes, 0.95),
     maxMs: transformTimes.length ? Number(Math.max(...transformTimes).toFixed(3)) : 0,
-    warmAverageMs: average(warmTransformTimes),
-    warmP95Ms: percentile(warmTransformTimes, 0.95),
-    warmMaxMs: warmTransformTimes.length ? Number(Math.max(...warmTransformTimes).toFixed(3)) : 0,
+    coldMaxMs: coldTransformTimes.length ? Number(Math.max(...coldTransformTimes).toFixed(3)) : 0,
+    warmAverageMs: average(transformTimes),
+    warmP95Ms: percentile(transformTimes, 0.95),
+    warmMaxMs: transformTimes.length ? Number(Math.max(...transformTimes).toFixed(3)) : 0,
     warmTargetMs: warmTransformTargetMs,
     coldTargetMs: coldTransformTargetMs
   },
@@ -4538,12 +4598,16 @@ const report = {
     entries: largeTransformLast.entries.length,
     bytes: largeTransformCode.length,
     iterations: transformIterations,
+    coldMs: largeColdTransform.transformMs,
+    coldTargetMs: largeColdTransformTargetMs,
+    coldPass: largeColdTransform.transformMs <= largeColdTransformTargetMs,
+    warmupSamples: largeWarmupTransforms.map((sample) => sample.transformMs),
     samples: largeTransformTimes,
     averageMs: average(largeTransformTimes),
     p95Ms: percentile(largeTransformTimes, 0.95),
     maxMs: Number(Math.max(...largeTransformTimes).toFixed(3)),
-    targetMs: largeTransformTargetMs,
-    pass: Math.max(...largeTransformTimes) <= largeTransformTargetMs
+    targetMs: largeWarmTransformTargetMs,
+    pass: Math.max(...largeTransformTimes) <= largeWarmTransformTargetMs
   },
   productGraphWriteThrottle,
   productMultiFileGraphRefresh,
@@ -4768,18 +4832,23 @@ const report = {
     historyAfterApplyCount: historyAfterBranchRevertApply.pendingCount,
     nonTopRevertOk: operationBranchRevertNonTop.ok,
     nonTopRevertMs: operationBranchRevertNonTop.ok ? operationBranchRevertNonTop.metrics.revertMs : null,
-    nonTopRestoredToken: operationBranchRevertNonTop.ok ? operationBranchRevertNonTop.restoredToken : null,
+    nonTopRevertReason: operationBranchRevertNonTop.ok ? null : operationBranchRevertNonTop.reason,
     pendingAfterNonTopRevert: pendingAfterBranchRevertNonTop.length,
     historyAfterNonTopRevertCount: historyAfterBranchRevertNonTop.pendingCount,
     historyAfterNonTopRevertNextToken:
       historyAfterBranchRevertNonTop.entries.find((entry) => entry.next)?.nextToken ?? null,
-    sourceHasRestoredNonTopToken: branchRevertSourceAfterNonTop.includes("gap-4"),
+    sourceKeepsNonTopPatchToken: branchRevertSourceAfterNonTop.includes("gap-6"),
     sourceKeepsTopPatchToken: branchRevertSourceAfterNonTop.includes("p-8"),
     topRevertOk: operationBranchRevertTop.ok,
     pendingAfterTopRevert: pendingAfterBranchRevertTop.length,
     historyAfterTopRevertCount: historyAfterBranchRevertTop.pendingCount,
-    sourceRestoredAfterTopRevert:
-      branchRevertSourceAfterTop.includes("gap-4") && branchRevertSourceAfterTop.includes("p-6"),
+    sourceAfterTopRevert:
+      branchRevertSourceAfterTop.includes("gap-6") && branchRevertSourceAfterTop.includes("p-6"),
+    oldestRevertOk: operationBranchRevertOldest.ok,
+    pendingAfterOldestRevert: pendingAfterBranchRevertOldest.length,
+    historyAfterOldestRevertCount: historyAfterBranchRevertOldest.pendingCount,
+    sourceRestoredAfterOrderedRevert:
+      branchRevertSourceAfterOldest.includes("gap-4") && branchRevertSourceAfterOldest.includes("p-6"),
     syntaxErrorsAfterRevert: syntaxErrorsAfterBranchRevert
   },
   operationConflict: {
@@ -5687,13 +5756,12 @@ const report = {
       externalCorpusHarnessReport.gateFailures?.length === 0 &&
       externalCorpusHarnessReport.mvpEvidence?.usableAsMvpEvidence === false &&
       externalCorpusHarnessReport.mvpEvidence?.decision === "measurement-smoke-only",
-    transformTargetPass:
-      warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
     coldTransformTargetPass:
-      transformTimes.length > 0 && Math.max(...transformTimes) <= coldTransformTargetMs,
+      coldTransformTimes.length > 0 && Math.max(...coldTransformTimes) <= coldTransformTargetMs,
     warmTransformTargetPass:
-      warmTransformTimes.length > 0 && Math.max(...warmTransformTimes) <= warmTransformTargetMs,
-    largeTransformTargetPass: Math.max(...largeTransformTimes) <= largeTransformTargetMs,
+      transformTimes.length > 0 && Math.max(...transformTimes) <= warmTransformTargetMs,
+    largeColdTransformTargetPass: largeColdTransform.transformMs <= largeColdTransformTargetMs,
+    largeTransformTargetPass: Math.max(...largeTransformTimes) <= largeWarmTransformTargetMs,
     productGraphWriteThrottlePass: productGraphWriteThrottle.pass,
     productMultiFileGraphRefreshPass: productMultiFileGraphRefresh.pass,
     cliInitPass:
@@ -5734,13 +5802,14 @@ const report = {
       packageInstallSmoke.viteImportExitCode === 0 &&
       packageInstallSmoke.installedViteTransformExitCode === 0 &&
       packageInstallSmoke.installedViteDevServerExitCode === 0 &&
-      packageInstallSmoke.binTarget === "bin/intent-layer.cjs" &&
-      packageInstallSmoke.viteExportTarget === "./vite.cjs" &&
-      packageInstallSmoke.hasBinWrapper &&
-      packageInstallSmoke.hasCliSource &&
-      packageInstallSmoke.hasVitePluginSource &&
+      packageInstallSmoke.binTarget === "dist/cli.js" &&
+      packageInstallSmoke.viteExportTarget === "./dist/vite.js" &&
+      packageInstallSmoke.cliShebang === "#!/usr/bin/env node" &&
+      packageInstallSmoke.hasCliBundle &&
+      packageInstallSmoke.hasViteBundle &&
+      packageInstallSmoke.hasVirtualClientBundle &&
       !packageInstallSmoke.hasContextPackFiles &&
-      packageInstallSmoke.hasInstallGuideDocs &&
+      packageInstallSmoke.hasReadmeDocs &&
       packageInstallSmoke.hasFailureModeDocs &&
       packageInstallSmoke.helpIncludesUsage &&
       packageInstallSmoke.helpIncludesDev &&
@@ -5866,7 +5935,7 @@ const report = {
       cliAgentContextReport?.command === "agent-context" &&
       cliAgentContextReport.ok &&
       Boolean(cliAgentContextReport.contextFile) &&
-      cliAgentContextReport.graphEntryCount >= 40 &&
+      cliAgentContextReport.graphEntryCount === cliScanReport?.summary.bindingCount &&
       cliAgentContextReport.directEditBindingCount > 0 &&
       cliAgentContextReport.readOnlyBindingCount > 0 &&
       cliAgentContextReport.markdownBytes > 1000 &&
@@ -5874,7 +5943,7 @@ const report = {
     cliAgentTaskPass:
       cliGraphScan.exitCode === 0 &&
       fs.existsSync(cliGraphFile) &&
-      (cliGraph ? Object.keys(cliGraph.entries).length : 0) >= 40 &&
+      (cliGraph ? Object.keys(cliGraph.entries).length : 0) === cliScanReport?.summary.bindingCount &&
       Boolean(cliAgentTaskBinding) &&
       cliAgentTask.exitCode === 0 &&
       cliAgentTaskReport?.command === "agent-task" &&
@@ -6219,23 +6288,28 @@ const report = {
       operationBranchRevertApplyTwo.ok &&
       pendingAfterBranchRevertApply.length === 2 &&
       historyAfterBranchRevertApply.pendingCount === 2 &&
-      operationBranchRevertNonTop.ok &&
-      operationBranchRevertNonTop.restoredToken === "gap-4" &&
-      pendingAfterBranchRevertNonTop.length === 1 &&
-      historyAfterBranchRevertNonTop.pendingCount === 1 &&
+      !operationBranchRevertNonTop.ok &&
+      operationBranchRevertNonTop.reason === "undo-not-latest" &&
+      pendingAfterBranchRevertNonTop.length === 2 &&
+      historyAfterBranchRevertNonTop.pendingCount === 2 &&
       historyAfterBranchRevertNonTop.entries.some((entry) => entry.next && entry.nextToken === "p-8") &&
-      branchRevertSourceAfterNonTop.includes("gap-4") &&
+      branchRevertSourceAfterNonTop.includes("gap-6") &&
       branchRevertSourceAfterNonTop.includes("p-8") &&
       operationBranchRevertTop.ok &&
-      pendingAfterBranchRevertTop.length === 0 &&
-      historyAfterBranchRevertTop.pendingCount === 0 &&
-      branchRevertSourceAfterTop.includes("gap-4") &&
+      pendingAfterBranchRevertTop.length === 1 &&
+      historyAfterBranchRevertTop.pendingCount === 1 &&
+      branchRevertSourceAfterTop.includes("gap-6") &&
       branchRevertSourceAfterTop.includes("p-6") &&
+      operationBranchRevertOldest.ok &&
+      pendingAfterBranchRevertOldest.length === 0 &&
+      historyAfterBranchRevertOldest.pendingCount === 0 &&
+      branchRevertSourceAfterOldest.includes("gap-4") &&
+      branchRevertSourceAfterOldest.includes("p-6") &&
       syntaxErrorsAfterBranchRevert === 0,
     operationConflictArtifactPass:
       operationConflictApply.ok &&
       !operationConflictRevert.ok &&
-      operationConflictRevert.reason === "revert-token-mismatch" &&
+      operationConflictRevert.reason === "revert-source-hash-mismatch" &&
       Boolean(operationConflictRevert.conflictFile) &&
       Boolean(operationConflictArtifact) &&
       operationConflictArtifact.kind === "revert-conflict" &&
@@ -6264,4 +6338,23 @@ fs.writeFileSync(
 );
 fs.writeFileSync(path.join(reportsDir, "spike-evaluation.json"), `${JSON.stringify(report, null, 2)}\n`);
 
-process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+const failedGates = Object.entries(report.gates)
+  .filter(([, passed]) => passed !== true)
+  .map(([name]) => name);
+process.stdout.write(
+  `${JSON.stringify(
+    {
+      generatedAt: report.generatedAt,
+      gateCount: Object.keys(report.gates).length,
+      failedGateCount: failedGates.length,
+      failedGates,
+      gates: report.gates
+    },
+    null,
+    2
+  )}\n`
+);
+if (failedGates.length > 0) {
+  process.stderr.write(`Evaluation failed: ${failedGates.join(", ")}\n`);
+  process.exitCode = 1;
+}

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-05T12:16:00.973Z",
+  "generatedAt": "2026-07-11T10:08:07.612Z",
   "filesScanned": 50,
   "classNameOccurrences": 390,
   "classification": {
@@ -16,19 +16,19 @@
   },
   "tokenTotals": {
     "static": 1770,
-    "staticEditable": 1570,
+    "staticEditable": 1610,
     "staticAndSimple": 1890,
-    "staticAndSimpleEditable": 1640,
+    "staticAndSimpleEditable": 1720,
     "supportedDirect": 1930,
-    "supportedDirectEditable": 1670,
+    "supportedDirectEditable": 1760,
     "all": 1930,
-    "allEditable": 1670
+    "allEditable": 1760
   },
   "editableCoverage": {
-    "staticOnly": 0.887,
-    "staticAndSimpleCnClsx": 0.8677,
-    "supportedDirect": 0.8653,
-    "allObservedTokens": 0.8653
+    "staticOnly": 0.9096,
+    "staticAndSimpleCnClsx": 0.9101,
+    "supportedDirect": 0.9119,
+    "allObservedTokens": 0.9119
   },
   "unsupportedReasons": {
     "variable-reference": 20,
@@ -56,7 +56,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
@@ -100,7 +100,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
@@ -144,7 +144,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-01.tsx",
@@ -199,7 +199,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
@@ -243,7 +243,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
@@ -287,7 +287,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-06.tsx",
@@ -342,7 +342,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
@@ -386,7 +386,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
@@ -430,7 +430,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-11.tsx",
@@ -485,7 +485,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
@@ -529,7 +529,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
@@ -573,7 +573,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-16.tsx",
@@ -628,7 +628,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
@@ -672,7 +672,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
@@ -716,7 +716,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-21.tsx",
@@ -771,7 +771,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
@@ -815,7 +815,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
@@ -859,7 +859,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-26.tsx",
@@ -914,7 +914,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
@@ -958,7 +958,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
@@ -1002,7 +1002,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-31.tsx",
@@ -1057,7 +1057,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
@@ -1101,7 +1101,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
@@ -1145,7 +1145,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-36.tsx",
@@ -1200,7 +1200,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
@@ -1244,7 +1244,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
@@ -1288,7 +1288,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-41.tsx",
@@ -1343,7 +1343,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
@@ -1387,7 +1387,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
@@ -1431,7 +1431,7 @@
         "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       ],
       "tokenCount": 9,
-      "editableTokenCount": 7
+      "editableTokenCount": 8
     },
     {
       "file": "fixtures/ai-generated/ai-dashboard-46.tsx",
@@ -1486,7 +1486,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 9
+      "editableTokenCount": 10
     },
     {
       "file": "fixtures/ai-generated/ai-landing-02.tsx",
@@ -1574,7 +1574,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 9
+      "editableTokenCount": 10
     },
     {
       "file": "fixtures/ai-generated/ai-landing-07.tsx",
@@ -1662,7 +1662,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 9
+      "editableTokenCount": 10
     },
     {
       "file": "fixtures/ai-generated/ai-landing-12.tsx",
@@ -1750,7 +1750,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 9
+      "editableTokenCount": 10
     },
     {
       "file": "fixtures/ai-generated/ai-landing-17.tsx",
@@ -1838,7 +1838,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 9
+      "editableTokenCount": 10
     },
     {
       "file": "fixtures/ai-generated/ai-landing-22.tsx",
@@ -1926,7 +1926,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 9
+      "editableTokenCount": 10
     },
     {
       "file": "fixtures/ai-generated/ai-landing-27.tsx",
@@ -2014,7 +2014,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 9
+      "editableTokenCount": 10
     },
     {
       "file": "fixtures/ai-generated/ai-landing-32.tsx",
@@ -2102,7 +2102,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 9
+      "editableTokenCount": 10
     },
     {
       "file": "fixtures/ai-generated/ai-landing-37.tsx",
@@ -2190,7 +2190,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 9
+      "editableTokenCount": 10
     },
     {
       "file": "fixtures/ai-generated/ai-landing-42.tsx",
@@ -2278,7 +2278,7 @@
         "mx-auto flex max-w-5xl flex-col gap-8 rounded-3xl border border-white/10 bg-white/10 p-8 shadow-xl"
       ],
       "tokenCount": 11,
-      "editableTokenCount": 9
+      "editableTokenCount": 10
     },
     {
       "file": "fixtures/ai-generated/ai-landing-47.tsx",
@@ -2936,7 +2936,7 @@
         "ring-2 ring-violet-300"
       ],
       "tokenCount": 8,
-      "editableTokenCount": 4
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-03.tsx",
@@ -2981,7 +2981,7 @@
         "opacity-70"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-03.tsx",
@@ -3004,7 +3004,7 @@
         "ring-2 ring-cyan-300"
       ],
       "tokenCount": 8,
-      "editableTokenCount": 4
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-08.tsx",
@@ -3049,7 +3049,7 @@
         "opacity-70"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-08.tsx",
@@ -3072,7 +3072,7 @@
         "ring-2 ring-violet-300"
       ],
       "tokenCount": 8,
-      "editableTokenCount": 4
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-13.tsx",
@@ -3117,7 +3117,7 @@
         "opacity-70"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-13.tsx",
@@ -3140,7 +3140,7 @@
         "ring-2 ring-cyan-300"
       ],
       "tokenCount": 8,
-      "editableTokenCount": 4
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-18.tsx",
@@ -3185,7 +3185,7 @@
         "opacity-70"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-18.tsx",
@@ -3208,7 +3208,7 @@
         "ring-2 ring-violet-300"
       ],
       "tokenCount": 8,
-      "editableTokenCount": 4
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-23.tsx",
@@ -3253,7 +3253,7 @@
         "opacity-70"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-23.tsx",
@@ -3276,7 +3276,7 @@
         "ring-2 ring-cyan-300"
       ],
       "tokenCount": 8,
-      "editableTokenCount": 4
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-28.tsx",
@@ -3321,7 +3321,7 @@
         "opacity-70"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-28.tsx",
@@ -3344,7 +3344,7 @@
         "ring-2 ring-violet-300"
       ],
       "tokenCount": 8,
-      "editableTokenCount": 4
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-33.tsx",
@@ -3389,7 +3389,7 @@
         "opacity-70"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-33.tsx",
@@ -3412,7 +3412,7 @@
         "ring-2 ring-cyan-300"
       ],
       "tokenCount": 8,
-      "editableTokenCount": 4
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-38.tsx",
@@ -3457,7 +3457,7 @@
         "opacity-70"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-38.tsx",
@@ -3480,7 +3480,7 @@
         "ring-2 ring-violet-300"
       ],
       "tokenCount": 8,
-      "editableTokenCount": 4
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-43.tsx",
@@ -3525,7 +3525,7 @@
         "opacity-70"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-43.tsx",
@@ -3548,7 +3548,7 @@
         "ring-2 ring-cyan-300"
       ],
       "tokenCount": 8,
-      "editableTokenCount": 4
+      "editableTokenCount": 7
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-48.tsx",
@@ -3593,7 +3593,7 @@
         "opacity-70"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-shadcn-48.tsx",
@@ -3627,7 +3627,7 @@
         "opacity-60"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-workflow-04.tsx",
@@ -3694,7 +3694,7 @@
         "opacity-60"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-workflow-09.tsx",
@@ -3761,7 +3761,7 @@
         "opacity-60"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-workflow-14.tsx",
@@ -3828,7 +3828,7 @@
         "opacity-60"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-workflow-19.tsx",
@@ -3895,7 +3895,7 @@
         "opacity-60"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-workflow-24.tsx",
@@ -3962,7 +3962,7 @@
         "opacity-60"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-workflow-29.tsx",
@@ -4029,7 +4029,7 @@
         "opacity-60"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-workflow-34.tsx",
@@ -4096,7 +4096,7 @@
         "opacity-60"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-workflow-39.tsx",
@@ -4163,7 +4163,7 @@
         "opacity-60"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-workflow-44.tsx",
@@ -4230,7 +4230,7 @@
         "opacity-60"
       ],
       "tokenCount": 4,
-      "editableTokenCount": 3
+      "editableTokenCount": 4
     },
     {
       "file": "fixtures/ai-generated/ai-workflow-49.tsx",

@@ -24,9 +24,9 @@ import type {
   UndoHistoryReport
 } from "./types";
 
-type PatchResponse = PatchApplyResult | PatchFailure;
+type PatchResponse = (PatchApplyResult & { binding?: IntentBinding | null }) | PatchFailure;
 type PreviewResponse = PatchPreview | PatchFailure;
-type RevertResponse = PatchRevertResult | PatchFailure;
+type RevertResponse = (PatchRevertResult & { binding?: IntentBinding | null }) | PatchFailure;
 type AgentTaskResponse = AgentTaskResult | PatchFailure;
 type AgentResultResponse = AgentResultArtifact | PatchFailure;
 type AgentQueueResponse = AgentQueueSignal | PatchFailure;
@@ -34,13 +34,18 @@ type UndoHistoryResponse = UndoHistoryReport;
 type ConflictReportResponse = PatchConflictReport;
 type ConflictResolveResponse = PatchConflictResolveResult | PatchFailure;
 type UndoDiscardResponse = PatchUndoDiscardResult | PatchFailure;
-type UndoRevertResponse = PatchUndoRevertResult | PatchFailure;
+type UndoRevertResponse = (PatchUndoRevertResult & { binding?: IntentBinding | null }) | PatchFailure;
 type SetupResponse = IntentSetupStatus;
 type SetupApplyResponse = IntentSetupResult | PatchFailure;
 
 interface RenderScope {
   renderedInstanceCount: number;
   isShared: boolean;
+}
+
+interface BindingRefreshDetail {
+  binding: IntentBinding;
+  message: string;
 }
 
 type WorkflowState = "idle" | "done" | "active" | "blocked";
@@ -120,6 +125,7 @@ type TextKey =
   | "pickHint"
   | "pickMode"
   | "preview"
+  | "requestFailed"
   | "ready"
   | "resetOnboarding"
   | "resetOnboardingDone"
@@ -153,7 +159,7 @@ type TextKey =
 
 const lastAgentTaskFileByIntentId = new Map<string, string>();
 const overlayStyleId = "intent-layer-overlay-style";
-const overlayRuntimeVersion = "visual-map-v1";
+const overlayRuntimeVersion = "visual-map-v2";
 const overlayBaseBottom = 18;
 const overlayAvoidanceGap = 14;
 let overlayPlacementFrame: number | null = null;
@@ -254,6 +260,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     pickHint: "선택을 누른 뒤 페이지에서 수정할 UI를 클릭하세요.",
     pickMode: "선택 모드입니다",
     preview: "미리보기",
+    requestFailed: "요청에 실패했습니다",
     ready: "준비됐습니다. 요소를 선택하세요.",
     resetOnboarding: "온보딩 다시 보기",
     resetOnboardingDone: "다음 실행 때 설정 화면이 다시 열립니다",
@@ -359,6 +366,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     pickHint: "Click Pick, then choose something on the page to edit.",
     pickMode: "Pick mode active",
     preview: "Preview",
+    requestFailed: "Request failed",
     ready: "Ready. Start by picking an element.",
     resetOnboarding: "Show onboarding again",
     resetOnboardingDone: "Setup will open again on the next run",
@@ -405,6 +413,20 @@ function detectInitialLanguage(): IntentLayerLanguage {
 
 function t(key: TextKey): string {
   return texts[overlayLanguage][key];
+}
+
+async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+  const response = await fetch(input, init);
+  const body = await response.text();
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    throw new Error(`${response.status} ${response.statusText}`.trim());
+  }
+}
+
+function requestErrorMessage(error: unknown): string {
+  return error instanceof Error && error.message ? error.message : String(error);
 }
 
 function compactPath(value: string): string {
@@ -1388,7 +1410,7 @@ function renderTokenRow(
   token: IntentToken,
   scope: RenderScope | null,
   setStatus: (message: string) => void,
-  rerender: (message: string) => void
+  rerender: (message: string, binding?: IntentBinding | null) => void
 ) {
   const row = document.createElement("div");
   row.className = "intent-layer-token-row";
@@ -1452,70 +1474,86 @@ function renderTokenRow(
   preview.addEventListener("click", async () => {
     const request = patchRequest();
     const startedAt = performance.now();
-    const response = await fetch("/__intent/preview", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(request)
-    });
-    const result = (await response.json()) as PreviewResponse;
-    const responseAt = performance.now();
-    const renderStartedAt = performance.now();
-    if (result.ok) {
+    preview.disabled = true;
+    try {
+      const result = await requestJson<PreviewResponse>("/__intent/preview", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request)
+      });
+      const responseAt = performance.now();
+      const renderStartedAt = performance.now();
       previewBox.style.display = "block";
-      previewBox.textContent = [`- ${result.before}`, `+ ${result.after}`].join("\n");
-      setStatus(`Preview ${result.oldToken} -> ${result.nextToken} in ${result.metrics.previewMs}ms`);
-    } else {
+      if (result.ok) {
+        previewBox.textContent = [`- ${result.before}`, `+ ${result.after}`].join("\n");
+        setStatus(`Preview ${result.oldToken} -> ${result.nextToken} in ${result.metrics.previewMs}ms`);
+      } else {
+        previewBox.textContent = result.detail ?? result.reason;
+        setStatus(`Preview rejected: ${result.reason}`);
+      }
+      const renderedAt = performance.now();
+      recordClientMetric({
+        kind: "patch-preview",
+        id: binding.id,
+        status: result.ok ? "ok" : "rejected",
+        createdAt: new Date().toISOString(),
+        oldToken: result.ok ? result.oldToken : request.oldToken,
+        nextToken: result.ok ? result.nextToken : request.nextToken,
+        roundTripMs: Number((responseAt - startedAt).toFixed(3)),
+        serverMs: result.ok ? result.metrics.previewMs : result.metrics?.previewMs ?? null,
+        renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
+        reason: result.ok ? undefined : result.reason
+      });
+    } catch (error) {
       previewBox.style.display = "block";
-      previewBox.textContent = result.detail ?? result.reason;
-      setStatus(`Preview rejected: ${result.reason}`);
+      previewBox.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+      setStatus(previewBox.textContent);
+    } finally {
+      preview.disabled = false;
     }
-    const renderedAt = performance.now();
-    recordClientMetric({
-      kind: "patch-preview",
-      id: binding.id,
-      status: result.ok ? "ok" : "rejected",
-      createdAt: new Date().toISOString(),
-      oldToken: result.ok ? result.oldToken : request.oldToken,
-      nextToken: result.ok ? result.nextToken : request.nextToken,
-      roundTripMs: Number((responseAt - startedAt).toFixed(3)),
-      serverMs: result.ok ? result.metrics.previewMs : result.metrics?.previewMs ?? null,
-      renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
-      reason: result.ok ? undefined : result.reason
-    });
   });
 
   apply.addEventListener("click", async () => {
     const request = patchRequest();
     const startedAt = performance.now();
-    const response = await fetch("/__intent/apply", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(request)
-    });
-    const result = (await response.json()) as PatchResponse;
-    const responseAt = performance.now();
-    const renderStartedAt = performance.now();
-    if (result.ok) {
-      const scopeNote = scope?.isShared
-        ? `; ${overlayLanguage === "ko" ? "영향 렌더 수" : "affects"} ${scope.renderedInstanceCount}`
-        : "";
-      rerender(`Applied ${result.oldToken} -> ${result.nextToken} in ${result.metrics.applyMs}ms${scopeNote}`);
-    } else {
-      setStatus(`Rejected: ${result.reason}`);
+    apply.disabled = true;
+    try {
+      const result = await requestJson<PatchResponse>("/__intent/apply", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request)
+      });
+      const responseAt = performance.now();
+      const renderStartedAt = performance.now();
+      if (result.ok) {
+        const scopeNote = scope?.isShared
+          ? `; ${overlayLanguage === "ko" ? "영향 렌더 수" : "affects"} ${scope.renderedInstanceCount}`
+          : "";
+        rerender(
+          `Applied ${result.oldToken} -> ${result.nextToken} in ${result.metrics.applyMs}ms${scopeNote}`,
+          result.binding
+        );
+      } else {
+        setStatus(`Rejected: ${result.reason}`);
+      }
+      const renderedAt = performance.now();
+      recordClientMetric({
+        kind: "patch-apply",
+        id: binding.id,
+        status: result.ok ? "ok" : "rejected",
+        createdAt: new Date().toISOString(),
+        oldToken: result.ok ? result.oldToken : request.oldToken,
+        nextToken: result.ok ? result.nextToken : request.nextToken,
+        roundTripMs: Number((responseAt - startedAt).toFixed(3)),
+        serverMs: result.ok ? result.metrics.applyMs : result.metrics?.applyMs ?? null,
+        renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
+        reason: result.ok ? undefined : result.reason
+      });
+    } catch (error) {
+      setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
+    } finally {
+      apply.disabled = false;
     }
-    const renderedAt = performance.now();
-    recordClientMetric({
-      kind: "patch-apply",
-      id: binding.id,
-      status: result.ok ? "ok" : "rejected",
-      createdAt: new Date().toISOString(),
-      oldToken: result.ok ? result.oldToken : request.oldToken,
-      nextToken: result.ok ? result.nextToken : request.nextToken,
-      roundTripMs: Number((responseAt - startedAt).toFixed(3)),
-      serverMs: result.ok ? result.metrics.applyMs : result.metrics?.applyMs ?? null,
-      renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
-      reason: result.ok ? undefined : result.reason
-    });
   });
 
   row.append(label, select, preview, apply, previewBox);
@@ -2019,7 +2057,10 @@ async function saveSetup(
   }
 }
 
-function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => void) {
+function renderUndoHistory(
+  root: HTMLElement,
+  setStatus: (message: string, binding?: IntentBinding | null) => void
+) {
   const wrapper = createSection(t("undoHistory"));
 
   const body = document.createElement("div");
@@ -2032,8 +2073,7 @@ function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => vo
   wrapper.appendChild(body);
   root.appendChild(wrapper);
 
-  void fetch("/__intent/undo-history")
-    .then((response) => response.json() as Promise<UndoHistoryResponse>)
+  void requestJson<UndoHistoryResponse>("/__intent/undo-history")
     .then((history) => {
       body.innerHTML = "";
       if (history.pendingCount === 0) {
@@ -2063,21 +2103,25 @@ function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => vo
         discard.addEventListener("click", async () => {
           discard.disabled = true;
           discard.style.cursor = "default";
-          const response = await fetch("/__intent/discard-undo", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              operationFile: item.operationFile,
-              note: "Discarded from overlay undo history."
-            })
-          });
-          const result = (await response.json()) as UndoDiscardResponse;
-          if (result.ok) {
-            setStatus(`Undo discarded: ${item.nextToken}, ${result.pendingCount} pending`);
-          } else {
-            discard.disabled = false;
-            discard.style.cursor = "pointer";
+          try {
+            const result = await requestJson<UndoDiscardResponse>("/__intent/discard-undo", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                operationFile: item.operationFile,
+                note: "Discarded from overlay undo history."
+              })
+            });
+            if (result.ok) {
+              setStatus(`Undo discarded: ${item.nextToken}, ${result.pendingCount} pending`);
+              return;
+            }
             setStatus(`Undo discard rejected: ${result.reason}`);
+          } catch (error) {
+            setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
+          } finally {
+            discard.disabled = false;
+            discard.style.cursor = "";
           }
         });
 
@@ -2085,23 +2129,31 @@ function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => vo
         revert.style.marginLeft = "6px";
         revert.style.padding = "3px 6px";
         revert.style.fontSize = "10px";
+        revert.disabled = !item.next;
+        revert.title = item.next ? "Revert latest patch" : "Revert newer patches first";
         revert.addEventListener("click", async () => {
+          if (!item.next) return;
           revert.disabled = true;
           revert.style.cursor = "default";
-          const response = await fetch("/__intent/revert-undo", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              operationFile: item.operationFile
-            })
-          });
-          const result = (await response.json()) as UndoRevertResponse;
-          if (result.ok) {
-            setStatus(`Undo reverted: ${item.nextToken} -> ${item.oldToken}, ${result.pendingCount} pending`);
-          } else {
-            revert.disabled = false;
-            revert.style.cursor = "pointer";
+          try {
+            const result = await requestJson<UndoRevertResponse>("/__intent/revert-undo", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ operationFile: item.operationFile })
+            });
+            if (result.ok) {
+              setStatus(
+                `Undo reverted: ${item.nextToken} -> ${item.oldToken}, ${result.pendingCount} pending`,
+                result.binding
+              );
+              return;
+            }
             setStatus(`Undo revert rejected: ${result.reason}`);
+          } catch (error) {
+            setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
+          } finally {
+            revert.disabled = false;
+            revert.style.cursor = "";
           }
         });
 
@@ -2111,8 +2163,8 @@ function renderUndoHistory(root: HTMLElement, setStatus: (message: string) => vo
 
       body.appendChild(list);
     })
-    .catch(() => {
-      body.textContent = "Undo history unavailable.";
+    .catch((error) => {
+      body.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
     });
 }
 
@@ -2258,36 +2310,44 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   undo.addEventListener("click", async () => {
     overlayView = "editor";
     const startedAt = performance.now();
-    const response = await fetch("/__intent/revert-last", {
-      method: "POST"
-    });
-    const result = (await response.json()) as RevertResponse;
-    const responseAt = performance.now();
-    const renderStartedAt = performance.now();
-    if (result.ok) {
-      renderBinding(
-        panel,
-        binding,
-        `Reverted ${result.oldToken} -> ${result.restoredToken} in ${result.metrics.revertMs}ms`,
-        scope
-      );
-    } else {
-      const conflict = result.conflictFile ? ` (${result.conflictFile})` : "";
-      renderBinding(panel, binding, `Undo rejected: ${result.reason}${conflict}`, scope);
+    undo.disabled = true;
+    try {
+      const result = await requestJson<RevertResponse>("/__intent/revert-last", { method: "POST" });
+      const responseAt = performance.now();
+      const renderStartedAt = performance.now();
+      if (result.ok) {
+        const message = `Reverted ${result.oldToken} -> ${result.restoredToken} in ${result.metrics.revertMs}ms`;
+        if (result.binding) {
+          panel.dispatchEvent(
+            new CustomEvent<BindingRefreshDetail>("intent:binding-refreshed", {
+              detail: { binding: result.binding, message }
+            })
+          );
+        } else {
+          renderBinding(panel, binding, message, scope);
+        }
+      } else {
+        const conflict = result.conflictFile ? ` (${result.conflictFile})` : "";
+        renderBinding(panel, binding, `Undo rejected: ${result.reason}${conflict}`, scope);
+      }
+      const renderedAt = performance.now();
+      recordClientMetric({
+        kind: "patch-revert",
+        id: result.ok ? result.id : binding?.id ?? null,
+        status: result.ok ? "ok" : "rejected",
+        createdAt: new Date().toISOString(),
+        oldToken: result.ok ? result.oldToken : undefined,
+        nextToken: result.ok ? result.restoredToken : undefined,
+        roundTripMs: Number((responseAt - startedAt).toFixed(3)),
+        serverMs: result.ok ? result.metrics.revertMs : result.metrics?.revertMs ?? null,
+        renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
+        reason: result.ok ? undefined : result.reason
+      });
+    } catch (error) {
+      renderBinding(panel, binding, `${t("requestFailed")}: ${requestErrorMessage(error)}`, scope);
+    } finally {
+      undo.disabled = false;
     }
-    const renderedAt = performance.now();
-    recordClientMetric({
-      kind: "patch-revert",
-      id: result.ok ? result.id : binding?.id ?? null,
-      status: result.ok ? "ok" : "rejected",
-      createdAt: new Date().toISOString(),
-      oldToken: result.ok ? result.oldToken : undefined,
-      nextToken: result.ok ? result.restoredToken : undefined,
-      roundTripMs: Number((responseAt - startedAt).toFixed(3)),
-      serverMs: result.ok ? result.metrics.revertMs : result.metrics?.revertMs ?? null,
-      renderMs: Number((renderedAt - renderStartedAt).toFixed(3)),
-      reason: result.ok ? undefined : result.reason
-    });
   });
   actions.appendChild(undo);
 
@@ -2346,7 +2406,15 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
         (message) => {
           statusLine.textContent = message;
         },
-        (message) => {
+        (message, refreshedBinding) => {
+          if (refreshedBinding) {
+            panel.dispatchEvent(
+              new CustomEvent<BindingRefreshDetail>("intent:binding-refreshed", {
+                detail: { binding: refreshedBinding, message }
+              })
+            );
+            return;
+          }
           renderBinding(panel, binding, message, effectiveScope);
         }
       );
@@ -2360,7 +2428,15 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
       statusLine.textContent = message;
     });
 
-    renderUndoHistory(content, (message) => {
+    renderUndoHistory(content, (message, refreshedBinding) => {
+      if (refreshedBinding) {
+        panel.dispatchEvent(
+          new CustomEvent<BindingRefreshDetail>("intent:binding-refreshed", {
+            detail: { binding: refreshedBinding, message }
+          })
+        );
+        return;
+      }
       renderBinding(panel, binding, message, effectiveScope);
     });
     renderConflictPanel(content, (message) => {
@@ -2433,6 +2509,17 @@ export function initIntentOverlay() {
     pickMode = true;
     document.body.dataset.intentLayerPicking = "true";
     setStatus(t("pickMode"));
+  });
+
+  panel.addEventListener("intent:binding-refreshed", (event) => {
+    const detail = (event as CustomEvent<BindingRefreshDetail>).detail;
+    selectedBinding = detail.binding;
+    if (graph) {
+      graph.entries[detail.binding.id] = detail.binding;
+    }
+    clearSelectedIntentElements();
+    selectedScope = selectIntentElements(detail.binding.id);
+    renderBinding(panel, selectedBinding, detail.message, selectedScope);
   });
 
   document.addEventListener(

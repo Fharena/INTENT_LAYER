@@ -3,7 +3,8 @@ export type IntentTokenCategory =
   | "radius"
   | "layout"
   | "typography"
-  | "color";
+  | "color"
+  | "effect";
 
 export interface IntentToken {
   token: string;
@@ -183,6 +184,8 @@ export interface PatchPreview {
   };
   before: string;
   after: string;
+  sourceHashBefore: string;
+  sourceHashAfter: string;
   metrics: {
     previewMs: number;
   };
@@ -224,6 +227,8 @@ export interface PatchConflictArtifact {
   };
   expectedToken: string;
   actualToken: string;
+  expectedSourceHash?: string;
+  actualSourceHash?: string;
   restoreToken: string;
   beforeLine: string;
   operationFile: string;
@@ -320,6 +325,8 @@ export interface PatchRevertResult {
   };
   before: string;
   after: string;
+  sourceHashBefore: string;
+  sourceHashAfter: string;
   operationFile: string;
   diffFile: string;
   metrics: {
@@ -435,9 +442,11 @@ export interface AgentQueueSignal {
   updatedAt: string;
   queueFile: string;
   agentDir: string;
+  totalTaskCount: number;
   pendingTaskCount: number;
   runningTaskCount: number;
   doneTaskCount: number;
+  failedTaskCount: number;
   latestTask: string | null;
   tasks: AgentQueueTask[];
 }

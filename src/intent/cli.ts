@@ -6,7 +6,13 @@ import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { createAgentContext } from "./agentContext";
 import { launchAgentTask } from "./agentLaunch";
-import { claimAgentTask, failAgentTask, refreshAgentQueueSignal } from "./agentQueue";
+import {
+  claimAgentTask,
+  failAgentTask,
+  pruneAgentArtifacts,
+  refreshAgentQueueSignal,
+  releaseAgentTask
+} from "./agentQueue";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
@@ -46,6 +52,8 @@ interface CliOptions {
   executeAgent: boolean;
   desiredChange: string | null;
   taskFile: string | null;
+  releaseAgentTask: boolean;
+  pruneAgentDays: number | null;
   summary: string | null;
   sessionId: string | null;
   changedFiles: string[];
@@ -251,6 +259,12 @@ interface CliAgentQueueReport {
   doneTaskCount: number;
   latestTask: string | null;
   taskCount: number;
+  totalTaskCount: number;
+  releasedTaskId: string | null;
+  prunedTaskCount: number;
+  removedFileCount: number;
+  reason: string | null;
+  detail: string | null;
 }
 
 interface CliAgentClaimReport {
@@ -1005,7 +1019,7 @@ function usage(): string {
     "  intent-layer apply --op file [--graph .intent/graph.intent.json] [--out file]",
     "  intent-layer agent-context [component] [--id intent-id] [--graph .intent/graph.intent.json]",
     "  intent-layer agent-task --id intent-id --change text [--graph .intent/graph.intent.json] [--out file]",
-    "  intent-layer agent-queue [--out file]",
+    "  intent-layer agent-queue [--release --task file] [--prune-days n] [--out file]",
     "  intent-layer agent-claim --provider codex|claude [--task file] [--session id]",
     "  intent-layer agent-fail --provider codex|claude --task file --summary text",
     "  intent-layer agent-launch --provider codex|claude [--id intent-id --change text] [--task file] [--execute]",
@@ -1035,6 +1049,8 @@ function parseOptions(args: string[]): CliOptions {
   let executeAgent = false;
   let desiredChange: string | null = null;
   let taskFile: string | null = null;
+  let releaseAgentTask = false;
+  let pruneAgentDays: number | null = null;
   let summary: string | null = null;
   let sessionId: string | null = null;
   const changedFiles: string[] = [];
@@ -1084,6 +1100,11 @@ function parseOptions(args: string[]): CliOptions {
     } else if (arg === "--task") {
       taskFile = args[index + 1] ?? null;
       index += 1;
+    } else if (arg === "--release") {
+      releaseAgentTask = true;
+    } else if (arg === "--prune-days") {
+      pruneAgentDays = Number(args[index + 1]);
+      index += 1;
     } else if (arg === "--summary") {
       summary = args[index + 1] ?? null;
       index += 1;
@@ -1127,6 +1148,8 @@ function parseOptions(args: string[]): CliOptions {
     executeAgent,
     desiredChange,
     taskFile,
+    releaseAgentTask,
+    pruneAgentDays,
     summary,
     sessionId,
     changedFiles,
@@ -1414,22 +1437,49 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
   }
 
   if (command === "agent-queue") {
+    const release = options.releaseAgentTask
+      ? options.taskFile
+        ? releaseAgentTask(rootDir, options.taskFile)
+        : {
+            ok: false as const,
+            reason: "missing-task-file",
+            detail: "Pass --task with the task to release.",
+            metrics: { statusMs: 0 }
+          }
+      : null;
+    let prune: ReturnType<typeof pruneAgentArtifacts> | null = null;
+    let maintenanceError: Error | null = null;
+    if ((!release || release.ok) && options.pruneAgentDays !== null) {
+      try {
+        prune = pruneAgentArtifacts(rootDir, options.pruneAgentDays);
+      } catch (error) {
+        maintenanceError = error instanceof Error ? error : new Error(String(error));
+      }
+    }
+
     const queue = refreshAgentQueueSignal(rootDir);
+    const ok = (!release || release.ok) && !maintenanceError;
     const report: CliAgentQueueReport = {
       version: 1,
       command,
       generatedAt: new Date().toISOString(),
-      ok: true,
+      ok,
       queueFile: queue.queueFile,
       pendingTaskCount: queue.pendingTaskCount,
       runningTaskCount: queue.runningTaskCount,
       doneTaskCount: queue.doneTaskCount,
       latestTask: queue.latestTask,
-      taskCount: queue.tasks.length
+      taskCount: queue.tasks.length,
+      totalTaskCount: queue.totalTaskCount,
+      releasedTaskId: release?.ok ? release.taskId : null,
+      prunedTaskCount: prune?.prunedTaskCount ?? 0,
+      removedFileCount: prune?.removedFiles.length ?? 0,
+      reason: release && !release.ok ? release.reason : maintenanceError ? "agent-queue-maintenance-failed" : null,
+      detail: release && !release.ok ? release.detail ?? null : maintenanceError?.message ?? null
     };
     const json = `${JSON.stringify({ ...report, queue }, null, 2)}\n`;
     writeOut(rootDir, options.out, json);
-    return { exitCode: 0, stdout: json, stderr: "", report };
+    return { exitCode: ok ? 0 : 1, stdout: json, stderr: "", report };
   }
 
   if (command === "agent-claim") {

@@ -66,6 +66,34 @@ function locksDir(rootDir: string): string {
   return path.join(agentDir(rootDir), "locks");
 }
 
+function renameAtomicWithRetry(source: string, destination: string): void {
+  const delaysMs = [5, 10, 20, 40, 80, 160];
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      fs.renameSync(source, destination);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      const delay = delaysMs[attempt];
+      if (!delay || !code || !["EACCES", "EBUSY", "EPERM"].includes(code)) {
+        throw error;
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
+    }
+  }
+}
+
+function writeTextAtomic(file: string, contents: string): void {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const temporary = `${file}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    fs.writeFileSync(temporary, contents, "utf8");
+    renameAtomicWithRetry(temporary, file);
+  } finally {
+    if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+  }
+}
+
 function taskIdFromTaskFile(taskFile: string): string {
   return path.basename(taskFile, path.extname(taskFile));
 }
@@ -275,7 +303,7 @@ function writeAgentTaskMetadata(
     ...current.metadata,
     updatedAt: nowIso()
   });
-  fs.writeFileSync(current.absoluteTaskFile, buildAgentTaskMarkdown(next, current.body));
+  writeTextAtomic(current.absoluteTaskFile, buildAgentTaskMarkdown(next, current.body));
   return { metadata: next, absoluteTaskFile: current.absoluteTaskFile };
 }
 
@@ -306,7 +334,7 @@ export function listAgentTasks(rootDir: string, limit = 50): AgentQueueTask[] {
   const dir = agentDir(rootDir);
   if (!fs.existsSync(dir)) return [];
 
-  return fs
+  const tasks = fs
     .readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /^task_.*\.md$/.test(entry.name))
     .map((entry) => {
@@ -317,15 +345,15 @@ export function listAgentTasks(rootDir: string, limit = 50): AgentQueueTask[] {
       };
     })
     .sort((first, second) => second.mtimeMs - first.mtimeMs)
-    .slice(0, limit)
     .map((entry) => entry.file)
     .map((file) => {
       const parsed = readAgentTaskMetadataSummary(rootDir, file);
       return parsed ? taskFromMetadata(rootDir, parsed.absoluteTaskFile, parsed.metadata) : null;
     })
     .filter((task): task is AgentQueueTask => Boolean(task))
-    .sort((first, second) => Date.parse(second.updatedAt) - Date.parse(first.updatedAt))
-    .slice(0, limit);
+    .sort((first, second) => Date.parse(second.updatedAt) - Date.parse(first.updatedAt));
+
+  return Number.isFinite(limit) ? tasks.slice(0, Math.max(0, Math.floor(limit))) : tasks;
 }
 
 export function refreshAgentQueueSignal(rootDir: string): AgentQueueSignal {
@@ -333,20 +361,23 @@ export function refreshAgentQueueSignal(rootDir: string): AgentQueueSignal {
   fs.mkdirSync(dir, { recursive: true });
   fs.mkdirSync(locksDir(rootDir), { recursive: true });
 
-  const tasks = listAgentTasks(rootDir, 50);
+  const allTasks = listAgentTasks(rootDir, Number.POSITIVE_INFINITY);
+  const tasks = allTasks.slice(0, 50);
   const signal: AgentQueueSignal = {
     version: 1,
     kind: "intent-agent-queue",
     updatedAt: nowIso(),
     queueFile: ".intent-agent-queue.json",
     agentDir: ".intent/agent",
-    pendingTaskCount: tasks.filter((task) => task.status === "queued").length,
-    runningTaskCount: tasks.filter((task) => runningStatuses.has(task.status)).length,
-    doneTaskCount: tasks.filter((task) => task.status === "done").length,
+    totalTaskCount: allTasks.length,
+    pendingTaskCount: allTasks.filter((task) => task.status === "queued").length,
+    runningTaskCount: allTasks.filter((task) => runningStatuses.has(task.status)).length,
+    doneTaskCount: allTasks.filter((task) => task.status === "done").length,
+    failedTaskCount: allTasks.filter((task) => task.status === "failed").length,
     latestTask: tasks[0]?.taskFile ?? null,
     tasks
   };
-  fs.writeFileSync(agentQueueSignalPath(rootDir), `${JSON.stringify(signal, null, 2)}\n`);
+  writeTextAtomic(agentQueueSignalPath(rootDir), `${JSON.stringify(signal, null, 2)}\n`);
   return signal;
 }
 
@@ -409,8 +440,11 @@ export function claimAgentTask(
 
   try {
     const lockFd = fs.openSync(absoluteLockFile, "wx");
-    fs.writeFileSync(lockFd, `${JSON.stringify(lockPayload, null, 2)}\n`);
-    fs.closeSync(lockFd);
+    try {
+      fs.writeFileSync(lockFd, `${JSON.stringify(lockPayload, null, 2)}\n`);
+    } finally {
+      fs.closeSync(lockFd);
+    }
   } catch {
     return failure(task.sourceIntentId ?? undefined, "agent-task-locked", "Task lock already exists.", "claimMs", started);
   }
@@ -424,6 +458,7 @@ export function claimAgentTask(
   }));
 
   if (!updated) {
+    if (fs.existsSync(absoluteLockFile)) fs.unlinkSync(absoluteLockFile);
     return failure(task.sourceIntentId ?? undefined, "missing-task-file", "Task file disappeared while claiming.", "claimMs", started);
   }
 
@@ -439,6 +474,99 @@ export function claimAgentTask(
     metrics: {
       claimMs: Number((performance.now() - started).toFixed(3))
     }
+  };
+}
+
+export function releaseAgentTask(
+  rootDir: string,
+  taskFile: string
+): AgentTaskStatusUpdateResult | PatchFailure {
+  const started = performance.now();
+  const current = readAgentTaskMetadata(rootDir, taskFile);
+  if (!current) {
+    return failure(undefined, "missing-task-file", "Task file does not exist.", "statusMs", started);
+  }
+  if (terminalStatuses.has(current.metadata.status)) {
+    return failure(
+      current.metadata.sourceIntentId ?? undefined,
+      "agent-task-closed",
+      `Task is already ${current.metadata.status}.`,
+      "statusMs",
+      started
+    );
+  }
+
+  const updated = writeAgentTaskMetadata(rootDir, taskFile, (metadata) => ({
+    ...metadata,
+    status: "queued",
+    provider: null,
+    claimedBy: null,
+    sessionId: null,
+    failureReason: null
+  }));
+  if (!updated) {
+    return failure(undefined, "missing-task-file", "Task file does not exist.", "statusMs", started);
+  }
+
+  const lockFile = lockFileForTask(rootDir, updated.metadata.taskId);
+  if (fs.existsSync(lockFile)) fs.unlinkSync(lockFile);
+  const queue = refreshAgentQueueSignal(rootDir);
+  return {
+    ok: true,
+    taskId: updated.metadata.taskId,
+    taskFile: relativeFromRoot(rootDir, updated.absoluteTaskFile),
+    status: updated.metadata.status,
+    queue,
+    metrics: { statusMs: Number((performance.now() - started).toFixed(3)) }
+  };
+}
+
+export interface AgentQueuePruneResult {
+  olderThanDays: number;
+  prunedTaskCount: number;
+  removedFiles: string[];
+}
+
+export function pruneAgentArtifacts(rootDir: string, olderThanDays: number): AgentQueuePruneResult {
+  if (!Number.isFinite(olderThanDays) || olderThanDays < 0) {
+    throw new Error("olderThanDays must be a non-negative number");
+  }
+
+  const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
+  const removed = new Set<string>();
+  const removeFile = (file: string | null | undefined) => {
+    if (!file) return;
+    const absolute = path.resolve(absoluteFromRoot(rootDir, file));
+    if (!isInsideRoot(rootDir, absolute) || !fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) return;
+    fs.unlinkSync(absolute);
+    removed.add(relativeFromRoot(rootDir, absolute));
+  };
+
+  let prunedTaskCount = 0;
+  for (const task of listAgentTasks(rootDir, Number.POSITIVE_INFINITY)) {
+    if (!terminalStatuses.has(task.status) || Date.parse(task.updatedAt) > cutoff) continue;
+    const parsed = readAgentTaskMetadata(rootDir, task.taskFile);
+    if (!parsed) continue;
+    removeFile(parsed.metadata.resultFile);
+    removeFile(parsed.metadata.diffFile);
+    removeFile(lockFileForTask(rootDir, parsed.metadata.taskId));
+    removeFile(parsed.absoluteTaskFile);
+    prunedTaskCount += 1;
+  }
+
+  const dir = agentDir(rootDir);
+  if (fs.existsSync(dir)) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isFile() || !/^(?:context|result)_.*\.md$/.test(entry.name)) continue;
+      const file = path.join(dir, entry.name);
+      if (fs.statSync(file).mtimeMs <= cutoff) removeFile(file);
+    }
+  }
+
+  return {
+    olderThanDays,
+    prunedTaskCount,
+    removedFiles: [...removed].sort()
   };
 }
 

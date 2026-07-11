@@ -121,6 +121,8 @@ export function planTokenPatch(
     range: { start, end },
     before,
     after,
+    sourceHashBefore: currentHash,
+    sourceHashAfter: sourceHash(patchedSource),
     metrics: {
       previewMs: Number((performance.now() - started).toFixed(3))
     }
@@ -320,6 +322,10 @@ function writeIntentArtifacts(params: {
         change: {
           from: preview.oldToken,
           to: preview.nextToken
+        },
+        sourceHash: {
+          before: preview.sourceHashBefore,
+          after: preview.sourceHashAfter
         }
       },
       null,
@@ -373,6 +379,8 @@ function writeRevertConflictArtifact(params: {
     },
     expectedToken: lastPatch.nextToken,
     actualToken,
+    expectedSourceHash: lastPatch.sourceHashAfter,
+    actualSourceHash: sourceHash(source),
     restoreToken: lastPatch.oldToken,
     beforeLine: lineSnippet(source, lastPatch.range.start),
     operationFile: lastPatch.operationFile,
@@ -526,6 +534,16 @@ export function revertPendingUndo(
     };
   }
 
+  if (pending[pending.length - 1] !== patch) {
+    return {
+      ok: false,
+      id: patch.id,
+      reason: "undo-not-latest",
+      detail: "Revert newer patches first. Intent Layer only reverts the latest pending patch.",
+      metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
   const result = revertTokenPatch(rootDir, patch, entry);
   if (!result.ok) {
     return result;
@@ -660,6 +678,18 @@ export function applyTokenPatch(
   }
 
   const source = fs.readFileSync(preview.file, "utf8");
+  if (sourceHash(source) !== preview.sourceHashBefore) {
+    return {
+      ok: false,
+      id: preview.id,
+      reason: "source-hash-mismatch",
+      detail: "The file changed after preview. Re-select the element and try again.",
+      metrics: {
+        previewMs: preview.metrics.previewMs,
+        applyMs: Number((performance.now() - applyStarted).toFixed(3))
+      }
+    };
+  }
   const patchedSource = `${source.slice(0, preview.range.start)}${preview.nextToken}${source.slice(
     preview.range.end
   )}`;
@@ -709,6 +739,31 @@ export function revertTokenPatch(
   const start = lastPatch.range.start;
   const end = start + lastPatch.nextToken.length;
   const currentToken = source.slice(start, end);
+  const currentHash = sourceHash(source);
+
+  if (!lastPatch.sourceHashAfter || currentHash !== lastPatch.sourceHashAfter) {
+    const reason = lastPatch.sourceHashAfter
+      ? "revert-source-hash-mismatch"
+      : "revert-source-hash-missing";
+    const conflict = writeRevertConflictArtifact({
+      rootDir,
+      lastPatch,
+      source,
+      actualToken: currentToken,
+      reason
+    });
+    return {
+      ok: false,
+      id: lastPatch.id,
+      reason,
+      detail: lastPatch.sourceHashAfter
+        ? "The file changed after this patch. Intent Layer refused to revert a stale source range."
+        : "This legacy patch has no post-apply source hash and cannot be reverted safely.",
+      conflictFile: conflict.conflictFile,
+      conflictArtifact: conflict.conflictArtifact,
+      metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
 
   if (currentToken !== lastPatch.nextToken) {
     const conflict = writeRevertConflictArtifact({
@@ -747,6 +802,8 @@ export function revertTokenPatch(
     },
     before,
     after,
+    sourceHashBefore: currentHash,
+    sourceHashAfter: sourceHash(revertedSource),
     metrics: {
       previewMs: 0
     }
@@ -772,6 +829,8 @@ export function revertTokenPatch(
     },
     before,
     after,
+    sourceHashBefore: currentHash,
+    sourceHashAfter: sourceHash(revertedSource),
     operationFile: artifacts.operationFile,
     diffFile: artifacts.diffFile,
     metrics: {

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import type { Plugin, ViteDevServer } from "vite";
 import { launchAgentTask } from "./agentLaunch";
@@ -44,6 +45,7 @@ const virtualClientId = "virtual:intent-layer/client";
 const resolvedVirtualClientId = "\0virtual:intent-layer/client.ts";
 const virtualTailwindId = "virtual:intent-layer/tailwind";
 const resolvedVirtualTailwindId = "\0virtual:intent-layer/tailwind.ts";
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 interface IntentState {
   rootDir: string;
@@ -229,10 +231,15 @@ function stripTypeImports(source: string): string {
   return source.replace(/import type \{[\s\S]*?\} from "\.\/types";\r?\n/g, "");
 }
 
+function runtimeModulePath(name: "client" | "tailwind"): string {
+  const built = path.join(moduleDir, `${name}.js`);
+  return fs.existsSync(built) ? built : path.join(moduleDir, `${name}.ts`);
+}
+
 function readClientModule() {
   return stripTypeImports(
     fs
-      .readFileSync(path.join(__dirname, "client.ts"), "utf8")
+      .readFileSync(runtimeModulePath("client"), "utf8")
       .replace("./tailwind", virtualTailwindId)
   );
 }
@@ -286,7 +293,7 @@ export function intentLayerSpike(): Plugin {
       }
       if (id === resolvedVirtualTailwindId) {
         return transpileVirtualModule(
-          stripTypeImports(fs.readFileSync(path.join(__dirname, "tailwind.ts"), "utf8")),
+          stripTypeImports(fs.readFileSync(runtimeModulePath("tailwind"), "utf8")),
           "intent-layer-tailwind.ts"
         );
       }
@@ -414,7 +421,13 @@ export function intentLayerSpike(): Plugin {
                 recordPatchApplyInOperationLog(state.rootDir, result);
                 syncChangedFile(server, state, result.file);
               }
-              writeJson(response, result.ok ? 200 : 409, result);
+              writeJson(
+                response,
+                result.ok ? 200 : 409,
+                result.ok
+                  ? { ...result, binding: state.entriesById.get(result.id) ?? null }
+                  : result
+              );
             } else {
               const result = planTokenPatch(entry, body);
               writeJson(response, result.ok ? 200 : 409, result);
@@ -440,7 +453,13 @@ export function intentLayerSpike(): Plugin {
               recordPatchRevertInOperationLog(state.rootDir, result);
               syncChangedFile(server, state, result.file);
             }
-            writeJson(response, result.ok ? 200 : 409, result);
+            writeJson(
+              response,
+              result.ok ? 200 : 409,
+              result.ok
+                ? { ...result, binding: state.entriesById.get(result.id) ?? null }
+                : result
+            );
           } catch (error) {
             writeJson(response, 500, {
               ok: false,
@@ -498,7 +517,13 @@ export function intentLayerSpike(): Plugin {
               state.undoStack = state.undoStack.filter((item) => item.operationFile !== body.operationFile);
               syncChangedFile(server, state, result.file);
             }
-            writeJson(response, result.ok ? 200 : 409, result);
+            writeJson(
+              response,
+              result.ok ? 200 : 409,
+              result.ok
+                ? { ...result, binding: state.entriesById.get(result.id) ?? null }
+                : result
+            );
           } catch (error) {
             writeJson(response, 500, {
               ok: false,
