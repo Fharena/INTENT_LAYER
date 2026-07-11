@@ -9,6 +9,7 @@ Run from the INTENT_LAYER repository.
 ```bash
 npm install
 npm run typecheck
+npm run test
 npm run dev
 ```
 
@@ -49,6 +50,7 @@ Create a local package tarball.
 
 ```bash
 npm run typecheck
+npm run test
 npm pack
 ```
 

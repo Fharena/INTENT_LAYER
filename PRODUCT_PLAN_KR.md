@@ -8,6 +8,21 @@
 - 1차 타깃: AI로 프론트엔드 코드를 만드는 개발자, 바이브코더, 초보 프론트엔드 개발자
 - 초기 지원 스택: `React + Vite + Tailwind CSS + TypeScript`
 
+### 0.1 현재 구현 기준선 (2026-07-11)
+
+현재 상태는 범용 제품이 아니라 **동작하는 alpha**다. 화면 선택, TypeScript AST source binding, Tailwind 후보, minimal range patch, apply 후 source hash 기반 최신 작업 undo는 코어 경로로 지원한다. Agent handoff는 선택 기능이며 직접 편집보다 유용하다는 비교 검증은 아직 없다.
+
+현재 구현 원칙:
+
+- JSX 분석은 fast scanner와 AST 이중 구현이 아니라 TypeScript AST 한 경로를 사용한다.
+- 후보가 실제로 둘 이상일 때만 토큰을 editable로 표시한다.
+- undo는 임의 순서 branch undo가 아니라 최신 pending patch부터 처리한다.
+- Vitest 회귀 테스트, GitHub Actions CI, 실패 시 exit 1인 평가 gate를 출시 기준으로 사용한다.
+- npm tarball은 raw TypeScript 대신 `dist/` JavaScript를 포함한다.
+- 활성 문서는 README, PRODUCT_PLAN, DEMO_WALKTHROUGH, FAILURE_MODES의 KR/EN 네 쌍으로 제한한다.
+
+이 문서 뒤쪽의 장기 package 구조와 v1 아이디어는 구현 완료 사실이 아니라 가설로 읽어야 한다.
+
 ## 1. 한 줄 정의
 
 `INTENT_LAYER`는 AI가 만든 React/Tailwind UI를 사람이 화면에서 직접 선택하고, 의미 단위로 이해하고, 안전하게 수정할 수 있게 해주는 **코드-의도 중간 레이어**이자 **deterministic visual patch tool**이다.
@@ -279,7 +294,7 @@ npm run dev
 npx intent-layer
 ```
 
-현재 MVP package surface는 `bin/intent-layer.cjs` wrapper와 package `/vite` export로 검증한다. `npm run eval`은 `npm pack --dry-run`, 실제 tarball 생성, 임시 폴더 설치, 설치된 `intent-layer --help`, 설치된 `intent-layer/vite` import, 설치된 plugin transform/graph, 실제 Vite dev server의 graph/preview/apply, apply refresh 51.556ms, 3-file graph refresh 118.416ms, missing-plugin doctor guidance, generated 24-file/624-binding product-sized graph refresh를 package/performance smoke gate로 측정한다. 공개 package 이름은 `intent-layer`로 맞췄고, 외부 사용자용 `INSTALL_*` / `FAILURE_MODES_*` 문서는 package tarball에 포함한다.
+현재 package surface는 빌드된 `dist/cli.js`와 `intent-layer/vite` export로 검증한다. `npm run eval`은 tarball 생성과 임시 설치, 설치된 CLI/Vite plugin, 실제 Vite dev server의 graph/preview/apply/revert, multi-file graph refresh, missing-plugin doctor guidance를 gate로 실행한다. 상세 수치는 `reports/performance/spike-evaluation.json`에만 기록하며 gate 하나라도 실패하면 exit code 1로 끝난다.
 
 ### 8.2 기본 흐름
 

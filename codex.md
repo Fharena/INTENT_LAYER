@@ -1,246 +1,112 @@
 # Codex Working Notes
 
-This file records project-specific working rules for Codex on `INTENT_LAYER`.
-Keep this file updated when the user's operating preferences change.
+Project-specific operating rules for Codex on `INTENT_LAYER`.
 
-## Current User Preferences
+## Product Priority
 
-- Use normal developer-style Git workflow.
-- Leave commits in sensible units:
-  - setup / scaffold
-  - implementation
-  - tests / measurement
-  - documentation
-  - fixes
-- Do not make one giant commit unless the user explicitly asks for it.
-- Keep Korean and English documentation together whenever feasible.
-- Write documentation in detail, including:
-  - what was built
-  - why the approach was chosen
-  - what was measured
-  - numeric results
-  - limitations
-  - next steps
-- Use the `Fharena/context-pack` project while developing:
-  - repository: https://github.com/Fharena/context-pack
-  - before using it, inspect the project instructions and available skill/workflow
-  - document how it was used in this project
-- The user wants numeric performance evaluation because the project is in progress and needs measurable evidence.
-- Record performance evaluation in project docs, not only in chat.
-- Continue development toward the MVP when the user gives a next target; do not stop at product direction or high-level planning.
-- Keep milestone scopes large enough for fast Codex-driven delivery, but avoid speculative architecture work before the feature needs it.
-- Avoid over-engineering. Prefer small in-repo implementations, including low-level scanners/parsers where they are sufficient.
-- Do not introduce external services or heavy dependencies just because they exist; use them only when they clearly reduce risk or implementation time.
-- The target user is a vibe-coder. Prefer GUI-first workflows; keep npm/CLI steps available but avoid making them the primary day-to-day UX.
-- First-run setup should happen in the browser overlay whenever possible: language choice, `.intent` workspace creation, and Agent hook readiness should be visible without extra CLI steps.
-- The same overlay path should remain usable as mid-session Settings: language, panel preferences, onboarding reset, and Agent command settings should be editable without extra CLI steps.
-- Korean UI support is a product requirement. Keep English available for external contributors, but make Korean practical and complete enough for the target user.
-- When integrating external agents, default to command planning. Directly spawning Codex/Claude must remain opt-in through `.intent/settings.json` Agent run settings or `INTENT_LAYER_AGENT_RUN=1`.
-- For the default agent UX, prefer the shared queue model over browser-triggered CLI spawning:
-  - task source of truth: `.intent/agent/task_*.md`
-  - shared signal file: `.intent-agent-queue.json`
-  - Codex pickup: project skill at `.agents/skills/intent-layer-task-runner/SKILL.md`
-  - Claude pickup: `.claude/settings.json` `FileChanged` hook watching `.intent-agent-queue.json`
-  - concurrency guard: task frontmatter status plus `.intent/agent/locks/*.lock.json`
-  - completion flag: `agent-result` marks the task `done`; `agent-fail` marks it `failed`
-- Reused component edits must clearly show shared-source scope. If one source binding affects multiple rendered instances, surface that count in the overlay.
-- Overlay visualization should serve both beginner and senior use:
-  - beginners see the next action first through a simple workflow rail
-  - seniors see source binding, source hash, className mode, editable token count, shared render count, and unsupported reason before patching
-  - direct edit and agent handoff must stay visually distinct
-  - stale overlay roots during HMR should be replaced when the client runtime version changes
+The proven product wedge is deterministic browser selection and source patching for React/Tailwind. Keep the direct-edit core thick and the Agent integration thin.
 
-## Documentation Rules
+Priority order:
 
-When creating or updating product/development docs, prefer paired Korean and English files.
+1. source binding correctness
+2. minimal patch and guarded undo safety
+3. high-frequency Tailwind edit coverage and clear GUI feedback
+4. real regression tests, package smoke, and CI
+5. optional Codex/Claude handoff
 
-Recommended document pairs:
+Do not add speculative analyzers, document formats, queue commands, package boundaries, or framework adapters without a failing user workflow or test that requires them.
 
-```text
-TECHNICAL_SPIKE_KR.md
-TECHNICAL_SPIKE_EN.md
-PERFORMANCE_EVALUATION_KR.md
-PERFORMANCE_EVALUATION_EN.md
-DEVELOPMENT_LOG_KR.md
-DEVELOPMENT_LOG_EN.md
-```
+## User Preferences
 
-Existing paired planning docs:
+- Use a normal developer Git workflow with clear commits and push completed work to `https://github.com/Fharena/INTENT_LAYER.git`.
+- Preserve unrelated user changes. Check `git status --short` before editing.
+- Keep Korean and English product documentation aligned.
+- Write practical details and limitations, but do not create duplicate status documents.
+- Use Context Pack for meaningful repository work and checkpoint at handoff.
+- Leave numeric evidence in generated JSON reports, not only in chat.
+- Work in large outcome-oriented batches when requested, while avoiding architecture that is not needed for the outcome.
+- The target user is a vibe-coder. The normal path is GUI-first; npm and CLI remain setup, CI, diagnosis, and recovery tools.
+- Korean is a complete product language. English remains available for external contributors.
+- Prefer established structured parsers and APIs. JSX source binding uses the TypeScript AST as its single source of truth.
+- Simple Tailwind edits, apply, validation, and undo are deterministic and must not call an LLM.
+
+## Overlay UX
+
+- First-run setup and later settings use the same browser panel.
+- Keep language, dock, density, startup collapse, onboarding reset, Agent permission, and provider commands editable without extra CLI steps.
+- The selected-element flow is `Pick -> Inspect -> Edit -> Review`.
+- Beginners see the next action first.
+- Experienced users see component, file, source hash, `className` mode, editable tokens, shared render count, and unsupported reason before patching.
+- Direct edit and Agent handoff stay visually distinct.
+- Reused component edits must show how many rendered instances share the source binding.
+- Network and patch failures must produce visible feedback.
+- Stale overlay roots must be replaced during HMR client version changes.
+
+## Patch Safety
+
+- Instrument only real intrinsic JSX nodes from the TypeScript AST.
+- Never write `data-intent-id` into source files.
+- Validate source hash and old token during preview and again before apply.
+- Use minimal source ranges, never full-file code generation for a token change.
+- Persist the post-apply source hash with the operation.
+- Undo only the latest pending patch when that hash still matches.
+- On drift, preserve the file and write a conflict artifact.
+
+## Agent Boundary
+
+Agent handoff is optional and experimental. Its durable minimum is:
 
 ```text
-PRODUCT_PLAN_KR.md
-PRODUCT_PLAN_EN.md
-LAUNCH_MVP_KR.md
-LAUNCH_MVP_EN.md
+.intent/agent/task_*.md
+.intent-agent-queue.json
+.intent/agent/locks/*.lock.json
 ```
 
-Korean docs should be practical and product-oriented.
-English docs should be suitable for external contributors and future open-source README expansion.
+- Codex pickup uses `.agents/skills/intent-layer-task-runner/SKILL.md`.
+- Claude pickup uses the `.claude/settings.json` `FileChanged` hook.
+- Both providers claim before editing and record `done` or `failed` on completion.
+- Direct CLI spawning remains opt-in through settings or `INTENT_LAYER_AGENT_RUN=1`.
+- Queue writes must be atomic, abandoned claims must be releasable, and old terminal artifacts must be prunable.
+- Do not deepen semantic pre-analysis or result-diff machinery until comparative user evidence shows it beats passing the selected source pointer directly to an agent.
 
-## Development Strategy
+## Active Documents
 
-Do not grow the architecture before the technical risk is validated.
-
-Preferred order:
-
-1. Measure whether deterministic direct editing has enough surface area.
-2. Build the smallest working click-to-patch vertical slice.
-3. Measure DOM-to-source mapping reliability with fixtures.
-4. Only then split into a larger package architecture.
-
-Avoid starting with a large monorepo package design before the spike works.
-
-## First Technical Target
-
-The first meaningful deliverable should be a working spike, not a polished product.
-
-Target:
+Maintain only these Korean/English pairs:
 
 ```text
-React + Vite + Tailwind demo
-static className only
-click DOM element
-map to source file/range
-patch a Tailwind token such as gap-4 -> gap-6
-verify old token before apply
-trigger HMR
-write minimal intent operation/diff output
+README_KR.md / README.md
+PRODUCT_PLAN_KR.md / PRODUCT_PLAN_EN.md
+DEMO_WALKTHROUGH_KR.md / DEMO_WALKTHROUGH_EN.md
+FAILURE_MODES_KR.md / FAILURE_MODES_EN.md
 ```
 
-Non-goals for the first spike:
+Historical spike, launch, handoff, and prose benchmark documents belong in Git history. Numeric truth belongs in `reports/performance/*.json`.
 
-```text
-complete overlay UI
-full cn()/clsx() support
-shadcn/ui full support
-Next.js support
-portal mapping
-props className forwarding
-large intent schema
-npm release
-VS Code extension
-```
+## Verification
 
-## Required Measurements
-
-Collect numeric evidence whenever possible.
-
-For the corpus audit:
-
-```text
-className occurrence count
-static className count and ratio
-simple cn()/clsx() count and ratio
-read-only pattern count and ratio
-editable Tailwind token count and ratio
-unsupported reason distribution
-```
-
-For external corpus validation:
-
-```text
-do not commit third-party source samples by default
-copy local samples under .intent/external-corpus/
-write a manifest with original path, copied path, hash, byte count, and className count
-write numeric coverage gates to reports/performance/external-corpus-audit.json
-record whether the sample set is independently collected or only a local smoke fixture
-record sample.sourceKind as independent-external, local-smoke-fixture, or generated-fixture
-record gateFailures, read-only ratio, top unsupported reasons, and mvpEvidence.usableAsMvpEvidence
-do not treat local-smoke-fixture or generated-fixture runs as market/MVP evidence even when coverage gates pass
-```
-
-For product-sized graph validation:
-
-```text
-single-file graph write throttle entry count
-multi-file graph entry count before/after one changed file
-changed-file token before/after
-unchanged file token retention
-generatedAt stability for same input and changed-input repeat
-changed-file transform time and target
-whether the fixture is generated smoke data or independent external project data
-```
-
-For the click-to-patch spike:
-
-```text
-Vite transform time per target file
-DOM click -> source binding time
-patch preview generation time
-patch apply time
-HMR reflection time when measurable
-installed Vite smoke apply/module/graph refresh time and target
-installed multi-file one-changed-file refresh time and target
-installed package import path should stay aligned with `intent-layer/vite`
-CLI doctor check count/pass/warn/fail/guidance count and runtime
-CLI doctor negative fixtures such as missing `intentLayer()` guidance
-package tarball inclusion for install and failure mode docs
-CLI agent-launch provider, command plan, task-created flag, enabled/executed flags, launch time, and dry-run gate result
-Agent queue signal readiness, Codex skill readiness, Claude hook readiness, queued/claimed/done status transitions, and lock file creation
-supported fixture success rate
-intentional stale-token rejection rate
-syntax error count after supported patches
-```
-
-Suggested gate:
-
-```text
-static className editable token coverage >= 30%
-static + simple cn()/clsx() editable token coverage >= 50%
-supported static className patch success rate = 100%
-old token mismatch rejection rate = 100%
-syntax errors after supported patches = 0
-```
-
-The exact thresholds may change, but any change should be documented with a reason.
-
-## Git Workflow
-
-Before editing:
+Every meaningful core change should run:
 
 ```bash
-git status --short
+npm run typecheck
+npm run test
+npm run build
 ```
 
-During work:
+Before a release claim, also run:
 
-- Keep unrelated user changes intact.
-- Do not revert files unless the user explicitly asks.
-- Prefer focused commits with clear messages.
-- Commit messages should describe the user-visible or engineering outcome.
-
-Example commit sequence:
-
-```text
-docs: record spike plan and evaluation criteria
-chore: scaffold vite tailwind spike
-feat: add jsx intent id instrumentation
-feat: patch static tailwind class tokens
-test: add mapping and patch safety fixtures
-docs: publish performance evaluation results
+```bash
+npm run eval
 ```
 
-If the directory is not yet a Git repository, initialize Git only when the user asks or when starting the actual development task and it is clearly needed for the requested workflow.
+`npm run eval` must exit non-zero for any failed gate. Keep fixture evidence separate from independent external evidence. Coverage is an observed allowlist metric, not proof of edit success.
 
-## Context-Pack Usage
+The next product proof should use held-out repositories and measure:
 
-When the next development task starts:
-
-1. Inspect `Fharena/context-pack`.
-2. Identify whether it provides a Codex skill, workflow, docs format, or context packaging convention.
-3. Use the relevant parts during implementation.
-4. Document usage in Korean and English development docs.
-5. Include any measurable effect if it influences performance, context quality, or workflow speed.
-
-Do not claim `context-pack` was used unless the repository or installed skill was actually inspected and applied.
+- first relevant element/source binding success
+- first edit success rate
+- time to accepted result versus prompting
+- incorrect-patch and safe-rejection rates
 
 ## Completion Standard
 
-For each task, final reporting should include:
-
-- files changed
-- commits created, if any
-- checks run
-- numeric results, if measurement was part of the task
-- docs updated in Korean and English, or a clear reason if only one language was updated
-- known limitations and next recommended step
+At handoff, report the user-visible result, tests and numeric gates, commit/push state, and any remaining product limitation. Keep the final answer concise even when the implementation is detailed.

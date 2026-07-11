@@ -9,6 +9,7 @@ INTENT_LAYER 저장소에서 실행한다.
 ```bash
 npm install
 npm run typecheck
+npm run test
 npm run dev
 ```
 
@@ -49,6 +50,7 @@ MVP 데모에서는 이 좁은 시나리오를 사용한다.
 
 ```bash
 npm run typecheck
+npm run test
 npm pack
 ```
 

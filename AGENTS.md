@@ -56,19 +56,20 @@ Core packages should not directly depend on:
 - VS Code
 - browser DOM
 
-Framework-specific logic belongs in adapters.
+Framework-specific logic belongs in adapters. During alpha, keep the implementation in focused modules under `src/intent/`; do not create a monorepo or split packages until a real external consumer requires an independently versioned boundary.
 
-Recommended package boundaries:
+Current module boundaries:
 
 ```text
-packages/core
-packages/react
-packages/tailwind
-packages/vite
-packages/server
-packages/overlay
-packages/cli
+instrument.ts   TypeScript AST source binding
+tailwind.ts     token classification and candidates
+patch.ts        preview, apply, operation log, and guarded undo
+vitePlugin.ts   Vite and HTTP adapter
+client.ts       browser overlay
+agent*.ts       optional Agent handoff adapter
 ```
+
+Do not add another parser, semantic analyzer, queue command, or document format unless a failing user workflow or regression test requires it.
 
 ## Supported v1 Stack
 
@@ -219,12 +220,15 @@ Avoid:
 
 ## Documentation Rules
 
-When updating product plans, update both Korean and English docs when feasible:
+Keep only these active Korean/English document pairs:
 
+- `README_KR.md` / `README.md`
 - `PRODUCT_PLAN_KR.md`
 - `PRODUCT_PLAN_EN.md`
-- `LAUNCH_MVP_KR.md`
-- `LAUNCH_MVP_EN.md`
+- `DEMO_WALKTHROUGH_KR.md` / `DEMO_WALKTHROUGH_EN.md`
+- `FAILURE_MODES_KR.md` / `FAILURE_MODES_EN.md`
+
+Do not create a new status, launch, handoff, or benchmark prose document when an active document or generated JSON report can hold the information. Numeric evaluation truth belongs in `reports/performance/*.json`.
 
 Korean docs should be practical and product-oriented.
 English docs should be suitable for external contributors and future open-source README expansion.

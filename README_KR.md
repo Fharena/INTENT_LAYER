@@ -1,232 +1,158 @@
 # INTENT_LAYER
 
-INTENT_LAYER는 AI가 만든 React/Tailwind UI를 사람이 브라우저에서 직접 클릭하고, 소스 위치로 되돌려 안전하게 수정하기 위한 frontend intent layer다.
+[English](./README.md)
 
-현재 상태:
+INTENT_LAYER는 React/Tailwind 화면을 브라우저에서 클릭하고, 해당 JSX 소스와 Tailwind 토큰을 확인한 뒤 작은 변경을 결정론적으로 적용하는 개발 도구다.
 
-> React/Vite/Tailwind click-to-patch MVP 후보. 구조화된 agent handoff/result artifact, 공통 Agent queue, Codex skill/Claude hook 자동 설정, 수치 기반 성능 리포트를 포함한다.
+현재 제품 판단은 **동작하는 alpha**다. 클릭부터 최소 패치와 안전한 되돌리기까지의 코어 경로는 동작하지만, 모든 React 표현식이나 Tailwind 설정을 편집하는 범용 도구는 아니다. Agent handoff는 선택 기능이며 아직 직접 편집 경로만큼 제품 가치가 검증되지 않았다.
 
-## 핵심 정의
+## 핵심 흐름
 
-제품의 목표는 단순 UI 수정에서 LLM 호출을 줄이고, 결정론적 코드 조작으로 빠르게 고치는 것이다.
+```text
+화면 요소 선택
+  -> 소스 파일, 컴포넌트, source hash 확인
+  -> 편집 가능한 Tailwind 토큰 선택
+  -> diff 미리보기
+  -> 최소 range patch 적용
+  -> 최신 패치 되돌리기 또는 Agent 작업 생성
+```
 
-지원하는 흐름:
+간단한 토큰 교체에는 LLM을 호출하지 않는다. 소스 해시나 토큰 위치가 달라졌으면 파일을 수정하지 않고 거부한다.
 
-- 브라우저에서 UI 요소를 클릭한다.
-- 클릭한 DOM을 source binding으로 연결한다.
-- Tailwind token intent를 확인한다.
-- 단순 변경은 range patch로 preview/apply한다.
-- 복잡하거나 불확실한 변경은 agent handoff task로 보내고 `.intent-agent-queue.json`에 올린다.
-- 적용 결과는 operation log와 intent diff로 검토한다.
+## 5분 시작
 
-## 문서
-
-- `PRODUCT_PLAN_KR.md` - 상세 제품 기획서
-- `PRODUCT_PLAN_EN.md` - 영어 제품 기획서
-- `LAUNCH_MVP_KR.md` - MVP 출시 계획
-- `LAUNCH_MVP_EN.md` - 영어 MVP 출시 계획
-- `TECHNICAL_SPIKE_KR.md` - 기술 스파이크 기록
-- `TECHNICAL_SPIKE_EN.md` - 영어 기술 스파이크 기록
-- `PERFORMANCE_EVALUATION_KR.md` - 수치 기반 성능 평가
-- `PERFORMANCE_EVALUATION_EN.md` - 영어 성능 평가
-- `DEMO_WALKTHROUGH_KR.md` - MVP 데모 절차
-- `DEMO_WALKTHROUGH_EN.md` - 영어 MVP 데모 절차
-- `INSTALL_KR.md` - 설치 가이드
-- `INSTALL_EN.md` - 영어 설치 가이드
-- `ONBOARDING_KR.md` - GUI-first 온보딩 흐름
-- `ONBOARDING_EN.md` - 영어 GUI-first 온보딩 흐름
-- `FAILURE_MODES_KR.md` - 실패 모드와 대응
-- `FAILURE_MODES_EN.md` - 영어 실패 모드 가이드
-- `MVP_HANDOFF_KR.md` - MVP 후보 상태와 handoff
-- `MVP_HANDOFF_EN.md` - 영어 MVP handoff
-- `AGENTS.md` - 이 저장소에서 작업하는 AI coding agent 지침
-- `codex.md` - Codex 작업 메모와 사용자 선호
-
-## 빠른 실행
-
-의존성을 설치한다.
+저장소에서 데모를 실행한다.
 
 ```bash
 npm install
-```
-
-데모 앱을 실행한다.
-
-```bash
 npm run dev
 ```
 
-브라우저 첫 설정:
+브라우저에서 Vite 주소를 열면 Intent Layer 패널이 나타난다.
 
-```text
-Vite dev URL 열기 -> Intent Layer 설정 -> 언어/패널/Agent queue 설정 -> 설정 완료
+1. 첫 설정에서 언어와 패널 위치를 고른다.
+2. `설정 완료`를 누른다.
+3. `선택`을 누르고 화면 요소를 클릭한다.
+4. 토큰 후보를 고르고 `미리보기`, `적용` 순서로 확인한다.
+5. 문제가 있으면 `되돌리기`를 누른다.
+
+설정은 나중에도 패널의 `설정`에서 바꿀 수 있다. 한국어/영어, 좌우 dock, 밀도, 시작 시 접기, Agent 실행 허용, Codex/Claude 명령과 자동 연결을 지원한다.
+
+## 다른 Vite 프로젝트에 설치
+
+아직 npm registry에 출판하지 않았으므로 로컬 tarball로 검증한다.
+
+```bash
+npm pack
+cd <target-vite-project>
+npm install <intent-layer-tarball>
 ```
 
-설정 화면은 브라우저 패널에서 `.intent/` schema, `.intent/settings.json`, `.intent-agent-queue.json`, Codex project skill, Claude FileChanged hook을 만든다. 이후에도 `설정` 버튼에서 언어, 패널 위치/밀도, 시작 시 접기, setup 자동 열기, Agent queue 자동 설정, Codex/Claude command를 바꿀 수 있다. CLI는 진단과 반복 검증용으로 남기지만, 일상적인 시각 편집의 기본 흐름은 GUI-first다.
+대상 프로젝트의 `vite.config.ts`에서 React plugin보다 먼저 등록한다.
 
-검증 명령:
+```ts
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+import { intentLayer } from "intent-layer/vite";
+
+export default defineConfig({
+  plugins: [intentLayer(), react()]
+});
+```
+
+그다음 평소처럼 Vite dev server를 실행한다. 별도의 초기화 CLI는 필수가 아니다.
+
+## 직접 편집 범위
+
+현재 직접 편집은 정적 `className`과 `cn()`/`clsx()` 안의 문자열 리터럴을 대상으로 한다.
+
+- spacing: padding, margin, gap의 표준 Tailwind scale
+- sizing: width, height, min/max, size
+- layout: display, grid columns, flex, align/justify
+- radius와 typography 크기/굵기/line-height
+- 표준 Tailwind color family와 shade, variant와 opacity 보존
+- shadow, opacity, ring width, transition
+
+후보가 자기 자신 하나뿐인 토큰은 편집 가능으로 표시하지 않는다. 임의 값, CSS 변수, `cva`, runtime 변수, property access, template expression은 inspect 가능하지만 직접 패치하지 않는다.
+
+## 안전 규칙
+
+- JSX는 TypeScript AST 한 경로로 분석한다. 문자열이나 주석 속 JSX 모양 텍스트는 instrumentation하지 않는다.
+- `data-intent-id`는 Vite transform 결과에만 넣고 디스크 소스에는 쓰지 않는다.
+- apply 전 binding source hash와 원래 토큰을 모두 확인한다.
+- preview와 apply 사이에 파일이 바뀌어도 다시 거부한다.
+- undo는 적용 후 전체 source hash가 맞는 **최신 pending patch**만 처리한다.
+- drift가 있으면 파일 대신 `.intent/conflicts/`에 conflict artifact를 남긴다.
+- patch는 전체 파일 codegen이 아니라 원래 source range만 교체한다.
+
+## Agent Handoff
+
+직접 편집이 불가능한 변경은 선택한 요소의 소스 포인터와 제약을 `.intent/agent/task_*.md`에 기록할 수 있다. Codex와 Claude는 같은 queue와 lock을 사용하므로 동시에 열려 있어도 한 provider만 claim한다.
+
+기본 경로는 task 생성과 자동 pickup이다. 로컬 CLI 직접 spawn은 설정에서 Agent 실행을 허용했을 때만 가능하다.
+
+중단된 claim을 되돌리거나 오래된 완료 아티팩트를 정리할 때만 CLI를 사용한다.
+
+```bash
+npm run intent:agent-queue -- --release --task .intent/agent/task_x.md
+npm run intent:agent-queue -- --prune-days 30
+```
+
+prune은 오래된 `done`, `failed`, `cancelled` 작업만 삭제하며 queued/running 작업은 보존한다. Queue signal은 temp file과 rename으로 갱신하고, 카운트는 최근 50개 화면이 아니라 전체 task를 기준으로 계산한다.
+
+## 검증
+
+일상 검증:
 
 ```bash
 npm run typecheck
-npm run intent:doctor
-npm run intent:check -- fixtures/corpus src/App.tsx
-npm run eval
+npm run test
 npm run build
 ```
 
-## CLI 사용
-
-로컬 CLI는 다음처럼 직접 실행할 수 있다.
+출시 전 전체 검증:
 
 ```bash
-npm run intent:init
+npm run eval
+```
+
+`npm run eval`은 tarball 설치, 설치된 CLI와 Vite export, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, agent queue, 외부 corpus와 성능 gate를 실행한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록되고 터미널에는 gate 요약만 출력한다.
+
+외부 corpus 수치는 **현재 allowlist가 관찰된 토큰 중 몇 개에 후보를 제공하는지**를 나타낸다. 실제 편집 성공률이나 패치 품질을 뜻하지 않는다. 다음 제품 검증은 held-out 저장소에서 첫 편집 성공률과 프롬프트 대비 소요 시간을 측정해야 한다.
+
+## CLI
+
+GUI가 기본이며 CLI는 진단, CI와 복구용이다.
+
+```bash
 npm run intent:doctor
-npm run intent:dev -- --dry-run
-npx tsx src/intent/cli.ts --help
-node bin/intent-layer.cjs --help
-npm run intent:scan -- fixtures/corpus src/App.tsx
-npx tsx src/intent/cli.ts check fixtures/corpus src/App.tsx --min-supported-direct 0.5
-npx tsx src/intent/cli.ts scan fixtures/corpus src/App.tsx --write-graph
-npx tsx src/intent/cli.ts apply --op .intent/operations/example.intent-op.json
-npx tsx src/intent/cli.ts diff --diff .intent/diffs/example.intent-diff.yml
-npx tsx src/intent/cli.ts agent-context ProductGrid
-npx tsx src/intent/cli.ts agent-task --id <intent-id> --change "Describe the desired change"
-npx tsx src/intent/cli.ts agent-queue
-npx tsx src/intent/cli.ts agent-claim --provider codex --task .intent/agent/task_x.md
-npx tsx src/intent/cli.ts agent-launch --provider codex --id <intent-id> --change "Describe the desired change"
-npx tsx src/intent/cli.ts agent-launch --provider claude --task .intent/agent/task_x.md
-npx tsx src/intent/cli.ts agent-result --id <intent-id> --task .intent/agent/task_x.md --summary "Describe the result"
+npm run intent:check -- fixtures/corpus src/App.tsx
+npm run intent:scan -- fixtures/corpus src/App.tsx --write-graph
+node dist/cli.js --help
 ```
 
-Agent 기본 UX:
+패키지는 `dist/cli.js`, `dist/vite.js`, browser virtual module bundle을 배포한다. 실행 시 raw TypeScript나 `tsx`에 의존하지 않는다.
 
-```text
-Agent handoff -> 작업 만들기 -> .intent-agent-queue.json에 queued
-Codex: 설치된 project skill이 queued task를 claim하고 처리
-Claude: Claude Code가 열려 있으면 FileChanged hook이 queue 변경을 감지해 처리
-완료: agent-result가 task frontmatter를 done으로 표시하고 lock을 해제
-```
+## 문서
 
-Codex와 Claude는 같은 task markdown, 같은 signal file, 같은 lock/status 규칙을 사용한다. 둘이 동시에 반응해도 먼저 `.intent/agent/locks/*.lock.json`을 만든 provider만 작업한다.
+- [PRODUCT_PLAN_KR.md](./PRODUCT_PLAN_KR.md): 제품 범위와 의사결정
+- [DEMO_WALKTHROUGH_KR.md](./DEMO_WALKTHROUGH_KR.md): 재현 가능한 데모
+- [FAILURE_MODES_KR.md](./FAILURE_MODES_KR.md): 실패와 복구
+- 영어 문서는 같은 이름의 `_EN.md` 또는 [README.md](./README.md)에 있다.
 
-## 외부 Corpus 측정
+과거 spike, launch, handoff 상태 문서는 Git 이력으로 보존하며 활성 문서로 중복 유지하지 않는다.
 
-외부 React/Tailwind 샘플을 로컬로 가져와 측정할 수 있다. third-party source는 commit하지 않는다.
-
-```bash
-npm run import:external-corpus -- <external-react-project-or-samples>
-npm run analyze:external-corpus
-```
-
-외부 corpus copy는 `.intent/external-corpus*/` 아래에 생성되고, 수치 리포트는 `reports/performance/` 아래에 생성된다.
-
-현재 독립 외부 baseline은 모두 50% MVP evidence gate를 넘는다.
-
-| 프로젝트 | 파일 수 | `className` 수 | supported direct editable coverage |
-| --- | ---: | ---: | ---: |
-| `shadcn-ui/ui@dbf9c5e` | 100 | 915 | 77.50% |
-| `sadmann7/skateshop@e954d54` | 100 | 866 | 79.46% |
-| `mckaywrigley/chatbot-ui@81328b6` | 100 | 601 | 66.91% |
-
-## 현재 MVP 판단
-
-현재 MVP 판단은 token taxonomy 확장 여부를 넘어서, 실제 사용 가능한 후보 상태에 가깝다.
-
-통과한 근거:
-
-- direct-edit coverage
-- package smoke
-- product-sized graph refresh
-- 독립 외부 corpus coverage
-- 실제 브라우저 click-to-patch QA
-- package tarball install smoke
-- preview/apply/revert endpoint smoke
-- KR/EN onboarding, install, failure mode, demo walkthrough 문서
-
-남은 watch 항목:
-
-- 다른 browser/runtime에서 QA 반복
-- strict revert browser round trip 50ms 이하 최적화
-- npm registry publish 전 최종 package 문구 정리
-
-## `npm run eval`이 확인하는 것
-
-`npm run eval`은 다음을 수치로 확인한다.
-
-- `npm pack --dry-run`
-- 실제 tarball 생성
-- 임시 프로젝트 `npm install`
-- 설치된 `intent-layer --help`
-- 설치된 `intent-layer/vite` import
-- 설치된 Vite plugin transform/graph output
-- 실제 Vite dev server HTTP smoke
-- `/__intent/graph`, `/__intent/setup`, `/__intent/preview`, `/__intent/apply`, `/__intent/revert-last`
-- setup/settings update persistence
-- apply/revert refresh timing
-- 3-file graph refresh
-- Agent queue signal, Codex skill, Claude hook 자동 설정
-- Codex/Claude agent launch dry-run 계획
-- missing-plugin `doctor` failure guidance
-- 401-binding transform stress
-- 24-file / 624-binding product-sized graph refresh
-- external corpus import/report smoke
-
-## 현재 지원 범위
-
-- React + Vite + Tailwind demo UI
-- compile-time `data-intent-id` injection
-- `.intent/graph.intent.json` sidecar graph
-- floating browser overlay
-- 브라우저 setup/settings 화면, 한국어/영어 선택, 패널 preference, 온보딩 재표시, Agent queue/hook/command 설정
-- 선택 후 `선택 -> 근거 확인 -> 수정 -> 검토` 단계 rail
-- component/source hash/className mode/editable token/shared render count를 보여주는 Intent 맵
-- overlay 수동 minimize/expand
-- 같은 intent id를 가진 렌더 DOM 전체 outline과 shared source scope 표시
-- patch preview before apply
-- static `className` Tailwind token replacement
-- simple `cn()` / `clsx()` literal segment replacement
-- unsupported `className` read-only binding
-- operation-log-backed undo stack
-- pending undo discard
-- safe non-top revert
-- revert conflict artifact
-- agent handoff task/result markdown
-- `.intent/agent/task_*.md` task frontmatter status와 `.intent-agent-queue.json` signal
-- Codex project skill 자동 생성: `.agents/skills/intent-layer-task-runner/SKILL.md`
-- Claude FileChanged hook 자동 설정: `.claude/settings.json`
-- `.intent/agent/task_*.md` 기반 Codex/Claude launch plan 호환 경로; 실제 spawn은 설정의 Agent 실행 허용 또는 `INTENT_LAYER_AGENT_RUN=1` 필요
-- source hash validation
-- operation/diff artifact output
-- related source snapshot/diff for read-only handoff
-- workspace package import context
-- external npm package import reference without patching `node_modules`
-- variant/cva related source handoff context
-- component snapshot discovery fixtures
-- browser click-to-panel, preview, apply, revert metric capture
-- external corpus coverage and graph refresh reports
-
-## 아직 범위 밖
+## 현재 비범위
 
 - Next.js 정식 adapter
-- styled-components / Emotion 편집
-- 전체 CSS cascade 편집
+- styled-components, Emotion, 전체 CSS cascade 편집
+- arbitrary Tailwind theme 자동 추론
+- 외부 npm package나 `node_modules` 직접 수정
 - Figma import
-- external npm package source 직접 patch
-- 넓은 자연어 layout refactor를 deterministic patch처럼 처리하는 흐름
+- 자연어 레이아웃 refactor를 결정론적 패치처럼 적용하는 기능
 
-지원하지 않는 케이스는 `.intent/agent/task_*.md` handoff로 내려보내는 것이 현재 MVP의 안전한 동작이다.
+지원하지 않는 표현은 조용히 잘못 고치지 않고 read-only 또는 Agent handoff로 내려간다.
 
-## 주요 리포트
+## 라이선스
 
-```text
-reports/performance/corpus-audit.json
-reports/performance/ai-corpus-audit.json
-reports/performance/spike-evaluation.json
-reports/performance/browser-click-metric.json
-reports/performance/browser-runtime-availability.json
-reports/performance/external-corpus-audit.json
-reports/performance/external-corpus-skateshop-audit.json
-reports/performance/external-corpus-chatbot-ui-audit.json
-```
-
-`reports/performance/external-corpus-audit.json`은 `npm run import:external-corpus -- <path>` 또는 `npm run analyze:external-corpus` 실행 시 갱신된다.
+[MIT](./LICENSE)

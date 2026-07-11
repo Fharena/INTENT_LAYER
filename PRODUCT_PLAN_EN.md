@@ -8,6 +8,21 @@
 - Primary audience: developers, vibe coders, and beginner frontend developers who use AI to generate UI code
 - Initial supported stack: `React + Vite + Tailwind CSS + TypeScript`
 
+### 0.1 Current Implementation Baseline (2026-07-11)
+
+The current state is a **working alpha**, not a universal product. Element selection, TypeScript AST source binding, Tailwind candidates, minimal range patches, and latest-first undo guarded by the post-apply source hash are supported as the core path. Agent handoff is optional and has not yet proven that it outperforms direct context passed to an agent.
+
+Current implementation rules:
+
+- JSX analysis uses one TypeScript AST path instead of parallel scanner and AST implementations.
+- A token is editable only when it has more than one real candidate.
+- Undo is latest-first rather than arbitrary branch undo.
+- Vitest regression tests, GitHub Actions CI, and evaluation gates that exit 1 on failure define release readiness.
+- npm tarballs ship built JavaScript under `dist/` instead of raw TypeScript execution.
+- Active documentation is limited to four KR/EN pairs: README, PRODUCT_PLAN, DEMO_WALKTHROUGH, and FAILURE_MODES.
+
+Later package structures and v1 ideas in this document are hypotheses, not claims about the current implementation.
+
 ## 1. One-line Definition
 
 `INTENT_LAYER` is a deterministic intent layer and visual patch tool that helps people inspect, understand, and safely edit AI-generated React/Tailwind UI through semantic controls.
@@ -277,7 +292,7 @@ npm run dev
 npx intent-layer
 ```
 
-The current MVP package surface is verified through the `bin/intent-layer.cjs` wrapper and package `/vite` export. `npm run eval` measures `npm pack --dry-run`, real tarball creation, temp-folder install, installed `intent-layer --help`, installed `intent-layer/vite` import, installed plugin transform/graph, real Vite dev server graph/preview/apply, 51.556ms apply refresh, 118.416ms 3-file graph refresh, missing-plugin doctor guidance, and a generated 24-file/624-binding product-sized graph refresh as package/performance smoke gates. The public package name is now aligned to `intent-layer`; external-facing `INSTALL_*` / `FAILURE_MODES_*` docs are included in the package tarball.
+The package surface is verified through built `dist/cli.js` and the `intent-layer/vite` export. `npm run eval` gates tarball creation and temporary installation, the installed CLI and Vite plugin, real Vite graph/preview/apply/revert HTTP flows, multi-file graph refresh, and missing-plugin doctor guidance. Detailed numbers live only in `reports/performance/spike-evaluation.json`, and any failed gate exits with code 1.
 
 ### 8.2 Basic Flow
 

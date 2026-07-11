@@ -197,3 +197,29 @@ npm run import:external-corpus -- <independent-react-tailwind-project-or-samples
 ```
 
 Re-measure with 50-100 independently collected samples.
+
+## 10. Undo is rejected with `undo-not-latest` or `revert-source-hash-mismatch`
+
+`undo-not-latest` means a newer pending patch exists. Revert patches in latest-first order.
+
+`revert-source-hash-mismatch` means the file changed after the patch was applied. Intent Layer refuses to trust the stored offset, preserves the file, and writes a record under `.intent/conflicts/`. Review the current source, reselect the element, or intentionally discard the pending undo.
+
+## 11. Preview, apply, or undo fails with a request error
+
+The panel reports a stopped dev server, invalid HTTP response, or JSON parse failure in its status area. Confirm that Vite is running and refresh the page. Buttons are temporarily disabled during requests, and a failed request does not modify source by itself.
+
+## 12. An Agent task remains `claimed`
+
+Return an abandoned provider task to the queue:
+
+```bash
+npm run intent:agent-queue -- --release --task .intent/agent/task_x.md
+```
+
+Prune old completed or failed artifacts explicitly:
+
+```bash
+npm run intent:agent-queue -- --prune-days 30
+```
+
+Prune removes only terminal tasks and preserves queued or running work.

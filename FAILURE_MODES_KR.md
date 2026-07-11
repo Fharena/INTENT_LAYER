@@ -197,3 +197,29 @@ npm run import:external-corpus -- <independent-react-tailwind-project-or-samples
 ```
 
 독립 수집 샘플 50-100개로 다시 측정한다.
+
+## 10. Undo가 `undo-not-latest` 또는 `revert-source-hash-mismatch`로 거부됨
+
+`undo-not-latest`는 더 최근의 pending patch가 있다는 뜻이다. 최근 작업부터 순서대로 되돌린다.
+
+`revert-source-hash-mismatch`는 patch 적용 이후 파일이 바뀌었다는 뜻이다. Intent Layer는 저장된 offset을 신뢰하지 않고 파일을 그대로 보존하며 `.intent/conflicts/`에 기록한다. 현재 소스를 검토한 뒤 새로 요소를 선택하거나 pending undo를 의도적으로 discard한다.
+
+## 11. 미리보기, 적용 또는 되돌리기가 요청 오류로 실패함
+
+패널은 dev server 종료, 잘못된 HTTP 응답, JSON 파싱 실패를 상태 영역에 표시한다. Vite dev server가 실행 중인지 확인하고 새로고침한다. 오류 중에는 버튼을 잠시 비활성화하며, 실패한 요청만으로 소스 파일을 수정하지 않는다.
+
+## 12. Agent task가 오래 `claimed` 상태로 남음
+
+중단된 provider의 task를 queue로 돌린다.
+
+```bash
+npm run intent:agent-queue -- --release --task .intent/agent/task_x.md
+```
+
+오래된 완료/실패 아티팩트는 명시적으로 정리한다.
+
+```bash
+npm run intent:agent-queue -- --prune-days 30
+```
+
+prune은 terminal task만 지우며 queued/running task는 지우지 않는다.
