@@ -154,6 +154,8 @@ interface PackageSmokeResult {
   installedViteDevServerSettingsClaudeCommand: string | null;
   installedViteDevServerSettingsCommandSource: string | null;
   installedViteDevServerSettingsUpdateOk: boolean;
+  installedViteDevServerUnauthorizedMutationStatus: number | null;
+  installedViteDevServerUnauthorizedMutationRejected: boolean;
   installedViteDevServerPreviewStatus: number | null;
   installedViteDevServerPreviewOk: boolean;
   installedViteDevServerApplyStatus: number | null;
@@ -480,10 +482,13 @@ function packageSmoke(): PackageSmokeResult {
       "  throw lastError ?? new Error(`Timed out fetching ${url}`);",
       "}",
       "",
-      "async function postJson(url, body) {",
+      "async function postJson(url, body, token = null) {",
       "  const response = await fetch(url, {",
       "    method: \"POST\",",
-      "    headers: { \"content-type\": \"application/json\" },",
+      "    headers: {",
+      "      \"content-type\": \"application/json\",",
+      "      ...(token ? { \"x-intent-layer-token\": token } : {})",
+      "    },",
       "    body: JSON.stringify(body)",
       "  });",
       "  const text = await response.text();",
@@ -494,6 +499,25 @@ function packageSmoke(): PackageSmokeResult {
       "    json = null;",
       "  }",
       "  return { status: response.status, text, json };",
+      "}",
+      "",
+      "async function waitRuntimeToken(root, timeoutMs) {",
+      "  const deadline = Date.now() + timeoutMs;",
+      "  const sessionsDir = path.join(root, \".intent\", \"runtime\", \"sessions\");",
+      "  while (Date.now() < deadline) {",
+      "    if (fs.existsSync(sessionsDir)) {",
+      "      for (const name of fs.readdirSync(sessionsDir)) {",
+      "        try {",
+      "          const session = JSON.parse(fs.readFileSync(path.join(sessionsDir, name), \"utf8\"));",
+      "          if (session?.token) return session.token;",
+      "        } catch {",
+      "          // Wait for an atomic runtime-session publish.",
+      "        }",
+      "      }",
+      "    }",
+      "    await new Promise((resolve) => setTimeout(resolve, 50));",
+      "  }",
+      "  throw new Error(\"Timed out waiting for the Intent Layer runtime token.\");",
       "}",
       "",
       "async function waitFetchMatch(url, timeoutMs, predicate) {",
@@ -606,6 +630,7 @@ function packageSmoke(): PackageSmokeResult {
       "  const home = await waitFetch(`${baseUrl}/`, 10000);",
       "  const module = await waitFetch(`${baseUrl}/src/App.tsx`, 10000);",
       "  const graph = await waitFetch(`${baseUrl}/__intent/graph`, 10000);",
+      "  const intentToken = await waitRuntimeToken(root, 10000);",
       "  const parsedGraph = graph.status === 200 ? JSON.parse(graph.body) : null;",
       "  const entries = parsedGraph ? Object.values(parsedGraph.entries ?? {}) : [];",
       "  const first = entries[0] ?? null;",
@@ -617,7 +642,7 @@ function packageSmoke(): PackageSmokeResult {
       "    language: \"ko\",",
       "    createWorkspace: true,",
       "    completeOnboarding: true",
-      "  });",
+      "  }, intentToken);",
       "  const setupAfter = await waitFetch(`${baseUrl}/__intent/setup?language=ko`, 10000);",
       "  const setupAfterJson = setupAfter.status === 200 ? JSON.parse(setupAfter.body) : null;",
       "  const setupSettingsFileExists = fs.existsSync(path.join(root, \".intent\", \"settings.json\"));",
@@ -648,7 +673,7 @@ function packageSmoke(): PackageSmokeResult {
       "      codexSkillEnabled: true,",
       "      claudeHookEnabled: true",
       "    }",
-      "  });",
+      "  }, intentToken);",
       "  const settingsAfter = await waitFetch(`${baseUrl}/__intent/setup`, 10000);",
       "  const settingsAfterJson = settingsAfter.status === 200 ? JSON.parse(settingsAfter.body) : null;",
       "  const settingsUpdateOk =",
@@ -678,8 +703,9 @@ function packageSmoke(): PackageSmokeResult {
       "    sourceStart: patchToken?.sourceStart,",
       "    sourceEnd: patchToken?.sourceEnd",
       "  };",
-      "  const preview = await postJson(`${baseUrl}/__intent/preview`, patchRequest);",
-      "  const apply = await postJson(`${baseUrl}/__intent/apply`, patchRequest);",
+      "  const unauthorizedApply = await postJson(`${baseUrl}/__intent/apply`, patchRequest);",
+      "  const preview = await postJson(`${baseUrl}/__intent/preview`, patchRequest, intentToken);",
+      "  const apply = await postJson(`${baseUrl}/__intent/apply`, patchRequest, intentToken);",
       "  const sourceAfterApply = fs.readFileSync(path.join(root, \"src\", \"App.tsx\"), \"utf8\");",
       "  const applyRefreshStarted = performance.now();",
       "  const moduleAfterApply = await waitFetchMatch(",
@@ -714,7 +740,7 @@ function packageSmoke(): PackageSmokeResult {
       "        ? parsedUndoHistoryAfterApply.entries.length",
       "        : 0;",
       "  const revertRefreshStarted = performance.now();",
-      "  const revertLast = await postJson(`${baseUrl}/__intent/revert-last`, {});",
+      "  const revertLast = await postJson(`${baseUrl}/__intent/revert-last`, {}, intentToken);",
       "  const sourceAfterRevert = fs.readFileSync(path.join(root, \"src\", \"App.tsx\"), \"utf8\");",
       "  const moduleAfterRevert = await waitFetchMatch(",
       "    () => moduleRequestUrl(baseUrl, \"src/App.tsx\"),",
@@ -833,6 +859,7 @@ function packageSmoke(): PackageSmokeResult {
       "    !setupQueueSignalExists && !setupCodexSkillExists && !setupClaudeSettingsExists && !setupClaudeHookConfigured &&",
       "    agentQueue.status === 200 && agentQueueJson?.kind === \"intent-agent-queue\" &&",
       "    settingsUpdateOk &&",
+      "    unauthorizedApply.status === 403 && unauthorizedApply.json?.reason === \"unsafe-intent-request\" &&",
       "    preview.status === 200 && preview.json?.ok === true &&",
       "    apply.status === 200 && apply.json?.ok === true &&",
       "    sourceAfterApply.includes(\"gap-6\") && !sourceAfterApply.includes(\"gap-4\") &&",
@@ -891,6 +918,8 @@ function packageSmoke(): PackageSmokeResult {
       "    settingsClaudeCommand: settingsAfterJson?.settings?.agent?.claudeCommand ?? null,",
       "    settingsCommandSource: settingsAfterJson?.agent?.codexCommandSource ?? null,",
       "    settingsUpdateOk,",
+      "    unauthorizedMutationStatus: unauthorizedApply.status,",
+      "    unauthorizedMutationRejected: unauthorizedApply.json?.reason === \"unsafe-intent-request\",",
       "    previewStatus: preview.status,",
       "    previewOk: preview.json?.ok === true,",
       "    applyStatus: apply.status,",
@@ -1069,6 +1098,8 @@ function packageSmoke(): PackageSmokeResult {
     settingsClaudeCommand?: string | null;
     settingsCommandSource?: string | null;
     settingsUpdateOk?: boolean;
+    unauthorizedMutationStatus?: number | null;
+    unauthorizedMutationRejected?: boolean;
     previewStatus?: number | null;
     previewOk?: boolean;
     applyStatus?: number | null;
@@ -1235,6 +1266,10 @@ function packageSmoke(): PackageSmokeResult {
     installedViteDevServerSettingsCommandSource:
       installedViteDevServerReport.settingsCommandSource ?? null,
     installedViteDevServerSettingsUpdateOk: installedViteDevServerReport.settingsUpdateOk === true,
+    installedViteDevServerUnauthorizedMutationStatus:
+      installedViteDevServerReport.unauthorizedMutationStatus ?? null,
+    installedViteDevServerUnauthorizedMutationRejected:
+      installedViteDevServerReport.unauthorizedMutationRejected === true,
     installedViteDevServerPreviewStatus: installedViteDevServerReport.previewStatus ?? null,
     installedViteDevServerPreviewOk: installedViteDevServerReport.previewOk === true,
     installedViteDevServerApplyStatus: installedViteDevServerReport.applyStatus ?? null,
@@ -5867,6 +5902,8 @@ const report = {
       packageInstallSmoke.installedViteDevServerSettingsClaudeCommand === "claude-custom" &&
       packageInstallSmoke.installedViteDevServerSettingsCommandSource === "settings" &&
       packageInstallSmoke.installedViteDevServerSettingsUpdateOk &&
+      packageInstallSmoke.installedViteDevServerUnauthorizedMutationStatus === 403 &&
+      packageInstallSmoke.installedViteDevServerUnauthorizedMutationRejected &&
       packageInstallSmoke.installedViteDevServerPreviewStatus === 200 &&
       packageInstallSmoke.installedViteDevServerPreviewOk &&
       packageInstallSmoke.installedViteDevServerApplyStatus === 200 &&

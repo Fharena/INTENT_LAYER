@@ -89,10 +89,11 @@ describe("Intent Layer MCP", () => {
         arguments: { operationId }
       });
       expect(verified.structuredContent).toMatchObject({
-        ok: true,
+        ok: false,
         source: "verified",
         runtime: "unavailable"
       });
+      expect(verified.isError).toBe(true);
 
       const resources = await client.listResources();
       expect(resources.resources.map((resource) => resource.uri)).toContain("intent://graph/current");

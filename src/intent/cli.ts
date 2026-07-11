@@ -15,6 +15,7 @@ import {
 } from "./agentQueue";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
+import { withIntentOperationLock } from "./fileLock";
 import { instrumentSource } from "./instrument";
 import { runIntentMcpServer } from "./mcp/server";
 import { applyTokenPatch, recordPatchApplyInOperationLog } from "./patch";
@@ -1282,6 +1283,7 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
                       detail: "Run scan --write-graph first or pass --graph with an existing graph file."
                     }
                   : null;
+    let operationLogFile: string | null = null;
     const result = invalidReason
       ? {
           ok: false as const,
@@ -1290,14 +1292,17 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
           detail: invalidReason.detail,
           metrics: { applyMs: Number((performance.now() - started).toFixed(3)) }
         }
-      : applyTokenPatch(rootDir, binding, {
-          id: op!.target!.id!,
-          oldToken: op!.change!.from!,
-          nextToken: op!.change!.to!,
-          sourceStart: op!.target!.range?.start,
-          sourceEnd: op!.target!.range?.end
+      : withIntentOperationLock(rootDir, () => {
+          const applied = applyTokenPatch(rootDir, binding, {
+            id: op!.target!.id!,
+            oldToken: op!.change!.from!,
+            nextToken: op!.change!.to!,
+            sourceStart: op!.target!.range?.start,
+            sourceEnd: op!.target!.range?.end
+          });
+          if (applied.ok) operationLogFile = recordPatchApplyInOperationLog(rootDir, applied);
+          return applied;
         });
-    const operationLogFile = result.ok ? recordPatchApplyInOperationLog(rootDir, result) : null;
     const report: CliApplyReport = {
       version: 1,
       command,

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { IntentMcpSettings } from "../types";
 
 const codexStart = "# intent-layer:mcp:start";
@@ -14,18 +15,52 @@ export interface IntentMcpIntegrationStatus {
   claudeConfigPath: string;
   serverCommand: string;
   serverArgs: string[];
+  serverReady: boolean;
 }
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+function intentLayerPackageRoot(): string {
+  let current = moduleDir;
+  while (true) {
+    const manifest = path.join(current, "package.json");
+    if (fs.existsSync(manifest)) {
+      try {
+        const value = JSON.parse(fs.readFileSync(manifest, "utf8")) as { name?: string };
+        if (value.name === "intent-layer") return current;
+      } catch {
+        // Continue toward the filesystem root.
+      }
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return moduleDir;
+    current = parent;
+  }
+}
+
+const packageRoot = intentLayerPackageRoot();
 
 function relativePath(rootDir: string, file: string): string {
   return path.relative(rootDir, file).replace(/\\/g, "/");
 }
 
 function serverArgs(rootDir: string): string[] {
-  const localBuild = path.join(rootDir, "dist", "mcp.js");
-  const entry = fs.existsSync(localBuild)
+  const localBuild = path.join(packageRoot, "dist", "mcp.js");
+  const entry = path.resolve(rootDir) === path.resolve(packageRoot) && fs.existsSync(localBuild)
     ? "./dist/mcp.js"
     : "./node_modules/intent-layer/dist/mcp.js";
   return [entry, "--root", "."];
+}
+
+function serverConfigMatches(value: unknown, args: string[]): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const config = value as { command?: unknown; args?: unknown };
+  return (
+    config.command === "node" &&
+    Array.isArray(config.args) &&
+    config.args.length === args.length &&
+    config.args.every((item, index) => item === args[index])
+  );
 }
 
 function codexBlock(args: string[]): string {
@@ -76,16 +111,19 @@ export function intentMcpIntegrationStatus(
     claude && claude.mcpServers && typeof claude.mcpServers === "object"
       ? (claude.mcpServers as Record<string, unknown>)
       : {};
+  const serverReady = fs.existsSync(path.resolve(rootDir, args[0]));
 
   return {
     codexEnabled: settings.codexEnabled,
-    codexReady: !settings.codexEnabled || codexContents.includes(codexStart),
+    codexReady: !settings.codexEnabled || (serverReady && codexContents.includes(codexBlock(args))),
     codexConfigPath: relativePath(rootDir, codexFile),
     claudeEnabled: settings.claudeEnabled,
-    claudeReady: !settings.claudeEnabled || Boolean(claudeServers["intent-layer"]),
+    claudeReady:
+      !settings.claudeEnabled || (serverReady && serverConfigMatches(claudeServers["intent-layer"], args)),
     claudeConfigPath: relativePath(rootDir, claudeFile),
     serverCommand: "node",
-    serverArgs: args
+    serverArgs: args,
+    serverReady
   };
 }
 

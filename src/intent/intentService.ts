@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { IntentFileLockedError, withIntentFileLock } from "./fileLock";
+import { IntentFileLockedError, withIntentFileLock, withIntentOperationLock } from "./fileLock";
 import { IntentGraphStore } from "./graphStore";
 import { sourceHash } from "./hash";
 import { queryRuntimeToken } from "./runtimeSession";
@@ -186,15 +186,17 @@ export class IntentService {
     if (!entry) return applyTokenPatch(this.rootDir, entry, request);
 
     try {
-      return withIntentFileLock(this.rootDir, entry.file, () => {
-        const result = applyTokenPatch(this.rootDir, this.getEntry(request.id), request);
-        if (result.ok) {
-          this.undoStack.push(result);
-          recordPatchApplyInOperationLog(this.rootDir, result);
-          this.refreshChangedFile(result.file);
-        }
-        return result;
-      });
+      return withIntentOperationLock(this.rootDir, () =>
+        withIntentFileLock(this.rootDir, entry.file, () => {
+          const result = applyTokenPatch(this.rootDir, this.getEntry(request.id), request);
+          if (result.ok) {
+            this.undoStack.push(result);
+            recordPatchApplyInOperationLog(this.rootDir, result);
+            this.refreshChangedFile(result.file);
+          }
+          return result;
+        })
+      );
     } catch (error) {
       if (error instanceof IntentFileLockedError) return failure(error.code, error.message, request.id);
       throw error;
@@ -210,22 +212,24 @@ export class IntentService {
   }
 
   revertLatest(): PatchRevertResult | PatchFailure {
-    const stack = this.refreshUndoStack();
-    const patch = stack[stack.length - 1] ?? null;
-    if (!patch) return revertTokenPatch(this.rootDir, patch, undefined);
-
     try {
-      return withIntentFileLock(this.rootDir, patch.file, () => {
-        const result = revertTokenPatch(this.rootDir, patch, this.getEntry(patch.id));
-        if (result.ok) {
-          this.undoStack.pop();
-          recordPatchRevertInOperationLog(this.rootDir, result);
-          this.refreshChangedFile(result.file);
-        }
-        return result;
+      return withIntentOperationLock(this.rootDir, () => {
+        const stack = this.refreshUndoStack();
+        const patch = stack[stack.length - 1] ?? null;
+        if (!patch) return revertTokenPatch(this.rootDir, patch, undefined);
+
+        return withIntentFileLock(this.rootDir, patch.file, () => {
+          const result = revertTokenPatch(this.rootDir, patch, this.getEntry(patch.id));
+          if (result.ok) {
+            this.undoStack.pop();
+            recordPatchRevertInOperationLog(this.rootDir, result);
+            this.refreshChangedFile(result.file);
+          }
+          return result;
+        });
       });
     } catch (error) {
-      if (error instanceof IntentFileLockedError) return failure(error.code, error.message, patch.id);
+      if (error instanceof IntentFileLockedError) return failure(error.code, error.message);
       throw error;
     }
   }
@@ -247,23 +251,25 @@ export class IntentService {
   }
 
   revertUndo(request: PatchUndoRevertRequest): PatchUndoRevertResult | PatchFailure {
-    const stack = this.refreshUndoStack();
-    const patch = stack.find((item) => this.operationMatches(item, request.operationFile));
-    if (!patch) return revertPendingUndo(this.rootDir, undefined, request);
-
     try {
-      return withIntentFileLock(this.rootDir, patch.file, () => {
-        const result = revertPendingUndo(this.rootDir, this.getEntry(patch.id), request);
-        if (result.ok) {
-          this.undoStack = this.undoStack.filter(
-            (item) => !this.operationMatches(item, request.operationFile)
-          );
-          this.refreshChangedFile(result.file);
-        }
-        return result;
+      return withIntentOperationLock(this.rootDir, () => {
+        const stack = this.refreshUndoStack();
+        const patch = stack.find((item) => this.operationMatches(item, request.operationFile));
+        if (!patch) return revertPendingUndo(this.rootDir, undefined, request);
+
+        return withIntentFileLock(this.rootDir, patch.file, () => {
+          const result = revertPendingUndo(this.rootDir, this.getEntry(patch.id), request);
+          if (result.ok) {
+            this.undoStack = this.undoStack.filter(
+              (item) => !this.operationMatches(item, request.operationFile)
+            );
+            this.refreshChangedFile(result.file);
+          }
+          return result;
+        });
       });
     } catch (error) {
-      if (error instanceof IntentFileLockedError) return failure(error.code, error.message, patch.id);
+      if (error instanceof IntentFileLockedError) return failure(error.code, error.message);
       throw error;
     }
   }
@@ -487,7 +493,7 @@ export class IntentService {
     const runtime = await queryRuntimeToken(this.rootDir, patch.id, patch.nextToken);
     return {
       ...sourceResult,
-      ok: sourceResult.ok && runtime.status !== "drifted",
+      ok: sourceResult.ok && runtime.status === "verified",
       runtime: runtime.status,
       renderedInstanceCount: runtime.renderedInstanceCount,
       matchingInstanceCount: runtime.matchingInstanceCount,

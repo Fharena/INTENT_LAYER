@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { withIntentOperationLock } from "./fileLock";
 import { sourceHash } from "./hash";
 import type {
   IntentBinding,
@@ -208,32 +210,47 @@ function readOperationLog(rootDir: string): PatchOperationLog {
 function writeOperationLog(rootDir: string, log: PatchOperationLog): string {
   const file = operationLogPath(rootDir);
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(log, null, 2)}\n`);
+  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    fs.writeFileSync(temporary, `${JSON.stringify(log, null, 2)}\n`, "utf8");
+    fs.renameSync(temporary, file);
+  } catch (error) {
+    try {
+      fs.unlinkSync(temporary);
+    } catch {
+      // Preserve the operation-log write error.
+    }
+    throw error;
+  }
   return file;
 }
 
 export function recordPatchApplyInOperationLog(rootDir: string, patch: PatchApplyResult): string {
-  const log = readOperationLog(rootDir);
-  const now = new Date().toISOString();
-  log.updatedAt = now;
-  log.entries.push({
-    action: "apply",
-    createdAt: now,
-    patch
+  return withIntentOperationLock(rootDir, () => {
+    const log = readOperationLog(rootDir);
+    const now = new Date().toISOString();
+    log.updatedAt = now;
+    log.entries.push({
+      action: "apply",
+      createdAt: now,
+      patch
+    });
+    return writeOperationLog(rootDir, log);
   });
-  return writeOperationLog(rootDir, log);
 }
 
 export function recordPatchRevertInOperationLog(rootDir: string, patch: PatchRevertResult): string {
-  const log = readOperationLog(rootDir);
-  const now = new Date().toISOString();
-  log.updatedAt = now;
-  log.entries.push({
-    action: "revert",
-    createdAt: now,
-    patch
+  return withIntentOperationLock(rootDir, () => {
+    const log = readOperationLog(rootDir);
+    const now = new Date().toISOString();
+    log.updatedAt = now;
+    log.entries.push({
+      action: "revert",
+      createdAt: now,
+      patch
+    });
+    return writeOperationLog(rootDir, log);
   });
-  return writeOperationLog(rootDir, log);
 }
 
 export function pendingUndoStackFromOperationLog(rootDir: string): PatchApplyResult[] {
@@ -296,7 +313,7 @@ function writeIntentArtifacts(params: {
   kind?: "tailwind-token-replace" | "tailwind-token-revert";
 }) {
   const { rootDir, entry, preview, kind = "tailwind-token-replace" } = params;
-  const timestamp = timestampSlug();
+  const timestamp = `${timestampSlug()}_${randomUUID()}`;
   const operationsDir = path.join(rootDir, ".intent", "operations");
   const diffsDir = path.join(rootDir, ".intent", "diffs");
   fs.mkdirSync(operationsDir, { recursive: true });
@@ -360,7 +377,7 @@ function writeRevertConflictArtifact(params: {
   reason: string;
 }): { conflictFile: string; conflictArtifact: PatchConflictArtifact } {
   const { rootDir, lastPatch, source, actualToken, reason } = params;
-  const timestamp = timestampSlug();
+  const timestamp = `${timestampSlug()}_${randomUUID()}`;
   const conflictsDir = conflictsDirPath(rootDir);
   fs.mkdirSync(conflictsDir, { recursive: true });
 
@@ -467,20 +484,22 @@ function recordPatchDiscardInOperationLog(
     note?: string;
   } = {}
 ): string {
-  const log = readOperationLog(rootDir);
-  const now = new Date().toISOString();
-  log.updatedAt = now;
-  log.entries.push({
-    action: "discard",
-    createdAt: now,
-    conflictFile: options.conflictFile,
-    note: options.note,
-    patch
+  return withIntentOperationLock(rootDir, () => {
+    const log = readOperationLog(rootDir);
+    const now = new Date().toISOString();
+    log.updatedAt = now;
+    log.entries.push({
+      action: "discard",
+      createdAt: now,
+      conflictFile: options.conflictFile,
+      note: options.note,
+      patch
+    });
+    return writeOperationLog(rootDir, log);
   });
-  return writeOperationLog(rootDir, log);
 }
 
-export function discardPendingUndo(
+function discardPendingUndoUnlocked(
   rootDir: string,
   request: PatchUndoDiscardRequest
 ): PatchUndoDiscardResult | PatchFailure {
@@ -516,7 +535,14 @@ export function discardPendingUndo(
   };
 }
 
-export function revertPendingUndo(
+export function discardPendingUndo(
+  rootDir: string,
+  request: PatchUndoDiscardRequest
+): PatchUndoDiscardResult | PatchFailure {
+  return withIntentOperationLock(rootDir, () => discardPendingUndoUnlocked(rootDir, request));
+}
+
+function revertPendingUndoUnlocked(
   rootDir: string,
   entry: IntentBinding | undefined,
   request: PatchUndoRevertRequest
@@ -559,7 +585,15 @@ export function revertPendingUndo(
   };
 }
 
-export function resolvePatchConflict(
+export function revertPendingUndo(
+  rootDir: string,
+  entry: IntentBinding | undefined,
+  request: PatchUndoRevertRequest
+): PatchUndoRevertResult | PatchFailure {
+  return withIntentOperationLock(rootDir, () => revertPendingUndoUnlocked(rootDir, entry, request));
+}
+
+function resolvePatchConflictUnlocked(
   rootDir: string,
   request: PatchConflictResolveRequest
 ): PatchConflictResolveResult | PatchFailure {
@@ -644,6 +678,13 @@ export function resolvePatchConflict(
       resolveMs: Number((performance.now() - started).toFixed(3))
     }
   };
+}
+
+export function resolvePatchConflict(
+  rootDir: string,
+  request: PatchConflictResolveRequest
+): PatchConflictResolveResult | PatchFailure {
+  return withIntentOperationLock(rootDir, () => resolvePatchConflictUnlocked(rootDir, request));
 }
 
 export function removeDiscardedPatchFromStack(

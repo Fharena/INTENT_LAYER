@@ -39,6 +39,7 @@ const virtualClientId = "virtual:intent-layer/client";
 const resolvedVirtualClientId = "\0virtual:intent-layer/client.ts";
 const virtualTailwindId = "virtual:intent-layer/tailwind";
 const resolvedVirtualTailwindId = "\0virtual:intent-layer/tailwind.ts";
+const intentMutationMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 interface OverlayState {
@@ -60,6 +61,18 @@ function readBody(request: IncomingMessage): Promise<string> {
     request.on("end", () => resolve(body));
     request.on("error", reject);
   });
+}
+
+export function isLoopbackAddress(address: string | undefined): boolean {
+  if (!address) return false;
+  return address === "::1" || address.startsWith("127.") || address.startsWith("::ffff:127.");
+}
+
+export function intentMutationRequestAllowed(request: IncomingMessage, sessionToken: string): boolean {
+  return (
+    isLoopbackAddress(request.socket.remoteAddress) &&
+    request.headers["x-intent-layer-token"] === sessionToken
+  );
 }
 
 function invalidateChangedFile(server: ViteDevServer, file: string) {
@@ -103,11 +116,12 @@ function runtimeModulePath(name: "client" | "tailwind"): string {
   return fs.existsSync(built) ? built : path.join(moduleDir, `${name}.ts`);
 }
 
-function readClientModule() {
+function readClientModule(sessionToken: string) {
   return stripTypeImports(
     fs
       .readFileSync(runtimeModulePath("client"), "utf8")
       .replace("./tailwind", virtualTailwindId)
+      .replaceAll("__INTENT_LAYER_SESSION_TOKEN__", sessionToken)
   );
 }
 
@@ -151,7 +165,7 @@ export function intentLayerSpike(): Plugin {
 
     load(id) {
       if (id === resolvedVirtualClientId) {
-        return transpileVirtualModule(readClientModule(), "intent-layer-client.ts");
+        return transpileVirtualModule(readClientModule(runtimeToken), "intent-layer-client.ts");
       }
       if (id === resolvedVirtualTailwindId) {
         return transpileVirtualModule(
@@ -220,9 +234,27 @@ export function intentLayerSpike(): Plugin {
 
       server.middlewares.use(async (request, response, next) => {
         const url = new URL(request.url ?? "/", "http://intent-layer.local");
+        const mutation = intentMutationMethods.has(request.method ?? "");
+
+        if (
+          mutation &&
+          url.pathname.startsWith("/__intent/") &&
+          url.pathname !== "/__intent/runtime-query" &&
+          !intentMutationRequestAllowed(request, runtimeToken)
+        ) {
+          writeJson(response, 403, {
+            ok: false,
+            reason: "unsafe-intent-request",
+            detail: "Intent Layer source-changing requests require a loopback connection and session token."
+          });
+          return;
+        }
 
         if (url.pathname === "/__intent/runtime-query" && request.method === "POST") {
-          if (request.headers.authorization !== `Bearer ${runtimeToken}`) {
+          if (
+            !isLoopbackAddress(request.socket.remoteAddress) ||
+            request.headers.authorization !== `Bearer ${runtimeToken}`
+          ) {
             writeJson(response, 401, { ok: false, reason: "unauthorized" });
             return;
           }

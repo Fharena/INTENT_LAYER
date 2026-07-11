@@ -190,6 +190,7 @@ export interface IntentSetupStatus {
     claudeConfigPath: string;
     serverCommand: string;
     serverArgs: string[];
+    serverReady: boolean;
   };
   agent: {
     runEnabled: boolean;

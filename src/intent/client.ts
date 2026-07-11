@@ -39,6 +39,8 @@ type UndoRevertResponse = (PatchUndoRevertResult & { binding?: IntentBinding | n
 type SetupResponse = IntentSetupStatus;
 type SetupApplyResponse = IntentSetupResult | PatchFailure;
 
+const intentSessionToken = "__INTENT_LAYER_SESSION_TOKEN__";
+
 interface RenderScope {
   renderedInstanceCount: number;
   isShared: boolean;
@@ -432,13 +434,19 @@ function t(key: TextKey): string {
 }
 
 async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, init);
+  const response = await intentFetch(input, init);
   const body = await response.text();
   try {
     return JSON.parse(body) as T;
   } catch {
     throw new Error(`${response.status} ${response.statusText}`.trim());
   }
+}
+
+function intentFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  headers.set("x-intent-layer-token", intentSessionToken);
+  return fetch(input, { ...init, headers });
 }
 
 function requestErrorMessage(error: unknown): string {
@@ -474,7 +482,7 @@ function syncSettings(settings: IntentLayerSettings) {
 
 function recordClientMetric(metric: ClientMetric) {
   window.__intentMetrics = [...(window.__intentMetrics ?? []), metric];
-  void fetch("/__intent/client-metric", {
+  void intentFetch("/__intent/client-metric", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(metric)
@@ -504,7 +512,7 @@ function publishRuntimeSelection(binding: IntentBinding | null, element: HTMLEle
         }
       : null
   };
-  void fetch("/__intent/selection", {
+  void intentFetch("/__intent/selection", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(request)
@@ -1699,7 +1707,7 @@ function renderAgentTaskForm(
   queueBox.textContent = "Loading...";
 
   async function renderQueueStatus() {
-    const response = await fetch("/__intent/agent-queue");
+    const response = await intentFetch("/__intent/agent-queue");
     const result = (await response.json()) as AgentQueueResponse;
     if (!("kind" in result)) {
       queueBox.textContent = result.detail ?? result.reason;
@@ -1728,7 +1736,7 @@ function renderAgentTaskForm(
   queueSection.append(queueHeader, queueBox);
 
   create.addEventListener("click", async () => {
-    const response = await fetch("/__intent/agent-task", {
+    const response = await intentFetch("/__intent/agent-task", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -1774,7 +1782,7 @@ function renderAgentTaskForm(
   const record = createButton(t("agentRecord"));
   record.style.marginTop = "8px";
   record.addEventListener("click", async () => {
-    const response = await fetch("/__intent/agent-result", {
+    const response = await intentFetch("/__intent/agent-result", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -2158,7 +2166,7 @@ function renderSetupPanel(
 
 async function fetchSetupStatus(language = overlayLanguage): Promise<IntentSetupStatus | null> {
   try {
-    const response = await fetch(`/__intent/setup?language=${encodeURIComponent(language)}`);
+    const response = await intentFetch(`/__intent/setup?language=${encodeURIComponent(language)}`);
     const status = (await response.json()) as SetupResponse;
     latestSetupStatus = status;
     syncSettings(status.settings);
@@ -2189,7 +2197,7 @@ async function saveSetup(
     resetOnboarding?: boolean;
   } = {}
 ) {
-  const response = await fetch("/__intent/setup", {
+  const response = await intentFetch("/__intent/setup", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -2347,7 +2355,7 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
   wrapper.appendChild(body);
   root.appendChild(wrapper);
 
-  void fetch("/__intent/conflicts")
+  void intentFetch("/__intent/conflicts")
     .then((response) => response.json() as Promise<ConflictReportResponse>)
     .then((report) => {
       body.innerHTML = "";
@@ -2385,7 +2393,7 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
         action.addEventListener("click", async () => {
           action.disabled = true;
           action.style.cursor = "default";
-          const response = await fetch("/__intent/resolve-conflict", {
+          const response = await intentFetch("/__intent/resolve-conflict", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
@@ -2675,7 +2683,7 @@ export function initIntentOverlay() {
   panel.addEventListener("intent:start-pick", async () => {
     overlayView = "editor";
     const graphStartedAt = performance.now();
-    const response = await fetch("/__intent/graph");
+    const response = await intentFetch("/__intent/graph");
     graph = (await response.json()) as IntentGraph;
     graphFetchMs = Number((performance.now() - graphStartedAt).toFixed(3));
     pickStartedAt = performance.now();

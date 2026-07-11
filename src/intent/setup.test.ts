@@ -12,6 +12,12 @@ function rootFixture(): string {
   return root;
 }
 
+function installMcpEntry(root: string): void {
+  const entry = path.join(root, "node_modules", "intent-layer", "dist", "mcp.js");
+  fs.mkdirSync(path.dirname(entry), { recursive: true });
+  fs.writeFileSync(entry, "// packaged MCP fixture\n", "utf8");
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
 });
@@ -38,6 +44,7 @@ describe("GUI-first setup", () => {
 
   it("adds only explicitly enabled project-local MCP integrations", () => {
     const root = rootFixture();
+    installMcpEntry(root);
     const result = applyIntentSetup(root, {
       createWorkspace: true,
       completeOnboarding: true,
@@ -48,7 +55,8 @@ describe("GUI-first setup", () => {
       codexEnabled: true,
       codexReady: true,
       claudeEnabled: true,
-      claudeReady: true
+      claudeReady: true,
+      serverReady: true
     });
     expect(fs.readFileSync(path.join(root, ".codex", "config.toml"), "utf8")).toContain(
       "[mcp_servers.intent_layer]"

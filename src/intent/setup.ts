@@ -417,7 +417,9 @@ export function intentSetupStatus(
             : "warn",
         detail:
           mcp.codexEnabled || mcp.claudeEnabled
-            ? "Codex and Claude use the same local Intent Layer MCP tools."
+            ? mcp.serverReady
+              ? "Codex and Claude use the same local Intent Layer MCP tools."
+              : "The MCP client config exists, but the built Intent Layer MCP server is missing."
             : "Connect Codex or Claude to let AI inspect and apply guarded UI edits."
       }
     ],

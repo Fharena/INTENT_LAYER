@@ -1,6 +1,8 @@
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { instrumentSource } from "./instrument";
 import {
@@ -26,6 +28,25 @@ function fixture(source = "export function App(){ return <main className=\"gap-4
 function currentEntry(rootDir: string, file: string) {
   const source = fs.readFileSync(file, "utf8");
   return instrumentSource({ code: source, file, rootDir }).entries[0];
+}
+
+function runNodeEval(source: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", source], {
+      cwd: process.cwd(),
+      windowsHide: true,
+      stdio: ["ignore", "ignore", "pipe"]
+    });
+    let stderr = "";
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Child operation writer exited ${code}: ${stderr}`));
+    });
+  });
 }
 
 afterEach(() => {
@@ -96,4 +117,51 @@ describe("safe token patches", () => {
     expect(oldest.ok).toBe(true);
     expect(pendingUndoStackFromOperationLog(rootDir)).toHaveLength(0);
   });
+
+  it(
+    "serializes operation-log writes across MCP-sized processes",
+    async () => {
+      const { rootDir } = fixture();
+      const patchModule = pathToFileURL(path.resolve("src/intent/patch.ts")).href;
+      const writers = Array.from({ length: 4 }, (_, index) => {
+        const source = `
+          import path from "node:path";
+          import { recordPatchApplyInOperationLog } from ${JSON.stringify(patchModule)};
+          const root = ${JSON.stringify(rootDir)};
+          const index = ${index};
+          recordPatchApplyInOperationLog(root, {
+            ok: true,
+            applied: true,
+            id: "writer-" + index,
+            file: path.join(root, "src", "Writer" + index + ".tsx"),
+            relativeFile: "src/Writer" + index + ".tsx",
+            oldToken: "gap-4",
+            nextToken: "gap-6",
+            range: { start: 0, end: 5 },
+            before: "gap-4",
+            after: "gap-6",
+            sourceHashBefore: "before-" + index,
+            sourceHashAfter: "after-" + index,
+            operationFile: path.join(root, ".intent", "operations", "writer-" + index + ".intent-op.json"),
+            diffFile: path.join(root, ".intent", "diffs", "writer-" + index + ".intent-diff.yml"),
+            metrics: { previewMs: 0, applyMs: 0 }
+          });
+        `;
+        return runNodeEval(source);
+      });
+
+      await Promise.all(writers);
+
+      expect(pendingUndoStackFromOperationLog(rootDir).map((patch) => patch.id).sort()).toEqual([
+        "writer-0",
+        "writer-1",
+        "writer-2",
+        "writer-3"
+      ]);
+      expect(
+        fs.readdirSync(path.join(rootDir, ".intent", "operations")).filter((file) => file.endsWith(".tmp"))
+      ).toEqual([]);
+    },
+    20_000
+  );
 });

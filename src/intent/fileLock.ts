@@ -10,6 +10,9 @@ interface FileLockRecord {
   createdAt: string;
 }
 
+const heldOperationLocks = new Set<string>();
+const sleepState = new Int32Array(new SharedArrayBuffer(4));
+
 export class IntentFileLockedError extends Error {
   readonly code = "file-locked";
 
@@ -42,7 +45,11 @@ function removeStaleLock(file: string, staleAfterMs: number): boolean {
     const staleByProcess = typeof record.pid !== "number" || !processIsAlive(record.pid);
     if (!staleByAge && !staleByProcess) return false;
   } catch {
-    // A malformed lock cannot safely own a source file indefinitely.
+    try {
+      if (Date.now() - fs.statSync(file).mtimeMs < 1_000) return false;
+    } catch {
+      return false;
+    }
   }
 
   try {
@@ -57,21 +64,25 @@ export function withIntentFileLock<T>(
   rootDir: string,
   file: string,
   callback: () => T,
-  staleAfterMs = 30_000
+  staleAfterMs = 30_000,
+  waitTimeoutMs = 0
 ): T {
   const target = lockPath(rootDir, file);
   fs.mkdirSync(path.dirname(target), { recursive: true });
 
   let descriptor: number | null = null;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  const deadline = Date.now() + Math.max(0, waitTimeoutMs);
+  while (descriptor === null) {
     try {
       descriptor = fs.openSync(target, "wx");
-      break;
     } catch (error) {
       const code = error instanceof Error && "code" in error ? String(error.code) : "";
-      if (code !== "EEXIST" || attempt > 0 || !removeStaleLock(target, staleAfterMs)) {
+      if (code !== "EEXIST") {
         throw new IntentFileLockedError(target);
       }
+      if (removeStaleLock(target, staleAfterMs)) continue;
+      if (Date.now() >= deadline) throw new IntentFileLockedError(target);
+      Atomics.wait(sleepState, 0, 0, Math.min(10, Math.max(1, deadline - Date.now())));
     }
   }
 
@@ -96,4 +107,25 @@ export function withIntentFileLock<T>(
       // A later stale-lock pass can recover an interrupted cleanup.
     }
   }
+}
+
+export function withIntentOperationLock<T>(rootDir: string, callback: () => T): T {
+  const root = path.resolve(rootDir);
+  if (heldOperationLocks.has(root)) return callback();
+
+  const journal = path.join(root, ".intent", "operations", "operation-log.json");
+  return withIntentFileLock(
+    root,
+    journal,
+    () => {
+      heldOperationLocks.add(root);
+      try {
+        return callback();
+      } finally {
+        heldOperationLocks.delete(root);
+      }
+    },
+    30_000,
+    5_000
+  );
 }
