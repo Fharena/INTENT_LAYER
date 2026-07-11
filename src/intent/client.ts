@@ -6,6 +6,7 @@ import type {
   AgentTaskResult,
   IntentBinding,
   IntentGraph,
+  IntentRuntimeSelectionRequest,
   PatchRequest,
   IntentToken,
   PatchApplyResult,
@@ -52,6 +53,8 @@ type WorkflowState = "idle" | "done" | "active" | "blocked";
 type OverlayView = "editor" | "setup";
 
 type TextKey =
+  | "aiConnections"
+  | "aiConnectionsDetail"
   | "agentCreate"
   | "agentChange"
   | "agentCreated"
@@ -82,11 +85,13 @@ type TextKey =
   | "claudeCommand"
   | "claudeHook"
   | "claudeHookDetail"
+  | "claudeMcp"
   | "classMode"
   | "codexSubtool"
   | "codexCommand"
   | "codexSkill"
   | "codexSkillDetail"
+  | "codexMcp"
   | "component"
   | "commandInputPlaceholder"
   | "commandPlan"
@@ -116,6 +121,7 @@ type TextKey =
   | "intentMap"
   | "korean"
   | "language"
+  | "legacyAgent"
   | "minimize"
   | "nextStep"
   | "noBinding"
@@ -187,6 +193,8 @@ declare global {
 
 const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
   ko: {
+    aiConnections: "AI 연결",
+    aiConnectionsDetail: "Codex와 Claude가 같은 안전 편집 도구와 현재 선택 정보를 사용합니다.",
     agentCreate: "작업 만들기",
     agentChange: "변경 요청",
     agentCreated: "Agent 작업 생성",
@@ -217,11 +225,13 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     claudeCommand: "Claude 명령",
     claudeHook: "Claude 자동 픽업",
     claudeHookDetail: "Claude Code가 열려 있으면 .intent-agent-queue.json 변경을 감지해 같은 작업 큐를 처리합니다.",
+    claudeMcp: "Claude 연결",
     classMode: "Class 모드",
     codexSubtool: "Codex 보조 도구",
     codexCommand: "Codex 명령",
     codexSkill: "Codex 작업 스킬",
     codexSkillDetail: "프로젝트에 Codex skill을 설치해 queued 작업을 같은 방식으로 claim하고 처리합니다.",
+    codexMcp: "Codex 연결",
     component: "컴포넌트",
     commandInputPlaceholder: "비워두면 기본값 또는 환경변수를 사용합니다",
     commandPlan: "명령 계획",
@@ -251,6 +261,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     intentMap: "Intent 맵",
     korean: "한국어",
     language: "언어",
+    legacyAgent: "기존 Agent 큐 (고급 호환성)",
     minimize: "접기",
     nextStep: "다음 행동",
     noBinding: "이 요소의 binding을 찾지 못했습니다",
@@ -293,6 +304,8 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     workflowReview: "검토"
   },
   en: {
+    aiConnections: "AI connections",
+    aiConnectionsDetail: "Codex and Claude share the same guarded editing tools and current selection.",
     agentCreate: "Create task",
     agentChange: "Change request",
     agentCreated: "Agent task created",
@@ -323,11 +336,13 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     claudeCommand: "Claude command",
     claudeHook: "Claude auto pickup",
     claudeHookDetail: "When Claude Code is open, it watches .intent-agent-queue.json and processes the same queue.",
+    claudeMcp: "Connect Claude",
     classMode: "Class mode",
     codexSubtool: "Codex subtool",
     codexCommand: "Codex command",
     codexSkill: "Codex task skill",
     codexSkillDetail: "Install a project Codex skill that claims and processes queued tasks through the shared queue.",
+    codexMcp: "Connect Codex",
     component: "Component",
     commandInputPlaceholder: "Leave blank to use the default or environment variable",
     commandPlan: "Command plan",
@@ -357,6 +372,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     intentMap: "Intent map",
     korean: "Korean",
     language: "Language",
+    legacyAgent: "Legacy agent queue (advanced compatibility)",
     minimize: "Minimize",
     nextStep: "Next step",
     noBinding: "No binding found for that element",
@@ -464,6 +480,36 @@ function recordClientMetric(metric: ClientMetric) {
     body: JSON.stringify(metric)
   }).catch(() => {
     // Metrics must never break the editing path.
+  });
+}
+
+function publishRuntimeSelection(binding: IntentBinding | null, element: HTMLElement | null) {
+  const rect = element?.getBoundingClientRect() ?? null;
+  const hidesText =
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement;
+  const request: IntentRuntimeSelectionRequest = {
+    id: binding?.id ?? null,
+    route: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    text: hidesText ? "" : (element?.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 120),
+    role: element?.getAttribute("role") ?? null,
+    visible: Boolean(rect && rect.width > 0 && rect.height > 0),
+    rect: rect
+      ? {
+          x: Number(rect.x.toFixed(2)),
+          y: Number(rect.y.toFixed(2)),
+          width: Number(rect.width.toFixed(2)),
+          height: Number(rect.height.toFixed(2))
+        }
+      : null
+  };
+  void fetch("/__intent/selection", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(request)
+  }).catch(() => {
+    // Selection sharing must not interrupt direct editing.
   });
 }
 
@@ -1358,6 +1404,55 @@ function intentIdSelector(id: string): string {
   return `[data-intent-id="${escaped}"]`;
 }
 
+interface IntentRuntimeHot {
+  on(event: string, callback: (data: unknown) => void): void;
+  send(event: string, data: unknown): void;
+}
+
+let runtimeQueryRegistered = false;
+
+function registerRuntimeQueryHandler() {
+  if (runtimeQueryRegistered) return;
+  const hot = (import.meta as ImportMeta & { hot?: IntentRuntimeHot }).hot;
+  if (!hot) return;
+  runtimeQueryRegistered = true;
+  hot.on("intent:runtime-query", (data) => {
+    if (!data || typeof data !== "object") return;
+    const query = data as { requestId?: string; id?: string; expectedToken?: string };
+    if (!query.requestId || !query.id || !query.expectedToken) return;
+
+    const elements = elementsForIntentId(query.id);
+    const matching = elements.filter((element) => element.classList.contains(query.expectedToken!));
+    const visible = elements.filter((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    });
+    const status =
+      elements.length === 0
+        ? "unavailable"
+        : matching.length === elements.length
+          ? "verified"
+          : "drifted";
+    hot.send("intent:runtime-result", {
+      requestId: query.requestId,
+      ok: status === "verified",
+      status,
+      id: query.id,
+      expectedToken: query.expectedToken,
+      renderedInstanceCount: elements.length,
+      matchingInstanceCount: matching.length,
+      visibleInstanceCount: visible.length,
+      route: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+      detail:
+        status === "verified"
+          ? "Every rendered source instance contains the expected class token."
+          : status === "drifted"
+            ? "At least one rendered source instance is missing the expected class token."
+            : "The source element is not rendered on the current route."
+    });
+  });
+}
+
 function elementsForIntentId(id: string): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>(intentIdSelector(id))).filter(
     (element) => !element.closest("[data-intent-overlay-root]")
@@ -1715,12 +1810,16 @@ function renderSetupPanel(
     onboardingCompletedAt: null,
     updatedAt: new Date().toISOString(),
     overlay: overlaySettings,
+    mcp: {
+      codexEnabled: false,
+      claudeEnabled: false
+    },
     agent: {
       runEnabled: false,
       codexCommand: null,
       claudeCommand: null,
-      codexSkillEnabled: true,
-      claudeHookEnabled: true
+      codexSkillEnabled: false,
+      claudeHookEnabled: false
     }
   };
   let draftLanguage = settings.language;
@@ -1728,6 +1827,8 @@ function renderSetupPanel(
   let draftDensity = settings.overlay.density;
   let draftDefaultCollapsed = settings.overlay.defaultCollapsed;
   let draftAutoOpenSetup = settings.overlay.autoOpenSetup;
+  let draftCodexMcpEnabled = settings.mcp.codexEnabled;
+  let draftClaudeMcpEnabled = settings.mcp.claudeEnabled;
   let draftAgentRunEnabled = settings.agent.runEnabled;
   let draftCodexCommand = settings.agent.codexCommand ?? "";
   let draftClaudeCommand = settings.agent.claudeCommand ?? "";
@@ -1749,11 +1850,17 @@ function renderSetupPanel(
     claudeHookEnabled: draftClaudeHookEnabled
   });
 
+  const currentMcpDraft = () => ({
+    codexEnabled: draftCodexMcpEnabled,
+    claudeEnabled: draftClaudeMcpEnabled
+  });
+
   const saveDraft = (completeOnboarding: boolean, resetOnboarding = false) =>
     saveSetup(panel, setStatus, completeOnboarding, {
       resetOnboarding,
       language: draftLanguage,
       overlay: currentOverlayDraft(),
+      mcp: currentMcpDraft(),
       agent: currentAgentDraft()
     });
 
@@ -1799,8 +1906,10 @@ function renderSetupPanel(
         ? "Workspace"
         : check.name === "language"
           ? t("language")
-          : check.name === "graph"
+            : check.name === "graph"
             ? "Graph"
+            : check.name === "mcp-integrations"
+              ? t("aiConnections")
             : check.name === "agent-integrations"
               ? t("agentSettings")
               : "Agent";
@@ -1821,6 +1930,11 @@ function renderSetupPanel(
         `${status.agent.claudeHookEnabled ? t("claudeHook") : "Claude hook off"}: ${
           status.agent.claudeHookReady ? "ready" : "setup"
         }`
+      ].join(" / ");
+    } else if (check.name === "mcp-integrations" && status) {
+      detail.textContent = [
+        `Codex: ${status.mcp.codexEnabled ? (status.mcp.codexReady ? "ready" : "setup") : "off"}`,
+        `Claude: ${status.mcp.claudeEnabled ? (status.mcp.claudeReady ? "ready" : "setup") : "off"}`
       ].join(" / ");
     } else {
       detail.textContent = check.detail;
@@ -1904,6 +2018,40 @@ function renderSetupPanel(
     createSettingRow(t("autoOpenSetup"), t("autoOpenSetupDetail"), autoOpenToggle)
   );
 
+  const mcpSection = document.createElement("div");
+  mcpSection.className = "intent-layer-section";
+  const mcpTitle = document.createElement("div");
+  mcpTitle.className = "intent-layer-section-title";
+  mcpTitle.textContent = t("aiConnections");
+  const mcpNote = document.createElement("p");
+  mcpNote.textContent = t("aiConnectionsDetail");
+  const codexMcpToggle = createToggleButton(draftCodexMcpEnabled);
+  codexMcpToggle.addEventListener("click", () => {
+    draftCodexMcpEnabled = !draftCodexMcpEnabled;
+    void saveDraft(false);
+  });
+  const claudeMcpToggle = createToggleButton(draftClaudeMcpEnabled);
+  claudeMcpToggle.addEventListener("click", () => {
+    draftClaudeMcpEnabled = !draftClaudeMcpEnabled;
+    void saveDraft(false);
+  });
+  mcpSection.append(
+    mcpTitle,
+    mcpNote,
+    createSettingRow(t("codexMcp"), "", codexMcpToggle),
+    createSettingRow(t("claudeMcp"), "", claudeMcpToggle)
+  );
+  if (status) {
+    const connectionStatus = document.createElement("pre");
+    connectionStatus.className = "intent-layer-preview-box";
+    connectionStatus.textContent = [
+      `Codex: ${status.mcp.codexEnabled ? (status.mcp.codexReady ? "ready" : "setup") : "off"} (${status.mcp.codexConfigPath})`,
+      `Claude: ${status.mcp.claudeEnabled ? (status.mcp.claudeReady ? "ready" : "setup") : "off"} (${status.mcp.claudeConfigPath})`,
+      `MCP: ${status.mcp.serverCommand} ${status.mcp.serverArgs.join(" ")}`
+    ].join("\n");
+    mcpSection.appendChild(connectionStatus);
+  }
+
   const agentSection = document.createElement("div");
   agentSection.className = "intent-layer-section";
   const agentTitle = document.createElement("div");
@@ -1973,6 +2121,10 @@ function renderSetupPanel(
     createSettingRow(t("agentRunToggle"), t("agentRunToggleDetail"), runToggle),
     commandGrid
   );
+  const legacyAgent = document.createElement("details");
+  const legacyAgentSummary = document.createElement("summary");
+  legacyAgentSummary.textContent = t("legacyAgent");
+  legacyAgent.append(legacyAgentSummary, agentSection);
 
   const actions = document.createElement("div");
   actions.className = "intent-layer-actions";
@@ -1991,7 +2143,16 @@ function renderSetupPanel(
   });
   actions.append(save, reset);
 
-  wrapper.append(title, intro, statusSection, languageSection, panelSection, agentSection, actions);
+  wrapper.append(
+    title,
+    intro,
+    statusSection,
+    languageSection,
+    panelSection,
+    mcpSection,
+    legacyAgent,
+    actions
+  );
   root.appendChild(wrapper);
 }
 
@@ -2014,6 +2175,10 @@ async function saveSetup(
   patch: {
     language?: IntentLayerLanguage;
     overlay?: IntentOverlaySettings;
+    mcp?: {
+      codexEnabled: boolean;
+      claudeEnabled: boolean;
+    };
     agent?: {
       runEnabled: boolean;
       codexCommand: string | null;
@@ -2033,6 +2198,7 @@ async function saveSetup(
       completeOnboarding,
       resetOnboarding: patch.resetOnboarding,
       overlay: patch.overlay,
+      mcp: patch.mcp,
       agent: patch.agent
     })
   });
@@ -2424,9 +2590,15 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     }
     content.appendChild(directSection);
 
-    renderAgentTaskForm(content, binding, (message) => {
+    const legacyHandoff = document.createElement("details");
+    const legacyHandoffSummary = document.createElement("summary");
+    legacyHandoffSummary.textContent = t("legacyAgent");
+    const legacyHandoffContent = document.createElement("div");
+    renderAgentTaskForm(legacyHandoffContent, binding, (message) => {
       statusLine.textContent = message;
     });
+    legacyHandoff.append(legacyHandoffSummary, legacyHandoffContent);
+    content.appendChild(legacyHandoff);
 
     renderUndoHistory(content, (message, refreshedBinding) => {
       if (refreshedBinding) {
@@ -2449,6 +2621,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
 
 export function initIntentOverlay() {
   if (typeof window === "undefined") return;
+  registerRuntimeQueryHandler();
   const existingPanel = document.querySelector<HTMLElement>("[data-intent-overlay-root]");
   if (existingPanel) {
     const hotReloading = Boolean((import.meta as ImportMeta & { hot?: unknown }).hot);
@@ -2519,6 +2692,10 @@ export function initIntentOverlay() {
     }
     clearSelectedIntentElements();
     selectedScope = selectIntentElements(detail.binding.id);
+    publishRuntimeSelection(
+      detail.binding,
+      document.querySelector<HTMLElement>(intentIdSelector(detail.binding.id))
+    );
     renderBinding(panel, selectedBinding, detail.message, selectedScope);
   });
 
@@ -2541,6 +2718,7 @@ export function initIntentOverlay() {
         clearSelectedIntentElements();
         selectedBinding = null;
         selectedScope = null;
+        publishRuntimeSelection(null, null);
         const renderStartedAt = performance.now();
         setStatus(t("noIntentElement"));
         const renderedAt = performance.now();
@@ -2563,6 +2741,7 @@ export function initIntentOverlay() {
       clearSelectedIntentElements();
       selectedScope = intentId ? selectIntentElements(intentId) : null;
       selectedBinding = graph.entries[intentId] ?? null;
+      publishRuntimeSelection(selectedBinding, selectedBinding ? element : null);
       const lookupEndedAt = performance.now();
       const renderStartedAt = performance.now();
       overlayCollapsed = false;

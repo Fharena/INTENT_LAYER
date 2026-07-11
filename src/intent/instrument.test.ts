@@ -81,4 +81,37 @@ describe("instrumentSource", () => {
     expect(result.entries).toEqual([]);
     expect(result.code).toBe(code);
   });
+
+  it("instruments intrinsic React.createElement calls with source-stable token ranges", () => {
+    const code = [
+      "export function Card({ active }: { active: boolean }) {",
+      "  return React.createElement('section', { className: cn('p-4', active && 'gap-4'), title: 'Card' });",
+      "}"
+    ].join("\n");
+
+    const result = instrumentSource({ code, file, rootDir });
+
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0]).toMatchObject({
+      tagName: "section",
+      componentName: "Card",
+      className: { kind: "call-literals", callee: "cn" }
+    });
+    expect(result.code).toContain('"data-intent-id": "il_');
+    for (const token of result.entries[0].tokens) {
+      expect(code.slice(token.sourceStart, token.sourceEnd)).toBe(token.token);
+    }
+  });
+
+  it("does not guess provenance for custom createElement or cloneElement calls", () => {
+    const code = [
+      "const first = React.createElement(Card, { className: 'p-4' });",
+      "const second = cloneElement(first, { className: 'gap-4' });"
+    ].join("\n");
+
+    const result = instrumentSource({ code, file, rootDir });
+
+    expect(result.entries).toEqual([]);
+    expect(result.code).toBe(code);
+  });
 });

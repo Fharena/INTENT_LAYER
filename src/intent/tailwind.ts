@@ -1,5 +1,18 @@
 import type { IntentToken, IntentTokenCategory } from "./types";
 
+export interface TailwindSemanticCandidate {
+  value: string;
+  token: string;
+}
+
+export interface TailwindSemanticToken {
+  property: string;
+  value: string;
+  token: string;
+  variant: string | null;
+  candidates: TailwindSemanticCandidate[];
+}
+
 const spacingPattern =
   /^-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-[\w.[\]/%()!-]+$/;
 const radiusPattern = /^rounded(?:-[trbl]{1,2})?(?:-[\w.[\]/%-]+)?$/;
@@ -247,4 +260,144 @@ export function candidatesForToken(token: string): string[] {
   }
 
   return colorCandidates(token, base) ?? [token];
+}
+
+function spacingProperty(prefix: string): string | null {
+  const properties: Record<string, string> = {
+    p: "spacing.padding",
+    px: "spacing.paddingX",
+    py: "spacing.paddingY",
+    pt: "spacing.paddingTop",
+    pr: "spacing.paddingRight",
+    pb: "spacing.paddingBottom",
+    pl: "spacing.paddingLeft",
+    m: "spacing.margin",
+    mx: "spacing.marginX",
+    my: "spacing.marginY",
+    mt: "spacing.marginTop",
+    mr: "spacing.marginRight",
+    mb: "spacing.marginBottom",
+    ml: "spacing.marginLeft",
+    gap: "layout.gap",
+    "gap-x": "layout.gapX",
+    "gap-y": "layout.gapY"
+  };
+  return properties[prefix] ?? null;
+}
+
+function colorProperty(prefix: string): string {
+  if (prefix === "bg") return "color.background";
+  if (prefix === "text") return "color.text";
+  if (prefix.startsWith("border")) return "color.border";
+  if (prefix.startsWith("divide")) return "color.divide";
+  if (prefix === "ring-offset") return "color.ringOffset";
+  return `color.${prefix}`;
+}
+
+function semanticParts(base: string): { property: string; value: string } | null {
+  const spacing = base.match(
+    /^(-?)(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-(.+)$/
+  );
+  if (spacing) {
+    const property = spacingProperty(spacing[2]);
+    return property ? { property, value: `${spacing[1]}${spacing[3]}` } : null;
+  }
+
+  const sizing = base.match(/^(w|h|min-w|min-h|max-w|max-h|size)-(.+)$/);
+  if (sizing) {
+    const properties: Record<string, string> = {
+      w: "size.width",
+      h: "size.height",
+      "min-w": "size.minWidth",
+      "min-h": "size.minHeight",
+      "max-w": "size.maxWidth",
+      "max-h": "size.maxHeight",
+      size: "size.both"
+    };
+    return { property: properties[sizing[1]], value: sizing[2] };
+  }
+
+  if (displayPattern.test(base)) return { property: "layout.display", value: base };
+
+  const radius = base.match(/^(rounded(?:-[trbl]{1,2})?)(?:-(.+))?$/);
+  if (radius) return { property: `radius.${radius[1]}`, value: radius[2] ?? "default" };
+
+  const grid = base.match(/^grid-cols-(\d+)$/);
+  if (grid) return { property: "layout.gridColumns", value: grid[1] };
+
+  const flex = base.match(/^flex-(1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)$/);
+  if (flex) {
+    const value = flex[1];
+    const property =
+      value === "row" || value === "row-reverse" || value === "col" || value === "col-reverse"
+        ? "layout.flexDirection"
+        : value === "wrap" || value === "wrap-reverse" || value === "nowrap"
+          ? "layout.flexWrap"
+          : "layout.flex";
+    return { property, value };
+  }
+
+  const alignment = base.match(/^(items|justify|content|self)-(.+)$/);
+  if (alignment) {
+    const properties: Record<string, string> = {
+      items: "layout.alignItems",
+      justify: "layout.justifyContent",
+      content: "layout.alignContent",
+      self: "layout.alignSelf"
+    };
+    return { property: properties[alignment[1]], value: alignment[2] };
+  }
+
+  const textSize = base.match(/^text-(xs|sm|base|lg|xl|[2-9]xl)$/);
+  if (textSize) return { property: "typography.size", value: textSize[1] };
+
+  const fontWeight = base.match(/^font-(thin|extralight|light|normal|medium|semibold|bold|extrabold|black)$/);
+  if (fontWeight) return { property: "typography.weight", value: fontWeight[1] };
+
+  const leading = base.match(/^leading-(.+)$/);
+  if (leading) return { property: "typography.lineHeight", value: leading[1] };
+
+  const shadow = base.match(/^shadow(?:-(none|sm|md|lg|xl|2xl|inner))?$/);
+  if (shadow) return { property: "effect.shadow", value: shadow[1] ?? "default" };
+
+  const opacity = base.match(/^opacity-(\d+)$/);
+  if (opacity) return { property: "effect.opacity", value: opacity[1] };
+
+  const ring = base.match(/^ring(?:-(0|1|2|4|8))?$/);
+  if (ring) return { property: "effect.ringWidth", value: ring[1] ?? "default" };
+
+  const transition = base.match(/^transition(?:-(none|all|colors|opacity|shadow|transform))?$/);
+  if (transition) return { property: "effect.transition", value: transition[1] ?? "default" };
+
+  const color = base.match(
+    /^((?:bg|text|border(?:-[trblxy])?|divide-[xy]|ring|ring-offset|outline|decoration|accent|caret|fill|stroke|shadow))-(.+)$/
+  );
+  if (color) return { property: colorProperty(color[1]), value: color[2] };
+
+  return null;
+}
+
+export function describeTailwindToken(token: string): TailwindSemanticToken | null {
+  const split = splitVariant(token);
+  const current = semanticParts(split.base);
+  if (!current) return null;
+
+  const candidates: TailwindSemanticCandidate[] = [];
+  const seen = new Set<string>();
+  for (const candidate of candidatesForToken(token)) {
+    const candidateParts = semanticParts(splitVariant(candidate).base);
+    if (!candidateParts || candidateParts.property !== current.property) continue;
+    const key = `${candidateParts.value}\0${candidate}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    candidates.push({ value: candidateParts.value, token: candidate });
+  }
+
+  return {
+    property: current.property,
+    value: current.value,
+    token,
+    variant: split.variantPrefix ? split.variantPrefix.slice(0, -1) : null,
+    candidates
+  };
 }

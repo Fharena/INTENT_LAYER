@@ -9,6 +9,7 @@
   },
   "exports": {
     "./vite": "./dist/vite.js",
+    "./mcp": "./dist/mcp.js",
     "./package.json": "./package.json"
   },
   "repository": {
@@ -30,7 +31,7 @@
     "FAILURE_MODES_KR.md"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -39,8 +40,10 @@
     "build:demo": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:mcp-package": "node scripts/smoke-mcp-package.mjs",
+    "benchmark:mcp": "tsx scripts/benchmark-mcp.ts",
     "test:watch": "vitest",
-    "verify": "npm run typecheck && npm run test && npm run build && npm run eval",
+    "verify": "npm run typecheck && npm run test && npm run build && npm run test:mcp-package && npm run eval",
     "prepack": "npm run build:package",
     "intent": "tsx src/intent/cli.ts",
     "intent:init": "tsx src/intent/cli.ts init",
@@ -50,6 +53,7 @@
     "intent:check": "tsx src/intent/cli.ts check",
     "intent:diff": "tsx src/intent/cli.ts diff",
     "intent:apply": "tsx src/intent/cli.ts apply",
+    "intent:mcp": "tsx src/intent/cli.ts mcp",
     "intent:agent-context": "tsx src/intent/cli.ts agent-context",
     "intent:agent-task": "tsx src/intent/cli.ts agent-task",
     "intent:agent-queue": "tsx src/intent/cli.ts agent-queue",
@@ -65,7 +69,9 @@
     "eval": "tsx scripts/evaluate-spike.ts"
   },
   "dependencies": {
-    "typescript": "^5.7.2"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "typescript": "^5.7.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

@@ -206,7 +206,14 @@ function getClassNameBinding(
 
   if (!ts.isJsxExpression(initializer) || !initializer.expression) return null;
 
-  const expression = initializer.expression;
+  return getExpressionClassNameBinding(initializer.expression, sourceFile);
+}
+
+function getExpressionClassNameBinding(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile
+): ClassNameBinding {
+
   const staticExpression = stringSegment(expression, sourceFile);
   if (staticExpression) {
     const { value, tokens } = tokensFromSegments([staticExpression]);
@@ -257,6 +264,30 @@ function getClassNameBinding(
   };
 }
 
+function propertyName(property: ts.ObjectLiteralElementLike): string | null {
+  if (!property.name) return null;
+  if (ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)) return property.name.text;
+  return null;
+}
+
+function createElementCall(node: ts.CallExpression): boolean {
+  if (ts.isIdentifier(node.expression)) return node.expression.text === "createElement";
+  return (
+    ts.isPropertyAccessExpression(node.expression) &&
+    node.expression.name.text === "createElement" &&
+    ts.isIdentifier(node.expression.expression) &&
+    node.expression.expression.text === "React"
+  );
+}
+
+function createElementInsertion(props: ts.ObjectLiteralExpression, id: string): Insertion {
+  const separator = props.properties.hasTrailingComma ? " " : props.properties.length > 0 ? ", " : "";
+  return {
+    position: props.getEnd() - 1,
+    text: `${separator}"data-intent-id": "${id}"`
+  };
+}
+
 export function instrumentSource(params: {
   code: string;
   file: string;
@@ -301,6 +332,45 @@ export function instrumentSource(params: {
         if (className) {
           const id = `il_${shortHash(`${relativeFile}:${className.start}:${tagName}`)}`;
           insertions.push({ position: getInsertPosition(node), text: ` data-intent-id="${id}"` });
+          entries.push({
+            id,
+            file: params.file,
+            relativeFile,
+            tagName,
+            componentName: currentComponentName,
+            sourceHash: currentSourceHash,
+            transformMs: 0,
+            className: {
+              kind: className.kind,
+              start: className.start,
+              end: className.end,
+              value: className.value,
+              callee: className.callee,
+              dynamicSegments: className.dynamicSegments,
+              unsupportedReason: className.unsupportedReason
+            },
+            tokens: className.tokens
+          });
+        }
+      }
+    }
+
+    if (ts.isCallExpression(node) && createElementCall(node)) {
+      const tag = node.arguments[0];
+      const props = node.arguments[1];
+      if (tag && ts.isStringLiteralLike(tag) && props && ts.isObjectLiteralExpression(props)) {
+        const classNameProperty = props.properties.find(
+          (property): property is ts.PropertyAssignment =>
+            ts.isPropertyAssignment(property) && propertyName(property) === "className"
+        );
+        const alreadyInstrumented = props.properties.some(
+          (property) => propertyName(property) === "data-intent-id"
+        );
+        if (classNameProperty && !alreadyInstrumented) {
+          const className = getExpressionClassNameBinding(classNameProperty.initializer, sourceFile);
+          const tagName = tag.text;
+          const id = `il_${shortHash(`${relativeFile}:${className.start}:${tagName}`)}`;
+          insertions.push(createElementInsertion(props, id));
           entries.push({
             id,
             file: params.file,

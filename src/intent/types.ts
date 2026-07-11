@@ -42,6 +42,58 @@ export interface IntentGraph {
   entries: Record<string, IntentBinding>;
 }
 
+export interface IntentRuntimeSelectionRequest {
+  id: string | null;
+  route?: string;
+  text?: string;
+  role?: string | null;
+  visible?: boolean;
+  rect?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
+}
+
+export interface IntentRuntimeSelection {
+  version: 1;
+  selectedAt: string;
+  selection: null | {
+    id: string;
+    componentName: string | null;
+    tagName: string;
+    sourceFile: string;
+    route: string;
+    text: string;
+    role: string | null;
+    visible: boolean;
+    rect: IntentRuntimeSelectionRequest["rect"];
+  };
+}
+
+export interface IntentRuntimeSession {
+  version: 1;
+  sessionId: string;
+  root: string;
+  url: string;
+  token: string;
+  pid: number;
+  startedAt: string;
+}
+
+export interface IntentRuntimeTokenResult {
+  ok: boolean;
+  status: "verified" | "drifted" | "unavailable";
+  id: string;
+  expectedToken: string;
+  renderedInstanceCount: number;
+  matchingInstanceCount: number;
+  visibleInstanceCount: number;
+  route: string | null;
+  detail: string;
+}
+
 export interface ClickToPanelMetric {
   kind: "click-to-panel";
   id: string | null;
@@ -96,12 +148,18 @@ export interface IntentAgentSettings {
   claudeHookEnabled: boolean;
 }
 
+export interface IntentMcpSettings {
+  codexEnabled: boolean;
+  claudeEnabled: boolean;
+}
+
 export interface IntentLayerSettings {
   version: 1;
   language: IntentLayerLanguage;
   onboardingCompletedAt: string | null;
   updatedAt: string;
   overlay: IntentOverlaySettings;
+  mcp: IntentMcpSettings;
   agent: IntentAgentSettings;
 }
 
@@ -123,6 +181,16 @@ export interface IntentSetupStatus {
   setupRequired: boolean;
   settings: IntentLayerSettings;
   checks: IntentSetupCheck[];
+  mcp: {
+    codexEnabled: boolean;
+    codexReady: boolean;
+    codexConfigPath: string;
+    claudeEnabled: boolean;
+    claudeReady: boolean;
+    claudeConfigPath: string;
+    serverCommand: string;
+    serverArgs: string[];
+  };
   agent: {
     runEnabled: boolean;
     runEnabledSource: IntentAgentRunSource;
@@ -149,6 +217,7 @@ export interface IntentSetupRequest {
   completeOnboarding?: boolean;
   resetOnboarding?: boolean;
   overlay?: Partial<IntentOverlaySettings>;
+  mcp?: Partial<IntentMcpSettings>;
   agent?: Partial<IntentAgentSettings>;
 }
 

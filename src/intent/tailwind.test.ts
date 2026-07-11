@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { candidatesForToken, categorizeTailwindToken, tokenizeClassName } from "./tailwind";
+import {
+  candidatesForToken,
+  categorizeTailwindToken,
+  describeTailwindToken,
+  tokenizeClassName
+} from "./tailwind";
 
 describe("Tailwind direct-edit candidates", () => {
   it("offers real color choices while preserving variants and opacity", () => {
@@ -33,5 +38,21 @@ describe("Tailwind direct-edit candidates", () => {
     expect(tokens.find((token) => token.token === "bg-[var(--surface)]")?.editable).toBe(false);
     expect(tokens.find((token) => token.token === "tracking-tight")?.editable).toBe(false);
     expect(tokens.find((token) => token.token === "p-4")?.editable).toBe(true);
+  });
+
+  it("maps tokens to semantic properties without losing variants", () => {
+    const color = describeTailwindToken("hover:bg-slate-50/50");
+    const gap = describeTailwindToken("gap-4");
+
+    expect(color).toMatchObject({
+      property: "color.background",
+      value: "slate-50/50",
+      variant: "hover"
+    });
+    expect(color?.candidates).toContainEqual({
+      value: "blue-50/50",
+      token: "hover:bg-blue-50/50"
+    });
+    expect(gap).toMatchObject({ property: "layout.gap", value: "4", variant: null });
   });
 });

@@ -830,7 +830,7 @@ function packageSmoke(): PackageSmokeResult {
       "    setupAfter.status === 200 && setupAfterJson?.language === \"ko\" &&",
       "    setupAfterJson?.workspaceReady === true && setupAfterJson?.settingsReady === true &&",
       "    setupAfterJson?.graphReady === true && setupSettingsFileExists && setupSchemaExists &&",
-      "    setupQueueSignalExists && setupCodexSkillExists && setupClaudeSettingsExists && setupClaudeHookConfigured &&",
+      "    !setupQueueSignalExists && !setupCodexSkillExists && !setupClaudeSettingsExists && !setupClaudeHookConfigured &&",
       "    agentQueue.status === 200 && agentQueueJson?.kind === \"intent-agent-queue\" &&",
       "    settingsUpdateOk &&",
       "    preview.status === 200 && preview.json?.ok === true &&",
@@ -5844,11 +5844,11 @@ const report = {
       packageInstallSmoke.installedViteDevServerSetupGraphReady &&
       packageInstallSmoke.installedViteDevServerSetupSettingsFileExists &&
       packageInstallSmoke.installedViteDevServerSetupSchemaExists &&
-      packageInstallSmoke.installedViteDevServerSetupQueueSignalExists &&
+      !packageInstallSmoke.installedViteDevServerSetupQueueSignalExists &&
       packageInstallSmoke.installedViteDevServerSetupQueueStatus === 200 &&
-      packageInstallSmoke.installedViteDevServerSetupCodexSkillExists &&
-      packageInstallSmoke.installedViteDevServerSetupClaudeSettingsExists &&
-      packageInstallSmoke.installedViteDevServerSetupClaudeHookConfigured &&
+      !packageInstallSmoke.installedViteDevServerSetupCodexSkillExists &&
+      !packageInstallSmoke.installedViteDevServerSetupClaudeSettingsExists &&
+      !packageInstallSmoke.installedViteDevServerSetupClaudeHookConfigured &&
       packageInstallSmoke.installedViteDevServerSettingsUpdateStatus === 200 &&
       packageInstallSmoke.installedViteDevServerSettingsLanguage === "en" &&
       packageInstallSmoke.installedViteDevServerSettingsDock === "left" &&

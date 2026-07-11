@@ -16,6 +16,7 @@ import {
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
 import { instrumentSource } from "./instrument";
+import { runIntentMcpServer } from "./mcp/server";
 import { applyTokenPatch, recordPatchApplyInOperationLog } from "./patch";
 import type { AgentLaunchResult, IntentBinding, IntentGraph, PatchFailure } from "./types";
 
@@ -27,6 +28,7 @@ type CliCommand =
   | "check"
   | "diff"
   | "apply"
+  | "mcp"
   | "agent-context"
   | "agent-task"
   | "agent-queue"
@@ -1017,6 +1019,7 @@ function usage(): string {
     "  intent-layer check [inputs...] [--min-supported-direct n] [--max-file-transform-ms n] [--out file]",
     "  intent-layer diff [--diff file] [--out file]",
     "  intent-layer apply --op file [--graph .intent/graph.intent.json] [--out file]",
+    "  intent-layer mcp [--root project-directory]",
     "  intent-layer agent-context [component] [--id intent-id] [--graph .intent/graph.intent.json]",
     "  intent-layer agent-task --id intent-id --change text [--graph .intent/graph.intent.json] [--out file]",
     "  intent-layer agent-queue [--release --task file] [--prune-days n] [--out file]",
@@ -1187,6 +1190,7 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
     command !== "check" &&
     command !== "diff" &&
     command !== "apply" &&
+    command !== "mcp" &&
     command !== "agent-context" &&
     command !== "agent-task" &&
     command !== "agent-queue" &&
@@ -1204,6 +1208,15 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
   }
 
   const options = parseOptions(argv.slice(1));
+  if (command === "mcp") {
+    return {
+      exitCode: 0,
+      stdout: "Intent Layer MCP is a long-running stdio command. Run it from the intent-layer executable.\n",
+      stderr: "",
+      report: null
+    };
+  }
+
   if (command === "init") {
     const report = initIntentWorkspace(rootDir);
     const json = `${JSON.stringify(report, null, 2)}\n`;
@@ -1752,7 +1765,16 @@ function isDirectExecution(moduleUrl: string, executable: string): boolean {
 
 if (process.argv[1] && isDirectExecution(import.meta.url, process.argv[1])) {
   const argv = process.argv.slice(2);
-  if (argv[0] === "dev" && !argv.includes("--dry-run") && !argv.includes("--out")) {
+  if (argv[0] === "mcp") {
+    const rootIndex = argv.indexOf("--root");
+    const rootDir = path.resolve(rootIndex >= 0 && argv[rootIndex + 1] ? argv[rootIndex + 1] : process.cwd());
+    runIntentMcpServer({ rootDir }).catch((error) => {
+      process.stderr.write(
+        `Intent Layer MCP failed: ${error instanceof Error ? error.message : String(error)}\n`
+      );
+      process.exitCode = 1;
+    });
+  } else if (argv[0] === "dev" && !argv.includes("--dry-run") && !argv.includes("--out")) {
     const options = parseOptions(argv.slice(1));
     const report = devCommandReport(process.cwd(), options);
     if (!report.ok || !report.executable) {

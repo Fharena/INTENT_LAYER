@@ -10,12 +10,12 @@ fs.mkdirSync(outdir, { recursive: true });
 
 const nodeBuild = {
   bundle: true,
-  external: ["typescript", "vite"],
+  external: ["typescript", "vite", "@modelcontextprotocol/sdk/*", "zod", "zod/*"],
   format: "esm",
   legalComments: "none",
   platform: "node",
   sourcemap: false,
-  target: "node18"
+  target: "node20"
 };
 
 await build({
@@ -35,6 +35,12 @@ await build({
 });
 
 await build({
+  ...nodeBuild,
+  entryPoints: [path.join(root, "src", "intent", "mcp", "entry.ts")],
+  outfile: path.join(outdir, "mcp.js")
+});
+
+await build({
   bundle: false,
   entryPoints: {
     client: path.join(root, "src", "intent", "client.ts"),
@@ -49,3 +55,4 @@ await build({
 });
 
 fs.chmodSync(cliFile, 0o755);
+fs.chmodSync(path.join(outdir, "mcp.js"), 0o755);

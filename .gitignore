@@ -25,6 +25,7 @@ demo-dist/
 .intent/agent/result_*.md
 .intent/agent/locks/
 .intent/tmp/
+.intent/runtime/
 .intent/external-corpus*/
 .intent-agent-queue.json
 .agents/skills/intent-layer-task-runner/
