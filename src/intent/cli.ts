@@ -2,7 +2,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 import { createAgentContext } from "./agentContext";
 import { launchAgentTask } from "./agentLaunch";
@@ -1742,7 +1742,15 @@ export function runCli(argv: string[], rootDir = process.cwd()): CliRunResult {
   return { exitCode: ok ? 0 : 1, stdout: json, stderr: "", report };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+function isDirectExecution(moduleUrl: string, executable: string): boolean {
+  try {
+    return fs.realpathSync(fileURLToPath(moduleUrl)) === fs.realpathSync(executable);
+  } catch {
+    return moduleUrl === pathToFileURL(executable).href;
+  }
+}
+
+if (process.argv[1] && isDirectExecution(import.meta.url, process.argv[1])) {
   const argv = process.argv.slice(2);
   if (argv[0] === "dev" && !argv.includes("--dry-run") && !argv.includes("--out")) {
     const options = parseOptions(argv.slice(1));
