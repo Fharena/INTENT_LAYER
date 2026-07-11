@@ -83,8 +83,10 @@ export default defineConfig({
 - apply 전 binding source hash와 원래 토큰을 모두 확인한다.
 - preview와 apply 사이에 파일이 바뀌어도 다시 거부한다.
 - undo는 적용 후 전체 source hash가 맞는 **최신 pending patch**만 처리한다.
+- 여러 Codex/Claude 프로세스의 apply와 undo는 프로젝트 operation lock으로 직렬화하며 저널은 atomic write한다.
 - drift가 있으면 파일 대신 `.intent/conflicts/`에 conflict artifact를 남긴다.
 - patch는 전체 파일 codegen이 아니라 원래 source range만 교체한다.
+- source를 바꾸는 Vite HTTP 요청은 loopback 연결과 overlay 세션 토큰을 모두 요구한다. LAN 주소로 연 preview는 읽을 수 있어도 편집은 거부된다.
 
 ## Codex와 Claude에서 사용
 
@@ -95,6 +97,8 @@ export default defineConfig({
 - `intent_verify_edit`, `intent_undo_edit`
 
 브라우저에서 선택한 요소는 `intent://selection/current`로 공유된다. AI는 source offset이나 raw patch를 보내지 않고 의미 속성과 후보 값만 요청한다. apply는 expiring preview, source hash, 파일 잠금과 idempotency key를 다시 검증한다. 브라우저가 연결돼 있으면 HMR 뒤 모든 렌더 인스턴스에 새 class token이 존재하는지도 확인한다.
+
+`intent_verify_edit`에서 `runtime: unavailable`은 source가 온전하더라도 `ok: false`다. 브라우저를 확인하지 못한 상태를 시각 검증 성공으로 보고하지 않는다.
 
 직접 지원하지 않는 구조 변경은 `handoff-required`로 내려가며, Agent가 일반 코드 편집으로 처리할 수 있도록 정확한 source pointer를 제공한다. 기존 Markdown queue는 고급 호환성 기능으로 한정한다.
 

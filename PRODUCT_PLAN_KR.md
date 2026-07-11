@@ -8,7 +8,7 @@
 - 1차 타깃: AI로 프론트엔드 코드를 만드는 개발자, 바이브코더, 초보 프론트엔드 개발자
 - 초기 지원 스택: `React + Vite + Tailwind CSS + TypeScript`
 
-### 0.1 현재 구현 기준선 (2026-07-11)
+### 0.1 현재 구현 기준선 (2026-07-12)
 
 현재 상태는 범용 제품이 아니라 **AI-native 동작 alpha**다. 화면 선택, TypeScript AST source binding, 의미 기반 Tailwind 후보, minimal range patch, source hash 기반 undo를 브라우저 GUI와 로컬 MCP가 같은 `IntentService`를 통해 사용한다. Markdown Agent queue는 기본 경로가 아니라 고급 호환성 기능이다.
 
@@ -21,6 +21,9 @@
 - apply는 expiring preview, source hash, atomic file lock과 idempotency key를 검증한다.
 - 브라우저가 연결되어 있으면 Vite HMR 뒤 실제 렌더 인스턴스의 class token을 검증한다.
 - undo는 임의 순서 branch undo가 아니라 최신 pending patch부터 처리한다.
+- 서로 다른 MCP 프로세스의 apply/undo는 프로젝트 operation lock으로 직렬화하고, 공용 저널은 atomic rename으로 기록한다.
+- Vite의 source-changing HTTP 요청은 loopback 연결과 세션 토큰을 모두 요구한다.
+- 브라우저가 없으면 source 검증 결과와 별개로 전체 verify는 성공으로 반환하지 않는다.
 - Vitest 회귀 테스트, GitHub Actions CI, 실패 시 exit 1인 평가 gate를 출시 기준으로 사용한다.
 - npm tarball은 raw TypeScript 대신 `dist/` JavaScript를 포함한다.
 - 활성 문서는 README, PRODUCT_PLAN, DEMO_WALKTHROUGH, FAILURE_MODES의 KR/EN 네 쌍으로 제한한다.
@@ -678,14 +681,27 @@ computed style은 실제 결과를 알려주지만 어떤 코드가 원인인지
 
 ## 14. 경쟁 제품과 차별화
 
-가까운 경쟁 축:
+### 14.1 2026년 7월 정성 수요 조사
 
-- Onlook: React visual editor
-- Piny: VS Code/Cursor 안에서 React/Tailwind visual edit
-- Frontman: browser-based AI frontend agent
-- stagewise: UI 선택 후 agent에 context 전달
-- Plasmic/Puck: React visual builder
-- v0/Bolt/Lovable/Replit: AI app/UI builder
+이 조사는 대표성 있는 시장 통계가 아니라 공개 사용자 발언과 현재 제품 문서를 이용한 방향 검증이다.
+
+- [Lovable 사용자는 border color 하나를 바꾸는 데 AI credit을 쓰는 경험](https://www.reddit.com/r/lovable/comments/1uisn68/visual_edits_ugh/)을 이탈 이유로 들었다. 단순 미세 편집은 무료이고 즉시 실행되어야 한다.
+- [Claude 사용자는 브라우저에서 요소를 고르고 바로 변경을 요청하는 흐름](https://www.reddit.com/r/ClaudeAI/comments/1tok0a8/visual_ui_editing_with_claude_click_element_in/)을 찾고 있다. screenshot 설명보다 정확한 selection context가 수요다.
+- [Bolt 사용자는 한 수정이 기존 동작을 깨뜨리고 파일 전체를 다시 쓰는 문제](https://www.reddit.com/r/boltnewbuilders/comments/1i7l1yo/i_really_like_boltnew_but_one_challenge_ive/)를 반복해서 지적한다. minimal patch, preview, undo는 부가 기능이 아니라 구매 신뢰의 핵심이다.
+- [react-rewrite](https://www.reddit.com/r/tailwindcss/comments/1smk5vu/i_built_a_visual_editor_overlay_for_react_that/)처럼 실제 저장소에 AST patch를 쓰는 도구도 등장했다. 직접 코드 반영 자체는 더 이상 유일한 차별점이 아니며, 잘못된 node를 절대 고치지 않는 신뢰성과 설치 마찰이 승부처다.
+
+따라서 확인된 수요는 "또 하나의 AI 생성기"가 아니라 **AI 비용 없이 가능한 미세 편집, 정확한 요소 지목, 기존 코드 보존, 로컬 저장소 소유권**이다.
+
+### 14.2 현재 경쟁 지도
+
+| 제품 | 현재 중심 | INTENT_LAYER가 정면 경쟁하지 않을 부분 |
+| --- | --- | --- |
+| [Onlook](https://www.onlook.com/for/react) | 디자이너용 광범위 React canvas, AI 생성, 여러 styling system | 전체 디자인 툴과 무한 canvas |
+| [Piny](https://getpiny.com/) | IDE 안의 Tailwind visual control, custom theme, direct code edit | VS Code extension 자체 |
+| [stagewise](https://docs.stagewise.io/) | browser를 포함한 완전한 agentic IDE와 diff review | 모델 실행기와 범용 IDE |
+| [Domscribe](https://www.domscribe.com/) | build-time stable ID, source와 live DOM 사이의 양방향 MCP context | context 조회만으로 승부하는 포지션 |
+| [Impeccable Live](https://impeccable.style/docs/live/) | 선택 요소에 AI 디자인 variant를 생성하고 하나를 source에 반영 | AI 디자인 생성 품질 경쟁 |
+| [react-rewrite](https://github.com/donghaxkim/react-rewrite) | deterministic AST write-back, drag/reorder/text edit | 넓은 canvas 조작 기능 경쟁 |
 
 `INTENT_LAYER`가 피해야 할 포지션:
 
@@ -698,9 +714,35 @@ computed style은 실제 결과를 알려주지만 어떤 코드가 원인인지
 차별 포지션:
 
 ```text
-AI-generated frontend code를 위한 intent layer.
-Line diff와 raw className 사이에 사람이 검수 가능한 semantic layer를 만든다.
+사람과 여러 AI client가 함께 쓰는 provider-neutral deterministic UI operation layer.
+semantic property -> guarded preview -> minimal patch -> source/runtime verify -> undo를 하나의 계약으로 만든다.
 ```
+
+### 14.3 조사에서 도출한 제품 결정
+
+다음 우선순위:
+
+1. spacing/color/text 같은 작은 직접 편집은 AI 호출 없이 로컬에서 계속 무료로 제공한다.
+2. wrong-node 0건, 전체 파일 rewrite 0건, unavailable runtime을 성공으로 표시하지 않는 것을 제품 신뢰 지표로 둔다.
+3. 하드코딩 palette를 늘리기보다 프로젝트 Tailwind theme와 CSS variable에서 후보를 읽는 adapter를 만든다.
+4. 다음 직접 편집 실험은 `literal text`로 한정한다. 구조 변경과 동적 문자열은 agent handoff로 내린다.
+5. 독립 저장소에서 prompt-only 대비 첫 성공 시간, 재시도 횟수, wrong-node, undo 사용률을 측정한 뒤 기능 범위를 넓힌다.
+
+지금 하지 않을 것:
+
+- 무한 canvas, drag/drop, sibling reorder
+- Next.js와 여러 framework 동시 확장
+- AI가 디자인 variant 여러 개를 생성하는 기능
+- 범용 agent IDE 또는 자체 모델 실행기
+
+구조적으로는 기본 제품에서 약 3,700줄의 legacy Agent queue/launch 계층을 계속 노출하지 않는다. alpha 호환성은 유지하되 HTTP route와 bundle 경계를 opt-in adapter로 분리하는 것을 다음 정리 대상으로 둔다.
+
+### 14.4 남은 구조적 위험
+
+- 현재 selection은 프로젝트당 파일 하나라 여러 브라우저/route의 마지막 선택이 서로 덮어쓴다. multi-session을 정식 지원하기 전 `sessionId`, freshness, active selection 규칙이 필요하다.
+- 각 Vite process는 자기 in-memory graph 전체를 publish한다. lazy route를 서로 다르게 연 두 dev server에서는 마지막 writer가 다른 route binding을 지울 수 있으므로 session별 graph를 file 단위로 merge하는 검증이 필요하다.
+- `tailwind.ts` 후보는 정적 목록 중심이다. 프로젝트 theme를 읽지 않으면 실제 브랜드 token을 우회하도록 유도하므로 candidate provider 경계를 먼저 분리해야 한다.
+- `client.ts`와 `cli.ts`는 크지만 파일 크기만을 이유로 지금 재작성하지 않는다. literal text 또는 theme adapter를 추가할 때 함께 수정되는 request/render 부분만 추출한다.
 
 ## 15. 제품화 전략
 
@@ -750,21 +792,21 @@ Next.js adapter
 
 필수:
 
-- [ ] React/Vite/Tailwind 데모 프로젝트 지원
-- [ ] `data-intent-id` 삽입
-- [ ] source sidecar map 생성
-- [ ] browser overlay
-- [ ] 요소 선택
-- [ ] source lookup
-- [ ] Tailwind spacing/layout/color/radius token parser
-- [ ] knob panel
-- [ ] range patch
-- [ ] undo/revert + pending history
-- [ ] intent diff
-- [ ] `.intent` 폴더 생성
+- [x] React/Vite/Tailwind 데모 프로젝트 지원
+- [x] `data-intent-id` 삽입
+- [x] source sidecar map 생성
+- [x] browser overlay
+- [x] 요소 선택
+- [x] source lookup
+- [x] Tailwind spacing/layout/color/radius token parser
+- [x] knob panel
+- [x] range patch
+- [x] undo/revert + pending history
+- [x] intent diff
+- [x] `.intent` 폴더 생성
 - [ ] confidence 표시
-- [ ] patch 실패 시 안전 중단
-- [ ] 문서/튜토리얼
+- [x] patch 실패 시 안전 중단
+- [x] 문서/튜토리얼
 
 ## 17. 2주 기술 스파이크
 
@@ -801,26 +843,37 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 
 ## 18. 로드맵
 
-### v0.1
+### v0.1 (완료)
 
-- Vite plugin
-- React TSX source mapping
-- Tailwind spacing knob
-- patch preview
+- [x] Vite plugin
+- [x] React TSX source mapping
+- [x] Tailwind spacing knob
+- [x] patch preview
 
-### v0.2
+### v0.2 (부분 완료)
 
-- color/radius/typography
-- intent document 저장
-- intent diff
-- undo/revert
+- [x] color/radius/typography
+- [ ] component intent document 저장
+- [x] intent diff
+- [x] undo/revert
 
-### v0.3
+### v0.3 (부분 완료)
 
-- simple `cn()`/`clsx()` support
-- responsive variants
-- confidence model
-- selected component summary
+- [x] simple `cn()`/`clsx()` support
+- [x] responsive variants
+- [ ] confidence model
+- [x] selected component summary
+
+### v0.4 (다음 검증)
+
+- [x] provider-neutral local MCP
+- [x] loopback/session-token HTTP boundary
+- [x] multi-process operation journal
+- [ ] project Tailwind theme/CSS variable candidate adapter
+- [ ] guarded literal text edit spike
+- [ ] session-scoped selection과 multi-Vite graph merge fixture
+- [ ] 독립 저장소 20개 실제 작업 A/B
+- [ ] legacy Agent HTTP/CLI adapter opt-in 분리
 
 ### v1.0
 

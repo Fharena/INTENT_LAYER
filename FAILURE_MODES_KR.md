@@ -208,16 +208,19 @@ npm run import:external-corpus -- <independent-react-tailwind-project-or-samples
 
 패널은 dev server 종료, 잘못된 HTTP 응답, JSON 파싱 실패를 상태 영역에 표시한다. Vite dev server가 실행 중인지 확인하고 새로고침한다. 오류 중에는 버튼을 잠시 비활성화하며, 실패한 요청만으로 소스 파일을 수정하지 않는다.
 
+- `unsafe-intent-request`: source 변경 요청이 loopback 주소가 아니거나 overlay 세션 토큰이 없다. 편집할 브라우저는 dev server가 실행되는 같은 컴퓨터에서 `127.0.0.1` 또는 `localhost`로 연다. LAN 편집을 우회해서 허용하지 않는다.
+
 ## 12. MCP 편집 또는 검증이 거부됨
 
 - `preview-expired`: 5분이 지난 preview다. `intent_preview_edit`부터 다시 수행한다.
 - `source-hash-mismatch`: preview 뒤 파일이 바뀌었다. 현재 요소를 다시 inspect한다.
 - `file-locked`: GUI나 다른 AI 작업이 같은 파일을 수정 중이다. 해당 작업이 끝난 뒤 새 preview를 만든다.
+- operation journal lock은 서로 다른 파일을 고치는 provider도 짧게 직렬화한다. 5초 이상 계속 잠기면 중단된 Intent Layer 프로세스와 `.intent/runtime/locks/` 상태를 확인한다.
 - `idempotency-key-conflict`: 다른 preview에 이미 쓴 key다. 새 작업 key를 사용한다.
 - `runtime: unavailable`: source는 검증됐지만 Vite 또는 브라우저가 연결되지 않았다. 시각 검증 성공으로 해석하지 않는다.
 - `runtime: drifted`: source는 바뀌었지만 일부 렌더 인스턴스에 새 token이 없다. HMR 상태와 동적 className 조건을 확인한다.
 
-Codex 또는 Claude에 도구가 보이지 않으면 패널 설정의 AI 연결 상태와 프로젝트 `.codex/config.toml`/`.mcp.json`을 확인한 뒤 새 세션을 시작한다. Intent Layer는 전역 provider 설정을 수정하지 않는다.
+Codex 또는 Claude에 도구가 보이지 않으면 패널 설정의 AI 연결 상태와 프로젝트 `.codex/config.toml`/`.mcp.json`을 확인한 뒤 새 세션을 시작한다. 설정이 있는데도 `serverReady`가 false면 package 설치 또는 `dist/mcp.js` 빌드가 빠진 상태다. Intent Layer는 전역 provider 설정을 수정하지 않는다.
 
 ## 13. Agent task가 오래 `claimed` 상태로 남음
 

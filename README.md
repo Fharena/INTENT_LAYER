@@ -83,8 +83,10 @@ A token is not presented as editable when its only candidate is itself. Arbitrar
 - Apply validates both the binding source hash and original token.
 - A file change between preview and apply is rejected again.
 - Undo accepts only the **latest pending patch** with the expected post-apply source hash.
+- Apply and undo from multiple Codex or Claude processes are serialized by a project operation lock, and the journal is written atomically.
 - Drift creates a conflict artifact under `.intent/conflicts/` instead of modifying the file.
 - Patches replace the original source range rather than regenerating a whole file.
+- Source-changing Vite HTTP requests require both a loopback connection and the overlay session token. A preview opened through a LAN address is readable but cannot edit source.
 
 ## Use From Codex Or Claude
 
@@ -95,6 +97,8 @@ After enabling a provider in Settings and starting a new Codex or Claude session
 - `intent_verify_edit`, `intent_undo_edit`
 
 The browser selection is exposed as `intent://selection/current`. AI clients submit semantic properties and candidate values, never source offsets or raw patches. Apply revalidates an expiring preview, source hash, file lock, and idempotency key. With a connected browser, verify also checks that every rendered source instance contains the new class token after HMR.
+
+For `intent_verify_edit`, `runtime: unavailable` returns `ok: false` even when the source patch is intact. A disconnected browser is never reported as visual verification success.
 
 Unsupported structural changes return `handoff-required` with an exact source pointer for normal agent editing. The Markdown queue remains available only as advanced compatibility.
 

@@ -8,7 +8,7 @@
 - Primary audience: developers, vibe coders, and beginner frontend developers who use AI to generate UI code
 - Initial supported stack: `React + Vite + Tailwind CSS + TypeScript`
 
-### 0.1 Current Implementation Baseline (2026-07-11)
+### 0.1 Current Implementation Baseline (2026-07-12)
 
 The current state is an **AI-native working alpha**, not a universal product. The browser GUI and local MCP share one `IntentService` for selection, TypeScript AST source binding, semantic Tailwind candidates, minimal range patches, and source-hash-guarded undo. The Markdown Agent queue is advanced compatibility rather than the default path.
 
@@ -21,6 +21,9 @@ Current implementation rules:
 - Apply validates an expiring preview, source hash, atomic file lock, and idempotency key.
 - With a connected browser, Vite HMR is followed by rendered-instance class-token verification.
 - Undo is latest-first rather than arbitrary branch undo.
+- Applies and undos from separate MCP processes are serialized by a project operation lock, and the shared journal is published with atomic rename.
+- Source-changing Vite HTTP requests require both a loopback connection and a session token.
+- When no browser is connected, source verification does not make the overall runtime verify result successful.
 - Vitest regression tests, GitHub Actions CI, and evaluation gates that exit 1 on failure define release readiness.
 - npm tarballs ship built JavaScript under `dist/` instead of raw TypeScript execution.
 - Active documentation is limited to four KR/EN pairs: README, PRODUCT_PLAN, DEMO_WALKTHROUGH, and FAILURE_MODES.
@@ -676,14 +679,27 @@ If intent documents drift away from source code, the product loses trust. `sourc
 
 ## 14. Competitive Differentiation
 
-Adjacent products include:
+### 14.1 July 2026 Qualitative Demand Scan
 
-- Onlook: visual editor for React apps
-- Piny: visual React/Tailwind editing inside VS Code/Cursor
-- Frontman: browser-based AI frontend agent
-- stagewise: selected UI context for coding agents
-- Plasmic/Puck: React visual builders
-- v0/Bolt/Lovable/Replit: AI app/UI builders
+This is directional evidence from public user reports and current product documentation, not a representative market survey.
+
+- [A Lovable user described spending AI credits on one border-color change](https://www.reddit.com/r/lovable/comments/1uisn68/visual_edits_ugh/) as a reason to leave. Small visual edits should be instant and free of model usage.
+- [Claude users are actively looking for a click-an-element-then-request-a-change workflow](https://www.reddit.com/r/ClaudeAI/comments/1tok0a8/visual_ui_editing_with_claude_click_element_in/). Exact selection context is the demand; screenshot narration is only a fallback.
+- [Bolt users report that one requested fix breaks working behavior or rewrites whole files](https://www.reddit.com/r/boltnewbuilders/comments/1i7l1yo/i_really_like_boltnew_but_one_challenge_ive/). Minimal patches, preview, and undo are trust requirements rather than secondary features.
+- Tools such as [react-rewrite](https://www.reddit.com/r/tailwindcss/comments/1smk5vu/i_built_a_visual_editor_overlay_for_react_that/) now write deterministic AST edits into real repositories. Source write-back alone is no longer unique; wrong-node prevention and setup friction are the competitive boundary.
+
+The observed demand is therefore not for another AI generator. It is for **model-free micro-edits, exact element targeting, preservation of existing code, and local repository ownership**.
+
+### 14.2 Current Competitive Map
+
+| Product | Current center | Where INTENT_LAYER should not compete head-on |
+| --- | --- | --- |
+| [Onlook](https://www.onlook.com/for/react) | Broad designer-facing React canvas, AI generation, multiple styling systems | A complete design tool and infinite canvas |
+| [Piny](https://getpiny.com/) | Tailwind visual controls and direct edits inside an IDE, including custom themes | Becoming a VS Code extension product |
+| [stagewise](https://docs.stagewise.io/) | Full agentic IDE with browser, model execution, and diff review | A general IDE or model runtime |
+| [Domscribe](https://www.domscribe.com/) | Build-time stable IDs and bidirectional source/live-DOM MCP context | Competing only on context lookup |
+| [Impeccable Live](https://impeccable.style/docs/live/) | AI-generated design variants for one selected element | Competing on generative design quality |
+| [react-rewrite](https://github.com/donghaxkim/react-rewrite) | Deterministic AST write-back plus drag, reorder, and text editing | Broad canvas manipulation |
 
 Positions to avoid:
 
@@ -696,9 +712,35 @@ another React page builder
 Differentiated position:
 
 ```text
-An intent layer for AI-generated frontend code.
-It creates a human-reviewable semantic layer between raw className and line diffs.
+A provider-neutral deterministic UI operation layer shared by people and multiple AI clients.
+Semantic property -> guarded preview -> minimal patch -> source/runtime verify -> undo as one contract.
 ```
+
+### 14.3 Product Decisions From The Scan
+
+Priorities:
+
+1. Keep small direct edits such as spacing, color, and text local and free of model calls.
+2. Treat zero wrong-node edits, zero full-file rewrites, and no false runtime success as product trust metrics.
+3. Build an adapter that derives candidates from the project's Tailwind theme and CSS variables instead of expanding hard-coded palettes.
+4. Limit the next direct-edit experiment to guarded literal text. Structural or dynamic string changes remain agent handoffs.
+5. Measure time to first successful edit, retries, wrong-node events, and undo usage against prompt-only workflows on held-out repositories before broadening scope.
+
+Not now:
+
+- infinite canvas, drag/drop, and sibling reorder
+- simultaneous Next.js and multi-framework expansion
+- multiple AI-generated design variants
+- a general agent IDE or proprietary model runtime
+
+Structurally, the roughly 3,700-line legacy Agent queue and launch layer should not remain exposed by the default product. Preserve alpha compatibility, then move its HTTP routes and bundle boundary into an opt-in adapter.
+
+### 14.4 Remaining Structural Risks
+
+- Selection is currently one project-wide file, so the latest selection from multiple browsers or routes overwrites the others. Formal multi-session support needs `sessionId`, freshness, and active-selection rules.
+- Each Vite process publishes its complete in-memory graph. Two dev servers visiting different lazy routes can let the last writer remove bindings seen only by the other session; session graphs need a file-level merge fixture.
+- Candidate lists in `tailwind.ts` are mostly static. Without reading the project theme, the product can steer users around their brand tokens, so a candidate-provider boundary should come first.
+- `client.ts` and `cli.ts` are large, but file size alone does not justify a rewrite. Extract only the request/render boundaries touched by the literal-text or theme-adapter work.
 
 ## 15. Productization Strategy
 
@@ -748,21 +790,21 @@ For v1.0, adoption matters more than monetization.
 
 Required:
 
-- [ ] React/Vite/Tailwind demo support
-- [ ] `data-intent-id` injection
-- [ ] source sidecar map generation
-- [ ] browser overlay
-- [ ] element selection
-- [ ] source lookup
-- [ ] Tailwind spacing/layout/color/radius parser
-- [ ] knob panel
-- [ ] range patch
-- [ ] undo/revert + pending history
-- [ ] intent diff
-- [ ] `.intent` folder creation
+- [x] React/Vite/Tailwind demo support
+- [x] `data-intent-id` injection
+- [x] source sidecar map generation
+- [x] browser overlay
+- [x] element selection
+- [x] source lookup
+- [x] Tailwind spacing/layout/color/radius parser
+- [x] knob panel
+- [x] range patch
+- [x] undo/revert + pending history
+- [x] intent diff
+- [x] `.intent` folder creation
 - [ ] confidence display
-- [ ] safe failure on patch errors
-- [ ] documentation and tutorial
+- [x] safe failure on patch errors
+- [x] documentation and tutorial
 
 ## 17. Two-week Technical Spike
 
@@ -799,26 +841,37 @@ Can the architecture scale to large projects?
 
 ## 18. Roadmap
 
-### v0.1
+### v0.1 (complete)
 
-- Vite plugin
-- React TSX source mapping
-- Tailwind spacing knob
-- patch preview
+- [x] Vite plugin
+- [x] React TSX source mapping
+- [x] Tailwind spacing knob
+- [x] patch preview
 
-### v0.2
+### v0.2 (partial)
 
-- color/radius/typography
-- intent document storage
-- intent diff
-- undo/revert
+- [x] color/radius/typography
+- [ ] component intent document storage
+- [x] intent diff
+- [x] undo/revert
 
-### v0.3
+### v0.3 (partial)
 
-- simple `cn()`/`clsx()` support
-- responsive variants
-- confidence model
-- selected component summary
+- [x] simple `cn()`/`clsx()` support
+- [x] responsive variants
+- [ ] confidence model
+- [x] selected component summary
+
+### v0.4 (next validation)
+
+- [x] provider-neutral local MCP
+- [x] loopback/session-token HTTP boundary
+- [x] multi-process operation journal
+- [ ] project Tailwind theme/CSS variable candidate adapter
+- [ ] guarded literal text edit spike
+- [ ] session-scoped selection and multi-Vite graph merge fixture
+- [ ] 20 held-out repository tasks against prompt-only workflows
+- [ ] opt-in boundary for legacy Agent HTTP/CLI adapter
 
 ### v1.0
 

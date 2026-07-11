@@ -146,6 +146,8 @@ find -> inspect -> preview -> apply -> verify -> optional undo
 - Resolve ranges from the current graph and semantic property on the server.
 - Require an expiring preview before apply.
 - Revalidate source hash inside a per-file atomic lock.
+- Serialize source mutation plus operation-journal recording with the project operation lock; publish the shared journal atomically.
+- Require loopback plus the Vite session token for every source-changing HTTP request. Do not enable remote/LAN mutation implicitly.
 - Treat browser runtime verification as unavailable, not successful, when Vite or the browser is disconnected.
 - Keep MCP on local stdio. Do not add remote HTTP, OAuth, or another agent scheduler without a demonstrated workflow.
 
