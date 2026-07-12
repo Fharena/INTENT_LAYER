@@ -63,11 +63,13 @@ Current module boundaries:
 ```text
 instrument.ts   TypeScript AST source binding
 tailwind.ts     token classification and candidates
+themeCandidates.ts static project Tailwind/CSS candidate provider
 gridLayout.ts   constrained CSS Grid inspection and grouped className planning
 patch.ts        preview, apply, operation log, and guarded undo
 graphStore.ts   graph state, publish, and disk reload
 intentService.ts shared GUI, HTTP, CLI, and MCP use cases
 runtimeSession.ts browser selection and live verification
+viteSetup.ts    safe one-time Vite config registration
 vitePlugin.ts   Vite, HTTP, and HMR adapter
 client.ts       browser overlay
 mcp/            local stdio tools, resources, and provider setup
@@ -153,6 +155,7 @@ find -> inspect -> preview -> apply -> verify -> optional undo
 - Require loopback plus the Vite session token for every source-changing HTTP request. Do not enable remote/LAN mutation implicitly.
 - Treat browser runtime verification as unavailable, not successful, when Vite or the browser is disconnected.
 - Keep MCP on local stdio. Do not add remote HTTP, OAuth, or another agent scheduler without a demonstrated workflow.
+- Keep the legacy Markdown queue disabled by default. Its task UI and HTTP routes require explicit `legacyQueueEnabled` compatibility mode.
 
 ## Agent Handoff Rules
 
@@ -190,6 +193,8 @@ Agent tasks also use a shared queue signal:
 
 The Markdown queue is advanced compatibility, not the default AI integration. Preserve it for existing projects, but do not add queue commands, analyzers, or UI unless a regression requires them.
 
+Evaluation fixtures must use `.intent/tmp/evaluation-agent`; never write benchmark tasks into the real project queue.
+
 Legacy pickup model:
 
 - Codex uses `.agents/skills/intent-layer-task-runner/SKILL.md`.
@@ -214,6 +219,7 @@ Always:
 On selection:
   parse selected file only
   analyze selected node and nearby parents/children
+  resolve project theme candidates for selected tokens only
 
 On demand:
   repo-wide scan
@@ -227,6 +233,8 @@ Target performance:
 - simple patch: under 50ms
 - small intent diff: under 1s
 - Vite transform overhead: under 5ms per file target
+
+Do not serialize project candidate arrays into every graph token. Keep the graph compact and query candidates on selection.
 
 ## UX Rules
 

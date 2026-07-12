@@ -18,13 +18,11 @@ intentLayer() was not found in the Vite config.
 
 해결:
 
-```ts
-import { intentLayer } from "intent-layer/vite";
-
-export default defineConfig({
-  plugins: [react(), intentLayer()]
-});
+```bash
+npx intent-layer init
 ```
+
+`init`이 `unsupported-config`를 반환하면 plugins 값이 함수 계산, 변수 참조 등 정적으로 고칠 수 없는 형태다. 이 경우 파일은 바뀌지 않는다. 수동으로 `intentLayer()`를 React plugin보다 앞에 넣고 다시 확인한다.
 
 확인:
 
@@ -231,9 +229,12 @@ Codex 또는 Claude에 도구가 보이지 않으면 패널 설정의 AI 연결 
 - `unbound-grid-child`: 직계 DOM 자식 중 source binding이 없는 요소가 있다. 해당 요소에 정적 className을 두고 다시 선택한다.
 - `repeated-grid-binding`, `cross-file-grid`, `dynamic-grid-classname`은 실패가 아니라 명시적인 지원 경계다. 이 상태에서 일부 자식만 직접 적용하지 않는다.
 - `grid-placement-overflow`: 시작 열과 span이 현재 열 수를 넘는다. placement strip 안쪽으로 범위를 다시 고른다.
+- `unsupported-grid-token`: arbitrary template에 `minmax()`, CSS 변수, named line 또는 양수가 아닌 track이 있다. 현재 slider는 `grid-cols-[1.2fr_0.8fr]`처럼 양수 `fr`만 직접 편집한다.
 - `planned-range-mismatch` 또는 `source-hash-mismatch`: preview 뒤 파일이 바뀌었다. source write는 0건이며 새 preview를 만든다.
 
 ## 14. Agent task가 오래 `claimed` 상태로 남음
+
+레거시 Markdown 큐는 기본 비활성화다. HTTP에서 `legacy-agent-disabled` 또는 404가 나오면 패널 설정의 `기존 Agent 큐 (고급 호환성)`을 명시적으로 켠다. 일반 Codex/Claude 편집은 로컬 MCP를 우선한다.
 
 중단된 provider의 task를 queue로 돌린다.
 
@@ -248,3 +249,11 @@ npm run intent:agent-queue -- --prune-days 30
 ```
 
 prune은 terminal task만 지우며 queued/running task는 지우지 않는다.
+
+## 15. 프로젝트 색상 또는 간격 후보가 보이지 않음
+
+candidate provider는 `tailwind.config.{js,ts,cjs,mjs,cts,mts}`의 정적 object와 `src/index.css`, `src/styles.css`, `src/globals.css`, `app/globals.css` 등 알려진 CSS 진입점만 읽는다. config를 실행하지 않는다. 함수로 계산한 theme, 외부 import로만 정의된 scale 또는 다른 위치의 CSS는 자동 후보가 아닐 수 있다. 표준 후보는 계속 표시되며 source patch 안전성에는 영향이 없다.
+
+## 16. Codex가 다른 브라우저 탭의 선택을 읽음
+
+각 Vite session의 선택은 따로 보존되지만 `intent://selection/current`는 살아 있는 session 중 가장 최근 선택을 반환한다. 응답의 `sessionId`, `selectedAt`, `freshUntil`, `route`를 확인한다. 의도한 탭에서 요소를 다시 선택하면 current가 갱신된다. 만료된 선택을 자동으로 성공 컨텍스트로 간주하지 않는다.

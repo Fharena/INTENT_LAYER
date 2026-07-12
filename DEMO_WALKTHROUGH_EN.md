@@ -56,6 +56,8 @@ Expected artifact output:
 
 Direct editing activates only when the parent and direct children have static classNames in one file. Repeated source ids from `.map()` or child implementations in another file report a reason without touching source.
 
+Use the hero grid in `test-sites/lumina-atelier` for an asymmetric template. On the `md` tab, changing the `1.2 / 0.8` track-ratio sliders must preview only the `md:grid-cols-[1.2fr_0.8fr]` token. Apply must HMR, and one Undo must restore the source byte for byte. Templates containing `minmax()`, CSS variables, or named lines are outside this demo.
+
 ## 4. Target Project Tarball Demo
 
 Create a local package tarball.
@@ -70,24 +72,14 @@ Install it in a target React/Vite/Tailwind project.
 
 ```bash
 npm install /absolute/path/to/intent-layer-0.0.1.tgz
+npx intent-layer init
 ```
 
-Register the Vite plugin.
-
-```ts
-import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
-import { intentLayer } from "intent-layer/vite";
-
-export default defineConfig({
-  plugins: [intentLayer(), react()]
-});
-```
+Confirm that `vite.status` is `configured`, `created`, or `already-configured`. A dynamic plugins expression must return `unsupported-config` without changing the Vite file.
 
 Run the target-project checks.
 
 ```bash
-npx intent-layer init
 npx intent-layer doctor
 npx intent-layer check src --min-supported-direct 0.5 --max-file-transform-ms 20
 npx intent-layer dev
@@ -104,6 +96,8 @@ npx intent-layer dev
 7. Restore the source with `intent_undo_edit`.
 
 For a quick packaged-stdio check, run `npm run build:package && npm run test:mcp-package`.
+
+Run the complete Lumina browser regression with `npm run test:e2e`. Chromium verifies setup, element selection, asymmetric Grid apply, HMR, exact undo, and mobile collapse/expand behavior.
 
 ## 6. What To Say During The Demo
 
@@ -128,5 +122,6 @@ Do not position these as ready MVP flows:
 - direct edits inside `node_modules`
 - broad natural-language layout refactors as deterministic patches
 - grid row/absolute placement, DOM reordering, and cross-file layout transactions
+- compound arbitrary Grid templates containing `minmax()`, CSS variables, or named lines
 
 Show unsupported cases as `handoff-required` with an exact source pointer. Use the Markdown queue only in an advanced compatibility demo.

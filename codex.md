@@ -34,6 +34,7 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 ## Overlay UX
 
 - First-run setup and later settings use the same browser panel.
+- Installed Vite projects use `npx intent-layer init` once. The command may minimally patch a static Vite config, but must leave dynamic config shapes unchanged with an explicit reason.
 - Keep language, dock, density, startup collapse, onboarding reset, Agent permission, and provider commands editable without extra CLI steps.
 - The selected-element flow is `Pick -> Inspect -> Edit -> Review`.
 - Beginners see the next action first.
@@ -42,6 +43,7 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Reused component edits must show how many rendered instances share the source binding.
 - Selecting an element inside a source-bound CSS Grid should expose the nearest supported grid ancestor; users should not have to click a narrow gap to select the parent.
 - Grid layout UI stays constrained to existing CSS Grid and semantic placement controls. Do not expand it into an infinite canvas or DOM reorder tool without comparative user evidence.
+- Simple positive-`fr` arbitrary templates are supported through track ratio controls. `minmax()`, variables, named lines, rows, and reorder remain explicit boundaries.
 - Network and patch failures must produce visible feedback.
 - Stale overlay roots must be replaced during HMR client version changes.
 
@@ -56,6 +58,8 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - On drift, preserve the file and write a conflict artifact.
 - Grouped layout patches are direct only when the parent and all direct children have static className bindings in one source file. Validate every original className plus the whole-file hash, write once, and store post-apply ranges for grouped undo.
 - Repeated source ids, cross-file grid children, dynamic className participants, and unsupported templates are explicit read-only boundaries, never partial-success cases.
+- Project theme candidates come from static Tailwind config and known CSS entry points. Never execute user config to discover candidates, and never duplicate candidate arrays into the intent graph; fetch them only for selected tokens.
+- Runtime selection is session-scoped. Preserve `sessionId` and freshness, merge graph entries by file ownership, and retain source-hash rejection as the final drift guard.
 
 ## Agent Boundary
 
@@ -71,6 +75,8 @@ Agent handoff is optional and experimental. Its durable minimum is:
 - Claude pickup uses the `.claude/settings.json` `FileChanged` hook.
 - Both providers claim before editing and record `done` or `failed` on completion.
 - Direct CLI spawning remains opt-in through settings or `INTENT_LAYER_AGENT_RUN=1`.
+- The entire legacy queue surface is off by default. Do not expose task forms or agent HTTP routes unless `legacyQueueEnabled` is explicit.
+- Evaluation agent artifacts must use `.intent/tmp/evaluation-agent`; never write fixtures into the real queue.
 - Queue writes must be atomic, abandoned claims must be releasable, and old terminal artifacts must be prunable.
 - Do not deepen semantic pre-analysis or result-diff machinery until comparative user evidence shows it beats passing the selected source pointer directly to an agent.
 
@@ -94,6 +100,7 @@ Every meaningful core change should run:
 ```bash
 npm run typecheck
 npm run test
+npm run test:e2e
 npm run build
 ```
 
@@ -111,6 +118,8 @@ The next product proof should use held-out repositories and measure:
 - first edit success rate
 - time to accepted result versus prompting
 - incorrect-patch and safe-rejection rates
+
+Record paired observations with `npm run eval:product-ab`. Do not call the product proof complete until `reports/performance/product-ab-evaluation.json` has at least five repositories and twenty paired tasks.
 
 ## Completion Standard
 

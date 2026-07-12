@@ -282,26 +282,11 @@ responsive:
 
 ```bash
 npm install -D intent-layer
-```
-
-`vite.config.ts`:
-
-```ts
-import { intentLayer } from "intent-layer/vite"
-
-export default {
-  plugins: [intentLayer()]
-}
-```
-
-실행:
-
-```bash
+npx intent-layer init
 npm run dev
-npx intent-layer
 ```
 
-현재 package surface는 빌드된 `dist/cli.js`와 `intent-layer/vite` export로 검증한다. `npm run eval`은 tarball 생성과 임시 설치, 설치된 CLI/Vite plugin, 실제 Vite dev server의 graph/preview/apply/revert, multi-file graph refresh, missing-plugin doctor guidance를 gate로 실행한다. 상세 수치는 `reports/performance/spike-evaluation.json`에만 기록하며 gate 하나라도 실패하면 exit code 1로 끝난다.
+`init`은 workspace 생성과 정적인 Vite config AST patch를 한 번에 처리한다. 기존 설정은 멱등적으로 유지하고, 동적 plugins 표현식은 파일을 건드리지 않고 거부한다. 현재 package surface는 빌드된 `dist/cli.js`와 `intent-layer/vite` export로 검증한다. `npm run eval`은 tarball 생성과 임시 설치, 설치된 CLI/Vite plugin, 실제 Vite dev server의 graph/preview/apply/revert, multi-file graph refresh, missing-plugin doctor guidance를 gate로 실행한다. 상세 수치는 `reports/performance/spike-evaluation.json`에만 기록하며 gate 하나라도 실패하면 exit code 1로 끝난다.
 
 ### 8.2 기본 흐름
 
@@ -735,13 +720,13 @@ semantic property -> guarded preview -> minimal patch -> source/runtime verify -
 - AI가 디자인 variant 여러 개를 생성하는 기능
 - 범용 agent IDE 또는 자체 모델 실행기
 
-구조적으로는 기본 제품에서 약 3,700줄의 legacy Agent queue/launch 계층을 계속 노출하지 않는다. alpha 호환성은 유지하되 HTTP route와 bundle 경계를 opt-in adapter로 분리하는 것을 다음 정리 대상으로 둔다.
+legacy Agent queue/launch 계층은 alpha 호환성으로 보존하지만 기본 설정, 요소 패널, HTTP route에서 닫는다. 설정의 고급 호환성 toggle을 켠 경우에만 queue route와 pickup integration을 활성화한다. evaluator는 전용 `.intent/tmp/evaluation-agent`를 사용해 실제 큐를 오염시키지 않는다.
 
-### 14.4 남은 구조적 위험
+### 14.4 검증된 구조 변경과 남은 위험
 
-- 현재 selection은 프로젝트당 파일 하나라 여러 브라우저/route의 마지막 선택이 서로 덮어쓴다. multi-session을 정식 지원하기 전 `sessionId`, freshness, active selection 규칙이 필요하다.
-- 각 Vite process는 자기 in-memory graph 전체를 publish한다. lazy route를 서로 다르게 연 두 dev server에서는 마지막 writer가 다른 route binding을 지울 수 있으므로 session별 graph를 file 단위로 merge하는 검증이 필요하다.
-- `tailwind.ts` 후보는 정적 목록 중심이다. 프로젝트 theme를 읽지 않으면 실제 브랜드 token을 우회하도록 유도하므로 candidate provider 경계를 먼저 분리해야 한다.
+- selection은 Vite session별 파일에 저장하고 현재 선택에 `sessionId`와 30분 freshness를 기록한다. 죽은 process의 session은 제거한다. AI resource가 여러 활성 session 중 최신 선택을 반환한다는 규칙은 구현됐지만, 사용자가 오래된 탭을 계속 살려 둔 경우 어떤 탭을 의도했는지는 UI에서 확인해야 한다.
+- graph publish는 per-file ownership과 atomic lock으로 디스크 graph를 병합한다. 두 store가 서로 다른 파일을 publish하고 한 파일을 삭제하는 fixture가 통과한다. 같은 파일을 동시에 다른 source 상태로 연 경우에는 마지막 source hash가 이기며 patch 단계가 drift를 다시 거부한다.
+- candidate provider는 `tailwind.config.*`의 정적 object와 알려진 CSS/Tailwind v4 `@theme` 위치만 읽는다. config를 실행하지 않으며 동적 import, 함수 계산, 복합 arbitrary value는 일반화하지 않는다. 후보는 선택 시 조회해 graph에 중복 저장하지 않는다.
 - `client.ts`와 `cli.ts`는 크지만 파일 크기만을 이유로 지금 재작성하지 않는다. Grid Composer, literal text 또는 theme adapter에서 함께 수정되는 request/render 부분만 추출한다.
 
 ### 14.5 Grid Layout Composer 설계
@@ -753,7 +738,7 @@ semantic property -> guarded preview -> minimal patch -> source/runtime verify -
 이 기능은 범용 페이지 빌더가 아니다. 이미 존재하는 CSS Grid의 의미를 읽고, 아래 속성만 결정론적으로 편집하는 좁은 도구다.
 
 ```text
-부모: grid-cols-N
+부모: grid-cols-N 또는 grid-cols-[1.2fr_0.8fr]
 자식: col-start-N, col-span-N
 variant: base, sm, md, lg
 ```
@@ -762,7 +747,7 @@ variant: base, sm, md, lg
 
 1. 사용자가 화면의 grid 부모를 선택한다.
 2. 패널은 실제 직계 자식과 source binding을 대조한다.
-3. breakpoint 탭과 열 수 stepper를 보여준다.
+3. breakpoint 탭과 열 수 stepper를 보여주고, 단순 fractional template이면 track 비율 slider를 보여준다.
 4. 각 자식의 1~12열 placement strip에서 시작 열과 span을 선택한다.
 5. `미리보기`가 영향받는 source binding 수와 className 전후를 보여준다.
 6. `적용`은 하나의 그룹 작업으로 source를 한 번만 쓴다.
@@ -777,9 +762,10 @@ variant: base, sm, md, lg
 - React/Vite가 만든 `data-intent-id`가 있는 grid 부모와 모든 직계 자식
 - 부모와 자식 binding이 한 source 파일에 있음
 - 부모와 자식의 `className`이 정적 문자열임
-- 부모에 base `grid`와 1~12 범위의 `grid-cols-N`이 있음
+- 부모에 base `grid`가 있고 effective 열 수가 1~12 범위임. 명시적 base 열이 없으면 CSS Grid의 implicit 1열로 본다.
 - base/sm/md/lg 한 breakpoint씩 편집
 - `grid-cols`, `col-start`, `col-span` 토큰의 추가, 교체, 제거
+- 양수 `fr` track만으로 된 단순 arbitrary template의 비율 변경
 
 읽기 전용 또는 Agent 전달:
 
@@ -787,7 +773,7 @@ variant: base, sm, md, lg
 - 자식 component 구현이 다른 파일에 있음
 - `cn()`/`clsx()`의 조건 분기, `cva`, 변수 참조, template expression
 - DOM 순서 변경, row/absolute placement, masonry, subgrid
-- 12열을 넘는 arbitrary grid template
+- `minmax()`, CSS variable, line name 또는 12열을 넘는 arbitrary grid template
 
 #### 가장 어려운 점과 결정
 
@@ -962,12 +948,13 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 - [x] provider-neutral local MCP
 - [x] loopback/session-token HTTP boundary
 - [x] multi-process operation journal
-- [x] 같은 파일 정적 Grid Layout Composer 수직 기능
-- [ ] project Tailwind theme/CSS variable candidate adapter
+- [x] 같은 파일 정적 Grid Layout Composer와 단순 fractional track 조절
+- [x] project Tailwind theme/CSS variable candidate adapter
 - [ ] guarded literal text edit spike
-- [ ] session-scoped selection과 multi-Vite graph merge fixture
-- [ ] 독립 저장소 20개 실제 작업 A/B
-- [ ] legacy Agent HTTP/CLI adapter opt-in 분리
+- [x] session-scoped selection과 multi-Vite graph merge fixture
+- [ ] 5개 이상 독립 저장소의 실제 작업 20개 A/B (`product-ab-evaluation.json`: collecting, 0 paired tasks)
+- [x] legacy Agent HTTP/UI opt-in 경계와 evaluator artifact 격리
+- [x] Lumina Chromium setup/Grid/HMR/undo/mobile CI
 
 ### v1.0
 

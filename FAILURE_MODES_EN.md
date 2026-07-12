@@ -18,13 +18,11 @@ Cause:
 
 Fix:
 
-```ts
-import { intentLayer } from "intent-layer/vite";
-
-export default defineConfig({
-  plugins: [react(), intentLayer()]
-});
+```bash
+npx intent-layer init
 ```
+
+If `init` returns `unsupported-config`, the plugins value uses a computed function, variable reference, or another shape that cannot be patched statically. The file remains unchanged. Register `intentLayer()` manually before the React plugin, then run the check again.
 
 Verify:
 
@@ -231,9 +229,12 @@ If Codex or Claude does not list the tools, check AI connection status and the p
 - `unbound-grid-child`: at least one direct DOM child has no source binding. Give that element a static className and select again.
 - `repeated-grid-binding`, `cross-file-grid`, and `dynamic-grid-classname` are explicit support boundaries, not partial-success conditions. The tool never applies only a subset of children.
 - `grid-placement-overflow`: start plus span exceeds the active column count. Select a range inside the placement strip.
+- `unsupported-grid-token`: an arbitrary template contains `minmax()`, a CSS variable, a named line, or a non-positive track. Ratio sliders currently edit only positive `fr` templates such as `grid-cols-[1.2fr_0.8fr]`.
 - `planned-range-mismatch` or `source-hash-mismatch`: source changed after preview. The source-write count is zero; create a new preview.
 
 ## 14. An Agent task remains `claimed`
+
+The legacy Markdown queue is disabled by default. If its HTTP route returns `legacy-agent-disabled` or 404, explicitly enable `Legacy agent queue (advanced compatibility)` in Settings. Prefer local MCP for normal Codex or Claude edits.
 
 Return an abandoned provider task to the queue:
 
@@ -248,3 +249,11 @@ npm run intent:agent-queue -- --prune-days 30
 ```
 
 Prune removes only terminal tasks and preserves queued or running work.
+
+## 15. Project color or spacing candidates are missing
+
+The candidate provider reads static objects from `tailwind.config.{js,ts,cjs,mjs,cts,mts}` and known CSS entry points such as `src/index.css`, `src/styles.css`, `src/globals.css`, and `app/globals.css`. It never executes config code. Function-computed themes, scales available only through imports, or CSS in another location may not become automatic candidates. Generic candidates remain available, and patch safety is unaffected.
+
+## 16. Codex reads a selection from another browser tab
+
+Each Vite session keeps its own selection, while `intent://selection/current` returns the most recent selection among live sessions. Check `sessionId`, `selectedAt`, `freshUntil`, and `route` in the resource. Re-selecting the element in the intended tab updates current. An expired selection must not be treated as confirmed context.

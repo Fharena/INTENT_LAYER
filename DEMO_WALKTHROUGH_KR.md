@@ -56,6 +56,8 @@ MVP 데모에서는 이 좁은 시나리오를 사용한다.
 
 이 직접 편집은 부모와 직계 자식이 같은 파일의 정적 className일 때만 활성화된다. `.map()`으로 같은 source id가 반복되거나 자식 구현이 다른 파일이면 이유를 표시하고 source를 건드리지 않는다.
 
+비대칭 template은 `test-sites/lumina-atelier`의 hero grid로 확인한다. `md` 탭에서 `1.2 / 0.8` track 비율 slider를 바꾸면 `md:grid-cols-[1.2fr_0.8fr]` 한 토큰만 미리보기되고, 적용 뒤 HMR과 한 번의 되돌리기가 원문을 byte-for-byte 복원해야 한다. `minmax()`, CSS 변수, line name이 포함된 template은 이 데모 범위가 아니다.
+
 ## 4. 대상 프로젝트 Tarball 데모
 
 로컬 package tarball을 만든다.
@@ -70,24 +72,14 @@ npm pack
 
 ```bash
 npm install /absolute/path/to/intent-layer-0.0.1.tgz
+npx intent-layer init
 ```
 
-Vite plugin을 등록한다.
-
-```ts
-import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
-import { intentLayer } from "intent-layer/vite";
-
-export default defineConfig({
-  plugins: [intentLayer(), react()]
-});
-```
+`init` 결과에서 `vite.status`가 `configured`, `created`, `already-configured` 중 하나인지 확인한다. 동적 plugins 배열이면 `unsupported-config`로 끝나고 Vite 파일은 바뀌지 않아야 한다.
 
 대상 프로젝트에서 확인한다.
 
 ```bash
-npx intent-layer init
 npx intent-layer doctor
 npx intent-layer check src --min-supported-direct 0.5 --max-file-transform-ms 20
 npx intent-layer dev
@@ -104,6 +96,8 @@ npx intent-layer dev
 7. `intent_undo_edit`로 원복한다.
 
 패키지 stdio 경로만 빠르게 검사할 때는 `npm run build:package && npm run test:mcp-package`를 사용한다.
+
+Lumina 전체 브라우저 회귀는 `npm run test:e2e`로 실행한다. 이 테스트는 설정, 요소 선택, 비대칭 Grid 적용, HMR, exact undo와 모바일 축소/확대를 Chromium에서 확인한다.
 
 ## 6. 데모 중 강조할 말
 
@@ -128,5 +122,6 @@ npx intent-layer dev
 - `node_modules` 내부 직접 편집
 - 넓은 자연어 layout refactor를 deterministic patch처럼 처리하는 흐름
 - Grid row/absolute placement, DOM reorder, cross-file layout transaction
+- `minmax()`, CSS variable 또는 named line을 포함한 복합 arbitrary Grid template
 
 지원하지 않는 케이스는 `handoff-required`와 정확한 source pointer로 보여준다. Markdown queue는 고급 호환성 데모에서만 사용한다.

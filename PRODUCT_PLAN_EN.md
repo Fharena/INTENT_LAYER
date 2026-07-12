@@ -280,26 +280,11 @@ responsive:
 
 ```bash
 npm install -D intent-layer
-```
-
-`vite.config.ts`:
-
-```ts
-import { intentLayer } from "intent-layer/vite"
-
-export default {
-  plugins: [intentLayer()]
-}
-```
-
-Run:
-
-```bash
+npx intent-layer init
 npm run dev
-npx intent-layer
 ```
 
-The package surface is verified through built `dist/cli.js` and the `intent-layer/vite` export. `npm run eval` gates tarball creation and temporary installation, the installed CLI and Vite plugin, real Vite graph/preview/apply/revert HTTP flows, multi-file graph refresh, and missing-plugin doctor guidance. Detailed numbers live only in `reports/performance/spike-evaluation.json`, and any failed gate exits with code 1.
+`init` combines workspace creation with a static Vite-config AST patch. Existing setup remains unchanged, and dynamic plugin expressions are rejected without touching the file. The package surface is verified through built `dist/cli.js` and the `intent-layer/vite` export. `npm run eval` gates tarball creation and temporary installation, the installed CLI and Vite plugin, real Vite graph/preview/apply/revert HTTP flows, multi-file graph refresh, and missing-plugin doctor guidance. Detailed numbers live only in `reports/performance/spike-evaluation.json`, and any failed gate exits with code 1.
 
 ### 8.2 Basic Flow
 
@@ -733,13 +718,13 @@ Not now:
 - multiple AI-generated design variants
 - a general agent IDE or proprietary model runtime
 
-Structurally, the roughly 3,700-line legacy Agent queue and launch layer should not remain exposed by the default product. Preserve alpha compatibility, then move its HTTP routes and bundle boundary into an opt-in adapter.
+The legacy Agent queue and launch layer remains for alpha compatibility but is closed in default settings, element UI, and HTTP routes. Its pickup integrations open only after the advanced compatibility toggle is enabled. Evaluation uses a dedicated `.intent/tmp/evaluation-agent` store and cannot contaminate the real queue.
 
-### 14.4 Remaining Structural Risks
+### 14.4 Verified Structural Changes And Residual Risks
 
-- Selection is currently one project-wide file, so the latest selection from multiple browsers or routes overwrites the others. Formal multi-session support needs `sessionId`, freshness, and active-selection rules.
-- Each Vite process publishes its complete in-memory graph. Two dev servers visiting different lazy routes can let the last writer remove bindings seen only by the other session; session graphs need a file-level merge fixture.
-- Candidate lists in `tailwind.ts` are mostly static. Without reading the project theme, the product can steer users around their brand tokens, so a candidate-provider boundary should come first.
+- Selection is stored per Vite session and current selection records a `sessionId` with a 30-minute freshness deadline. Dead-process sessions are removed. The AI resource returns the newest active selection, but a user keeping multiple live tabs must still confirm which tab they intended.
+- Graph publishing merges per-file ownership under an atomic lock. Fixtures cover two stores publishing different files and deleting one owned file. If two sessions open the same file at different source states, the latest source hash wins and patch validation rejects drift again.
+- The candidate provider reads static objects from `tailwind.config.*` plus known CSS and Tailwind v4 `@theme` locations. It never executes config code and does not generalize dynamic imports, computed functions, or compound arbitrary values. Candidates are fetched on selection instead of being duplicated into the graph.
 - `client.ts` and `cli.ts` are large, but file size alone does not justify a rewrite. Extract only request/render boundaries shared by Grid Composer, literal-text, or theme-adapter work.
 
 ### 14.5 Grid Layout Composer Design
@@ -751,7 +736,7 @@ When arranging asymmetric cards, users should not have to describe requests such
 This is not a general page builder. It reads an existing CSS Grid and deterministically edits only:
 
 ```text
-parent: grid-cols-N
+parent: grid-cols-N or grid-cols-[1.2fr_0.8fr]
 children: col-start-N, col-span-N
 variants: base, sm, md, lg
 ```
@@ -760,7 +745,7 @@ variants: base, sm, md, lg
 
 1. The user selects a rendered grid parent.
 2. The panel reconciles its real direct children with source bindings.
-3. It shows breakpoint tabs and a column-count stepper.
+3. It shows breakpoint tabs and a column-count stepper, or track-ratio sliders for a simple fractional template.
 4. The user selects a start and span on a 1-12 column placement strip for each child.
 5. `Preview` shows affected source bindings and before/after className values.
 6. `Apply` writes one grouped operation.
@@ -775,9 +760,10 @@ Direct edit:
 - a grid parent and every direct child have React/Vite `data-intent-id` bindings
 - parent and child bindings live in one source file
 - every participating `className` is a static string
-- the parent has base `grid` and `grid-cols-N` in the 1-12 range
+- the parent has base `grid` and an effective 1-12 column count; absent base columns use CSS Grid's implicit one column
 - one base/sm/md/lg breakpoint is edited at a time
 - add, replace, or remove `grid-cols`, `col-start`, and `col-span` tokens
+- edit a simple arbitrary template containing only positive `fr` tracks
 
 Read-only or agent handoff:
 
@@ -785,7 +771,7 @@ Read-only or agent handoff:
 - child component implementations in other files
 - conditional `cn()`/`clsx()`, `cva`, variable references, or template expressions
 - DOM reordering, row or absolute placement, masonry, or subgrid
-- arbitrary grid templates over 12 columns
+- `minmax()`, CSS variables, line names, or arbitrary templates over 12 columns
 
 #### Hard Problems and Decisions
 
@@ -960,12 +946,13 @@ Can the architecture scale to large projects?
 - [x] provider-neutral local MCP
 - [x] loopback/session-token HTTP boundary
 - [x] multi-process operation journal
-- [x] same-file static Grid Layout Composer vertical slice
-- [ ] project Tailwind theme/CSS variable candidate adapter
+- [x] same-file static Grid Layout Composer plus simple fractional track controls
+- [x] project Tailwind theme/CSS variable candidate adapter
 - [ ] guarded literal text edit spike
-- [ ] session-scoped selection and multi-Vite graph merge fixture
-- [ ] 20 held-out repository tasks against prompt-only workflows
-- [ ] opt-in boundary for legacy Agent HTTP/CLI adapter
+- [x] session-scoped selection and multi-Vite graph merge fixture
+- [ ] 20 held-out tasks against prompt-only workflows (`product-ab-evaluation.json`: collecting, 0 paired tasks)
+- [x] opt-in legacy Agent HTTP/UI boundary and evaluator artifact isolation
+- [x] Lumina Chromium setup/Grid/HMR/undo/mobile CI
 
 ### v1.0
 

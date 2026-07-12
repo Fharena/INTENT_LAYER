@@ -49,21 +49,13 @@ Node.js 20 or newer is required. The package is not published to npm yet, so use
 npm pack
 cd <target-vite-project>
 npm install <intent-layer-tarball>
+npx intent-layer init
+npm run dev
 ```
 
-Register Intent Layer before the React plugin in `vite.config.ts`:
+`intent-layer init` creates the `.intent` workspace, parses the Vite config with the TypeScript AST, and minimally inserts `intentLayer()` before the React plugin. It leaves an existing setup unchanged. If `defineConfig` or the plugins array is dynamic, it returns an explicit failure without rewriting the file.
 
-```ts
-import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
-import { intentLayer } from "intent-layer/vite";
-
-export default defineConfig({
-  plugins: [intentLayer(), react()]
-});
-```
-
-Then start the normal Vite dev server. A separate initialization command is not required.
+When no Vite config exists but `@vitejs/plugin-react` is installed, it creates a conventional `vite.config.ts`. Later configuration stays in the browser panel.
 
 ## Direct-Edit Surface
 
@@ -73,12 +65,12 @@ Direct edits currently target static JSX `className` values, string literals ins
 - sizing: width, height, min/max, and size
 - layout: display, grid columns, flex, alignment, justification, and numeric `col-start`/`col-span`
 - radius and typography size, weight, and line height
-- standard Tailwind color families and shades while preserving variants and opacity
+- standard Tailwind colors plus project `tailwind.config.*`, Tailwind v4 `@theme`, and conservatively identified CSS-variable candidates
 - shadow, opacity, ring width, and transition
 
-A token is not presented as editable when its only candidate is itself. Arbitrary values, CSS variables, `cva`, runtime variables, property access, and template expressions remain inspectable but are not patched directly.
+A token is not presented as editable when its only candidate is itself. Project themes are parsed statically rather than executed, and project candidates appear before the generic palette. Dynamic configs that cannot be resolved, `cva`, runtime variables, property access, and template expressions remain inspectable but are not patched directly.
 
-The Grid Layout Composer directly edits only an existing grid and direct children with static `className` bindings in one TSX file. It can add, replace, or remove 1-12 track `grid-cols`, `col-start`, and `col-span` tokens at base/sm/md/lg. Repeated source ids, cross-file children, dynamic classNames, and DOM reordering safely remain read-only.
+The Grid Layout Composer directly edits only an existing grid and direct children with static `className` bindings in one TSX file. It can add, replace, or remove 1-12 track `grid-cols`, `col-start`, and `col-span` tokens at base/sm/md/lg. Simple positive `fr` templates such as `grid-cols-[1.2fr_0.8fr]` expose track-ratio sliders. Repeated source ids, cross-file children, dynamic classNames, compound `minmax()` templates, and DOM reordering safely remain read-only.
 
 ## Safety Model
 
@@ -88,6 +80,7 @@ The Grid Layout Composer directly edits only an existing grid and direct childre
 - A file change between preview and apply is rejected again.
 - Undo accepts only the **latest pending patch** with the expected post-apply source hash.
 - Apply and undo from multiple Codex or Claude processes are serialized by a project operation lock, and the journal is written atomically.
+- Browser selections are stored per Vite session and expose a `sessionId` plus freshness deadline. Graph publishing replaces only files owned by that server and merges entries from other active Vite sessions.
 - Drift creates a conflict artifact under `.intent/conflicts/` instead of modifying the file.
 - Patches replace the original source range rather than regenerating a whole file.
 - A grouped grid edit validates every original className and the complete source hash, then writes the same file once. Undo validates every post-apply range and restores the group byte for byte.
@@ -105,7 +98,7 @@ The browser selection is exposed as `intent://selection/current`. AI clients sub
 
 For `intent_verify_edit`, `runtime: unavailable` returns `ok: false` even when the source patch is intact. A disconnected browser is never reported as visual verification success.
 
-Unsupported structural changes return `handoff-required` with an exact source pointer for normal agent editing. The Markdown queue remains available only as advanced compatibility.
+Unsupported structural changes return `handoff-required` with an exact source pointer for normal agent editing. The Markdown queue and its HTTP routes are off by default and open only after enabling the advanced compatibility toggle.
 
 Use the CLI only when checking the MCP server directly:
 
@@ -121,6 +114,7 @@ Everyday checks:
 ```bash
 npm run typecheck
 npm run test
+npm run test:e2e
 npm run build
 npm run test:mcp-package
 ```
@@ -131,13 +125,13 @@ Full release check:
 npm run eval
 ```
 
-`npm run eval` covers tarball installation, installed CLI and Vite exports, real Vite HTTP preview/apply/revert, multi-file graph refresh, an eight-child grouped Grid apply/undo, external corpora, and performance gates. `test:mcp-package` starts the built stdio server with a real MCP client and checks all six tools. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
+`npm run eval` covers tarball installation, installed CLI and Vite exports, real Vite HTTP preview/apply/revert, multi-file graph refresh, grouped Grid apply/undo, external corpora, and 56 performance and safety gates. `test:e2e` uses Chromium against Lumina to verify setup, selection, asymmetric Grid ratios, HMR, byte-for-byte undo, and the mobile panel. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
 
 `npm run benchmark:mcp` records local mechanical latency for inspect, preview, apply, undo, and in-memory MCP calls in [mcp-alpha-evaluation.json](./reports/performance/mcp-alpha-evaluation.json). These numbers do not prove agent task success or product value.
 
 The real browser-selection-to-stdio-MCP flow, including verification across three reused instances and undo, is recorded in [mcp-browser-roundtrip.json](./reports/performance/mcp-browser-roundtrip.json).
 
-External corpus percentages measure how many observed tokens receive a candidate from the current allowlist. They are not evidence of real edit success or patch quality. The next product proof must measure first-edit success and time-to-result against prompting on held-out repositories.
+External corpus percentages measure how many observed tokens receive a candidate from the current allowlist. They are not evidence of real edit success or patch quality. `npm run eval:product-ab` aggregates paired Intent Layer and prompt-only observations from independent users. [product-ab-evaluation.json](./reports/performance/product-ab-evaluation.json) is currently `collecting` with zero observations; no product-advantage claim is made before five repositories and twenty paired tasks.
 
 ## CLI
 
@@ -145,6 +139,7 @@ The GUI is the default. The CLI exists for diagnostics, CI, and recovery:
 
 ```bash
 npm run intent:doctor
+npx intent-layer init
 npm run intent:check -- fixtures/corpus src/App.tsx
 npm run intent:scan -- fixtures/corpus src/App.tsx --write-graph
 node dist/cli.js --help
@@ -167,7 +162,7 @@ Historical spike, launch, and handoff notes remain available in Git history inst
 - automatic prop or variant refactors for one rendered instance
 - direct edits through ambiguous `cloneElement` provenance
 - styled-components, Emotion, or full CSS cascade editing
-- automatic inference for arbitrary Tailwind themes
+- executing dynamic Tailwind configs or generally editing compound arbitrary values
 - direct edits to external packages or `node_modules`
 - Figma import
 - treating broad natural-language refactors as deterministic patches
