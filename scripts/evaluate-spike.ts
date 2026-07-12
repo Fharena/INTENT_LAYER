@@ -276,6 +276,7 @@ function reportPath(file: string): string {
 
 function packageSmoke(): PackageSmokeResult {
   const packageSmokeRoot = path.join(tmpDir, "package-smoke");
+  fs.rmSync(packageSmokeRoot, { recursive: true, force: true });
   fs.mkdirSync(packageSmokeRoot, { recursive: true });
   const packageRoot = fs.mkdtempSync(path.join(packageSmokeRoot, "intent-layer-package-smoke-"));
   const installDir = path.join(packageRoot, "install");
@@ -1161,7 +1162,7 @@ function packageSmoke(): PackageSmokeResult {
     ? fs.readFileSync(builtCliFile, "utf8").split(/\r?\n/, 1)[0] ?? null
     : null;
 
-  return {
+  const result: PackageSmokeResult = {
     packageName: dryRunPackage?.name ?? null,
     packageVersion: dryRunPackage?.version ?? null,
     binTarget: packageJson.bin?.["intent-layer"] ?? null,
@@ -1372,6 +1373,8 @@ function packageSmoke(): PackageSmokeResult {
       installedViteTransform.stderr.length +
       installedViteDevServer.stderr.length
   };
+  fs.rmSync(packageRoot, { recursive: true, force: true });
+  return result;
 }
 
 function sourceFiles(input: string): string[] {
