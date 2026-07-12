@@ -14,7 +14,7 @@ export interface TailwindSemanticToken {
 }
 
 const spacingPattern =
-  /^-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-[\w.[\]/%()!-]+$/;
+  /^(-?)(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-([\w.[\]/%()!-]+)$/;
 const radiusPattern = /^rounded(?:-[trbl]{1,2})?(?:-[\w.[\]/%-]+)?$/;
 const sizingPattern = /^(?:w|h|min-w|min-h|max-w|max-h|size)-[\w.[\]/%()!-]+$/;
 const displayPattern = /^(?:flex|grid|block|inline|inline-block|inline-flex|hidden)$/;
@@ -100,6 +100,12 @@ const tokenCategoryCache = new Map<string, IntentTokenCategory | null>();
 const classNameTokenCache = new Map<string, IntentToken[]>();
 const maxClassNameTokenCacheSize = 1000;
 
+function validSpacingMatch(base: string): RegExpMatchArray | null {
+  const match = base.match(spacingPattern);
+  if (!match || (match[1] === "-" && !match[2].startsWith("m"))) return null;
+  return match;
+}
+
 export function splitTailwindVariant(token: string): { variantPrefix: string; base: string } {
   const parts = token.split(":");
   return parts.length === 1
@@ -184,7 +190,7 @@ export function categorizeTailwindToken(token: string): IntentTokenCategory | nu
 
   const { base } = splitTailwindVariant(token);
   let category: IntentTokenCategory | null = null;
-  if (spacingPattern.test(base)) category = "spacing";
+  if (validSpacingMatch(base)) category = "spacing";
   else if (radiusPattern.test(base)) category = "radius";
   else if (sizingPattern.test(base) || displayPattern.test(base) || layoutPattern.test(base)) category = "layout";
   else if (typographyPattern.test(base)) category = "typography";
@@ -255,10 +261,11 @@ function colorCandidates(token: string, base: string): string[] | null {
 export function candidatesForToken(token: string): string[] {
   const { base } = splitTailwindVariant(token);
 
-  const spacingMatch = base.match(
-    /^(-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y))-([\w.[\]/%()!-]+)$/
-  );
-  if (spacingMatch) return uniqueCandidates(token, spacingValues.map((value) => `${spacingMatch[1]}-${value}`));
+  const spacingMatch = validSpacingMatch(base);
+  if (spacingMatch) {
+    const prefix = `${spacingMatch[1]}${spacingMatch[2]}`;
+    return uniqueCandidates(token, spacingValues.map((value) => `${prefix}-${value}`));
+  }
 
   const sizingMatch = base.match(/^((?:w|h|min-w|min-h|max-w|max-h|size))-([\w.[\]/%()!-]+)$/);
   if (sizingMatch) return uniqueCandidates(token, sizingValues.map((value) => `${sizingMatch[1]}-${value}`));
@@ -280,7 +287,12 @@ export function candidatesForToken(token: string): string[] {
 
   const flexMatch = base.match(/^(flex)-(1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)$/);
   if (flexMatch) {
-    const values = ["1", "auto", "initial", "none", "row", "row-reverse", "col", "col-reverse", "wrap", "wrap-reverse", "nowrap"];
+    const current = flexMatch[2];
+    const values = ["row", "row-reverse", "col", "col-reverse"].includes(current)
+      ? ["row", "row-reverse", "col", "col-reverse"]
+      : ["wrap", "wrap-reverse", "nowrap"].includes(current)
+        ? ["wrap", "wrap-reverse", "nowrap"]
+        : ["1", "auto", "initial", "none"];
     return uniqueCandidates(token, values.map((value) => `flex-${value}`));
   }
 
@@ -359,9 +371,7 @@ function colorProperty(prefix: string): string {
 }
 
 function semanticParts(base: string): { property: string; value: string } | null {
-  const spacing = base.match(
-    /^(-?)(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-(.+)$/
-  );
+  const spacing = validSpacingMatch(base);
   if (spacing) {
     const property = spacingProperty(spacing[2]);
     return property ? { property, value: `${spacing[1]}${spacing[3]}` } : null;

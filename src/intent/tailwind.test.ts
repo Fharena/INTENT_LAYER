@@ -36,6 +36,26 @@ describe("Tailwind direct-edit candidates", () => {
     expect(candidates).toContain("gap-96");
   });
 
+  it("keeps flex controls within one semantic property", () => {
+    expect(candidatesForToken("flex-col")).toEqual([
+      "flex-col",
+      "flex-row",
+      "flex-row-reverse",
+      "flex-col-reverse"
+    ]);
+    expect(candidatesForToken("flex-wrap")).toEqual(["flex-wrap", "flex-wrap-reverse", "flex-nowrap"]);
+    expect(candidatesForToken("flex-1")).toEqual(["flex-1", "flex-auto", "flex-initial", "flex-none"]);
+  });
+
+  it("accepts negative margin but not invalid negative padding or gap", () => {
+    const tokens = tokenizeClassName("-m-4 -p-4 -gap-4");
+
+    expect(tokens.find((token) => token.token === "-m-4")?.editable).toBe(true);
+    expect(tokens.find((token) => token.token === "-p-4")?.editable).toBe(false);
+    expect(tokens.find((token) => token.token === "-gap-4")?.editable).toBe(false);
+    expect(candidatesForToken("-m-4")).toContain("-m-8");
+  });
+
   it("does not claim arbitrary or unsupported tokens are editable", () => {
     const tokens = tokenizeClassName("bg-[var(--surface)] tracking-tight p-4");
 

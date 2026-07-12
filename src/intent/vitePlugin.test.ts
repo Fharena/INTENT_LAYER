@@ -10,6 +10,10 @@ function request(address: string, token: string): IncomingMessage {
 }
 
 describe("Intent Layer dev-server mutation boundary", () => {
+  it("never instruments production builds", () => {
+    expect(intentLayer().apply).toBe("serve");
+  });
+
   it("accepts only a matching session token from loopback", () => {
     expect(intentMutationRequestAllowed(request("127.0.0.1", "session"), "session")).toBe(true);
     expect(intentMutationRequestAllowed(request("::1", "session"), "session")).toBe(true);

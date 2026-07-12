@@ -151,6 +151,7 @@ export function intentLayerSpike(): Plugin {
 
   return {
     name: "intent-layer",
+    apply: "serve",
     enforce: "pre",
 
     configResolved(config) {

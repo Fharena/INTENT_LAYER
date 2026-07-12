@@ -27,14 +27,19 @@ interface Insertion {
   text: string;
 }
 
+interface ReactFactoryBindings {
+  functions: Set<string>;
+  namespaces: Set<string>;
+}
+
 export interface InstrumentResult {
   code: string;
   entries: IntentBinding[];
   transformMs: number;
 }
 
-function isIntrinsicTag(tagName: string): boolean {
-  return /^[a-z]/.test(tagName);
+function isIntrinsicTag(tagName: ts.JsxTagNameExpression): boolean {
+  return ts.isIdentifier(tagName) && /^[a-z]/.test(tagName.text);
 }
 
 function getTagNameText(
@@ -271,13 +276,39 @@ function propertyName(property: ts.ObjectLiteralElementLike): string | null {
   return null;
 }
 
-function createElementCall(node: ts.CallExpression): boolean {
-  if (ts.isIdentifier(node.expression)) return node.expression.text === "createElement";
+function reactFactoryBindings(sourceFile: ts.SourceFile): ReactFactoryBindings {
+  const functions = new Set<string>();
+  const namespaces = new Set<string>();
+  for (const statement of sourceFile.statements) {
+    if (
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteralLike(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === "react"
+    ) {
+      const clause = statement.importClause;
+      if (clause?.name) namespaces.add(clause.name.text);
+      if (clause?.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
+        namespaces.add(clause.namedBindings.name.text);
+      }
+      if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+        for (const element of clause.namedBindings.elements) {
+          if ((element.propertyName?.text ?? element.name.text) === "createElement") {
+            functions.add(element.name.text);
+          }
+        }
+      }
+    }
+  }
+  return { functions, namespaces };
+}
+
+function createElementCall(node: ts.CallExpression, bindings: ReactFactoryBindings): boolean {
+  if (ts.isIdentifier(node.expression)) return bindings.functions.has(node.expression.text);
   return (
     ts.isPropertyAccessExpression(node.expression) &&
     node.expression.name.text === "createElement" &&
     ts.isIdentifier(node.expression.expression) &&
-    node.expression.expression.text === "React"
+    bindings.namespaces.has(node.expression.expression.text)
   );
 }
 
@@ -307,6 +338,7 @@ export function instrumentSource(params: {
     ts.ScriptKind.TSX
   );
   const currentSourceHash = sourceHash(params.code);
+  const reactFactories = reactFactoryBindings(sourceFile);
   const insertions: Insertion[] = [];
   const entries: IntentBinding[] = [];
   const relativeFile = path.relative(params.rootDir, params.file).replace(/\\/g, "/");
@@ -314,6 +346,7 @@ export function instrumentSource(params: {
   function visit(node: ts.Node, componentName: string | null) {
     let currentComponentName = componentName;
     if (ts.isFunctionDeclaration(node) && node.name) currentComponentName = node.name.text;
+    if (ts.isClassDeclaration(node) && node.name) currentComponentName = node.name.text;
     if (
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
@@ -328,7 +361,7 @@ export function instrumentSource(params: {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tagName = getTagNameText(node, sourceFile);
       const classNameAttribute = findAttribute(node, "className");
-      if (isIntrinsicTag(tagName) && classNameAttribute && !findAttribute(node, "data-intent-id")) {
+      if (isIntrinsicTag(node.tagName) && classNameAttribute && !findAttribute(node, "data-intent-id")) {
         const className = getClassNameBinding(classNameAttribute, sourceFile);
         if (className) {
           const id = `il_${shortHash(`${relativeFile}:${className.start}:${tagName}`)}`;
@@ -356,7 +389,7 @@ export function instrumentSource(params: {
       }
     }
 
-    if (ts.isCallExpression(node) && createElementCall(node)) {
+    if (ts.isCallExpression(node) && createElementCall(node, reactFactories)) {
       const tag = node.arguments[0];
       const props = node.arguments[1];
       if (tag && ts.isStringLiteralLike(tag) && props && ts.isObjectLiteralExpression(props)) {

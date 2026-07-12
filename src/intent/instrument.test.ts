@@ -66,24 +66,53 @@ describe("instrumentSource", () => {
     expect(result.entries[0].className.unsupportedReason).toBe("variant-function");
   });
 
-  it("keeps the exported component name through wrappers and namespace objects", () => {
+  it("keeps the component name through wrappers, classes, and namespace objects", () => {
     const wrapped = "export const WrappedCard = memo(function Inner(){ return <section className=\"p-4\">Card</section>; });";
+    const classComponent = "export class LegacyCard extends Component { render(){ return <article className=\"m-4\">Card</article>; } }";
     const namespace = "export const CardParts = { Root: () => <section className=\"p-4\">Card</section> };";
 
     expect(instrumentSource({ code: wrapped, file, rootDir }).entries[0].componentName).toBe("WrappedCard");
+    expect(instrumentSource({ code: classComponent, file, rootDir }).entries[0].componentName).toBe("LegacyCard");
     expect(instrumentSource({ code: namespace, file, rootDir }).entries[0].componentName).toBe("CardParts");
   });
 
-  it("does not bind custom component props as DOM nodes", () => {
-    const code = "export function App(){ return <Card className=\"p-4\" />; }";
+  it("traverses fragments, conditionals, maps, suspense children, and portal content", () => {
+    const code = [
+      "export const App = forwardRef(function App(_, ref) {",
+      "  const items = [1, 2];",
+      "  return <>",
+      "    <Suspense fallback={<div className=\"p-2\">Loading</div>}>",
+      "      {items.map((item) => <article ref={ref} className=\"gap-4\">{item}</article>)}",
+      "      {items.length > 0 ? <section className=\"m-4\">Ready</section> : null}",
+      "      {createPortal(<aside className=\"rounded-lg\">Portal</aside>, document.body)}",
+      "    </Suspense>",
+      "  </>;",
+      "});"
+    ].join("\n");
+
     const result = instrumentSource({ code, file, rootDir });
 
-    expect(result.entries).toEqual([]);
-    expect(result.code).toBe(code);
+    expect(result.entries.map((entry) => entry.tagName)).toEqual(["div", "article", "section", "aside"]);
+    expect(result.entries.every((entry) => entry.componentName === "App")).toBe(true);
+  });
+
+  it("does not bind custom component props or member expressions as DOM nodes", () => {
+    const code = [
+      "export function App(){",
+      "  return <><Card className=\"p-4\" /><motion.div className=\"m-4\" /><my-widget className=\"gap-4\" /></>;",
+      "}"
+    ].join("\n");
+    const result = instrumentSource({ code, file, rootDir });
+
+    expect(result.entries.map((entry) => entry.tagName)).toEqual(["my-widget"]);
+    expect(result.entries[0].tokens.map((token) => token.token)).toEqual(["gap-4"]);
+    expect(result.code).not.toContain("<Card className=\"p-4\" data-intent-id");
+    expect(result.code).not.toContain("<motion.div className=\"m-4\" data-intent-id");
   });
 
   it("instruments intrinsic React.createElement calls with source-stable token ranges", () => {
     const code = [
+      "import React from 'react';",
       "export function Card({ active }: { active: boolean }) {",
       "  return React.createElement('section', { className: cn('p-4', active && 'gap-4'), title: 'Card' });",
       "}"
@@ -103,9 +132,28 @@ describe("instrumentSource", () => {
     }
   });
 
+  it("supports React factory aliases but rejects unrelated createElement functions", () => {
+    const code = [
+      "import R, { createElement as h } from 'react';",
+      "const createElement = (...args: unknown[]) => args;",
+      "const custom = createElement('div', { className: 'm-4' });",
+      "export function App(){",
+      "  return h('section', { className: 'p-4' }, R.createElement('span', { className: 'gap-4' }));",
+      "}"
+    ].join("\n");
+
+    const result = instrumentSource({ code, file, rootDir });
+
+    expect(result.entries.map((entry) => entry.tagName)).toEqual(["section", "span"]);
+    expect(result.entries.flatMap((entry) => entry.tokens.map((token) => token.token))).not.toContain("m-4");
+  });
+
   it("does not guess provenance for custom createElement or cloneElement calls", () => {
     const code = [
-      "const first = React.createElement(Card, { className: 'p-4' });",
+      "const createElement = (...args: unknown[]) => args;",
+      "const custom = createElement('section', { className: 'm-4' });",
+      "const React = { createElement: (...args: unknown[]) => args };",
+      "const first = React.createElement('article', { className: 'p-4' });",
       "const second = cloneElement(first, { className: 'gap-4' });"
     ].join("\n");
 
