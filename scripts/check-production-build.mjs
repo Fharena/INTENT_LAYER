@@ -2,9 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const output = path.join(root, "demo-dist");
+const requestedOutputs = process.argv.slice(2);
+const outputNames = requestedOutputs.length > 0 ? requestedOutputs : ["demo-dist"];
 const forbidden = ["data-intent-id", "virtual:intent-layer/client", "intent-layer-overlay-style"];
 const matches = [];
+const checked = [];
 
 function visit(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -19,7 +21,13 @@ function visit(directory) {
   }
 }
 
-if (!fs.existsSync(output)) throw new Error("demo-dist does not exist. Run the production build first.");
-visit(output);
-process.stdout.write(`${JSON.stringify({ ok: matches.length === 0, checked: "demo-dist", matches }, null, 2)}\n`);
+for (const outputName of outputNames) {
+  const output = path.resolve(root, outputName);
+  if (!fs.existsSync(output)) {
+    throw new Error(`${outputName} does not exist. Run the production build first.`);
+  }
+  checked.push(path.relative(root, output).replace(/\\/g, "/") || ".");
+  visit(output);
+}
+process.stdout.write(`${JSON.stringify({ ok: matches.length === 0, checked, matches }, null, 2)}\n`);
 if (matches.length > 0) process.exitCode = 1;

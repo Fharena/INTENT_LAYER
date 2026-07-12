@@ -82,7 +82,7 @@ interface PackageSmokeResult {
   packageName: string | null;
   packageVersion: string | null;
   binTarget: string | null;
-  viteExportTarget: string | null;
+  viteExportTarget: string | { types?: string; import?: string } | null;
   dryRunExitCode: number | null;
   packExitCode: number | null;
   installExitCode: number | null;
@@ -99,6 +99,7 @@ interface PackageSmokeResult {
   cliShebang: string | null;
   hasCliBundle: boolean;
   hasViteBundle: boolean;
+  hasViteTypes: boolean;
   hasVirtualClientBundle: boolean;
   hasContextPackFiles: boolean;
   hasReadmeDocs: boolean;
@@ -332,7 +333,7 @@ function packageSmoke(): PackageSmokeResult {
       : { exitCode: null, stdout: "", stderr: "missing installed bin", ms: 0 };
   const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf8")) as {
     bin?: Record<string, string>;
-    exports?: Record<string, string>;
+    exports?: Record<string, string | { types?: string; import?: string }>;
   };
   const files = dryRunPackage?.files ?? [];
   const packageName = dryRunPackage?.name ?? "intent-layer";
@@ -1183,6 +1184,7 @@ function packageSmoke(): PackageSmokeResult {
     cliShebang,
     hasCliBundle: files.some((file) => file.path === "dist/cli.js"),
     hasViteBundle: files.some((file) => file.path === "dist/vite.js"),
+    hasViteTypes: files.some((file) => file.path === "dist/types/vitePlugin.d.ts"),
     hasVirtualClientBundle:
       files.some((file) => file.path === "dist/client.js") &&
       files.some((file) => file.path === "dist/tailwind.js"),
@@ -5955,10 +5957,14 @@ const report = {
       packageInstallSmoke.installedViteTransformExitCode === 0 &&
       packageInstallSmoke.installedViteDevServerExitCode === 0 &&
       packageInstallSmoke.binTarget === "dist/cli.js" &&
-      packageInstallSmoke.viteExportTarget === "./dist/vite.js" &&
+      (typeof packageInstallSmoke.viteExportTarget === "string"
+        ? packageInstallSmoke.viteExportTarget === "./dist/vite.js"
+        : packageInstallSmoke.viteExportTarget?.import === "./dist/vite.js" &&
+          packageInstallSmoke.viteExportTarget.types === "./dist/types/vitePlugin.d.ts") &&
       packageInstallSmoke.cliShebang === "#!/usr/bin/env node" &&
       packageInstallSmoke.hasCliBundle &&
       packageInstallSmoke.hasViteBundle &&
+      packageInstallSmoke.hasViteTypes &&
       packageInstallSmoke.hasVirtualClientBundle &&
       !packageInstallSmoke.hasContextPackFiles &&
       packageInstallSmoke.hasReadmeDocs &&

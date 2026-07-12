@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { build } from "esbuild";
 
 const root = process.cwd();
@@ -53,6 +54,12 @@ await build({
   sourcemap: false,
   target: "es2020"
 });
+
+execFileSync(
+  process.execPath,
+  [path.join(root, "node_modules", "typescript", "bin", "tsc"), "--project", path.join(root, "tsconfig.package.json")],
+  { cwd: root, stdio: "inherit" }
+);
 
 fs.chmodSync(cliFile, 0o755);
 fs.chmodSync(path.join(outdir, "mcp.js"), 0o755);
