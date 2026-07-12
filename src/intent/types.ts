@@ -47,6 +47,7 @@ export interface IntentRuntimeSelectionRequest {
   route?: string;
   text?: string;
   role?: string | null;
+  classTokens?: string[];
   visible?: boolean;
   rect?: {
     x: number;
@@ -69,6 +70,7 @@ export interface IntentRuntimeSelection {
     route: string;
     text: string;
     role: string | null;
+    classTokens: string[];
     visible: boolean;
     rect: IntentRuntimeSelectionRequest["rect"];
   };

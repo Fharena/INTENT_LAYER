@@ -59,6 +59,13 @@ function compactText(value: string | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
 }
 
+function compactClassTokens(value: string[] | undefined): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((token) => token.trim()).filter((token) => token && !/\s/.test(token)))]
+    .slice(0, 200)
+    .map((token) => token.slice(0, 240));
+}
+
 export function writeRuntimeSelection(
   rootDir: string,
   entry: IntentBinding | undefined,
@@ -82,6 +89,7 @@ export function writeRuntimeSelection(
           route: compactText(request.route),
           text: compactText(request.text),
           role: compactText(request.role ?? undefined) || null,
+          classTokens: compactClassTokens(request.classTokens),
           visible: request.visible ?? false,
           rect: request.rect ?? null
         }
@@ -113,7 +121,12 @@ function readSelectionFile(file: string, sessionId: string | null): IntentRuntim
           sessionId: typeof value.sessionId === "string" ? value.sessionId : sessionId,
           freshUntil:
             typeof value.freshUntil === "string" ? value.freshUntil : new Date(0).toISOString(),
-          selection: value.selection ?? null
+          selection: value.selection
+            ? {
+                ...value.selection,
+                classTokens: compactClassTokens(value.selection.classTokens)
+              }
+            : null
         }
       : null;
   } catch {

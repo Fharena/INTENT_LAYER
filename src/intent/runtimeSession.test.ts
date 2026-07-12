@@ -99,12 +99,21 @@ describe("runtime sessions", () => {
       tokens: []
     });
 
-    writeRuntimeSelection(root, binding("first-id"), { id: "first-id", route: "/first" }, first.sessionId);
+    writeRuntimeSelection(
+      root,
+      binding("first-id"),
+      {
+        id: "first-id",
+        route: "/first",
+        classTokens: ["p-4", "bg-brand", "p-4", " invalid token ", ""]
+      },
+      first.sessionId
+    );
     writeRuntimeSelection(root, binding("second-id"), { id: "second-id", route: "/second" }, second.sessionId);
 
     expect(readRuntimeSelection(root, first.sessionId)).toMatchObject({
       sessionId: first.sessionId,
-      selection: { id: "first-id", route: "/first" }
+      selection: { id: "first-id", route: "/first", classTokens: ["p-4", "bg-brand"] }
     });
     expect(readRuntimeSelection(root, second.sessionId)).toMatchObject({
       sessionId: second.sessionId,

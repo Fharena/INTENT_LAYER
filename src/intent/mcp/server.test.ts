@@ -38,6 +38,7 @@ describe("Intent Layer MCP", () => {
       route: "/demo",
       text: "App",
       role: "main",
+      classTokens: ["gap-4", "p-4"],
       visible: true,
       rect: { x: 10, y: 20, width: 300, height: 120 }
     });
@@ -105,7 +106,7 @@ describe("Intent Layer MCP", () => {
       expect("text" in selectionContent).toBe(true);
       if (!("text" in selectionContent)) return;
       expect(JSON.parse(selectionContent.text)).toMatchObject({
-        selection: { id: entry.id, route: "/demo", text: "App" }
+        selection: { id: entry.id, route: "/demo", text: "App", classTokens: ["gap-4", "p-4"] }
       });
 
       const undone = await client.callTool({

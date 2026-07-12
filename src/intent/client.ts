@@ -1,4 +1,4 @@
-import { candidatesForToken } from "./tailwind";
+import { candidatesForToken, splitTailwindVariant } from "./tailwind";
 import type {
   AgentResultArtifact,
   AgentQueueSignal,
@@ -52,6 +52,11 @@ const intentSessionToken = "__INTENT_LAYER_SESSION_TOKEN__";
 interface RenderScope {
   renderedInstanceCount: number;
   isShared: boolean;
+  activeTokens: string[] | null;
+}
+
+interface RuntimeDomPreview {
+  elements: Array<{ element: HTMLElement; className: string | null; previewClassName: string | null }>;
 }
 
 interface BindingRefreshDetail {
@@ -107,6 +112,7 @@ type TextKey =
   | "commandPlan"
   | "compact"
   | "density"
+  | "decreaseValue"
   | "conflicts"
   | "conflictsEmpty"
   | "comfortable"
@@ -128,6 +134,7 @@ type TextKey =
   | "healthReady"
   | "healthSetup"
   | "inspectableNoTokens"
+  | "increaseValue"
   | "intentMap"
   | "korean"
   | "language"
@@ -151,10 +158,12 @@ type TextKey =
   | "pickMode"
   | "preview"
   | "requestFailed"
+  | "resetPreview"
   | "ready"
   | "resetOnboarding"
   | "resetOnboardingDone"
   | "runLocked"
+  | "runtimeInactive"
   | "saveSettings"
   | "settingsSaved"
   | "selectSingle"
@@ -184,7 +193,7 @@ type TextKey =
 
 const lastAgentTaskFileByIntentId = new Map<string, string>();
 const overlayStyleId = "intent-layer-overlay-style";
-const overlayRuntimeVersion = "visual-map-v2";
+const overlayRuntimeVersion = "visual-map-v3";
 const overlayBaseBottom = 18;
 const overlayAvoidanceGap = 14;
 let overlayPlacementFrame: number | null = null;
@@ -193,6 +202,7 @@ let overlayView: OverlayView = "editor";
 let overlayLanguage: IntentLayerLanguage = detectInitialLanguage();
 let overlaySettings: IntentOverlaySettings = defaultOverlaySettings();
 let latestSetupStatus: IntentSetupStatus | null = null;
+let runtimeDomPreview: RuntimeDomPreview | null = null;
 const devToolCandidateSelector = [
   "nextjs-portal",
   "vite-error-overlay",
@@ -256,6 +266,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     commandPlan: "명령 계획",
     compact: "컴팩트",
     density: "밀도",
+    decreaseValue: "이전 값",
     conflicts: "되돌리기 충돌",
     conflictsEmpty: "해결되지 않은 충돌이 없습니다.",
     comfortable: "기본",
@@ -277,6 +288,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     healthReady: "준비",
     healthSetup: "설정 필요",
     inspectableNoTokens: "이 요소는 inspect 가능하지만 아직 직접 수정 가능한 토큰이 없습니다.",
+    increaseValue: "다음 값",
     intentMap: "Intent 맵",
     korean: "한국어",
     language: "언어",
@@ -300,10 +312,12 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     pickMode: "선택 모드입니다",
     preview: "미리보기",
     requestFailed: "요청에 실패했습니다",
+    resetPreview: "미리보기 원복",
     ready: "준비됐습니다. 요소를 선택하세요.",
     resetOnboarding: "온보딩 다시 보기",
     resetOnboardingDone: "다음 실행 때 설정 화면이 다시 열립니다",
     runLocked: "실행은 잠겨 있습니다. 설정에서 Agent 실행을 켜거나 INTENT_LAYER_AGENT_RUN=1일 때만 CLI가 실행됩니다.",
+    runtimeInactive: "현재 클릭한 렌더에서 비활성인 조건부 토큰은 숨겼습니다.",
     saveSettings: "설정 저장",
     settingsSaved: "설정을 저장했습니다",
     selectSingle: "이 렌더 인스턴스에만 연결됩니다.",
@@ -376,6 +390,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     commandPlan: "Command plan",
     compact: "Compact",
     density: "Density",
+    decreaseValue: "Previous value",
     conflicts: "Undo conflicts",
     conflictsEmpty: "No unresolved undo conflicts.",
     comfortable: "Comfortable",
@@ -397,6 +412,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     healthReady: "Ready",
     healthSetup: "Setup needed",
     inspectableNoTokens: "This element is inspectable, but it has no direct-edit tokens yet.",
+    increaseValue: "Next value",
     intentMap: "Intent map",
     korean: "Korean",
     language: "Language",
@@ -420,10 +436,12 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     pickMode: "Pick mode active",
     preview: "Preview",
     requestFailed: "Request failed",
+    resetPreview: "Reset preview",
     ready: "Ready. Start by picking an element.",
     resetOnboarding: "Show onboarding again",
     resetOnboardingDone: "Setup will open again on the next run",
     runLocked: "Agent run is locked. Agent CLIs run only when enabled in settings or INTENT_LAYER_AGENT_RUN=1 is set.",
+    runtimeInactive: "Conditional tokens inactive in the clicked render are hidden.",
     saveSettings: "Save settings",
     settingsSaved: "Settings saved",
     selectSingle: "Affects this rendered instance.",
@@ -537,6 +555,7 @@ function publishRuntimeSelection(binding: IntentBinding | null, element: HTMLEle
     route: `${window.location.pathname}${window.location.search}${window.location.hash}`,
     text: hidesText ? "" : (element?.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 120),
     role: element?.getAttribute("role") ?? null,
+    classTokens: element ? Array.from(element.classList) : [],
     visible: Boolean(rect && rect.width > 0 && rect.height > 0),
     rect: rect
       ? {
@@ -1034,6 +1053,78 @@ function ensureOverlayStyles() {
   color: #eef2ff !important;
   font-size: 11px !important;
   font-weight: 800 !important;
+}
+
+.intent-layer-token-controls {
+  grid-column: 1 / -1 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+}
+
+.intent-layer-token-stepper {
+  display: grid !important;
+  grid-template-columns: 28px minmax(0, 1fr) 28px !important;
+  align-items: center !important;
+  gap: 5px !important;
+  width: min(100%, 210px) !important;
+}
+
+[data-intent-overlay-root] .intent-layer-token-stepper button {
+  width: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 16px !important;
+}
+
+.intent-layer-token-stepper output {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: #cfd7eb !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 10px !important;
+  text-align: center !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.intent-layer-color-swatches {
+  display: flex !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  padding: 2px 0 !important;
+}
+
+[data-intent-overlay-root] .intent-layer-color-swatch {
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16) !important;
+}
+
+[data-intent-overlay-root] .intent-layer-color-swatch[data-intent-active="true"] {
+  border-color: #7edcff !important;
+  box-shadow: 0 0 0 2px rgba(98, 217, 255, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+.intent-layer-runtime-note {
+  margin-bottom: 8px !important;
+  color: #9ea9c2 !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+}
+
+[data-intent-preview-active="true"] {
+  outline: 2px solid rgba(98, 217, 255, 0.8) !important;
+  outline-offset: 2px !important;
 }
 
 [data-intent-overlay-root] select,
@@ -1715,20 +1806,53 @@ function elementsForIntentId(id: string): HTMLElement[] {
   );
 }
 
+function clearRuntimeDomPreview(): void {
+  if (!runtimeDomPreview) return;
+  for (const { element, className, previewClassName } of runtimeDomPreview.elements) {
+    if (element.getAttribute("class") === previewClassName) {
+      if (className === null) element.removeAttribute("class");
+      else element.setAttribute("class", className);
+    }
+    element.removeAttribute("data-intent-preview-active");
+  }
+  runtimeDomPreview = null;
+}
+
+function applyRuntimeDomPreview(id: string, oldToken: string, nextToken: string): number {
+  clearRuntimeDomPreview();
+  if (oldToken === nextToken) return 0;
+
+  const elements = elementsForIntentId(id).filter((element) => element.classList.contains(oldToken));
+  const snapshots = elements.map((element) => ({
+    element,
+    className: element.getAttribute("class"),
+    previewClassName: null as string | null
+  }));
+  for (const snapshot of snapshots) {
+    snapshot.element.classList.replace(oldToken, nextToken);
+    snapshot.element.setAttribute("data-intent-preview-active", "true");
+    snapshot.previewClassName = snapshot.element.getAttribute("class");
+  }
+  runtimeDomPreview = snapshots.length > 0 ? { elements: snapshots } : null;
+  return snapshots.length;
+}
+
 function clearSelectedIntentElements() {
   for (const element of document.querySelectorAll<HTMLElement>("[data-intent-selected='true']")) {
     element.removeAttribute("data-intent-selected");
   }
 }
 
-function selectIntentElements(id: string): RenderScope {
+function selectIntentElements(id: string, clickedElement: HTMLElement | null = null): RenderScope {
   const elements = elementsForIntentId(id);
   for (const element of elements) {
     element.setAttribute("data-intent-selected", "true");
   }
+  const activeElement = clickedElement && elements.includes(clickedElement) ? clickedElement : elements[0] ?? null;
   return {
     renderedInstanceCount: Math.max(elements.length, 1),
-    isShared: elements.length > 1
+    isShared: elements.length > 1,
+    activeTokens: activeElement ? Array.from(activeElement.classList) : null
   };
 }
 
@@ -2140,6 +2264,7 @@ function renderGridLayoutComposer(
         setStatus(overlayLanguage === "ko" ? "바뀐 배치가 없습니다." : "The layout has not changed.");
         return;
       }
+      clearRuntimeDomPreview();
       preview.disabled = true;
       try {
         const result = await requestJson<GridLayoutPreviewResponse>("/__intent/grid-layout/preview", {
@@ -2178,6 +2303,7 @@ function renderGridLayoutComposer(
 
     apply.addEventListener("click", async () => {
       if (!previewId) return;
+      clearRuntimeDomPreview();
       apply.disabled = true;
       const applyRequest: GridLayoutApplyRequest = { previewId };
       try {
@@ -2211,6 +2337,67 @@ function renderGridLayoutComposer(
   return section;
 }
 
+function supportsTokenStepper(token: string): boolean {
+  const { base } = splitTailwindVariant(token);
+  return /^-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-/.test(base);
+}
+
+function orderedStepperCandidates(candidates: string[]): string[] {
+  return candidates
+    .map((candidate, index) => {
+      const { base } = splitTailwindVariant(candidate);
+      const match = /^-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-(.+)$/.exec(base);
+      const value = match?.[1] ?? "";
+      const numericValue = value === "px" ? 0.0625 : Number(value);
+      return {
+        candidate,
+        index,
+        order: Number.isFinite(numericValue) ? numericValue : Number.POSITIVE_INFINITY
+      };
+    })
+    .sort((left, right) => left.order - right.order || left.index - right.index)
+    .map((item) => item.candidate);
+}
+
+function candidateColor(token: string): string | null {
+  const { base } = splitTailwindVariant(token);
+  const match = /^(bg|text|border(?:-[trblxy])?|divide-[xy]|ring|ring-offset|outline|decoration|accent|caret|fill|stroke|shadow)-(.+)$/.exec(
+    base
+  );
+  if (!match) return null;
+  const value = match[2].split("/", 1)[0];
+  const variable = /^\[var\((--[^)]+)\)\]$/.exec(value)?.[1] ?? `--color-${value}`;
+  const themeValue = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
+  if (themeValue) return themeValue;
+
+  const probe = document.createElement("span");
+  probe.className = base;
+  probe.style.position = "fixed";
+  probe.style.pointerEvents = "none";
+  probe.style.visibility = "hidden";
+  document.body.appendChild(probe);
+  const style = getComputedStyle(probe);
+  const color =
+    match[1] === "bg"
+      ? style.backgroundColor
+      : match[1] === "fill"
+        ? style.fill
+        : match[1] === "stroke"
+          ? style.stroke
+          : match[1].startsWith("ring")
+            ? style.getPropertyValue("--tw-ring-color")
+            : match[1] === "shadow"
+              ? style.getPropertyValue("--tw-shadow-color")
+              : match[1].startsWith("border") || match[1].startsWith("divide") || match[1] === "outline"
+                ? style.borderTopColor
+                : style.color;
+  probe.remove();
+  const normalized = color.trim();
+  return normalized && normalized !== "transparent" && normalized !== "rgba(0, 0, 0, 0)"
+    ? normalized
+    : null;
+}
+
 function renderTokenRow(
   root: HTMLElement,
   binding: IntentBinding,
@@ -2223,63 +2410,32 @@ function renderTokenRow(
   row.className = "intent-layer-token-row";
   row.dataset.intentTokenCategory = token.category ?? "unknown";
   row.dataset.intentToken = token.token;
-  row.style.display = "grid";
-  row.style.gridTemplateColumns = "1fr 1fr auto auto";
-  row.style.gap = "8px";
-  row.style.alignItems = "center";
-  row.style.marginTop = "8px";
 
   const label = document.createElement("div");
   label.className = "intent-layer-token-label";
   label.textContent = `${token.category}: ${token.token}`;
-  label.style.fontSize = "12px";
-  label.style.fontWeight = "700";
 
   const select = document.createElement("select");
-  select.style.width = "100%";
-  select.style.border = "1px solid #cbd5e1";
-  select.style.borderRadius = "6px";
-  select.style.padding = "6px";
-  select.style.fontSize = "12px";
-
-  const renderCandidates = (candidates: string[]) => {
-    const selected = select.value || token.token;
-    select.innerHTML = "";
-    for (const candidate of candidates) {
-      const option = document.createElement("option");
-      option.value = candidate;
-      option.textContent = candidate;
-      option.selected = candidate === selected;
-      select.appendChild(option);
-    }
-  };
-  renderCandidates(candidatesForToken(token.token));
-  void intentFetch(`/__intent/candidates?token=${encodeURIComponent(token.token)}`)
-    .then((response) => response.json() as Promise<{ candidates?: string[] }>)
-    .then((result) => {
-      if (select.isConnected && result.candidates && result.candidates.length > 1) {
-        renderCandidates(result.candidates);
-      }
-    })
-    .catch(() => undefined);
-
   const preview = createButton(t("preview"));
+  preview.dataset.intentAction = "token-preview";
   const apply = createButton(scope?.isShared ? t("applyAll") : t("apply"));
+  apply.dataset.intentAction = "token-apply";
+  apply.disabled = true;
   if (scope?.isShared) {
     const title = `This source binding is rendered ${scope.renderedInstanceCount} times on the page.`;
     preview.title = title;
     apply.title = title;
   }
+
+  const controls = document.createElement("div");
+  controls.className = "intent-layer-token-controls";
+  const reset = createButton(t("resetPreview"));
+  reset.dataset.intentAction = "reset-dom-preview";
+  reset.hidden = true;
+  let currentCandidates = candidatesForToken(token.token);
+
   const previewBox = document.createElement("pre");
   previewBox.className = "intent-layer-preview-box";
-  previewBox.style.gridColumn = "1 / -1";
-  previewBox.style.margin = "0";
-  previewBox.style.padding = "8px";
-  previewBox.style.borderRadius = "6px";
-  previewBox.style.background = "#f8fafc";
-  previewBox.style.border = "1px solid #e2e8f0";
-  previewBox.style.fontSize = "11px";
-  previewBox.style.whiteSpace = "pre-wrap";
   previewBox.style.display = "none";
 
   function patchRequest(): PatchRequest {
@@ -2292,10 +2448,127 @@ function renderTokenRow(
     };
   }
 
+  function chooseCandidate(candidate: string) {
+    if (!currentCandidates.includes(candidate)) return;
+    select.value = candidate;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function renderCandidateControls() {
+    controls.innerHTML = "";
+    if (supportsTokenStepper(token.token)) {
+      const stepperCandidates = orderedStepperCandidates(currentCandidates);
+      const stepper = document.createElement("div");
+      stepper.className = "intent-layer-token-stepper";
+      const previous = createButton("-");
+      previous.type = "button";
+      previous.title = t("decreaseValue");
+      previous.setAttribute("aria-label", t("decreaseValue"));
+      previous.dataset.intentAction = "candidate-previous";
+      const output = document.createElement("output");
+      output.textContent = select.value;
+      const next = createButton("+");
+      next.type = "button";
+      next.title = t("increaseValue");
+      next.setAttribute("aria-label", t("increaseValue"));
+      next.dataset.intentAction = "candidate-next";
+      const index = Math.max(0, stepperCandidates.indexOf(select.value));
+      previous.disabled = index <= 0;
+      next.disabled = index >= stepperCandidates.length - 1;
+      previous.addEventListener("click", () => chooseCandidate(stepperCandidates[index - 1]));
+      next.addEventListener("click", () => chooseCandidate(stepperCandidates[index + 1]));
+      stepper.append(previous, output, next);
+      controls.appendChild(stepper);
+    }
+
+    if (token.category === "color") {
+      const colorCandidates: Array<{ candidate: string; color: string }> = [];
+      for (const candidate of currentCandidates) {
+        const color = candidateColor(candidate);
+        if (color) colorCandidates.push({ candidate, color });
+        if (colorCandidates.length >= 18) break;
+      }
+      if (colorCandidates.length < 2) {
+        reset.hidden = select.value === token.token;
+        controls.appendChild(reset);
+        return;
+      }
+      const swatches = document.createElement("div");
+      swatches.className = "intent-layer-color-swatches";
+      for (const { candidate, color } of colorCandidates) {
+        const swatch = createButton("");
+        swatch.type = "button";
+        swatch.className += " intent-layer-color-swatch";
+        swatch.dataset.intentCandidate = candidate;
+        swatch.dataset.intentActive = candidate === select.value ? "true" : "false";
+        swatch.title = candidate;
+        swatch.setAttribute("aria-label", candidate);
+        swatch.style.setProperty("background", color, "important");
+        swatch.addEventListener("click", () => chooseCandidate(candidate));
+        swatches.appendChild(swatch);
+      }
+      controls.appendChild(swatches);
+    }
+    reset.hidden = select.value === token.token;
+    controls.appendChild(reset);
+  }
+
+  function renderCandidates(candidates: string[]) {
+    const selected = select.value || token.token;
+    currentCandidates = [...new Set([token.token, ...candidates])];
+    select.innerHTML = "";
+    for (const candidate of currentCandidates) {
+      const option = document.createElement("option");
+      option.value = candidate;
+      option.textContent = candidate;
+      option.selected = candidate === selected;
+      select.appendChild(option);
+    }
+    if (!currentCandidates.includes(selected)) select.value = token.token;
+    renderCandidateControls();
+  }
+
+  select.addEventListener("change", () => {
+    apply.disabled = true;
+    previewBox.style.display = "none";
+    previewBox.textContent = "";
+    const affected = applyRuntimeDomPreview(binding.id, token.token, select.value);
+    renderCandidateControls();
+    if (select.value !== token.token) {
+      setStatus(
+        overlayLanguage === "ko"
+          ? `DOM 미리보기: ${affected}개 렌더, source는 아직 바뀌지 않았습니다.`
+          : `DOM preview: ${affected} render(s); source is unchanged.`
+      );
+    }
+  });
+
+  reset.addEventListener("click", () => {
+    clearRuntimeDomPreview();
+    select.value = token.token;
+    apply.disabled = true;
+    previewBox.style.display = "none";
+    previewBox.textContent = "";
+    renderCandidateControls();
+    setStatus(t("resetPreview"));
+  });
+
+  renderCandidates(currentCandidates);
+  void intentFetch(`/__intent/candidates?token=${encodeURIComponent(token.token)}`)
+    .then((response) => response.json() as Promise<{ candidates?: string[] }>)
+    .then((result) => {
+      if (select.isConnected && result.candidates && result.candidates.length > 1) {
+        renderCandidates(result.candidates);
+      }
+    })
+    .catch(() => undefined);
+
   preview.addEventListener("click", async () => {
     const request = patchRequest();
+    if (request.nextToken === request.oldToken) return;
     const startedAt = performance.now();
     preview.disabled = true;
+    apply.disabled = true;
     try {
       const result = await requestJson<PreviewResponse>("/__intent/preview", {
         method: "POST",
@@ -2306,9 +2579,15 @@ function renderTokenRow(
       const renderStartedAt = performance.now();
       previewBox.style.display = "block";
       if (result.ok) {
+        const affected = applyRuntimeDomPreview(binding.id, token.token, select.value);
+        apply.disabled = false;
+        reset.hidden = false;
         previewBox.textContent = [`- ${result.before}`, `+ ${result.after}`].join("\n");
-        setStatus(`Preview ${result.oldToken} -> ${result.nextToken} in ${result.metrics.previewMs}ms`);
+        setStatus(
+          `Preview ${result.oldToken} -> ${result.nextToken} in ${result.metrics.previewMs}ms; ${affected} render(s)`
+        );
       } else {
+        clearRuntimeDomPreview();
         previewBox.textContent = result.detail ?? result.reason;
         setStatus(`Preview rejected: ${result.reason}`);
       }
@@ -2326,6 +2605,7 @@ function renderTokenRow(
         reason: result.ok ? undefined : result.reason
       });
     } catch (error) {
+      clearRuntimeDomPreview();
       previewBox.style.display = "block";
       previewBox.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
       setStatus(previewBox.textContent);
@@ -2337,6 +2617,7 @@ function renderTokenRow(
   apply.addEventListener("click", async () => {
     const request = patchRequest();
     const startedAt = performance.now();
+    clearRuntimeDomPreview();
     apply.disabled = true;
     try {
       const result = await requestJson<PatchResponse>("/__intent/apply", {
@@ -2372,12 +2653,10 @@ function renderTokenRow(
       });
     } catch (error) {
       setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
-    } finally {
-      apply.disabled = false;
     }
   });
 
-  row.append(label, select, preview, apply, previewBox);
+  row.append(label, select, preview, apply, controls, previewBox);
   root.appendChild(row);
 }
 
@@ -3042,6 +3321,7 @@ function renderUndoHistory(
         revert.title = item.next ? "Revert latest patch" : "Revert newer patches first";
         revert.addEventListener("click", async () => {
           if (!item.next) return;
+          clearRuntimeDomPreview();
           revert.disabled = true;
           revert.style.cursor = "default";
           try {
@@ -3159,6 +3439,7 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
 }
 
 function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status: string, scope: RenderScope | null = null) {
+  clearRuntimeDomPreview();
   panel.innerHTML = "";
   panel.dataset.intentCollapsed = overlayCollapsed ? "true" : "false";
   applyOverlaySettingsToPanel(panel);
@@ -3222,6 +3503,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   undo.addEventListener("click", async () => {
     overlayView = "editor";
     const startedAt = performance.now();
+    clearRuntimeDomPreview();
     undo.disabled = true;
     try {
       const result = await requestJson<RevertResponse>("/__intent/revert-last", { method: "POST" });
@@ -3292,10 +3574,19 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   } else {
     const effectiveScope = scope ?? {
       renderedInstanceCount: 1,
-      isShared: false
+      isShared: false,
+      activeTokens: null
     };
 
-    const editableTokens = binding.tokens.filter((item) => item.editable);
+    const allEditableTokens = binding.tokens.filter((item) => item.editable);
+    const runtimeActiveTokens =
+      binding.className.kind === "call-literals" && effectiveScope.activeTokens
+        ? new Set(effectiveScope.activeTokens)
+        : null;
+    const editableTokens = runtimeActiveTokens
+      ? allEditableTokens.filter((item) => runtimeActiveTokens.has(item.token))
+      : allEditableTokens;
+    const runtimeInactiveCount = allEditableTokens.length - editableTokens.length;
     renderWorkflowRail(content, binding, editableTokens.length);
     renderIntentMap(content, binding, effectiveScope, editableTokens);
 
@@ -3319,6 +3610,13 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     if (layoutComposer) content.appendChild(layoutComposer);
 
     const directSection = createSection(t("directEdit"), editableTokens.length > 0 ? "ready" : "warn");
+    if (runtimeInactiveCount > 0) {
+      const runtimeNote = document.createElement("p");
+      runtimeNote.className = "intent-layer-runtime-note";
+      runtimeNote.dataset.intentRuntimeInactiveCount = String(runtimeInactiveCount);
+      runtimeNote.textContent = `${t("runtimeInactive")} (${runtimeInactiveCount})`;
+      directSection.appendChild(runtimeNote);
+    }
     if (editableTokens.length === 0) {
       const empty = document.createElement("p");
       empty.textContent = t("inspectableNoTokens");
@@ -3507,7 +3805,7 @@ export function initIntentOverlay() {
       const lookupStartedAt = performance.now();
       const intentId = element.dataset.intentId ?? "";
       clearSelectedIntentElements();
-      selectedScope = intentId ? selectIntentElements(intentId) : null;
+      selectedScope = intentId ? selectIntentElements(intentId, element) : null;
       selectedBinding = graph.entries[intentId] ?? null;
       publishRuntimeSelection(selectedBinding, selectedBinding ? element : null);
       const lookupEndedAt = performance.now();
