@@ -5,6 +5,8 @@
 .context-pack/local/
 .playwright-cli/
 output/playwright/
+test-results/
+playwright-report/
 
 # dependencies and build outputs
 node_modules/

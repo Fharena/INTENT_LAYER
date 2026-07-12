@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-12T01:25:47.042Z",
+  "status": "collecting",
+  "scope": "Independent paired user-task outcomes only. Corpus coverage, synthetic fixtures, and mechanical latency are excluded.",
+  "inputFile": "reports/performance/product-ab-observations.jsonl",
+  "repositoryCount": 0,
+  "pairedTaskCount": 0,
+  "observationCount": 0,
+  "conditions": {
+    "intent-layer": {
+      "observationCount": 0,
+      "successCount": 0,
+      "successRate": 0,
+      "medianDurationMs": null,
+      "p95DurationMs": null,
+      "averageRetryCount": 0,
+      "wrongTargetCount": 0,
+      "undoCount": 0,
+      "unsupportedCount": 0
+    },
+    "prompt-only": {
+      "observationCount": 0,
+      "successCount": 0,
+      "successRate": 0,
+      "medianDurationMs": null,
+      "p95DurationMs": null,
+      "averageRetryCount": 0,
+      "wrongTargetCount": 0,
+      "undoCount": 0,
+      "unsupportedCount": 0
+    }
+  },
+  "paired": {
+    "intentFasterCount": 0,
+    "promptFasterCount": 0,
+    "tiedDurationCount": 0,
+    "intentOnlySuccessCount": 0,
+    "promptOnlySuccessCount": 0,
+    "medianIntentMinusPromptMs": null
+  },
+  "gates": {
+    "atLeastFiveRepositories": false,
+    "atLeastTwentyPairedTasks": false,
+    "everyTaskHasBothConditions": true,
+    "complete": false
+  }
+}

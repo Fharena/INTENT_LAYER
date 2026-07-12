@@ -40,10 +40,12 @@
     "build:demo": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "npm run build:package && playwright test",
     "test:mcp-package": "node scripts/smoke-mcp-package.mjs",
     "benchmark:mcp": "tsx scripts/benchmark-mcp.ts",
+    "eval:product-ab": "tsx scripts/summarize-product-ab.ts",
     "test:watch": "vitest",
-    "verify": "npm run typecheck && npm run test && npm run build && npm run test:mcp-package && npm run eval",
+    "verify": "npm run typecheck && npm run test && npm run build && npm run test:mcp-package && npm run test:e2e && npm run eval && npm run eval:product-ab",
     "prepack": "npm run build:package",
     "intent": "tsx src/intent/cli.ts",
     "intent:init": "tsx src/intent/cli.ts init",
@@ -74,6 +76,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
