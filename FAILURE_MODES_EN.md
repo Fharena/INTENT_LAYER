@@ -220,13 +220,19 @@ The panel reports a stopped dev server, invalid HTTP response, or JSON parse fai
 
 ## 13. A DOM preview resets or a conditional token is missing
 
-A color or spacing change shown immediately after candidate selection is a temporary DOM preview, not a source patch. Picking another element, rerendering the panel, starting a Grid operation, applying, or undoing restores it automatically. Source Apply also stays locked until server-side Preview succeeds.
+A color or spacing change shown immediately after candidate selection is a temporary DOM preview, not a source patch. Picking another element, rerendering the panel, starting a Grid/Flex operation, applying, or undoing restores it automatically. Source Apply also stays locked until server-side Preview succeeds.
 
 For literal conditional branches inside `cn()` or `clsx()`, the panel hides tokens absent from the clicked DOM instance. Move the app into the other state and pick the element again to edit that branch. If React renders a new `class` value on the same element during preview, reset preserves React's newer result instead of overwriting it with a stale snapshot. Pick the element again to continue from current source and runtime state.
 
 If Codex or Claude does not list the tools, check AI connection status and the project-local `.codex/config.toml` or `.mcp.json`, then start a new session. If config exists but `serverReady` is false, the package install or built `dist/mcp.js` entry is missing. Intent Layer never edits global provider configuration.
 
-## 13. Grid layout appears as read-only
+## 14. The literal-text editor is missing or rejects the edit
+
+- `text-not-literal`: the element does not contain exactly one JSX text child, or it contains an expression/nested element. That is a structural edit and remains read-only.
+- `invalid-literal-text`: the new value is empty, over 500 characters, has outer whitespace or a line break, or contains `<>{}&`. Only one-line plain text that cannot alter JSX/entity semantics is accepted.
+- `old-text-mismatch` or `source-hash-mismatch`: source changed after selection. Nothing is written; select the element again and create a new preview.
+
+## 15. Grid layout appears as read-only
 
 - `repeated-grid-binding`: multiple direct children, commonly from `.map()`, share one source id. Per-instance placement needs a prop or variant refactor, so use agent handoff.
 - `cross-file-grid`: the parent and direct-child implementations live in different files. The first version limits grouped edits to one file to prevent partial apply.
@@ -235,10 +241,21 @@ If Codex or Claude does not list the tools, check AI connection status and the p
 - `unbound-grid-child`: at least one direct DOM child has no source binding. Give that element a static className and select again.
 - `repeated-grid-binding`, `cross-file-grid`, and `dynamic-grid-classname` are explicit support boundaries, not partial-success conditions. The tool never applies only a subset of children.
 - `grid-placement-overflow`: start plus span exceeds the active column count. Select a range inside the placement strip.
+- `grid-row-placement-overflow`: row start plus span exceeds the active row count. Change the row count or child row range.
+- `unsupported-breakpoint`: the project screen cannot be ordered as a numeric min-width. `raw`, max-only, CSS-variable, and dynamic-config screens are omitted from direct-edit tabs.
 - `unsupported-grid-token`: an arbitrary template contains `minmax()`, a CSS variable, a named line, or a non-positive track. Ratio sliders currently edit only positive `fr` templates such as `grid-cols-[1.2fr_0.8fr]`.
 - `planned-range-mismatch` or `source-hash-mismatch`: source changed after preview. The source-write count is zero; create a new preview.
 
-## 14. An Agent task remains `claimed`
+## 16. Flex layout appears as read-only
+
+- `repeated-flex-binding` or `unbound-flex-child`: direct children share a source id or have no binding. Per-instance placement requires a prop/variant refactor.
+- `cross-file-flex`, `dynamic-flex-classname`, `multiline-flex-classname`, or `noncanonical-flex-classname`: the complete group cannot be validated as static single-line classNames in one file. The tool never applies only a subset.
+- `not-static-flex`: the parent has no base `flex` or `inline-flex` token. A container that becomes Flex only at a responsive breakpoint is not directly composed yet.
+- `unsupported-flex-token`: an axis-specific `gap-x`/`gap-y` or unknown justify/items/self utility prevents a safe effective-layout model.
+- `invalid-flex-gap`: the requested gap is not a standard or statically parsed project candidate.
+- The Flex composer does not expose `order` or DOM drag reordering. Changes that can diverge visual order from keyboard/screen-reader order require an agent-reviewed refactor.
+
+## 17. An Agent task remains `claimed`
 
 The legacy Markdown queue is disabled by default. If its HTTP route returns `legacy-agent-disabled` or 404, explicitly enable `Legacy agent queue (advanced compatibility)` in Settings. Prefer local MCP for normal Codex or Claude edits.
 
@@ -256,14 +273,14 @@ npm run intent:agent-queue -- --prune-days 30
 
 Prune removes only terminal tasks and preserves queued or running work.
 
-## 15. Project color or spacing candidates are missing
+## 18. Project color, spacing, or breakpoint candidates are missing
 
-The candidate provider reads static objects from `tailwind.config.{js,ts,cjs,mjs,cts,mts}` and known CSS entry points such as `src/index.css`, `src/styles.css`, `src/globals.css`, and `app/globals.css`. It never executes config code. Function-computed themes, scales available only through imports, or CSS in another location may not become automatic candidates. Generic candidates remain available, and patch safety is unaffected.
+The candidate provider reads static objects from `tailwind.config.{js,ts,cjs,mjs,cts,mts}` and known CSS entry points such as `src/index.css`, `src/styles.css`, `src/globals.css`, and `app/globals.css`. It never executes config code. Function-computed themes, scales available only through imports, or CSS in another location may not become automatic candidates. Breakpoints are ordered only from numeric string/object `min` values and v4 `--breakpoint-*` lengths; `raw`, max-only, and `var()` values are omitted. Generic candidates remain available, and patch safety is unaffected.
 
-## 16. Codex reads a selection from another browser tab
+## 19. Codex reads a selection from another browser tab
 
 Each Vite session keeps its own selection, while `intent://selection/current` returns the most recent selection among live sessions. Check `sessionId`, `selectedAt`, `freshUntil`, and `route` in the resource. Re-selecting the element in the intended tab updates current. An expired selection must not be treated as confirmed context.
 
-## 17. Vite repeatedly reloads when an `.intent` file changes
+## 20. Vite repeatedly reloads when an `.intent` file changes
 
 The current plugin excludes only `.intent/**` and `.intent-agent-queue.json*` under the resolved Vite project root. If reloads continue, first verify that the installed `intent-layer` package contains the latest build and fully restart the dev server. Existing user `server.watch.ignored` patterns should merge with these entries; if another plugin later replaces `ignored`, add the same root-anchored patterns there. Do not use a global `**/.intent/**`: it also ignores an entire test project located under `.intent/tmp`. Neither this watcher setting nor overlay instrumentation enters production builds.

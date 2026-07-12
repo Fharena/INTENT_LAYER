@@ -225,15 +225,18 @@ Tailwind CSS 3의 정적 config와 표준 utility를 검증했고, Tailwind CSS 
 - color: background, text, border, divide, ring/outline/decoration/accent/caret/fill/stroke/shadow color의 알려진 palette와 정적 project token
 - shape/effect: border radius, shadow size, opacity, ring width, transition 종류
 - variant: 기존 responsive/state/arbitrary variant prefix를 보존한 단일 token 교체
+- content: 정적 className binding이 있는 intrinsic JSX의 단일·한 줄 literal text
 
-Grid Layout Composer는 일반 token dropdown보다 좁다. 같은 TSX 파일, 정적 한 줄 `className`, 기존 `grid` 부모와 바인딩된 직계 자식, base/sm/md/lg, 1~12열, numeric `grid-cols`/`col-start`/`col-span`, 단순 양수 `fr` template만 그룹 편집한다.
+Grid Layout Composer는 일반 token dropdown보다 좁다. 같은 TSX 파일, 정적 한 줄 `className`, 기존 `grid` 부모와 바인딩된 직계 자식, Tailwind 기본 및 정적으로 읽은 min-width project breakpoint, 1~12개 열/행, numeric start/span, 단순 양수 `fr` 열 template만 그룹 편집한다.
+
+Flex Layout Composer는 같은 binding 계약에서 기존 base `flex`/`inline-flex` 부모의 direction, wrap, justify, align, project gap과 자식별 `align-self`만 그룹 편집한다.
 
 현재 read-only 또는 handoff 범위:
 
 - runtime variable, property access, template expression, object형 `clsx`, `cva`/variant 의미
-- custom breakpoint와 xl/2xl Grid 편집, grid row/row-span, order/reorder, Flex composer
+- `raw`/max-only/동적으로 계산된 breakpoint, Grid/Flex order·DOM reorder
 - `minmax()`, named line, CSS variable를 포함한 복합 arbitrary Grid template
-- cross-file Grid 자식, 반복된 source id의 인스턴스별 배치, 외부 package source patch
+- cross-file Grid/Flex 자식, 반복된 source id의 인스턴스별 배치, 축별 Flex `gap-x`/`gap-y`, 외부 package source patch
 - styled-components, Emotion, 전체 CSS cascade, CSS Modules declaration 직접 편집
 - Next.js/RSC adapter, Figma import, 결정론적 패치로 위장한 AI 자동 리팩터링
 
@@ -241,12 +244,11 @@ Grid Layout Composer는 일반 token dropdown보다 좁다. 같은 TSX 파일, �
 
 P0 안정화는 production 계측 제거, React factory provenance 확인, semantic flex 후보 분리, invalid negative utility 거부, 프로젝트 드라이브 temp 격리, 오래된 raw-TS bin 제거까지 완료했다.
 
-P1에서 runtime-active 조건 분기 필터, source apply 전 DOM-only preview, color swatch, 수치 순서 spacing stepper, Vite source map/자체 artifact 감시 제외, React 19/Tailwind CSS 4/Vite 8의 npm·pnpm 호환성 gate를 완료했다. 남은 순서는 다음과 같다.
+P1에서 runtime-active 조건 분기 필터, source apply 전 DOM-only preview, color swatch, 수치 순서 spacing stepper, guarded literal text, project breakpoint/Grid row, Flex composer, Vite source map/자체 artifact 감시 제외, React 19/Tailwind CSS 4/Vite 8의 npm·pnpm 호환성 gate를 완료했다. 남은 외부 검증은 다음과 같다.
 
 1. 5개 이상 독립 저장소의 실제 작업으로 prompt-only 대비 첫 성공 시간과 patch 품질을 A/B 측정한다.
-2. project breakpoint를 읽어 Grid의 xl/2xl/custom breakpoint와 row/row-span을 지원한다.
-3. 같은 안전 계약으로 Flex Layout Composer를 검증한다.
-4. yarn/bun은 실제 사용자 수요가 확인될 때 설치 호환성을 검증한다.
+2. yarn/bun은 실제 사용자 수요가 확인될 때 설치 호환성을 검증한다.
+3. A/B와 초기 사용자 피드백이 통과한 뒤 npm registry 공개 배포를 승인한다.
 
 정리 원칙:
 
@@ -572,12 +574,12 @@ semantic property -> guarded preview -> minimal patch -> source/runtime verify -
 1. spacing/color/text 같은 작은 직접 편집은 AI 호출 없이 로컬에서 계속 무료로 제공한다.
 2. wrong-node 0건, 전체 파일 rewrite 0건, unavailable runtime을 성공으로 표시하지 않는 것을 제품 신뢰 지표로 둔다.
 3. 하드코딩 palette를 늘리기보다 프로젝트 Tailwind theme와 CSS variable에서 후보를 읽는 adapter를 만든다.
-4. 다음 직접 편집 실험은 기존 CSS Grid를 다루는 `Grid Layout Composer`로 한정한다. DOM 순서 변경과 동적 반복 구조는 agent handoff로 내린다.
+4. Grid/Flex GUI는 기존 layout container의 의미 토큰만 다룬다. DOM 순서 변경과 동적 반복 구조는 agent handoff로 내린다.
 5. 독립 저장소에서 prompt-only 대비 첫 성공 시간, 재시도 횟수, wrong-node, undo 사용률을 측정한 뒤 기능 범위를 넓힌다.
 
 지금 하지 않을 것:
 
-- 무한 canvas, 자유 배치 canvas, sibling reorder. 단, 기존 CSS Grid의 열 범위를 고르는 제한된 placement control은 예외다.
+- 무한 canvas, 자유 배치 canvas, sibling reorder. 기존 Grid/Flex의 제한된 semantic control만 예외다.
 - Next.js와 여러 framework 동시 확장
 - AI가 디자인 variant 여러 개를 생성하는 기능
 - 범용 agent IDE 또는 자체 모델 실행기
@@ -589,6 +591,7 @@ legacy Agent queue/launch 계층은 alpha 호환성으로 보존하지만 기본
 - selection은 Vite session별 파일에 저장하고 현재 선택에 `sessionId`와 30분 freshness를 기록한다. 죽은 process의 session은 제거한다. AI resource가 여러 활성 session 중 최신 선택을 반환한다는 규칙은 구현됐지만, 사용자가 오래된 탭을 계속 살려 둔 경우 어떤 탭을 의도했는지는 UI에서 확인해야 한다.
 - graph publish는 per-file ownership과 atomic lock으로 디스크 graph를 병합한다. 두 store가 서로 다른 파일을 publish하고 한 파일을 삭제하는 fixture가 통과한다. 같은 파일을 동시에 다른 source 상태로 연 경우에는 마지막 source hash가 이기며 patch 단계가 drift를 다시 거부한다.
 - candidate provider는 `tailwind.config.*`의 정적 object와 알려진 CSS/Tailwind v4 `@theme` 위치만 읽는다. config를 실행하지 않으며 동적 import, 함수 계산, 복합 arbitrary value는 일반화하지 않는다. 후보는 선택 시 조회해 graph에 중복 저장하지 않는다.
+- breakpoint provider는 기본 Tailwind screen과 숫자로 환산 가능한 string/object `min`, v4 `--breakpoint-*`만 순서화한다. `raw`, max-only, CSS variable 값은 responsive 상속 순서를 증명할 수 없어 탭에서 제외한다.
 - `client.ts`와 `cli.ts`는 크지만 파일 크기만을 이유로 지금 재작성하지 않는다. Grid Composer, literal text 또는 theme adapter에서 함께 수정되는 request/render 부분만 추출한다.
 
 ### 14.5 Grid Layout Composer 설계
@@ -600,17 +603,17 @@ legacy Agent queue/launch 계층은 alpha 호환성으로 보존하지만 기본
 이 기능은 범용 페이지 빌더가 아니다. 이미 존재하는 CSS Grid의 의미를 읽고, 아래 속성만 결정론적으로 편집하는 좁은 도구다.
 
 ```text
-부모: grid-cols-N 또는 grid-cols-[1.2fr_0.8fr]
-자식: col-start-N, col-span-N
-variant: base, sm, md, lg
+부모: grid-cols-N, grid-rows-N 또는 grid-cols-[1.2fr_0.8fr]
+자식: col-start/span-N, row-start/span-N
+variant: base, 기본 Tailwind screen, 정적으로 순서화한 project screen
 ```
 
 #### UX 흐름
 
 1. 사용자가 화면의 grid 부모를 선택한다.
 2. 패널은 실제 직계 자식과 source binding을 대조한다.
-3. breakpoint 탭과 열 수 stepper를 보여주고, 단순 fractional template이면 track 비율 slider를 보여준다.
-4. 각 자식의 1~12열 placement strip에서 시작 열과 span을 선택한다.
+3. breakpoint 탭과 열·행 수 stepper를 보여주고, 단순 fractional template이면 열 track 비율 slider를 보여준다.
+4. 각 자식의 1~12열/행 placement strip에서 시작 위치와 span을 선택한다.
 5. `미리보기`가 영향받는 source binding 수와 className 전후를 보여준다.
 6. `적용`은 하나의 그룹 작업으로 source를 한 번만 쓴다.
 7. 기존 `되돌리기`가 그룹 전체를 한 번에 복원한다.
@@ -625,8 +628,8 @@ variant: base, sm, md, lg
 - 부모와 자식 binding이 한 source 파일에 있음
 - 부모와 자식의 `className`이 정적 문자열임
 - 부모에 base `grid`가 있고 effective 열 수가 1~12 범위임. 명시적 base 열이 없으면 CSS Grid의 implicit 1열로 본다.
-- base/sm/md/lg 한 breakpoint씩 편집
-- `grid-cols`, `col-start`, `col-span` 토큰의 추가, 교체, 제거
+- 기본 Tailwind screen과 정적으로 순서화 가능한 project min-width screen을 한 breakpoint씩 편집
+- `grid-cols`, `grid-rows`, `col-start`, `col-span`, `row-start`, `row-span` 토큰의 추가, 교체, 제거
 - 양수 `fr` track만으로 된 단순 arbitrary template의 비율 변경
 
 읽기 전용 또는 Agent 전달:
@@ -634,7 +637,8 @@ variant: base, sm, md, lg
 - `.map()` 결과처럼 같은 source id가 직계 자식에서 반복됨
 - 자식 component 구현이 다른 파일에 있음
 - `cn()`/`clsx()`의 조건 분기, `cva`, 변수 참조, template expression
-- DOM 순서 변경, row/absolute placement, masonry, subgrid
+- DOM 순서 변경, absolute placement, masonry, subgrid
+- `raw`, max-only 또는 동적으로 계산된 project screen
 - `minmax()`, CSS variable, line name 또는 12열을 넘는 arbitrary grid template
 
 #### 가장 어려운 점과 결정
@@ -665,7 +669,7 @@ DOM 자식이 세 개여도 source id가 같으면 세 개를 따로 배치할 �
 selected grid DOM
   -> parent id + ordered direct-child ids
   -> server-side support inspection
-  -> semantic layout request (breakpoint/start/span)
+  -> semantic layout request (breakpoint/row/column/start/span)
   -> guarded grouped className preview
   -> expiring preview id
   -> operation lock + file lock + full validation
@@ -683,7 +687,15 @@ selected grid DOM
 - 3~8개 자식 layout preview p95 20ms 이하, apply p95 50ms 이하
 - 독립 사용자 과제에서 prompt-only 대비 첫 성공 시간 또는 재시도 횟수 중 하나를 30% 이상 개선
 
-이 수치를 통과하기 전에는 row placement, drag reorder, 여러 파일 트랜잭션을 추가하지 않는다.
+2026-07-12 로컬 evaluator에서 custom breakpoint와 row placement를 포함한 8개 자식 Grid 20회가 부분 쓰기 0건, byte restore 20/20, preview/apply p95 5.051/3.559ms를 기록했다. 기계 안전/지연 gate는 통과했지만 독립 사용자 A/B는 표본 0이므로 drag reorder와 여러 파일 트랜잭션은 계속 보류한다.
+
+### 14.6 Flex Layout Composer 설계
+
+Flex는 기존 base `flex`/`inline-flex` 부모와 직계 자식을 GUI로 읽고, direction, wrap, justify, align, project gap, 자식 `align-self`만 바꾼다. 방향과 wrap은 mode control, 정렬과 gap은 option control, 결과는 작은 Flex canvas에서 먼저 확인한다.
+
+Grid와 같은 안전 계약을 사용한다. 모든 참여자는 한 파일의 정적 단일행 className이어야 하고, runtime 직계 자식 id가 유일해야 한다. 서버가 breakpoint 상속과 token 범위를 다시 해석하고, expiring preview 뒤 전체 source hash와 각 원문을 검증한 다음 파일을 한 번만 쓴다. `gap-x`/`gap-y`, unknown plugin utility, 반복 id, 교차 파일 자식은 전체 작업을 거부한다.
+
+DOM 순서와 keyboard/screen-reader 순서가 달라질 수 있는 `order`/drag reorder는 지원하지 않는다. 2026-07-12 evaluator의 8개 자식 Flex 20회는 부분 쓰기 0건, byte restore 20/20, preview/apply p95 2.706/4.035ms를 기록했다.
 
 ## 15. 제품화 전략
 
@@ -747,6 +759,10 @@ Next.js adapter
 - [x] `.intent` 폴더 생성
 - [x] patch 실패 시 안전 중단
 - [x] 문서/튜토리얼
+- [x] literal text와 Grid/Flex grouped patch 회귀 테스트
+- [x] React 18/19, Tailwind 3/4, Vite 6/8, npm/pnpm 호환 gate
+- [ ] 5개 이상 독립 저장소·20개 paired task 제품 A/B
+- [ ] 승인된 npm registry 공개 배포와 초기 사용자 피드백 루프
 
 ## 17. 2주 기술 스파이크
 
@@ -804,24 +820,27 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 - 보류: confidence model은 v1 release gate에서 제외
 - [x] selected component summary
 
-### v0.4 (다음 검증)
+### v0.4 (현재 alpha)
 
 - [x] provider-neutral local MCP
 - [x] loopback/session-token HTTP boundary
 - [x] multi-process operation journal
 - [x] 같은 파일 정적 Grid Layout Composer와 단순 fractional track 조절
 - [x] project Tailwind theme/CSS variable candidate adapter
-- [ ] guarded literal text edit spike
+- [x] guarded literal text edit와 MCP `content.text`
+- [x] project breakpoint와 Grid row/start/span
+- [x] 같은 파일 정적 Flex Layout Composer
 - [x] session-scoped selection과 multi-Vite graph merge fixture
 - [ ] 5개 이상 독립 저장소의 실제 작업 20개 A/B (`product-ab-evaluation.json`: collecting, 0 paired tasks)
 - [x] legacy Agent HTTP/UI opt-in 경계와 evaluator artifact 격리
-- [x] Lumina Chromium setup/Grid/HMR/undo/mobile CI
+- [x] Lumina/Modern Chromium setup/literal/Grid/Flex/HMR/undo/mobile CI
 - [x] dev-only instrumentation과 production bundle marker 0건 gate
 - [x] import provenance 기반 React `createElement` binding
 - [x] runtime-active conditional token 구분과 DOM-only candidate preview
 - [x] Vite transform source map과 원본 TSX 브라우저 합성 gate
 - [x] React 19/Tailwind 4/Vite 8 npm 호환성 fixture
 - [x] pnpm 10.34.5 fresh-install 호환성 fixture와 외부 pnpm 브라우저 round trip
+- [x] evaluator 62개 gate와 텍스트/Grid/Flex 각 20회 byte-restore benchmark
 
 ### v1.0
 

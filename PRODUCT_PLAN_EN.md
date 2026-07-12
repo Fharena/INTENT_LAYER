@@ -223,15 +223,18 @@ Current direct edits cover:
 - color: known palettes and static project tokens for background, text, border, divide, ring/outline/decoration/accent/caret/fill/stroke/shadow colors
 - shape/effects: border radius, shadow size, opacity, ring width, and transition kind
 - variants: single-token replacement while preserving existing responsive, state, or arbitrary-variant prefixes
+- content: one single-line literal text child on intrinsic JSX with a static className binding
 
-The Grid Layout Composer is narrower than the general token dropdown. It requires one TSX file, static single-line `className` values, an existing `grid` parent and bound direct children, base/sm/md/lg, 1-12 tracks, numeric `grid-cols`/`col-start`/`col-span`, or a simple positive `fr` template.
+The Grid Layout Composer is narrower than the general token dropdown. It requires one TSX file, static single-line `className` values, an existing `grid` parent and bound direct children, default or statically parsed min-width project breakpoints, 1-12 row/column tracks, numeric start/span tokens, or a simple positive column `fr` template.
+
+The Flex Layout Composer uses the same binding contract and edits only direction, wrapping, justification, alignment, project gap candidates, and per-child `align-self` on an existing base `flex`/`inline-flex` parent.
 
 Current read-only or handoff cases:
 
 - runtime variables, property access, template expressions, object-form `clsx`, and `cva`/variant meaning
-- custom breakpoints and xl/2xl Grid editing, grid rows/row spans, ordering/reordering, and a Flex composer
+- `raw`, max-only, or dynamically computed breakpoints, plus Grid/Flex ordering and DOM reordering
 - compound arbitrary Grid templates containing `minmax()`, named lines, or CSS variables
-- cross-file Grid children, per-instance layout for repeated source ids, and direct patches to external packages
+- cross-file Grid/Flex children, per-instance layout for repeated source ids, axis-specific Flex `gap-x`/`gap-y`, and direct patches to external packages
 - styled-components, Emotion, complete CSS cascade editing, and direct CSS Modules declaration editing
 - a Next.js/RSC adapter, Figma import, and AI refactors presented as deterministic patches
 
@@ -239,12 +242,11 @@ Current read-only or handoff cases:
 
 P0 stabilization is complete for production-instrumentation removal, React factory provenance, semantic flex candidate grouping, invalid negative-utility rejection, workspace-drive temp isolation, and removal of the stale raw-TypeScript bin.
 
-P1 has completed runtime-active conditional filtering, DOM-only preview before source apply, color swatches, numerically ordered spacing steppers, Vite source maps and self-artifact watch exclusion, and npm/pnpm compatibility gates for React 19/Tailwind CSS 4/Vite 8. Remaining work proceeds in this order:
+P1 has completed runtime-active conditional filtering, DOM-only preview before source apply, color swatches, numerically ordered spacing steppers, guarded literal text, project breakpoint/Grid rows, the Flex composer, Vite source maps and self-artifact watch exclusion, and npm/pnpm compatibility gates for React 19/Tailwind CSS 4/Vite 8. Remaining external validation is:
 
 1. Measure time-to-first-success and patch quality against prompt-only work on real tasks from at least five independent repositories.
-2. Read project breakpoints and add xl/2xl/custom breakpoint plus row/row-span Grid editing.
-3. Validate a Flex Layout Composer under the same grouped-patch safety contract.
-4. Validate yarn or bun installation only after real user demand is observed.
+2. Validate yarn or bun installation only after real user demand is observed.
+3. Approve a public npm registry release only after A/B and initial-user feedback pass.
 
 Cleanup rules:
 
@@ -570,12 +572,12 @@ Priorities:
 1. Keep small direct edits such as spacing, color, and text local and free of model calls.
 2. Treat zero wrong-node edits, zero full-file rewrites, and no false runtime success as product trust metrics.
 3. Build an adapter that derives candidates from the project's Tailwind theme and CSS variables instead of expanding hard-coded palettes.
-4. Limit the next direct-edit experiment to a `Grid Layout Composer` for existing CSS Grid. DOM reordering and dynamic repeated structures remain agent handoffs.
+4. Keep Grid and Flex GUI controls limited to semantic tokens on existing layout containers. DOM reordering and dynamic repeated structures remain agent handoffs.
 5. Measure time to first successful edit, retries, wrong-node events, and undo usage against prompt-only workflows on held-out repositories before broadening scope.
 
 Not now:
 
-- infinite canvas, freeform canvas, and sibling reorder. A constrained column-placement control for an existing CSS Grid is the exception.
+- infinite canvas, freeform canvas, and sibling reorder. Constrained semantic controls for existing Grid/Flex containers are the exception.
 - simultaneous Next.js and multi-framework expansion
 - multiple AI-generated design variants
 - a general agent IDE or proprietary model runtime
@@ -587,6 +589,7 @@ The legacy Agent queue and launch layer remains for alpha compatibility but is c
 - Selection is stored per Vite session and current selection records a `sessionId` with a 30-minute freshness deadline. Dead-process sessions are removed. The AI resource returns the newest active selection, but a user keeping multiple live tabs must still confirm which tab they intended.
 - Graph publishing merges per-file ownership under an atomic lock. Fixtures cover two stores publishing different files and deleting one owned file. If two sessions open the same file at different source states, the latest source hash wins and patch validation rejects drift again.
 - The candidate provider reads static objects from `tailwind.config.*` plus known CSS and Tailwind v4 `@theme` locations. It never executes config code and does not generalize dynamic imports, computed functions, or compound arbitrary values. Candidates are fetched on selection instead of being duplicated into the graph.
+- The breakpoint provider orders only default Tailwind screens, numeric string/object `min` values, and v4 `--breakpoint-*` lengths. `raw`, max-only, and CSS-variable values are omitted because their responsive inheritance order cannot be proven.
 - `client.ts` and `cli.ts` are large, but file size alone does not justify a rewrite. Extract only request/render boundaries shared by Grid Composer, literal-text, or theme-adapter work.
 
 ### 14.5 Grid Layout Composer Design
@@ -598,17 +601,17 @@ When arranging asymmetric cards, users should not have to describe requests such
 This is not a general page builder. It reads an existing CSS Grid and deterministically edits only:
 
 ```text
-parent: grid-cols-N or grid-cols-[1.2fr_0.8fr]
-children: col-start-N, col-span-N
-variants: base, sm, md, lg
+parent: grid-cols-N, grid-rows-N, or grid-cols-[1.2fr_0.8fr]
+children: col-start/span-N and row-start/span-N
+variants: base, default Tailwind screens, and statically ordered project screens
 ```
 
 #### UX Flow
 
 1. The user selects a rendered grid parent.
 2. The panel reconciles its real direct children with source bindings.
-3. It shows breakpoint tabs and a column-count stepper, or track-ratio sliders for a simple fractional template.
-4. The user selects a start and span on a 1-12 column placement strip for each child.
+3. It shows breakpoint tabs plus column/row steppers, or column track-ratio sliders for a simple fractional template.
+4. The user selects starts and spans on 1-12 column and row placement strips for each child.
 5. `Preview` shows affected source bindings and before/after className values.
 6. `Apply` writes one grouped operation.
 7. The existing `Undo` restores the entire group at once.
@@ -623,8 +626,8 @@ Direct edit:
 - parent and child bindings live in one source file
 - every participating `className` is a static string
 - the parent has base `grid` and an effective 1-12 column count; absent base columns use CSS Grid's implicit one column
-- one base/sm/md/lg breakpoint is edited at a time
-- add, replace, or remove `grid-cols`, `col-start`, and `col-span` tokens
+- edit one default Tailwind or statically ordered project min-width screen at a time
+- add, replace, or remove `grid-cols`, `grid-rows`, `col-start`, `col-span`, `row-start`, and `row-span`
 - edit a simple arbitrary template containing only positive `fr` tracks
 
 Read-only or agent handoff:
@@ -632,7 +635,8 @@ Read-only or agent handoff:
 - repeated direct-child source ids such as `.map()` output
 - child component implementations in other files
 - conditional `cn()`/`clsx()`, `cva`, variable references, or template expressions
-- DOM reordering, row or absolute placement, masonry, or subgrid
+- DOM reordering, absolute placement, masonry, or subgrid
+- `raw`, max-only, or dynamically computed project screens
 - `minmax()`, CSS variables, line names, or arbitrary templates over 12 columns
 
 #### Hard Problems and Decisions
@@ -663,7 +667,7 @@ The browser sends only the selected parent id and ordered direct-child ids. The 
 selected grid DOM
   -> parent id + ordered direct-child ids
   -> server-side support inspection
-  -> semantic layout request (breakpoint/start/span)
+  -> semantic layout request (breakpoint/row/column/start/span)
   -> guarded grouped className preview
   -> expiring preview id
   -> operation lock + file lock + full validation
@@ -681,7 +685,15 @@ selected grid DOM
 - p95 preview under 20ms and apply under 50ms for 3-8 children
 - at least 30% improvement in either time to first success or retry count against prompt-only held-out tasks
 
-Do not add row placement, drag reordering, or cross-file transactions before these gates pass.
+On 2026-07-12, the local evaluator completed 20/20 eight-child Grid round trips including a custom breakpoint and row placement, with zero partial writes, byte restoration 20/20, and preview/apply p95 of 5.051/3.559ms. Mechanical safety and latency pass, but independent-user A/B still has zero samples, so drag reordering and cross-file transactions remain deferred.
+
+### 14.6 Flex Layout Composer Design
+
+Flex reads an existing base `flex`/`inline-flex` parent and direct children, then edits only direction, wrapping, justification, alignment, project gap candidates, and child `align-self`. Direction and wrapping use mode controls; alignment and gap use option controls; a small Flex canvas reflects the proposed result before source preview.
+
+It uses the same Grid safety contract. Every participant must have a static single-line className in one file, and runtime direct-child ids must be unique. The server resolves responsive inheritance and token ranges, then validates the full source hash and every original range after an expiring preview before one file write. Axis-specific `gap-x`/`gap-y`, unknown plugin utilities, repeated ids, and cross-file children reject the entire operation.
+
+The composer does not expose `order` or drag reordering because visual order can diverge from keyboard and screen-reader order. On 2026-07-12, the evaluator completed 20/20 eight-child Flex round trips with zero partial writes, byte restoration 20/20, and preview/apply p95 of 2.706/4.035ms.
 
 ## 15. Productization Strategy
 
@@ -745,6 +757,10 @@ Required:
 - [x] `.intent` folder creation
 - [x] safe failure on patch errors
 - [x] documentation and tutorial
+- [x] literal-text and grouped Grid/Flex regression coverage
+- [x] React 18/19, Tailwind 3/4, Vite 6/8, and npm/pnpm compatibility gates
+- [ ] product A/B across at least five independent repositories and twenty paired tasks
+- [ ] approved public npm registry release plus an initial-user feedback loop
 
 ## 17. Two-week Technical Spike
 
@@ -802,24 +818,27 @@ Can the architecture scale to large projects?
 - Hold: the confidence model is not a v1 release gate
 - [x] selected component summary
 
-### v0.4 (next validation)
+### v0.4 (current alpha)
 
 - [x] provider-neutral local MCP
 - [x] loopback/session-token HTTP boundary
 - [x] multi-process operation journal
 - [x] same-file static Grid Layout Composer plus simple fractional track controls
 - [x] project Tailwind theme/CSS variable candidate adapter
-- [ ] guarded literal text edit spike
+- [x] guarded literal text edit plus MCP `content.text`
+- [x] project breakpoints and Grid row/start/span
+- [x] same-file static Flex Layout Composer
 - [x] session-scoped selection and multi-Vite graph merge fixture
 - [ ] 20 held-out tasks against prompt-only workflows (`product-ab-evaluation.json`: collecting, 0 paired tasks)
 - [x] opt-in legacy Agent HTTP/UI boundary and evaluator artifact isolation
-- [x] Lumina Chromium setup/Grid/HMR/undo/mobile CI
+- [x] Lumina/Modern Chromium setup/literal/Grid/Flex/HMR/undo/mobile CI
 - [x] dev-only instrumentation and a zero-marker production-bundle gate
 - [x] import-provenance React `createElement` binding
 - [x] runtime-active conditional-token filtering and DOM-only candidate preview
 - [x] Vite transform source maps with original-TSX browser composition gate
 - [x] React 19/Tailwind 4/Vite 8 npm compatibility fixture
 - [x] pnpm 10.34.5 fresh-install fixture and external pnpm browser round trip
+- [x] 62 evaluator gates plus twenty byte-restore rounds each for text, Grid, and Flex
 
 ### v1.0
 

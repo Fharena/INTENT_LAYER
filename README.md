@@ -38,7 +38,9 @@ Open the Vite URL and use the Intent Layer panel:
 4. Choose a token candidate to try it in the DOM. Reset it, or validate the source diff and apply it.
 5. Use Undo if the result is not right.
 
-When the selected element is inside CSS Grid, the nearest source-bound ancestor opens `Grid layout` automatically. Choose a breakpoint, drag each child's column range, preview the grouped diff, then apply or undo it as one operation.
+A single-line plain JSX text child can be edited in the same panel. Text containing expressions, entities, or nested elements remains read-only because changing it can alter source semantics.
+
+When the selected element is inside CSS Grid, the nearest source-bound ancestor opens `Grid layout` automatically. Choose a breakpoint and adjust columns, rows, and each child's placement before applying or undoing one grouped diff. When the nearest layout is Flex, `Flex layout` exposes direction, wrapping, main/cross-axis alignment, gap, and per-child `align-self`.
 
 Settings remain available from the panel. Enabling an AI connection merges only the Intent Layer entry into project-local `.codex/config.toml` or `.mcp.json`. Global settings are not modified.
 
@@ -68,7 +70,7 @@ When no Vite config exists but `@vitejs/plugin-react` is installed, it creates a
 | React | React 18.3.1 and 19.2.7, intrinsic JSX, fragment/conditional/map traversal, `forwardRef`, JSX inside `Suspense`/portals, provenance-checked imported `createElement` | React Server Components, React Native, `cloneElement` source provenance |
 | Vite | Vite 6.4.3 and 8.1.4 dev servers, HMR, source maps composed to original TSX, `.intent` runtime-artifact watch exclusion, static config setup, and a zero-production-instrumentation gate | SSR/library mode, automatic edits to dynamic configs |
 | TypeScript | TypeScript 5.9.3 parser, TSX end-to-end flow, JSX/TSX instrumentation | Recovering source from compiled JSX runtime calls or arbitrary Babel/SWC output |
-| Tailwind | Tailwind CSS 3.4.19 and 4.3.2 browser flows, static `tailwind.config.*`, v4 `@theme`, variant preservation | Dynamic config execution and arbitrary plugin-utility semantics |
+| Tailwind | Tailwind CSS 3.4.19 and 4.3.2 browser flows, static `tailwind.config.*`, v4 `@theme`, variant preservation, numerically ordered project breakpoints | Dynamic config execution, `raw`/max-only screen inheritance, and arbitrary plugin-utility semantics |
 | Tailwind v4 | `@tailwindcss/vite` install, `@theme` color candidates, DOM preview, HMR patch, and exact undo | Inferring arbitrary utilities created by external plugins |
 | Browser/OS | Playwright Chromium 149, local Windows, GitHub Actions Ubuntu path | Firefox, WebKit/Safari, macOS |
 
@@ -76,11 +78,11 @@ Intent Layer does not override React Hooks, Context, `memo`, or `lazy`. Code usi
 
 ## Direct-Edit Surface
 
-Direct edits currently target static JSX `className` values, string literals inside `cn()` or `clsx()`, and intrinsic `React.createElement()` calls.
+Direct edits currently target static JSX `className` values, string literals inside `cn()` or `clsx()`, intrinsic `React.createElement()` calls, and one single-line literal text child on an intrinsic JSX element with a static binding.
 
 - spacing: padding, margin, and gap across the standard Tailwind scale
 - sizing: width, height, min/max, and size
-- layout: display, grid columns, flex, alignment, justification, and numeric `col-start`/`col-span`
+- layout: display, grid columns/rows, flex, alignment, justification, and numeric `col-start`/`col-span`/`row-start`/`row-span`
 - radius and typography size, weight, and line height
 - standard Tailwind colors plus project `tailwind.config.*`, Tailwind v4 `@theme`, and conservatively identified CSS-variable candidates
 - shadow, opacity, ring width, and transition
@@ -89,7 +91,9 @@ A token is not presented as editable when its only candidate is itself. Project 
 
 For literal bindings inside `cn()` or `clsx()`, the panel compares candidates with the clicked DOM instance and hides tokens from inactive conditional branches. Choosing a candidate temporarily replaces matching rendered instances of the same source binding without touching source; reset restores the exact original `class` string when runtime has not drifted. Colors expose swatches, spacing exposes numerically ordered `-`/`+` controls, and source Apply remains locked until server-side diff preview succeeds.
 
-The Grid Layout Composer directly edits only an existing grid and direct children with static `className` bindings in one TSX file. It can add, replace, or remove 1-12 track `grid-cols`, `col-start`, and `col-span` tokens at base/sm/md/lg. Simple positive `fr` templates such as `grid-cols-[1.2fr_0.8fr]` expose track-ratio sliders. Repeated source ids, cross-file children, dynamic classNames, compound `minmax()` templates, and DOM reordering safely remain read-only.
+The Grid Layout Composer directly edits only an existing grid and direct children with static `className` bindings in one TSX file. At default Tailwind breakpoints and statically parsed min-width project breakpoints, it can add, replace, or remove 1-12 `grid-cols`/`grid-rows`, `col-start`/`col-span`, and `row-start`/`row-span` tokens. Simple positive `fr` templates such as `grid-cols-[1.2fr_0.8fr]` expose track-ratio sliders.
+
+The Flex Layout Composer uses the same one-file, static-className, unique-direct-child contract. It edits direction, wrapping, justification, alignment, project gap candidates, and child `align-self` on an existing base `flex`/`inline-flex` container. Repeated source ids, cross-file children, axis-specific `gap-x`/`gap-y`, unknown plugin tokens, and DOM reordering reject the whole direct edit rather than applying a partial result.
 
 ## Safety Model
 
@@ -102,7 +106,7 @@ The Grid Layout Composer directly edits only an existing grid and direct childre
 - Browser selections are stored per Vite session and expose a `sessionId` plus freshness deadline. Graph publishing replaces only files owned by that server and merges entries from other active Vite sessions.
 - Drift creates a conflict artifact under `.intent/conflicts/` instead of modifying the file.
 - Patches replace the original source range rather than regenerating a whole file.
-- A grouped grid edit validates every original className and the complete source hash, then writes the same file once. Undo validates every post-apply range and restores the group byte for byte.
+- Grouped Grid and Flex edits validate every original className and the complete source hash, then write the same file once. Undo validates every post-apply range and restores the group byte for byte.
 - Source-changing Vite HTTP requests require both a loopback connection and the overlay session token. A preview opened through a LAN address is readable but cannot edit source.
 
 ## Use From Codex Or Claude
@@ -113,7 +117,7 @@ After enabling a provider in Settings and starting a new Codex or Claude session
 - `intent_preview_edit`, `intent_apply_edit`
 - `intent_verify_edit`, `intent_undo_edit`
 
-The browser selection is exposed as `intent://selection/current`. AI clients submit semantic properties and candidate values, never source offsets or raw patches. Apply revalidates an expiring preview, source hash, file lock, and idempotency key. With a connected browser, verify also checks that every rendered source instance contains the new class token after HMR.
+The browser selection is exposed as `intent://selection/current`. AI clients submit semantic properties and candidate values, never source offsets or raw patches. `content.text` uses the same six MCP tools for the guarded literal-text subset above. Apply revalidates an expiring preview, source hash, file lock, and idempotency key. With a connected browser, verify also checks that every rendered source instance contains the new class token after HMR.
 
 For `intent_verify_edit`, `runtime: unavailable` returns `ok: false` even when the source patch is intact, but it is not marked as an MCP tool execution error. This lets an agent handle successful source verification separately from missing visual evidence. Source drift and missing operations remain tool errors.
 
@@ -146,7 +150,9 @@ Full release check:
 npm run verify
 ```
 
-`npm run verify` runs type checking, Vitest, package/demo builds, the production-bundle contamination gate, the installed-package MCP smoke test, Chromium E2E, a pinned pnpm install/build, evaluation gates, and product A/B aggregation. `npm run eval` is the subset covering tarball installation, installed CLI plus Vite exports/type declarations, real Vite HTTP preview/apply/revert, multi-file graph refresh, grouped Grid apply/undo, external corpora, and 56 performance and safety gates. `test:e2e` covers the React 18/Tailwind 3 Lumina site and the React 19/Tailwind 4 Modern fixture, including setup, selection, Grid editing, runtime branches, DOM preview, HMR, original-TSX source-map composition, byte-for-byte undo, and the mobile panel. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
+`npm run verify` runs type checking, Vitest, package/demo builds, the production-bundle contamination gate, the installed-package MCP smoke test, Chromium E2E, a pinned pnpm install/build, evaluation gates, and product A/B aggregation. `npm run eval` covers tarball installation, installed CLI plus Vite exports/type declarations, real Vite HTTP preview/apply/revert, multi-file graph refresh, external corpora, and 62 performance and safety gates. Literal text, Grid, and Flex each currently complete 20/20 grouped round trips with zero partial writes; their local preview/apply p95 values are 2.474/3.663ms, 5.051/3.559ms, and 2.706/4.035ms respectively. These are mechanical local timings, not product-value A/B evidence.
+
+`test:e2e` covers the React 18/Tailwind 3 Lumina site and the React 19/Tailwind 4 Modern fixture, including setup, selection, literal text, Grid rows/custom breakpoints, Flex, runtime branches, DOM preview, HMR, original-TSX source-map composition, byte-for-byte undo, and the mobile panel. The Modern fixture force-refreshes pnpm's local `file:` package copy before running, so stale `dist` cannot pass. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
 
 OS temp files and Playwright browsers used by tests live under the repository's `.intent/tmp/`. On Windows the wrapper rejects a temp path on a different drive, so testing a D-drive workspace cannot silently fill the C drive again.
 

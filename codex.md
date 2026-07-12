@@ -46,9 +46,10 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Literal `cn()`/`clsx()` bindings show only tokens active on the clicked DOM instance; persisted runtime selection includes the observed class tokens.
 - Candidate selection is a reversible DOM-only preview. Preserve the exact original `class` attribute, and keep source Apply disabled until guarded server preview succeeds.
 - Prefer color swatches and numerically ordered spacing steppers over forcing every high-frequency edit through a dropdown.
-- Selecting an element inside a source-bound CSS Grid should expose the nearest supported grid ancestor; users should not have to click a narrow gap to select the parent.
-- Grid layout UI stays constrained to existing CSS Grid and semantic placement controls. Do not expand it into an infinite canvas or DOM reorder tool without comparative user evidence.
-- Simple positive-`fr` arbitrary templates are supported through track ratio controls. `minmax()`, variables, named lines, rows, and reorder remain explicit boundaries.
+- Selecting an element inside a source-bound CSS Grid or Flex container should expose the nearest supported layout ancestor; users should not have to click a narrow gap to select the parent.
+- Grid layout UI stays constrained to existing CSS Grid column/row placement. Flex UI stays constrained to direction, wrap, justify, align, gap, and child `align-self`. Do not expand either into an infinite canvas or DOM reorder tool without comparative user evidence.
+- Simple positive-`fr` column templates are supported through track ratio controls. `minmax()`, variables, named lines, absolute placement, and reorder remain explicit boundaries.
+- Literal text editing is direct only for exactly one trimmed, single-line JSX text child without expressions, nested elements, entities, or JSX delimiters. Keep Apply locked behind the same source-hash and old-range preview.
 - Network and patch failures must produce visible feedback.
 - Stale overlay roots must be replaced during HMR client version changes.
 
@@ -64,11 +65,12 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Undo only the latest pending patch when that hash still matches.
 - On drift, preserve the file and write a conflict artifact.
 - Grouped layout patches are direct only when the parent and all direct children have static className bindings in one source file. Validate every original className plus the whole-file hash, write once, and store post-apply ranges for grouped undo.
-- Repeated source ids, cross-file grid children, dynamic className participants, and unsupported templates are explicit read-only boundaries, never partial-success cases.
+- Repeated source ids, cross-file Grid/Flex children, dynamic className participants, unsupported templates, and axis-specific Flex gaps are explicit read-only boundaries, never partial-success cases.
 - Project theme candidates come from static Tailwind config and known CSS entry points. Never execute user config to discover candidates, and never duplicate candidate arrays into the intent graph; fetch them only for selected tokens.
+- Order project breakpoints only when a numeric min-width is statically available. Exclude `raw`, max-only, CSS-variable, and dynamically computed screens rather than guessing responsive inheritance.
 - Runtime selection is session-scoped. Preserve `sessionId` and freshness, merge graph entries by file ownership, and retain source-hash rejection as the final drift guard.
 - The npm compatibility fixture under `test-sites/modern-tailwind-v4` gates React 19, Vite 8, Tailwind CSS 4, package type declarations, production overlay stripping, and the browser edit round trip. Do not weaken it to make an unsupported package surface appear green.
-- The pinned pnpm gate must force-refresh the local `file:` dependency after `build:package`; a cached fixture copy is not evidence for the current source tree. Keep the pin on a non-vulnerable release and require a clean `npm audit`.
+- Modern compatibility and E2E commands must force-refresh the pinned pnpm `file:` dependency after `build:package`; a cached fixture copy is not evidence for the current source tree. Keep the pin on a non-vulnerable release and require a clean `npm audit`.
 
 ## Agent Boundary
 

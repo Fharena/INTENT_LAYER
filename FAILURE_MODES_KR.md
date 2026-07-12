@@ -220,13 +220,19 @@ npm run import:external-corpus -- <independent-react-tailwind-project-or-samples
 
 ## 13. DOM 미리보기가 원복되거나 조건부 토큰이 보이지 않음
 
-후보 선택 직후의 색상/간격 변경은 source patch가 아니라 임시 DOM 미리보기다. 다른 요소 선택, 패널 재렌더, Grid 작업, apply 또는 undo를 시작하면 자동으로 원복된다. 서버 `미리보기`가 성공하기 전에는 `적용` 버튼도 잠겨 있다.
+후보 선택 직후의 색상/간격 변경은 source patch가 아니라 임시 DOM 미리보기다. 다른 요소 선택, 패널 재렌더, Grid/Flex 작업, apply 또는 undo를 시작하면 자동으로 원복된다. 서버 `미리보기`가 성공하기 전에는 `적용` 버튼도 잠겨 있다.
 
 `cn()`/`clsx()` literal 조건 분기에서는 클릭한 DOM 인스턴스에 실제로 없는 token을 숨긴다. 다른 분기를 고치려면 앱 상태를 그 분기로 바꾼 뒤 요소를 다시 선택한다. 미리보기 중 React가 같은 요소의 `class`를 새로 렌더했다면 원복 동작은 오래된 snapshot으로 덮지 않고 React의 최신 결과를 보존한다. 이 경우 요소를 다시 선택해 현재 source/runtime 상태에서 시작한다.
 
 Codex 또는 Claude에 도구가 보이지 않으면 패널 설정의 AI 연결 상태와 프로젝트 `.codex/config.toml`/`.mcp.json`을 확인한 뒤 새 세션을 시작한다. 설정이 있는데도 `serverReady`가 false면 package 설치 또는 `dist/mcp.js` 빌드가 빠진 상태다. Intent Layer는 전역 provider 설정을 수정하지 않는다.
 
-## 13. Grid 배치가 read-only로 표시됨
+## 14. Literal text 편집기가 보이지 않거나 거부됨
+
+- `text-not-literal`: 자식이 하나의 JSX text가 아니거나 표현식/중첩 element가 있다. 구조 변경으로 간주해 직접 편집하지 않는다.
+- `invalid-literal-text`: 새 값이 비어 있거나 500자를 넘거나, 앞뒤 공백·줄바꿈·`<>{}&`가 있다. JSX 문법이나 entity 의미를 바꾸지 않는 한 줄 plain text만 허용한다.
+- `old-text-mismatch` 또는 `source-hash-mismatch`: 선택 뒤 source가 바뀌었다. 파일을 쓰지 않으므로 요소를 다시 선택해 preview한다.
+
+## 15. Grid 배치가 read-only로 표시됨
 
 - `repeated-grid-binding`: `.map()` 등으로 여러 직계 자식이 같은 source id를 공유한다. 각 인스턴스를 다르게 배치하려면 prop/variant 구조로 바꿔야 하므로 Agent 전달을 사용한다.
 - `cross-file-grid`: 부모와 직계 자식 구현이 다른 파일에 있다. 부분 적용을 피하기 위해 첫 버전은 같은 파일만 그룹 편집한다.
@@ -235,10 +241,21 @@ Codex 또는 Claude에 도구가 보이지 않으면 패널 설정의 AI 연결 
 - `unbound-grid-child`: 직계 DOM 자식 중 source binding이 없는 요소가 있다. 해당 요소에 정적 className을 두고 다시 선택한다.
 - `repeated-grid-binding`, `cross-file-grid`, `dynamic-grid-classname`은 실패가 아니라 명시적인 지원 경계다. 이 상태에서 일부 자식만 직접 적용하지 않는다.
 - `grid-placement-overflow`: 시작 열과 span이 현재 열 수를 넘는다. placement strip 안쪽으로 범위를 다시 고른다.
+- `grid-row-placement-overflow`: 시작 행과 span이 현재 행 수를 넘는다. 행 수 또는 자식의 행 범위를 조정한다.
+- `unsupported-breakpoint`: project screen을 숫자 min-width 순서로 증명할 수 없다. `raw`, max-only, CSS variable, 동적 config screen은 직접 편집 탭에 넣지 않는다.
 - `unsupported-grid-token`: arbitrary template에 `minmax()`, CSS 변수, named line 또는 양수가 아닌 track이 있다. 현재 slider는 `grid-cols-[1.2fr_0.8fr]`처럼 양수 `fr`만 직접 편집한다.
 - `planned-range-mismatch` 또는 `source-hash-mismatch`: preview 뒤 파일이 바뀌었다. source write는 0건이며 새 preview를 만든다.
 
-## 14. Agent task가 오래 `claimed` 상태로 남음
+## 16. Flex 배치가 read-only로 표시됨
+
+- `repeated-flex-binding`, `unbound-flex-child`: 직계 자식이 source id를 공유하거나 binding이 없다. 인스턴스별 배치는 prop/variant refactor가 필요하다.
+- `cross-file-flex`, `dynamic-flex-classname`, `multiline-flex-classname`, `noncanonical-flex-classname`: 그룹 전체를 같은 파일의 정적 단일행 className으로 검증할 수 없다. 일부만 적용하지 않는다.
+- `not-static-flex`: 부모에 base `flex` 또는 `inline-flex` token이 없다. responsive에서만 Flex가 되는 container는 현재 직접 편집하지 않는다.
+- `unsupported-flex-token`: `gap-x`/`gap-y`, unknown justify/items/self utility처럼 effective layout을 안전하게 모델링할 수 없는 token이 있다.
+- `invalid-flex-gap`: 요청한 gap이 표준 또는 정적으로 읽은 project candidate가 아니다.
+- Flex composer는 `order`와 DOM drag reorder를 제공하지 않는다. 시각 순서와 keyboard/screen-reader 순서가 달라지는 변경은 Agent refactor로 검토한다.
+
+## 17. Agent task가 오래 `claimed` 상태로 남음
 
 레거시 Markdown 큐는 기본 비활성화다. HTTP에서 `legacy-agent-disabled` 또는 404가 나오면 패널 설정의 `기존 Agent 큐 (고급 호환성)`을 명시적으로 켠다. 일반 Codex/Claude 편집은 로컬 MCP를 우선한다.
 
@@ -256,14 +273,14 @@ npm run intent:agent-queue -- --prune-days 30
 
 prune은 terminal task만 지우며 queued/running task는 지우지 않는다.
 
-## 15. 프로젝트 색상 또는 간격 후보가 보이지 않음
+## 18. 프로젝트 색상, 간격 또는 breakpoint 후보가 보이지 않음
 
-candidate provider는 `tailwind.config.{js,ts,cjs,mjs,cts,mts}`의 정적 object와 `src/index.css`, `src/styles.css`, `src/globals.css`, `app/globals.css` 등 알려진 CSS 진입점만 읽는다. config를 실행하지 않는다. 함수로 계산한 theme, 외부 import로만 정의된 scale 또는 다른 위치의 CSS는 자동 후보가 아닐 수 있다. 표준 후보는 계속 표시되며 source patch 안전성에는 영향이 없다.
+candidate provider는 `tailwind.config.{js,ts,cjs,mjs,cts,mts}`의 정적 object와 `src/index.css`, `src/styles.css`, `src/globals.css`, `app/globals.css` 등 알려진 CSS 진입점만 읽는다. config를 실행하지 않는다. 함수로 계산한 theme, 외부 import로만 정의된 scale 또는 다른 위치의 CSS는 자동 후보가 아닐 수 있다. breakpoint는 길이로 환산 가능한 string/object `min`과 v4 `--breakpoint-*`만 순서화하며, `raw`, max-only, `var()` 값은 제외한다. 표준 후보는 계속 표시되며 source patch 안전성에는 영향이 없다.
 
-## 16. Codex가 다른 브라우저 탭의 선택을 읽음
+## 19. Codex가 다른 브라우저 탭의 선택을 읽음
 
 각 Vite session의 선택은 따로 보존되지만 `intent://selection/current`는 살아 있는 session 중 가장 최근 선택을 반환한다. 응답의 `sessionId`, `selectedAt`, `freshUntil`, `route`를 확인한다. 의도한 탭에서 요소를 다시 선택하면 current가 갱신된다. 만료된 선택을 자동으로 성공 컨텍스트로 간주하지 않는다.
 
-## 17. `.intent` 파일이 바뀔 때 Vite가 반복해서 reload됨
+## 20. `.intent` 파일이 바뀔 때 Vite가 반복해서 reload됨
 
 현재 plugin은 **해당 Vite project root 아래의** `.intent/**`와 `.intent-agent-queue.json*`만 watcher에서 자동 제외한다. 반복 reload가 보이면 설치된 `intent-layer`가 최신 빌드인지 먼저 확인하고 dev server를 완전히 재시작한다. 사용자 `server.watch.ignored` 규칙은 합쳐져야 하며, 다른 plugin이 `ignored`를 나중에 덮어쓰는 경우 그 plugin 설정에도 project-root 기준의 같은 두 패턴을 추가한다. 전역 `**/.intent/**`는 `.intent/tmp` 아래 테스트 프로젝트 전체까지 무시하므로 사용하지 않는다. production build에는 이 watcher 설정이나 overlay 계측이 들어가지 않는다.

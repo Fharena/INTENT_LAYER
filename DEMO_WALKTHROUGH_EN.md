@@ -50,6 +50,7 @@ Use the separate fixture for the modern stack and visual controls:
 
 ```bash
 npm run build:package
+npm run refresh:modern-fixture
 npm run dev --prefix test-sites/modern-tailwind-v4
 ```
 
@@ -62,6 +63,14 @@ npm run dev --prefix test-sites/modern-tailwind-v4
 7. Apply, verify HMR plus `gap-7` in source, then use one Undo to restore the original bytes.
 8. Switch the page from `Primary branch` to `Accent branch`, pick the card again, and confirm only `bg-accent` is exposed as the active branch row.
 
+### Guarded Literal Text
+
+1. Select the `Edit the rendered branch, not a dormant token.` heading in the Modern fixture.
+2. Enter one line of plain text and click text Preview. Source must still be unchanged.
+3. Apply and verify that both HMR text and the TSX literal change.
+4. Use one Undo to restore the original bytes.
+5. No editor should appear for text containing an expression, nested `<span>`, or entity.
+
 ## 3. Grid Layout Composer Flow
 
 1. Click `Pick`, then click any text inside one of the three cards.
@@ -71,12 +80,25 @@ npm run dev --prefix test-sites/modern-tailwind-v4
 5. Click `Preview layout` and confirm that only two className literals change.
 6. Apply and confirm TSX plus HMR contain `sm:col-span-6 sm:col-start-1` and `sm:col-span-3 sm:col-start-7`.
 7. Click `Undo` once and confirm both classNames restore together and pending undo is empty.
+8. In the Lumina hero, select the project `dashboard` breakpoint, increase rows to three, and place the first child on row two. Preview should add only `dashboard:grid-rows-3`, `dashboard:row-start-2`, and `dashboard:row-span-1`.
 
 Direct editing activates only when the parent and direct children have static classNames in one file. Repeated source ids from `.map()` or child implementations in another file report a reason without touching source.
 
 Use the hero grid in `test-sites/lumina-atelier` for an asymmetric template. On the `md` tab, changing the `1.2 / 0.8` track-ratio sliders must preview only the `md:grid-cols-[1.2fr_0.8fr]` token. Apply must HMR, and one Undo must restore the source byte for byte. Templates containing `minmax()`, CSS variables, or named lines are outside this demo.
 
-## 4. Target Project Tarball Demo
+## 4. Flex Layout Composer Flow
+
+1. In the Modern fixture, click `Pick` and select the top header.
+2. Confirm the nearest layout is recognized and `Flex layout` appears.
+3. At `base`, choose direction `col`, wrap `wrap`, justify `center`, align `start`, and gap `gap-6`.
+4. Set the first child's item alignment to `center` and confirm the mini canvas updates immediately.
+5. Source must remain unchanged and Apply must stay locked before Preview.
+6. Preview and apply. Only one parent range and one child range should change, and HMR should expose `flex-col`.
+7. Use one Undo and confirm both ranges restore byte for byte.
+
+The Flex composer requires static single-line classNames, one source file, and unique direct-child ids. Do not directly demo axis-specific gaps, repeated ids, cross-file children, or DOM reordering.
+
+## 5. Target Project Tarball Demo
 
 Create a local package tarball.
 
@@ -103,7 +125,7 @@ npx intent-layer check src --min-supported-direct 0.5 --max-file-transform-ms 20
 npx intent-layer dev
 ```
 
-## 5. Codex/Claude MCP Demo
+## 6. Codex/Claude MCP Demo
 
 1. Enable a provider under `Settings > AI connections`.
 2. Start a new Codex or Claude session.
@@ -113,11 +135,13 @@ npx intent-layer dev
 6. After approval, run `apply → verify` and confirm both source and rendered instances are verified.
 7. Restore the source with `intent_undo_edit`.
 
+The same six tools support guarded literal text. With a plain JSX text node selected, preview and apply `property: "content.text"`, verify source, then undo.
+
 For a quick packaged-stdio check, run `npm run build:package && npm run test:mcp-package`.
 
-Run all browser regressions with `npm run test:e2e`. Lumina covers setup, asymmetric Grid editing, HMR, exact undo, and mobile collapse/expand behavior. The Modern fixture covers conditional branches, swatches, the spacing stepper, source-free DOM preview, and the complete React 19/Tailwind 4 round trip.
+Run all browser regressions with `npm run test:e2e`. Lumina covers setup, asymmetric Grid editing, a custom breakpoint with row placement, HMR, exact undo, and mobile collapse/expand behavior. The Modern fixture covers literal text, Flex, conditional branches, swatches, the spacing stepper, source-free DOM preview, and the complete React 19/Tailwind 4 round trip.
 
-## 6. What To Say During The Demo
+## 7. What To Say During The Demo
 
 Use this positioning:
 
@@ -127,9 +151,9 @@ Use this positioning:
 - AI clients never submit raw source offsets and use the same `IntentService` as the GUI.
 - With a connected browser, verification checks rendered class tokens after HMR.
 - Every applied patch writes operation and intent diff artifacts for review.
-- Grid placement previews, applies, and undoes multiple classNames as one guarded operation.
+- Grid and Flex placement preview, apply, and undo multiple classNames as one guarded operation.
 
-## 7. Do Not Demo Yet
+## 8. Do Not Demo Yet
 
 Do not position these as ready MVP flows:
 
@@ -139,7 +163,8 @@ Do not position these as ready MVP flows:
 - Figma import
 - direct edits inside `node_modules`
 - broad natural-language layout refactors as deterministic patches
-- grid row/absolute placement, DOM reordering, and cross-file layout transactions
+- absolute placement, DOM reordering, and cross-file layout transactions
+- `raw`, max-only, or dynamic project breakpoints
 - compound arbitrary Grid templates containing `minmax()`, CSS variables, or named lines
 
 Show unsupported cases as `handoff-required` with an exact source pointer. Use the Markdown queue only in an advanced compatibility demo.

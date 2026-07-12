@@ -50,6 +50,7 @@ MVP 데모에서는 이 좁은 시나리오를 사용한다.
 
 ```bash
 npm run build:package
+npm run refresh:modern-fixture
 npm run dev --prefix test-sites/modern-tailwind-v4
 ```
 
@@ -62,6 +63,14 @@ npm run dev --prefix test-sites/modern-tailwind-v4
 7. 적용 후 HMR과 source의 `gap-7`을 확인하고, `되돌리기` 한 번으로 원문이 byte-for-byte 복원되는지 확인한다.
 8. 페이지의 `Primary branch`를 `Accent branch`로 바꾸고 다시 선택해 `bg-accent`만 활성 분기 row로 보이는지 확인한다.
 
+### Guarded literal text
+
+1. Modern fixture의 `Edit the rendered branch, not a dormant token.` 제목을 선택한다.
+2. text editor에서 한 줄 plain text로 바꾸고 `텍스트 미리보기`를 누른다. source는 아직 그대로여야 한다.
+3. `적용` 뒤 HMR text와 TSX literal이 함께 바뀌는지 확인한다.
+4. `되돌리기` 한 번으로 원문을 복원한다.
+5. `{expression}`, nested `<span>`, entity가 있는 text에는 editor가 나타나지 않는 것이 정상이다.
+
 ## 3. Grid Layout Composer 흐름
 
 1. `선택`을 누르고 세 카드 중 아무 내부 텍스트나 클릭한다.
@@ -71,12 +80,25 @@ npm run dev --prefix test-sites/modern-tailwind-v4
 5. `배치 미리보기`에서 두 className만 바뀌는지 확인한다.
 6. `배치 적용` 뒤 TSX와 HMR 렌더가 `sm:col-span-6 sm:col-start-1`, `sm:col-span-3 sm:col-start-7`을 반영하는지 확인한다.
 7. `되돌리기` 한 번으로 두 className이 함께 원복되고 pending undo가 비는지 확인한다.
+8. Lumina hero에서 `dashboard` project breakpoint를 고르고 행 수를 3으로 늘린 뒤 첫 자식을 2행에 둔다. preview에는 `dashboard:grid-rows-3`, `dashboard:row-start-2`, `dashboard:row-span-1`만 추가돼야 한다.
 
 이 직접 편집은 부모와 직계 자식이 같은 파일의 정적 className일 때만 활성화된다. `.map()`으로 같은 source id가 반복되거나 자식 구현이 다른 파일이면 이유를 표시하고 source를 건드리지 않는다.
 
 비대칭 template은 `test-sites/lumina-atelier`의 hero grid로 확인한다. `md` 탭에서 `1.2 / 0.8` track 비율 slider를 바꾸면 `md:grid-cols-[1.2fr_0.8fr]` 한 토큰만 미리보기되고, 적용 뒤 HMR과 한 번의 되돌리기가 원문을 byte-for-byte 복원해야 한다. `minmax()`, CSS 변수, line name이 포함된 template은 이 데모 범위가 아니다.
 
-## 4. 대상 프로젝트 Tarball 데모
+## 4. Flex Layout Composer 흐름
+
+1. Modern fixture에서 `선택`을 누르고 상단 header를 클릭한다.
+2. 가장 가까운 layout이 Flex로 판정돼 `Flex 배치`가 나타나는지 확인한다.
+3. `base`에서 direction `col`, wrap `wrap`, justify `center`, align `start`, gap `gap-6`을 고른다.
+4. 첫 자식의 개별 정렬을 `center`로 바꾸고 mini canvas가 즉시 갱신되는지 본다.
+5. `배치 미리보기` 전에는 source가 그대로이고 `배치 적용`이 잠겨 있어야 한다.
+6. preview/apply 뒤 부모 한 range와 첫 자식 한 range만 바뀌고 HMR에 `flex-col`이 반영되는지 확인한다.
+7. `되돌리기` 한 번으로 두 range가 byte-for-byte 복원되는지 확인한다.
+
+Flex composer는 정적 단일행 className, 같은 파일, 유일한 직계 자식 id에서만 열린다. `gap-x`/`gap-y`, 반복 id, cross-file child, DOM reorder는 이 데모에서 직접 적용하지 않는다.
+
+## 5. 대상 프로젝트 Tarball 데모
 
 로컬 package tarball을 만든다.
 
@@ -103,7 +125,7 @@ npx intent-layer check src --min-supported-direct 0.5 --max-file-transform-ms 20
 npx intent-layer dev
 ```
 
-## 5. Codex/Claude MCP 데모
+## 6. Codex/Claude MCP 데모
 
 1. 패널 `설정 > AI 연결`에서 사용할 provider를 켠다.
 2. Codex 또는 Claude를 새 세션으로 시작한다.
@@ -113,11 +135,13 @@ npx intent-layer dev
 6. 승인 뒤 `apply → verify`를 수행하고 source와 렌더 인스턴스가 모두 verified인지 확인한다.
 7. `intent_undo_edit`로 원복한다.
 
+같은 6개 도구로 literal text도 검증할 수 있다. plain JSX text가 선택된 상태에서 `property: "content.text"`와 새 문자열을 preview/apply하고, source 검증 뒤 undo한다.
+
 패키지 stdio 경로만 빠르게 검사할 때는 `npm run build:package && npm run test:mcp-package`를 사용한다.
 
-전체 브라우저 회귀는 `npm run test:e2e`로 실행한다. Lumina는 설정, 비대칭 Grid, HMR, exact undo와 모바일 축소/확대를 확인하고, Modern fixture는 조건 분기, swatch, spacing stepper, source-free DOM preview와 React 19/Tailwind 4 전체 라운드트립을 확인한다.
+전체 브라우저 회귀는 `npm run test:e2e`로 실행한다. Lumina는 설정, 비대칭 Grid, custom breakpoint/행 배치, HMR, exact undo와 모바일 축소/확대를 확인한다. Modern fixture는 literal text, Flex, 조건 분기, swatch, spacing stepper, source-free DOM preview와 React 19/Tailwind 4 전체 라운드트립을 확인한다.
 
-## 6. 데모 중 강조할 말
+## 7. 데모 중 강조할 말
 
 포지셔닝은 이렇게 잡는다.
 
@@ -127,9 +151,9 @@ npx intent-layer dev
 - AI도 raw source offset을 쓰지 않고 GUI와 같은 `IntentService`를 사용한다.
 - 브라우저가 연결돼 있으면 HMR 뒤 렌더된 class token까지 검증한다.
 - 적용된 patch는 review를 위해 operation과 intent diff artifact를 남긴다.
-- Grid 배치는 여러 className을 하나의 guarded operation으로 preview/apply/undo한다.
+- Grid/Flex 배치는 여러 className을 하나의 guarded operation으로 preview/apply/undo한다.
 
-## 7. 아직 데모하지 않을 것
+## 8. 아직 데모하지 않을 것
 
 다음 항목은 MVP ready flow처럼 말하지 않는다.
 
@@ -139,7 +163,8 @@ npx intent-layer dev
 - Figma import
 - `node_modules` 내부 직접 편집
 - 넓은 자연어 layout refactor를 deterministic patch처럼 처리하는 흐름
-- Grid row/absolute placement, DOM reorder, cross-file layout transaction
+- absolute placement, DOM reorder, cross-file layout transaction
+- `raw`/max-only/dynamic project breakpoint
 - `minmax()`, CSS variable 또는 named line을 포함한 복합 arbitrary Grid template
 
 지원하지 않는 케이스는 `handoff-required`와 정확한 source pointer로 보여준다. Markdown queue는 고급 호환성 데모에서만 사용한다.
