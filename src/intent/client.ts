@@ -138,6 +138,7 @@ type TextKey =
   | "layoutComposer"
   | "layoutLoading"
   | "layoutPreview"
+  | "layoutRatio"
   | "layoutSpan"
   | "legacyAgent"
   | "minimize"
@@ -286,6 +287,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     layoutComposer: "Grid 배치",
     layoutLoading: "Grid source binding을 확인하는 중입니다.",
     layoutPreview: "배치 미리보기",
+    layoutRatio: "비율",
     layoutSpan: "너비",
     legacyAgent: "기존 Agent 큐 (고급 호환성)",
     minimize: "접기",
@@ -405,6 +407,7 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     layoutComposer: "Grid layout",
     layoutLoading: "Checking grid source bindings.",
     layoutPreview: "Preview layout",
+    layoutRatio: "Ratio",
     layoutSpan: "Span",
     legacyAgent: "Legacy agent queue (advanced compatibility)",
     minimize: "Minimize",
@@ -1116,6 +1119,35 @@ function ensureOverlayStyles() {
   font-weight: 850 !important;
 }
 
+.intent-layer-layout-tracks {
+  display: grid !important;
+  gap: 6px !important;
+}
+
+.intent-layer-layout-track {
+  display: grid !important;
+  grid-template-columns: 52px minmax(0, 1fr) 38px !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+.intent-layer-layout-track span,
+.intent-layer-layout-track output {
+  color: #b8c2d9 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 9px !important;
+}
+
+.intent-layer-layout-track output {
+  text-align: right !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-track input[type="range"] {
+  min-height: 22px !important;
+  padding: 0 !important;
+  accent-color: #7e82ff !important;
+}
+
 .intent-layer-layout-canvas {
   display: grid !important;
   min-height: 76px !important;
@@ -1788,6 +1820,7 @@ function renderGridLayoutComposer(
   if (!runtime) return null;
 
   const section = createSection(t("layoutComposer"), "ready");
+  section.dataset.intentLayoutComposer = "true";
   const tabs = document.createElement("div");
   tabs.className = "intent-layer-layout-tabs";
   const body = document.createElement("div");
@@ -1802,6 +1835,7 @@ function renderGridLayoutComposer(
   const tabButtons = new Map<GridLayoutBreakpoint, HTMLButtonElement>();
   for (const breakpoint of ["base", "sm", "md", "lg"] as GridLayoutBreakpoint[]) {
     const button = createButton(breakpoint);
+    button.dataset.intentBreakpoint = breakpoint;
     button.dataset.intentActive = breakpoint === activeBreakpoint ? "true" : "false";
     button.title = breakpoint === "base" ? "Base styles" : `${breakpoint}: responsive styles`;
     button.addEventListener("click", () => {
@@ -1856,6 +1890,11 @@ function renderGridLayoutComposer(
     let columns = inspection.columns.effective ?? 1;
     const initialColumns = columns;
     let columnsChanged = false;
+    let columnTemplate = inspection.columnTemplate.effective
+      ? [...inspection.columnTemplate.effective]
+      : null;
+    const initialColumnTemplate = columnTemplate ? [...columnTemplate] : null;
+    let templateChanged = false;
     let previewId: string | null = null;
     const items: GridComposerItemState[] = inspection.items.map((item) => ({
       id: item.id,
@@ -1867,7 +1906,7 @@ function renderGridLayoutComposer(
     }));
 
     function hasChanges() {
-      return columnsChanged || items.some((item) => item.startChanged || item.spanChanged);
+      return columnsChanged || templateChanged || items.some((item) => item.startChanged || item.spanChanged);
     }
 
     function requestBody(): GridLayoutEditRequest {
@@ -1885,6 +1924,7 @@ function renderGridLayoutComposer(
           }))
       };
       if (columnsChanged) edit.columns = columns;
+      if (templateChanged) edit.columnTemplate = columnTemplate;
       return edit;
     }
 
@@ -1902,17 +1942,55 @@ function renderGridLayoutComposer(
     columnOutput.textContent = String(columns);
     const addColumn = createButton("+");
     addColumn.title = "Add one grid column";
+    removeColumn.disabled = Boolean(columnTemplate);
+    addColumn.disabled = Boolean(columnTemplate);
     stepper.append(removeColumn, columnOutput, addColumn);
     toolbar.append(columnsLabel, stepper);
 
+    const trackEditor = document.createElement("div");
+    trackEditor.className = "intent-layer-layout-tracks";
+    if (columnTemplate) {
+      columnTemplate.forEach((weight, index) => {
+        const row = document.createElement("label");
+        row.className = "intent-layer-layout-track";
+        const name = document.createElement("span");
+        name.textContent = `${index + 1} ${t("layoutRatio")}`;
+        const input = document.createElement("input");
+        input.type = "range";
+        input.min = "0.25";
+        input.max = "4";
+        input.step = "0.05";
+        input.value = String(weight);
+        input.dataset.intentGridTrack = String(index + 1);
+        const output = document.createElement("output");
+        output.textContent = weight.toFixed(2).replace(/\.00$/, "");
+        input.addEventListener("input", () => {
+          if (!columnTemplate) return;
+          columnTemplate[index] = Number(input.value);
+          output.textContent = columnTemplate[index].toFixed(2).replace(/\.00$/, "");
+          templateChanged = Boolean(
+            initialColumnTemplate &&
+              columnTemplate.some((value, itemIndex) => value !== initialColumnTemplate[itemIndex])
+          );
+          invalidatePreview();
+          drawCanvas();
+        });
+        row.append(name, input, output);
+        trackEditor.appendChild(row);
+      });
+    }
+
     const canvas = document.createElement("div");
     canvas.className = "intent-layer-layout-canvas";
+    canvas.dataset.intentLayoutCanvas = "true";
     const itemList = document.createElement("div");
     itemList.className = "intent-layer-layout-items";
     const actions = document.createElement("div");
     actions.className = "intent-layer-layout-actions";
     const preview = createButton(t("layoutPreview"));
+    preview.dataset.intentAction = "grid-preview";
     const apply = createButton(t("layoutApply"), "primary");
+    apply.dataset.intentAction = "grid-apply";
     apply.disabled = true;
     const previewBox = document.createElement("pre");
     previewBox.className = "intent-layer-code-box";
@@ -1928,7 +2006,9 @@ function renderGridLayoutComposer(
 
     function drawCanvas() {
       canvas.innerHTML = "";
-      canvas.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+      canvas.style.gridTemplateColumns = columnTemplate
+        ? columnTemplate.map((weight) => `${weight}fr`).join(" ")
+        : `repeat(${columns}, minmax(0, 1fr))`;
       items.forEach((item, index) => {
         const block = document.createElement("div");
         block.className = "intent-layer-layout-block";
@@ -1954,6 +2034,7 @@ function renderGridLayoutComposer(
     }
 
     function changeColumns(delta: number) {
+      if (columnTemplate) return;
       const next = Math.max(1, Math.min(12, columns + delta));
       if (next === columns) return;
       columns = next;
@@ -2121,7 +2202,9 @@ function renderGridLayoutComposer(
 
     drawCanvas();
     renderItemControls();
-    body.append(toolbar, canvas, itemList, actions, previewBox);
+    body.append(toolbar);
+    if (columnTemplate) body.append(trackEditor);
+    body.append(canvas, itemList, actions, previewBox);
   }
 
   void loadInspection();
@@ -2139,6 +2222,7 @@ function renderTokenRow(
   const row = document.createElement("div");
   row.className = "intent-layer-token-row";
   row.dataset.intentTokenCategory = token.category ?? "unknown";
+  row.dataset.intentToken = token.token;
   row.style.display = "grid";
   row.style.gridTemplateColumns = "1fr 1fr auto auto";
   row.style.gap = "8px";
@@ -2158,13 +2242,26 @@ function renderTokenRow(
   select.style.padding = "6px";
   select.style.fontSize = "12px";
 
-  for (const candidate of candidatesForToken(token.token)) {
-    const option = document.createElement("option");
-    option.value = candidate;
-    option.textContent = candidate;
-    option.selected = candidate === token.token;
-    select.appendChild(option);
-  }
+  const renderCandidates = (candidates: string[]) => {
+    const selected = select.value || token.token;
+    select.innerHTML = "";
+    for (const candidate of candidates) {
+      const option = document.createElement("option");
+      option.value = candidate;
+      option.textContent = candidate;
+      option.selected = candidate === selected;
+      select.appendChild(option);
+    }
+  };
+  renderCandidates(candidatesForToken(token.token));
+  void intentFetch(`/__intent/candidates?token=${encodeURIComponent(token.token)}`)
+    .then((response) => response.json() as Promise<{ candidates?: string[] }>)
+    .then((result) => {
+      if (select.isConnected && result.candidates && result.candidates.length > 1) {
+        renderCandidates(result.candidates);
+      }
+    })
+    .catch(() => undefined);
 
   const preview = createButton(t("preview"));
   const apply = createButton(scope?.isShared ? t("applyAll") : t("apply"));
@@ -2444,6 +2541,7 @@ function renderSetupPanel(
       claudeEnabled: false
     },
     agent: {
+      legacyQueueEnabled: false,
       runEnabled: false,
       codexCommand: null,
       claudeCommand: null,
@@ -2458,6 +2556,7 @@ function renderSetupPanel(
   let draftAutoOpenSetup = settings.overlay.autoOpenSetup;
   let draftCodexMcpEnabled = settings.mcp.codexEnabled;
   let draftClaudeMcpEnabled = settings.mcp.claudeEnabled;
+  let draftLegacyQueueEnabled = settings.agent.legacyQueueEnabled;
   let draftAgentRunEnabled = settings.agent.runEnabled;
   let draftCodexCommand = settings.agent.codexCommand ?? "";
   let draftClaudeCommand = settings.agent.claudeCommand ?? "";
@@ -2472,6 +2571,7 @@ function renderSetupPanel(
   });
 
   const currentAgentDraft = () => ({
+    legacyQueueEnabled: draftLegacyQueueEnabled,
     runEnabled: draftAgentRunEnabled,
     codexCommand: draftCodexCommand.trim() || null,
     claudeCommand: draftClaudeCommand.trim() || null,
@@ -2750,14 +2850,27 @@ function renderSetupPanel(
     createSettingRow(t("agentRunToggle"), t("agentRunToggleDetail"), runToggle),
     commandGrid
   );
-  const legacyAgent = document.createElement("details");
-  const legacyAgentSummary = document.createElement("summary");
-  legacyAgentSummary.textContent = t("legacyAgent");
-  legacyAgent.append(legacyAgentSummary, agentSection);
+  const legacyAgent = document.createElement("div");
+  legacyAgent.className = "intent-layer-section";
+  const legacyAgentToggle = createToggleButton(draftLegacyQueueEnabled);
+  legacyAgentToggle.addEventListener("click", () => {
+    draftLegacyQueueEnabled = !draftLegacyQueueEnabled;
+    if (!draftLegacyQueueEnabled) {
+      draftAgentRunEnabled = false;
+      draftCodexSkillEnabled = false;
+      draftClaudeHookEnabled = false;
+    }
+    draftCodexCommand = codexInput.value;
+    draftClaudeCommand = claudeInput.value;
+    void saveDraft(false);
+  });
+  legacyAgent.append(createSettingRow(t("legacyAgent"), "", legacyAgentToggle));
+  if (draftLegacyQueueEnabled) legacyAgent.appendChild(agentSection);
 
   const actions = document.createElement("div");
   actions.className = "intent-layer-actions";
   const save = createButton(status?.settingsReady ? t("saveSettings") : t("setupApply"), "primary");
+  save.dataset.intentAction = "save-settings";
   save.addEventListener("click", () => {
     draftCodexCommand = codexInput.value;
     draftClaudeCommand = claudeInput.value;
@@ -2809,6 +2922,7 @@ async function saveSetup(
       claudeEnabled: boolean;
     };
     agent?: {
+      legacyQueueEnabled: boolean;
       runEnabled: boolean;
       codexCommand: string | null;
       claudeCommand: string | null;
@@ -3078,6 +3192,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   actions.className = "intent-layer-actions intent-layer-header-actions";
 
   const pick = createButton(t("pick"), "primary");
+  pick.dataset.intentAction = "pick";
   pick.title = "Pick an element on the page";
   pick.addEventListener("click", () => {
     overlayView = "editor";
@@ -3086,6 +3201,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   actions.appendChild(pick);
 
   const setup = createButton(t("setup"));
+  setup.dataset.intentAction = "setup";
   setup.title = t("setupOpen");
   setup.addEventListener("click", () => {
     overlayView = overlayView === "setup" ? "editor" : "setup";
@@ -3101,6 +3217,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   actions.appendChild(setup);
 
   const undo = createButton(t("undo"));
+  undo.dataset.intentAction = "undo";
   undo.title = "Revert the latest direct patch";
   undo.addEventListener("click", async () => {
     overlayView = "editor";
@@ -3147,6 +3264,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   actions.appendChild(undo);
 
   const toggle = createButton(overlayCollapsed ? t("expand") : t("minimize"));
+  toggle.dataset.intentAction = "collapse";
   toggle.title = overlayCollapsed ? "Expand the Intent Layer panel" : "Minimize the Intent Layer panel";
   toggle.addEventListener("click", () => {
     overlayCollapsed = !overlayCollapsed;
@@ -3238,15 +3356,17 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     }
     content.appendChild(directSection);
 
-    const legacyHandoff = document.createElement("details");
-    const legacyHandoffSummary = document.createElement("summary");
-    legacyHandoffSummary.textContent = t("legacyAgent");
-    const legacyHandoffContent = document.createElement("div");
-    renderAgentTaskForm(legacyHandoffContent, binding, (message) => {
-      statusLine.textContent = message;
-    });
-    legacyHandoff.append(legacyHandoffSummary, legacyHandoffContent);
-    content.appendChild(legacyHandoff);
+    if (latestSetupStatus?.settings.agent.legacyQueueEnabled) {
+      const legacyHandoff = document.createElement("details");
+      const legacyHandoffSummary = document.createElement("summary");
+      legacyHandoffSummary.textContent = t("legacyAgent");
+      const legacyHandoffContent = document.createElement("div");
+      renderAgentTaskForm(legacyHandoffContent, binding, (message) => {
+        statusLine.textContent = message;
+      });
+      legacyHandoff.append(legacyHandoffSummary, legacyHandoffContent);
+      content.appendChild(legacyHandoff);
+    }
 
     renderUndoHistory(content, (message, refreshedBinding) => {
       if (refreshedBinding) {

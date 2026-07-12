@@ -4,7 +4,9 @@ import {
   categorizeTailwindToken,
   describeTailwindToken,
   gridLayoutToken,
+  gridTemplateToken,
   parseGridLayoutToken,
+  parseGridTemplateToken,
   tokenizeClassName
 } from "./tailwind";
 
@@ -70,5 +72,14 @@ describe("Tailwind direct-edit candidates", () => {
       property: "layout.columnSpan",
       value: "5"
     });
+  });
+
+  it("round-trips safe fractional grid templates", () => {
+    expect(parseGridTemplateToken("md:grid-cols-[1.2fr_0.8fr]")).toEqual({
+      breakpoint: "md",
+      weights: [1.2, 0.8]
+    });
+    expect(gridTemplateToken([0.75, 1.25], "lg")).toBe("lg:grid-cols-[0.75fr_1.25fr]");
+    expect(parseGridTemplateToken("grid-cols-[minmax(0,_1fr)_2fr]")).toBeNull();
   });
 });

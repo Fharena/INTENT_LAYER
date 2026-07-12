@@ -34,7 +34,7 @@ describe("GUI-first setup", () => {
     expect(result.status.settings).toMatchObject({
       language: "ko",
       mcp: { codexEnabled: false, claudeEnabled: false },
-      agent: { codexSkillEnabled: false, claudeHookEnabled: false }
+      agent: { legacyQueueEnabled: false, codexSkillEnabled: false, claudeHookEnabled: false }
     });
     expect(fs.readFileSync(path.join(root, ".gitignore"), "utf8")).toContain(".intent/runtime/");
     expect(fs.existsSync(path.join(root, ".codex", "config.toml"))).toBe(false);
@@ -65,6 +65,28 @@ describe("GUI-first setup", () => {
       mcpServers: Record<string, unknown>;
     };
     expect(claude.mcpServers["intent-layer"]).toBeDefined();
+    expect(fs.existsSync(path.join(root, ".intent-agent-queue.json"))).toBe(false);
+  });
+
+  it("keeps legacy queue integrations off unless the advanced mode is explicit", () => {
+    const root = rootFixture();
+    const result = applyIntentSetup(root, {
+      createWorkspace: true,
+      completeOnboarding: true,
+      agent: {
+        legacyQueueEnabled: false,
+        runEnabled: true,
+        codexSkillEnabled: true,
+        claudeHookEnabled: true
+      }
+    });
+
+    expect(result.status.settings.agent).toMatchObject({
+      legacyQueueEnabled: false,
+      runEnabled: false,
+      codexSkillEnabled: false,
+      claudeHookEnabled: false
+    });
     expect(fs.existsSync(path.join(root, ".intent-agent-queue.json"))).toBe(false);
   });
 });

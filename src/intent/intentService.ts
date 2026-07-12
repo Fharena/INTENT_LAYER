@@ -21,7 +21,7 @@ import {
   revertTokenPatch,
   undoHistoryFromStack
 } from "./patch";
-import { describeTailwindToken } from "./tailwind";
+import { describeProjectTailwindToken } from "./themeCandidates";
 import type {
   IntentBinding,
   IntentGraph,
@@ -581,7 +581,7 @@ export class IntentService {
   private propertiesFor(entry: IntentBinding): IntentEditableProperty[] {
     return entry.tokens.flatMap((token) => {
       if (!token.editable) return [];
-      const semantic = describeTailwindToken(token.token);
+      const semantic = describeProjectTailwindToken(this.rootDir, token.token);
       if (!semantic || semantic.candidates.length < 2) return [];
       return [
         {

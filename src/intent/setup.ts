@@ -75,6 +75,7 @@ export function defaultIntentSettings(language: IntentLayerLanguage = "en"): Int
       claudeEnabled: false
     },
     agent: {
+      legacyQueueEnabled: false,
       runEnabled: false,
       codexCommand: null,
       claudeCommand: null,
@@ -104,7 +105,11 @@ function normalizeOverlaySettings(value: unknown): IntentOverlaySettings {
 
 function normalizeAgentSettings(value: unknown): IntentAgentSettings {
   const raw = value && typeof value === "object" ? (value as Partial<IntentAgentSettings>) : {};
+  const inferredLegacyQueue = Boolean(
+    raw.runEnabled || raw.codexSkillEnabled || raw.claudeHookEnabled
+  );
   return {
+    legacyQueueEnabled: normalizeBoolean(raw.legacyQueueEnabled, inferredLegacyQueue),
     runEnabled: normalizeBoolean(raw.runEnabled, false),
     codexCommand: normalizeCommand(raw.codexCommand),
     claudeCommand: normalizeCommand(raw.claudeCommand),
@@ -347,6 +352,10 @@ export function resolveAgentRunMode(rootDir: string): {
   return { enabled: false, source: "locked" };
 }
 
+export function legacyAgentQueueEnabled(rootDir: string): boolean {
+  return (readIntentSettings(rootDir) ?? defaultIntentSettings()).agent.legacyQueueEnabled;
+}
+
 export function intentSetupStatus(
   rootDir: string,
   options: { graphEntryCount?: number; language?: IntentLayerLanguage } = {}
@@ -425,6 +434,7 @@ export function intentSetupStatus(
     ],
     mcp,
     agent: {
+      legacyQueueEnabled: effectiveSettings.agent.legacyQueueEnabled,
       runEnabled: agentRunMode.enabled,
       runEnabledSource: agentRunMode.source,
       codexCommand,
@@ -470,10 +480,18 @@ export function applyIntentSetup(
     ...previous.mcp,
     ...(request.mcp ?? {})
   });
-  const nextAgent = normalizeAgentSettings({
+  const normalizedAgent = normalizeAgentSettings({
     ...previous.agent,
     ...(request.agent ?? {})
   });
+  const nextAgent: IntentAgentSettings = normalizedAgent.legacyQueueEnabled
+    ? normalizedAgent
+    : {
+        ...normalizedAgent,
+        runEnabled: false,
+        codexSkillEnabled: false,
+        claudeHookEnabled: false
+      };
   const onboardingCompletedAt =
     request.resetOnboarding === true
       ? null

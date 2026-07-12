@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  agentArtifactsDir,
+  agentQueueSignalPath,
   buildAgentTaskMarkdown,
   claimAgentTask,
   createAgentTaskMetadata,
@@ -33,6 +35,7 @@ function writeTask(rootDir: string, id: string, status: "queued" | "done" = "que
 }
 
 afterEach(() => {
+  delete process.env.INTENT_LAYER_AGENT_ARTIFACT_DIR;
   vi.restoreAllMocks();
   for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
 });
@@ -97,5 +100,25 @@ describe("agent queue durability", () => {
     expect(fs.existsSync(done)).toBe(false);
     expect(fs.existsSync(context)).toBe(false);
     expect(fs.existsSync(queued)).toBe(true);
+  });
+
+  it("isolates evaluator artifacts from the project queue", () => {
+    const rootDir = workspace();
+    process.env.INTENT_LAYER_AGENT_ARTIFACT_DIR = ".intent/tmp/evaluation-agent";
+    const isolatedDir = agentArtifactsDir(rootDir);
+    fs.mkdirSync(isolatedDir, { recursive: true });
+    const taskFile = path.join(isolatedDir, "task_isolated.md");
+    const metadata = createAgentTaskMetadata({
+      taskFile,
+      sourceIntentId: "intent-isolated",
+      sourceFile: ".intent/tmp/Fixture.tsx"
+    });
+    fs.writeFileSync(taskFile, buildAgentTaskMarkdown(metadata, "# isolated\n"));
+
+    const queue = refreshAgentQueueSignal(rootDir);
+
+    expect(queue.totalTaskCount).toBe(1);
+    expect(agentQueueSignalPath(rootDir)).toBe(path.join(isolatedDir, "queue.json"));
+    expect(fs.existsSync(path.join(rootDir, ".intent-agent-queue.json"))).toBe(false);
   });
 });

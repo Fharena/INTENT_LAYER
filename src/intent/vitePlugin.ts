@@ -18,7 +18,8 @@ import {
   writeRuntimeSelection,
   writeRuntimeSession
 } from "./runtimeSession";
-import { applyIntentSetup, intentSetupStatus } from "./setup";
+import { applyIntentSetup, intentSetupStatus, legacyAgentQueueEnabled } from "./setup";
+import { projectCandidatesForToken, readProjectThemeCatalog } from "./themeCandidates";
 import type {
   AgentResultRequest,
   AgentLaunchRequest,
@@ -142,6 +143,7 @@ function transpileVirtualModule(source: string, fileName: string): string {
 
 export function intentLayerSpike(): Plugin {
   let isServe = false;
+  let runtimeSessionId: string | null = null;
   const runtimeToken = randomBytes(24).toString("hex");
   const graphStore = new IntentGraphStore(process.cwd());
   const intentService = new IntentService(graphStore);
@@ -226,10 +228,10 @@ export function intentLayerSpike(): Plugin {
       server.httpServer?.once("listening", () => {
         const address = server.httpServer?.address();
         if (!address || typeof address === "string") return;
-        writeRuntimeSession(intentService.rootDir, {
+        runtimeSessionId = writeRuntimeSession(intentService.rootDir, {
           url: `http://127.0.0.1:${address.port}`,
           token: runtimeToken
-        });
+        }).sessionId;
       });
       server.httpServer?.once("close", () => {
         removeRuntimeSession(intentService.rootDir, runtimeToken);
@@ -249,6 +251,18 @@ export function intentLayerSpike(): Plugin {
             ok: false,
             reason: "unsafe-intent-request",
             detail: "Intent Layer source-changing requests require a loopback connection and session token."
+          });
+          return;
+        }
+
+        if (
+          url.pathname.startsWith("/__intent/agent-") &&
+          !legacyAgentQueueEnabled(intentService.rootDir)
+        ) {
+          writeJson(response, 404, {
+            ok: false,
+            reason: "legacy-agent-disabled",
+            detail: "Enable the advanced legacy agent queue in Intent Layer settings before using this route."
           });
           return;
         }
@@ -310,8 +324,23 @@ export function intentLayerSpike(): Plugin {
           return;
         }
 
+        if (url.pathname === "/__intent/candidates" && request.method === "GET") {
+          const token = url.searchParams.get("token")?.trim();
+          if (!token || token.length > 200) {
+            writeJson(response, 400, { ok: false, reason: "invalid-token" });
+            return;
+          }
+          writeJson(response, 200, {
+            ok: true,
+            token,
+            candidates: projectCandidatesForToken(intentService.rootDir, token),
+            themeFiles: readProjectThemeCatalog(intentService.rootDir).files
+          });
+          return;
+        }
+
         if (url.pathname === "/__intent/selection" && request.method === "GET") {
-          writeJson(response, 200, readRuntimeSelection(intentService.rootDir));
+          writeJson(response, 200, readRuntimeSelection(intentService.rootDir, runtimeSessionId));
           return;
         }
 
@@ -321,7 +350,8 @@ export function intentLayerSpike(): Plugin {
             const result = writeRuntimeSelection(
               intentService.rootDir,
               body.id ? intentService.getEntry(body.id) : undefined,
-              body
+              body,
+              runtimeSessionId
             );
             writeJson(response, 200, result);
           } catch (error) {

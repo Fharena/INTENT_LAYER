@@ -1,7 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { sourceHash } from "./hash";
-import { gridLayoutToken, parseGridLayoutToken, type GridLayoutTokenProperty } from "./tailwind";
+import {
+  gridLayoutToken,
+  gridTemplateToken,
+  parseGridLayoutToken,
+  parseGridTemplateToken,
+  type GridLayoutTokenProperty
+} from "./tailwind";
 import type {
   GridLayoutBreakpoint,
   GridLayoutEditRequest,
@@ -20,6 +26,11 @@ interface GridParticipants {
   children: IntentBinding[];
 }
 
+interface ColumnDefinition {
+  columns: number;
+  template: number[] | null;
+}
+
 export interface GridLayoutPlan {
   ok: true;
   inspection: GridLayoutInspection;
@@ -31,11 +42,51 @@ function failure(reason: string, detail: string, id?: string): PatchFailure {
   return { ok: false, id, reason, detail };
 }
 
+function exactColumnDefinition(
+  entry: IntentBinding,
+  breakpoint: GridLayoutBreakpoint
+): ColumnDefinition | null | PatchFailure {
+  const numeric = entry.tokens
+    .map((token) => parseGridLayoutToken(token.token))
+    .filter((token) => token?.property === "columns" && token.breakpoint === breakpoint);
+  const templates = entry.tokens
+    .map((token) => parseGridTemplateToken(token.token))
+    .filter((token) => token?.breakpoint === breakpoint);
+  if (numeric.length + templates.length > 1) {
+    return failure(
+      "ambiguous-grid-token",
+      `More than one ${breakpoint}:columns token exists on ${entry.id}.`,
+      entry.id
+    );
+  }
+  if (numeric[0]) return { columns: numeric[0].value, template: null };
+  if (templates[0]) return { columns: templates[0].weights.length, template: templates[0].weights };
+  return null;
+}
+
+function effectiveColumnDefinition(
+  entry: IntentBinding,
+  breakpoint: GridLayoutBreakpoint,
+  excludeCurrent = false
+): ColumnDefinition | PatchFailure {
+  const targetIndex = breakpoints.indexOf(breakpoint) - (excludeCurrent ? 1 : 0);
+  for (let index = targetIndex; index >= 0; index -= 1) {
+    const value = exactColumnDefinition(entry, breakpoints[index]);
+    if (value) return value;
+  }
+  return { columns: 1, template: null };
+}
+
 function exactGridValue(
   entry: IntentBinding,
   property: GridLayoutTokenProperty,
   breakpoint: GridLayoutBreakpoint
 ): number | null | PatchFailure {
+  if (property === "columns") {
+    const definition = exactColumnDefinition(entry, breakpoint);
+    if (definition && "ok" in definition) return definition;
+    return definition?.columns ?? null;
+  }
   const matches = entry.tokens
     .map((token) => parseGridLayoutToken(token.token))
     .filter(
@@ -83,9 +134,10 @@ function unsupportedGridConflict(
 ): string | null {
   for (const token of entry.tokens) {
     const parsed = parseGridLayoutToken(token.token);
+    const template = parseGridTemplateToken(token.token);
     const { variant, base } = tokenVariantAndBase(token.token);
     if (variant !== breakpoint) continue;
-    if (role === "parent" && base.startsWith("grid-cols-") && !parsed) return token.token;
+    if (role === "parent" && base.startsWith("grid-cols-") && !parsed && !template) return token.token;
     if (role === "child" && /^(?:col-auto|col-end-|col-start-|col-span-)/.test(base) && !parsed) {
       return token.token;
     }
@@ -158,12 +210,12 @@ function participants(
   if (!parent.tokens.some((token) => token.token === "grid")) {
     return failure("not-static-grid", "The selected parent does not have a base grid token.", request.parentId);
   }
-  const baseColumns = exactGridValue(parent, "columns", "base");
-  if (baseColumns && typeof baseColumns === "object") return baseColumns;
-  if (typeof baseColumns !== "number" || baseColumns < 1 || baseColumns > 12) {
+  const baseColumns = effectiveColumnDefinition(parent, "base");
+  if ("ok" in baseColumns) return baseColumns;
+  if (baseColumns.columns < 1 || baseColumns.columns > 12) {
     return failure(
       "unsupported-grid-columns",
-      "The selected parent needs a numeric base grid-cols-1 through grid-cols-12 token.",
+      "The selected parent needs one through twelve numeric or fractional grid columns.",
       request.parentId
     );
   }
@@ -197,7 +249,7 @@ export function inspectGridLayout(
 ): GridLayoutInspection | PatchFailure {
   const scope = participants(resolve, request);
   if (!("parent" in scope)) return scope;
-  const columns = resolvedValue(scope.parent, "columns", request.breakpoint, null);
+  const columns = resolvedValue(scope.parent, "columns", request.breakpoint, 1);
   if ("ok" in columns) return columns;
   if (typeof columns.effective !== "number") {
     return failure("missing-effective-columns", "No numeric grid column count is effective at this breakpoint.", request.parentId);
@@ -217,6 +269,11 @@ export function inspectGridLayout(
     });
   }
 
+  const explicitDefinition = exactColumnDefinition(scope.parent, request.breakpoint);
+  if (explicitDefinition && "ok" in explicitDefinition) return explicitDefinition;
+  const effectiveDefinition = effectiveColumnDefinition(scope.parent, request.breakpoint);
+  if ("ok" in effectiveDefinition) return effectiveDefinition;
+
   return {
     ok: true,
     parentId: scope.parent.id,
@@ -224,12 +281,25 @@ export function inspectGridLayout(
     breakpoint: request.breakpoint,
     supportedBreakpoints: breakpoints,
     columns,
+    columnTemplate: {
+      explicit: explicitDefinition?.template ?? null,
+      effective: effectiveDefinition.template
+    },
     items
   };
 }
 
 function validTrack(value: number | null | undefined): value is number {
   return Number.isInteger(value) && Number(value) >= 1 && Number(value) <= 12;
+}
+
+function validTemplate(weights: number[] | null | undefined): weights is number[] {
+  return Boolean(
+    weights &&
+      weights.length >= 1 &&
+      weights.length <= 12 &&
+      weights.every((value) => Number.isFinite(value) && value > 0 && value <= 12)
+  );
 }
 
 function updateStaticClassName(
@@ -241,7 +311,11 @@ function updateStaticClassName(
   for (const change of changes) {
     const indexes = tokens.flatMap((token, index) => {
       const parsed = parseGridLayoutToken(token);
-      return parsed?.property === change.property && parsed.breakpoint === breakpoint ? [index] : [];
+      const template = change.property === "columns" ? parseGridTemplateToken(token) : null;
+      return (parsed?.property === change.property && parsed.breakpoint === breakpoint) ||
+        template?.breakpoint === breakpoint
+        ? [index]
+        : [];
     });
     if (indexes.length > 1) {
       return failure("ambiguous-grid-token", `More than one ${breakpoint}:${change.property} token exists.`, entry.id);
@@ -255,6 +329,34 @@ function updateStaticClassName(
     if (index === undefined) tokens.push(nextToken);
     else tokens[index] = nextToken;
   }
+  return tokens.join(" ");
+}
+
+function updateStaticGridTemplate(
+  entry: IntentBinding,
+  weights: number[] | null,
+  breakpoint: GridLayoutBreakpoint
+): string | PatchFailure {
+  const tokens = entry.tokens.map((token) => token.token);
+  const indexes = tokens.flatMap((token, index) => {
+    const numeric = parseGridLayoutToken(token);
+    const template = parseGridTemplateToken(token);
+    return (numeric?.property === "columns" && numeric.breakpoint === breakpoint) ||
+      template?.breakpoint === breakpoint
+      ? [index]
+      : [];
+  });
+  if (indexes.length > 1) {
+    return failure("ambiguous-grid-token", `More than one ${breakpoint}:columns token exists.`, entry.id);
+  }
+  const index = indexes[0];
+  if (weights === null) {
+    if (index !== undefined && parseGridTemplateToken(tokens[index])) tokens.splice(index, 1);
+    return tokens.join(" ");
+  }
+  const nextToken = gridTemplateToken(weights, breakpoint);
+  if (index === undefined) tokens.push(nextToken);
+  else tokens[index] = nextToken;
   return tokens.join(" ");
 }
 
@@ -288,17 +390,39 @@ export function planGridLayout(
   if (request.columns !== undefined && request.columns !== null && !validTrack(request.columns)) {
     return failure("invalid-grid-columns", "Grid columns must be an integer from 1 through 12.", request.parentId);
   }
+  if (request.columns !== undefined && request.columnTemplate !== undefined) {
+    return failure(
+      "conflicting-grid-columns",
+      "Change either the column count or the fractional template in one operation, not both.",
+      request.parentId
+    );
+  }
+  if (
+    request.columnTemplate !== undefined &&
+    request.columnTemplate !== null &&
+    !validTemplate(request.columnTemplate)
+  ) {
+    return failure(
+      "invalid-grid-template",
+      "A fractional grid template needs one through twelve positive track weights.",
+      request.parentId
+    );
+  }
   if (request.columns === null && request.breakpoint === "base") {
     return failure("required-base-columns", "The base grid column token cannot be removed.", request.parentId);
   }
-  const inheritedColumns = effectiveGridValue(scope.parent, "columns", request.breakpoint, null, true);
-  if (inheritedColumns && typeof inheritedColumns === "object") return inheritedColumns;
+  const inheritedDefinition = effectiveColumnDefinition(scope.parent, request.breakpoint, true);
+  if ("ok" in inheritedDefinition) return inheritedDefinition;
   const nextColumns =
-    request.columns === undefined
-      ? inspection.columns.effective
-      : request.columns === null
-        ? inheritedColumns
-        : request.columns;
+    request.columnTemplate !== undefined
+      ? request.columnTemplate === null
+        ? inheritedDefinition.columns
+        : request.columnTemplate.length
+      : request.columns === undefined
+        ? inspection.columns.effective
+        : request.columns === null
+          ? inheritedDefinition.columns
+          : request.columns;
   if (!validTrack(nextColumns)) {
     return failure("missing-effective-columns", "The edited breakpoint would have no valid grid column count.", request.parentId);
   }
@@ -349,8 +473,11 @@ export function planGridLayout(
   const editsWithoutAppliedRange: Array<Omit<PatchTextEdit, "appliedRange">> = [];
   for (const entry of [scope.parent, ...scope.children]) {
     const changes = updates.get(entry.id);
-    if (!changes) continue;
-    const nextClassName = updateStaticClassName(entry, changes, request.breakpoint);
+    if (!changes && !(entry.id === scope.parent.id && request.columnTemplate !== undefined)) continue;
+    const nextClassName =
+      entry.id === scope.parent.id && request.columnTemplate !== undefined
+        ? updateStaticGridTemplate(entry, request.columnTemplate, request.breakpoint)
+        : updateStaticClassName(entry, changes ?? [], request.breakpoint);
     if (typeof nextClassName !== "string") return nextClassName;
     if (nextClassName !== entry.className.value) editsWithoutAppliedRange.push(classEdit(entry, nextClassName));
   }

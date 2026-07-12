@@ -2,6 +2,7 @@ import path from "node:path";
 import ts from "typescript";
 import { shortHash, sourceHash } from "./hash";
 import { tokenizeClassName } from "./tailwind";
+import { createProjectCandidateResolver } from "./themeCandidates";
 import type { IntentBinding, IntentToken } from "./types";
 
 interface SourceSegment {
@@ -398,6 +399,15 @@ export function instrumentSource(params: {
   }
 
   visit(sourceFile, null);
+  let candidatesForProject: ((token: string) => string[]) | null = null;
+  for (const entry of entries) {
+    for (const token of entry.tokens) {
+      if (!token.editable && token.category !== null) {
+        candidatesForProject ??= createProjectCandidateResolver(params.rootDir);
+        token.editable = candidatesForProject(token.token).length > 1;
+      }
+    }
+  }
   const transformMs = Number((performance.now() - started).toFixed(3));
   for (const entry of entries) entry.transformMs = transformMs;
   return { code: insertText(params.code, insertions), entries, transformMs };

@@ -30,12 +30,14 @@ import { intentLayer } from "../src/intent/vitePlugin";
 const rootDir = process.cwd();
 const reportsDir = path.join(rootDir, "reports", "performance");
 const tmpDir = path.join(rootDir, ".intent", "tmp");
+const evaluationAgentDir = path.join(tmpDir, "evaluation-agent");
+process.env.INTENT_LAYER_AGENT_ARTIFACT_DIR = path.relative(rootDir, evaluationAgentDir);
 const aiCorpusMinFiles = 50;
 const aiCorpusCoverageTarget = 0.5;
 const externalCorpusHarnessMinFiles = 3;
 const externalCorpusHarnessCoverageTarget = 0.5;
 const runtimeArtifactRoots = [
-  path.join(rootDir, ".intent", "agent"),
+  evaluationAgentDir,
   path.join(rootDir, ".intent", "operations"),
   path.join(rootDir, ".intent", "diffs"),
   path.join(rootDir, ".intent", "conflicts")
@@ -61,7 +63,9 @@ process.once("exit", () => {
     for (const file of runtimeArtifactFiles()) {
       if (!runtimeArtifactsBeforeEvaluation.has(file) && fs.existsSync(file)) fs.unlinkSync(file);
     }
-    refreshAgentQueueSignal(rootDir);
+    if (fs.existsSync(evaluationAgentDir)) {
+      fs.rmSync(evaluationAgentDir, { recursive: true, force: true });
+    }
   } catch {
     // Evaluation cleanup must not mask the gate result.
   }
@@ -669,6 +673,7 @@ function packageSmoke(): PackageSmokeResult {
       "      autoOpenSetup: false",
       "    },",
       "    agent: {",
+      "      legacyQueueEnabled: true,",
       "      runEnabled: true,",
       "      codexCommand: \"codex-custom\",",
       "      claudeCommand: \"claude-custom\",",
@@ -859,7 +864,7 @@ function packageSmoke(): PackageSmokeResult {
       "    setupAfterJson?.workspaceReady === true && setupAfterJson?.settingsReady === true &&",
       "    setupAfterJson?.graphReady === true && setupSettingsFileExists && setupSchemaExists &&",
       "    !setupQueueSignalExists && !setupCodexSkillExists && !setupClaudeSettingsExists && !setupClaudeHookConfigured &&",
-      "    agentQueue.status === 200 && agentQueueJson?.kind === \"intent-agent-queue\" &&",
+      "    agentQueue.status === 404 && agentQueueJson === null &&",
       "    settingsUpdateOk &&",
       "    unauthorizedApply.status === 403 && unauthorizedApply.json?.reason === \"unsafe-intent-request\" &&",
       "    preview.status === 200 && preview.json?.ok === true &&",
@@ -5986,7 +5991,7 @@ const report = {
       packageInstallSmoke.installedViteDevServerSetupSettingsFileExists &&
       packageInstallSmoke.installedViteDevServerSetupSchemaExists &&
       !packageInstallSmoke.installedViteDevServerSetupQueueSignalExists &&
-      packageInstallSmoke.installedViteDevServerSetupQueueStatus === 200 &&
+      packageInstallSmoke.installedViteDevServerSetupQueueStatus === 404 &&
       !packageInstallSmoke.installedViteDevServerSetupCodexSkillExists &&
       !packageInstallSmoke.installedViteDevServerSetupClaudeSettingsExists &&
       !packageInstallSmoke.installedViteDevServerSetupClaudeHookConfigured &&
@@ -6114,7 +6119,10 @@ const report = {
       cliAgentLaunchCodexReport.taskCreated &&
       cliAgentLaunchCodexReport.executed === false &&
       cliAgentLaunchCodexReport.commandPlan?.slice(1, 4).join(" ") === "exec --sandbox workspace-write" &&
-      Boolean(cliAgentLaunchCodexReport.commandText?.includes("Read .intent/agent/")) &&
+      Boolean(
+        cliAgentLaunchCodexReport.taskFile &&
+          cliAgentLaunchCodexReport.commandText?.includes(`Read ${cliAgentLaunchCodexReport.taskFile}`)
+      ) &&
       cliAgentLaunchClaude.exitCode === 0 &&
       cliAgentLaunchClaudeReport?.command === "agent-launch" &&
       cliAgentLaunchClaudeReport.ok &&

@@ -106,6 +106,58 @@ describe("Grid Layout Composer", () => {
     expect(preview.patch.after).toContain("md:col-start-1 md:col-span-5");
   });
 
+  it("edits simple fractional templates used by asymmetric production grids", () => {
+    const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "intent-layer-grid-template-"));
+    roots.push(rootDir);
+    const file = path.join(rootDir, "src", "App.tsx");
+    const source = [
+      "export function App(){ return (",
+      '  <section className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">',
+      '    <article className="rounded-lg">A</article>',
+      '    <article className="rounded-lg">B</article>',
+      "  </section>",
+      "); }"
+    ].join("\n");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, source, "utf8");
+    const entries = instrumentSource({ code: source, file, rootDir }).entries;
+    const parent = entries.find((entry) => entry.tagName === "section")!;
+    const children = entries.filter((entry) => entry.tagName === "article");
+    const store = new IntentGraphStore(rootDir);
+    store.replaceFileEntries(file, entries);
+    store.publish();
+    const service = new IntentService(store);
+    const childIds = children.map((child) => child.id);
+
+    expect(service.inspectGridLayout({ parentId: parent.id, childIds, breakpoint: "base" })).toMatchObject({
+      ok: true,
+      columns: { explicit: null, effective: 1 },
+      columnTemplate: { explicit: null, effective: null }
+    });
+    const inspection = service.inspectGridLayout({ parentId: parent.id, childIds, breakpoint: "md" });
+    expect(inspection).toMatchObject({
+      ok: true,
+      columns: { explicit: 2, effective: 2 },
+      columnTemplate: { explicit: [1.2, 0.8], effective: [1.2, 0.8] }
+    });
+
+    const preview = service.previewGridLayout({
+      parentId: parent.id,
+      childIds,
+      breakpoint: "md",
+      columnTemplate: [0.75, 1.25],
+      items: []
+    });
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) return;
+    expect(preview.patch.after).toContain("md:grid-cols-[0.75fr_1.25fr]");
+    const applied = service.applyGridLayout({ previewId: preview.previewId });
+    expect(applied.ok).toBe(true);
+    expect(fs.readFileSync(file, "utf8")).toContain("md:grid-cols-[0.75fr_1.25fr]");
+    expect(service.revertLatest().ok).toBe(true);
+    expect(fs.readFileSync(file, "utf8")).toBe(source);
+  });
+
   it("rejects repeated runtime bindings, unbound children, and overflowing placements", () => {
     const { parent, children, service } = fixture();
     expect(

@@ -59,6 +59,8 @@ export interface IntentRuntimeSelectionRequest {
 export interface IntentRuntimeSelection {
   version: 1;
   selectedAt: string;
+  sessionId: string | null;
+  freshUntil: string;
   selection: null | {
     id: string;
     componentName: string | null;
@@ -141,6 +143,7 @@ export interface IntentOverlaySettings {
 }
 
 export interface IntentAgentSettings {
+  legacyQueueEnabled: boolean;
   runEnabled: boolean;
   codexCommand: string | null;
   claudeCommand: string | null;
@@ -193,6 +196,7 @@ export interface IntentSetupStatus {
     serverReady: boolean;
   };
   agent: {
+    legacyQueueEnabled: boolean;
     runEnabled: boolean;
     runEnabledSource: IntentAgentRunSource;
     codexCommand: string;
@@ -299,6 +303,10 @@ export interface GridLayoutInspection {
   breakpoint: GridLayoutBreakpoint;
   supportedBreakpoints: GridLayoutBreakpoint[];
   columns: GridLayoutResolvedValue;
+  columnTemplate: {
+    explicit: number[] | null;
+    effective: number[] | null;
+  };
   items: Array<{
     id: string;
     label: string;
@@ -315,6 +323,7 @@ export interface GridLayoutItemEdit {
 
 export interface GridLayoutEditRequest extends GridLayoutInspectRequest {
   columns?: number | null;
+  columnTemplate?: number[] | null;
   items: GridLayoutItemEdit[];
 }
 

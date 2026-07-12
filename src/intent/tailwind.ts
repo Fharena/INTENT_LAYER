@@ -19,7 +19,7 @@ const radiusPattern = /^rounded(?:-[trbl]{1,2})?(?:-[\w.[\]/%-]+)?$/;
 const sizingPattern = /^(?:w|h|min-w|min-h|max-w|max-h|size)-[\w.[\]/%()!-]+$/;
 const displayPattern = /^(?:flex|grid|block|inline|inline-block|inline-flex|hidden)$/;
 const layoutPattern =
-  /^(?:grid-cols-\d+|col-(?:start|span)-\d+|flex-(?:1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)|items-[\w-]+|justify-[\w-]+|content-[\w-]+|self-[\w-]+)$/;
+  /^(?:grid-cols-(?:\d+|\[[^\]]+\])|col-(?:start|span)-\d+|flex-(?:1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)|items-[\w-]+|justify-[\w-]+|content-[\w-]+|self-[\w-]+)$/;
 const typographyPattern =
   /^(?:text-(?:xs|sm|base|lg|xl|[2-9]xl)|font-[\w-]+|leading-[\w.[\]/%-]+)$/;
 const effectPattern =
@@ -100,7 +100,7 @@ const tokenCategoryCache = new Map<string, IntentTokenCategory | null>();
 const classNameTokenCache = new Map<string, IntentToken[]>();
 const maxClassNameTokenCacheSize = 1000;
 
-function splitVariant(token: string): { variantPrefix: string; base: string } {
+export function splitTailwindVariant(token: string): { variantPrefix: string; base: string } {
   const parts = token.split(":");
   return parts.length === 1
     ? { variantPrefix: "", base: token }
@@ -108,7 +108,7 @@ function splitVariant(token: string): { variantPrefix: string; base: string } {
 }
 
 function withVariant(originalToken: string, nextBase: string): string {
-  return `${splitVariant(originalToken).variantPrefix}${nextBase}`;
+  return `${splitTailwindVariant(originalToken).variantPrefix}${nextBase}`;
 }
 
 export type GridLayoutTokenProperty = "columns" | "columnStart" | "columnSpan";
@@ -119,8 +119,35 @@ export interface GridLayoutToken {
   value: number;
 }
 
+export interface GridTemplateToken {
+  breakpoint: string;
+  weights: number[];
+}
+
+export function parseGridTemplateToken(token: string): GridTemplateToken | null {
+  const { variantPrefix, base } = splitTailwindVariant(token);
+  const match = /^grid-cols-\[([^\]]+)\]$/.exec(base);
+  if (!match) return null;
+  const tracks = match[1].split("_");
+  if (tracks.length === 0 || tracks.length > 12) return null;
+  const weights = tracks.map((track) => {
+    const value = /^(\d+(?:\.\d+)?)fr$/.exec(track)?.[1];
+    return value ? Number(value) : Number.NaN;
+  });
+  if (weights.some((value) => !Number.isFinite(value) || value <= 0 || value > 12)) return null;
+  return {
+    breakpoint: variantPrefix ? variantPrefix.slice(0, -1) : "base",
+    weights
+  };
+}
+
+export function gridTemplateToken(weights: number[], breakpoint = "base"): string {
+  const tracks = weights.map((value) => `${Number(value.toFixed(2))}fr`).join("_");
+  return `${breakpoint === "base" ? "" : `${breakpoint}:`}grid-cols-[${tracks}]`;
+}
+
 export function parseGridLayoutToken(token: string): GridLayoutToken | null {
-  const { variantPrefix, base } = splitVariant(token);
+  const { variantPrefix, base } = splitTailwindVariant(token);
   const match = /^(grid-cols|col-start|col-span)-(\d+)$/.exec(base);
   if (!match) return null;
   const properties: Record<string, GridLayoutTokenProperty> = {
@@ -155,7 +182,7 @@ function uniqueCandidates(token: string, bases: string[]): string[] {
 export function categorizeTailwindToken(token: string): IntentTokenCategory | null {
   if (tokenCategoryCache.has(token)) return tokenCategoryCache.get(token) ?? null;
 
-  const { base } = splitVariant(token);
+  const { base } = splitTailwindVariant(token);
   let category: IntentTokenCategory | null = null;
   if (spacingPattern.test(base)) category = "spacing";
   else if (radiusPattern.test(base)) category = "radius";
@@ -226,7 +253,7 @@ function colorCandidates(token: string, base: string): string[] | null {
 }
 
 export function candidatesForToken(token: string): string[] {
-  const { base } = splitVariant(token);
+  const { base } = splitTailwindVariant(token);
 
   const spacingMatch = base.match(
     /^(-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y))-([\w.[\]/%()!-]+)$/
@@ -420,15 +447,18 @@ function semanticParts(base: string): { property: string; value: string } | null
   return null;
 }
 
-export function describeTailwindToken(token: string): TailwindSemanticToken | null {
-  const split = splitVariant(token);
+export function describeTailwindToken(
+  token: string,
+  candidateTokens: string[] = candidatesForToken(token)
+): TailwindSemanticToken | null {
+  const split = splitTailwindVariant(token);
   const current = semanticParts(split.base);
   if (!current) return null;
 
   const candidates: TailwindSemanticCandidate[] = [];
   const seen = new Set<string>();
-  for (const candidate of candidatesForToken(token)) {
-    const candidateParts = semanticParts(splitVariant(candidate).base);
+  for (const candidate of candidateTokens) {
+    const candidateParts = semanticParts(splitTailwindVariant(candidate).base);
     if (!candidateParts || candidateParts.property !== current.property) continue;
     const key = `${candidateParts.value}\0${candidate}`;
     if (seen.has(key)) continue;

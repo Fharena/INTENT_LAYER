@@ -2,7 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { sourceHash } from "./hash";
-import { buildAgentTaskMarkdown, createAgentTaskMetadata, refreshAgentQueueSignal } from "./agentQueue";
+import {
+  agentArtifactsDir,
+  buildAgentTaskMarkdown,
+  createAgentTaskMetadata,
+  refreshAgentQueueSignal
+} from "./agentQueue";
 import type { AgentTaskRequest, AgentTaskResult, IntentBinding, PatchFailure } from "./types";
 
 function timestampSlug(): string {
@@ -1274,7 +1279,7 @@ export function createAgentTask(
         .filter((file) => file !== binding.relativeFile && file !== relatedSnapshot?.file)
     ])
   );
-  const taskDir = path.join(rootDir, ".intent", "agent");
+  const taskDir = agentArtifactsDir(rootDir);
   fs.mkdirSync(taskDir, { recursive: true });
   const taskFile = path.join(taskDir, `task_${timestampSlug()}.md`);
   const source = {

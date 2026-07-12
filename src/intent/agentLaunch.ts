@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { agentArtifactsDir } from "./agentQueue";
 import { resolveAgentCommands, resolveAgentRunMode } from "./setup";
 import type { AgentLaunchRequest, AgentLaunchResult, AgentProvider, PatchFailure } from "./types";
 
@@ -149,7 +150,7 @@ export function launchAgentTask(rootDir: string, request: AgentLaunchRequest): A
     );
   }
 
-  const runsDir = path.join(rootDir, ".intent", "agent", "runs");
+  const runsDir = path.join(agentArtifactsDir(rootDir), "runs");
   fs.mkdirSync(runsDir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[.:]/g, "-");
   const stdoutFile = path.join(runsDir, `${stamp}_${request.provider}.stdout.log`);

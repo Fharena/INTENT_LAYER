@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { completeAgentTask, refreshAgentQueueSignal } from "./agentQueue";
+import { agentArtifactsDir, completeAgentTask, refreshAgentQueueSignal } from "./agentQueue";
 import { sourceHash } from "./hash";
 import { tokenizeClassName } from "./tailwind";
 import type {
@@ -641,7 +641,7 @@ export function recordAgentResult(
 
   const createdAt = new Date().toISOString();
   const timestamp = timestampSlug();
-  const agentDir = path.join(rootDir, ".intent", "agent");
+  const agentDir = agentArtifactsDir(rootDir);
   const diffsDir = path.join(rootDir, ".intent", "diffs");
   fs.mkdirSync(agentDir, { recursive: true });
   fs.mkdirSync(diffsDir, { recursive: true });
