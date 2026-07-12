@@ -68,6 +68,17 @@ describe("GUI-first setup", () => {
     expect(fs.existsSync(path.join(root, ".intent-agent-queue.json"))).toBe(false);
   });
 
+  it("does not append a redundant runtime rule when the whole intent directory is ignored", () => {
+    const root = rootFixture();
+    const ignoreFile = path.join(root, ".gitignore");
+    const original = "node_modules/\n.intent/\n";
+    fs.writeFileSync(ignoreFile, original, "utf8");
+
+    applyIntentSetup(root, { createWorkspace: true, completeOnboarding: true });
+
+    expect(fs.readFileSync(ignoreFile, "utf8")).toBe(original);
+  });
+
   it("keeps legacy queue integrations off unless the advanced mode is explicit", () => {
     const root = rootFixture();
     const result = applyIntentSetup(root, {

@@ -167,7 +167,24 @@ function ensureRuntimeGitIgnore(
   const file = path.join(rootDir, ".gitignore");
   const existed = fs.existsSync(file);
   const contents = existed ? fs.readFileSync(file, "utf8") : "";
-  if (contents.split(/\r?\n/).includes(".intent/runtime/")) return;
+  const ignored = new Set(
+    contents
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#") && !line.startsWith("!"))
+  );
+  if (
+    [
+      ".intent/runtime/",
+      "/.intent/runtime/",
+      ".intent/",
+      "/.intent/",
+      ".intent/**",
+      "/.intent/**"
+    ].some((pattern) => ignored.has(pattern))
+  ) {
+    return;
+  }
   const prefix = contents && !contents.endsWith("\n") ? `${contents}\n` : contents;
   fs.writeFileSync(file, `${prefix}.intent/runtime/\n`, "utf8");
   (existed ? existingPaths : createdPaths).push(relativeFromRoot(rootDir, file));
