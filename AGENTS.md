@@ -269,8 +269,21 @@ Keep only these active Korean/English document pairs:
 
 Do not create a new status, launch, handoff, or benchmark prose document when an active document or generated JSON report can hold the information. Numeric evaluation truth belongs in `reports/performance/*.json`.
 
-Korean docs should be practical and product-oriented.
-English docs should be suitable for external contributors and future open-source README expansion.
+`README_KR.md` / `README.md` are the canonical user manuals. Preserve both a short quick start and a detailed GUI-first guide.
+
+Any user-visible change to installation, setup, Settings, panel controls, editing workflows, MCP tools, verification, undo, update/reinstall, or support boundaries must update both manuals in the same commit. Do not mark the work complete while usage docs describe the previous behavior.
+
+For every changed workflow, document:
+
+- prerequisites and exact command or UI sequence
+- the visible success result
+- when source is still untouched and when it is mutated
+- approval, verification, undo, and recovery behavior
+- read-only and unsupported boundaries
+
+Update the Demo Walkthrough when the demonstrable sequence changes and Failure Modes when a new rejection or recovery path is introduced. Verify instructions against current source or an executable fixture; never document an intended control as if it already exists.
+
+Korean docs should be detailed, practical, and product-oriented. English docs should carry equivalent operational meaning for external contributors and future open-source README expansion.
 
 
 <!-- context-pack:rules:start -->

@@ -22,7 +22,9 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Use a normal developer Git workflow with clear commits and push completed work to `https://github.com/Fharena/INTENT_LAYER.git`.
 - Preserve unrelated user changes. Check `git status --short` before editing.
 - Keep Korean and English product documentation aligned.
-- Write practical details and limitations, but do not create duplicate status documents.
+- Treat `README_KR.md` / `README.md` as continuously maintained user manuals. Every user-facing install, setup, Settings, GUI, MCP, verify, undo, update, or removal change must update both in the same commit.
+- Keep a short quick start plus a detailed guide covering prerequisites, exact actions, expected UI/source results, approval, undo/recovery, and unsupported boundaries. Verify usage text against the implementation or a fixture.
+- Update Demo Walkthrough and Failure Modes when their workflows change, but do not create duplicate status or usage documents.
 - Use Context Pack for meaningful repository work and checkpoint at handoff.
 - Leave numeric evidence in generated JSON reports, not only in chat.
 - Work in large outcome-oriented batches when requested, while avoiding architecture that is not needed for the outcome.

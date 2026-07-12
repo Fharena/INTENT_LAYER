@@ -60,6 +60,146 @@ npm run dev
 
 When no Vite config exists but `@vitejs/plugin-react` is installed, it creates a conventional `vite.config.ts`. Later configuration stays in the browser panel.
 
+## Detailed Usage
+
+### 1. Confirm The Runtime
+
+Intent Layer injects its panel and source bindings into the Vite **development server only**. Production builds contain neither the panel nor `data-intent-id` attributes.
+
+1. Run `npm run dev` in the target project.
+2. Open the terminal's `localhost` or `127.0.0.1` URL in a browser on the same computer.
+3. Confirm that the `Intent Layer` panel appears at the edge of the page.
+4. Select `Expand` if the panel is minimized.
+5. Complete setup when the status says `Setup required`. A `Ready` status means element selection is available.
+
+If the panel is absent, run `npx intent-layer doctor` and check the following:
+
+- `vite.config.*` contains `intentLayer()` before the React plugin.
+- Fully stop and restart the dev server after installing or updating the package.
+- A LAN URL opened from another computer or phone is view-only; source mutations are rejected.
+- Intent Layer uses a separate overlay root to avoid known dev-tool surfaces, but Vite remains the supported runtime.
+
+### 2. Complete First-Run Setup
+
+Choose these options inside the panel:
+
+1. Select `Korean` or `English` under `Language`.
+2. Choose left or right under `Panel position`.
+3. Choose comfortable or compact under `Density`.
+4. Enable `Start minimized` to begin collapsed after the next reload.
+5. Keep `Open setup when needed` enabled to reopen setup when workspace state is missing.
+6. Enable a provider under `AI connections` only when Codex or Claude will use this project.
+7. Select `Complete setup`.
+
+Completion creates `.intent/settings.json` and the required workspace. Expected status results are:
+
+- `Workspace ready`: the `.intent/` workspace is usable.
+- `Source bindings ready`: JSX/TSX modules transformed by Vite are present in the graph.
+- `AI connection ready`: the selected project-local MCP entry and built server entry are available.
+
+`Waiting for source bindings` is not necessarily an installation failure. Render the route being edited and select again. An unvisited lazy route has no graph entries until Vite transforms it.
+
+### 3. Select An Element And Inspect Evidence
+
+1. Select `Pick` at the top of the panel.
+2. Click the actual UI to edit. The Intent Layer panel and known dev-tool surfaces are excluded.
+3. Under `Selected source`, inspect the component, project-relative file, source hash, and class mode.
+4. When `Shared source` appears, inspect how many rendered instances use the same JSX binding.
+5. If the evidence is read-only, inspect the reason instead of attempting a direct apply.
+
+Clicking a custom React component does not cause Intent Layer to guess that a prop is a DOM node. It resolves the rendered intrinsic JSX implementation such as a `div`, `button`, or `section`. When `.map()` renders one source node repeatedly, one source edit may affect every instance, so check the shared render count first.
+
+For conditional literals in `cn()` or `clsx()`, the panel shows only tokens active on the clicked DOM instance. To edit another branch, move the application into that state, wait for it to render, and select the element again.
+
+### 4. Edit A Tailwind Property
+
+1. Find the property under `Direct edit`. Colors use swatches, spacing uses previous/next controls, and other properties use candidate options.
+2. Choose a candidate. At this point only the **DOM preview** changes; the source file is untouched.
+3. Use `Reset preview` or choose another candidate when the result is not right.
+4. Select `Preview` on that property to create a source diff.
+5. Review the old/new token, file, and source range.
+6. Select `Apply`. The server revalidates the source hash and original token, then writes only the minimal range.
+7. Check the page and status after HMR.
+8. If the result is wrong, use `Undo` before making another source edit.
+
+Choosing a candidate and creating a source preview are different operations. The first is temporary browser-only feedback; the second creates an expiring server patch that can be applied. `Apply` remains disabled until server preview succeeds.
+
+### 5. Edit Literal Copy
+
+`Text edit` appears when the selected intrinsic element has exactly one directly bound plain JSX text child.
+
+1. Change the copy in the textarea.
+2. Select `Preview text` to create the source diff.
+3. Review the range and select `Apply text`.
+4. Inspect the HMR result or restore it with `Undo`.
+
+Empty text, more than 500 characters, outer whitespace, line breaks, `<>{}&`, expressions, entities, and nested elements are not direct-editable. A change that restructures icon and text children belongs in a normal Codex or Claude code task.
+
+### 6. Edit A Grid Layout
+
+You do not need to click a narrow empty area on the Grid parent. Selecting the Grid itself or an element inside it resolves the nearest supported Grid ancestor.
+
+1. Select inside the Grid and confirm that `Grid layout` appears.
+2. Choose `base`, `sm`, `md`, or a project breakpoint tab.
+3. Change the parent's column and row counts.
+4. Change each direct child's column/row start and span.
+5. For a simple positive `fr` template, adjust track weights with the ratio control.
+6. Inspect the small layout canvas.
+7. Select `Preview layout` and review the complete grouped parent/child diff.
+8. Select `Apply layout` and inspect HMR.
+9. Use `Undo` to restore the entire group byte for byte when needed.
+
+A responsive tab can have different explicit and inherited effective values. Removing an override makes that breakpoint inherit again. Removing the required base Grid column definition is rejected.
+
+Repeated source ids, unbound direct DOM children, cross-file children, dynamic classNames, and complex templates using `minmax()`, CSS variables, or named lines make the whole Grid read-only rather than partially applied. Dragging or changing DOM order is not supported.
+
+### 7. Edit A Flex Layout
+
+1. Select an element inside an existing `flex` or `inline-flex` container.
+2. Choose a breakpoint under `Flex layout`.
+3. Choose direction and wrapping modes.
+4. Choose main-axis alignment, cross-axis alignment, and gap.
+5. Change `align-self` for any direct child that needs an override.
+6. Inspect direction, wrap, alignment, and spacing on the Flex canvas.
+7. Review every className change with `Preview layout`, then select `Apply layout`.
+8. Use grouped `Undo` if the result is wrong.
+
+The canvas first reads generated CSS utilities or project spacing variables. A custom utility not yet generated in the browser may have an approximate preview, so the grouped source diff remains authoritative. Axis-specific `gap-x`/`gap-y`, unknown plugin utilities, and DOM reordering are not direct-editable.
+
+### 8. Understand Scope And Undo
+
+A direct edit targets a **source binding**, not one DOM instance. If one component source renders three times, changing its class token affects all three instances. Check the panel's single/shared-source indicator before applying.
+
+`Undo` targets the latest safe pending operation in the operation journal. If a person or another tool changes the file after apply, Intent Layer does not trust the stored offset. It preserves the file and writes an `Undo conflict` plus an artifact under `.intent/conflicts/`. Review current source, then either select again and make a new edit or explicitly discard only an operation that should no longer be undone.
+
+### 9. Change Settings, Disconnect AI, Or Repeat Onboarding
+
+Open `Settings` at the top of the panel; first-run setup does not need to be repeated for ordinary changes.
+
+- Language, dock, density, and startup collapse apply immediately or on the next reload as indicated.
+- Turning off a Codex/Claude toggle removes only the project-local MCP entry managed by Intent Layer. Other MCP settings remain intact.
+- Start a new Codex/Claude session after enabling or disabling a connection.
+- `Show onboarding again` reopens setup on the next run without deleting source or operations.
+- `Legacy agent queue (advanced compatibility)` and `Enable Agent run` are unnecessary for normal MCP use. Leave them off without a specific compatibility need.
+
+### 10. Update Or Reinstall A Local Tarball
+
+Stop the target dev server before updating this alpha in another project.
+
+```bash
+cd <intent-layer-source>
+npm pack
+
+cd <target-vite-project>
+npm install --force <absolute-path-to-intent-layer-tarball>
+npx intent-layer init
+npm run dev
+```
+
+Repeated `intent-layer init` calls do not insert a duplicate plugin. Reinstalling preserves `.intent/settings.json`, operation history, and provider choices. A pnpm local `file:` dependency may keep an older package copy, so run `pnpm install --force` before restarting the dev server.
+
+For full removal, first disable Codex and Claude in Settings and save. Stop the dev server, remove the `intentLayer` import and `intentLayer()` entry from `vite.config.*`, then uninstall the package. Inspect `.intent/` before deleting it because it may contain undo, conflict, or evaluation records.
+
 ## Verified Compatibility
 
 "Supported" below means there is an automated fixture or a real browser round trip as of 2026-07-12. It does not imply every release or API in a similarly named ecosystem works.
@@ -117,6 +257,27 @@ After enabling a provider in Settings and starting a new Codex or Claude session
 - `intent_inspect_layout`, `intent_preview_layout`
 - `intent_preview_edit`, `intent_apply_edit`
 - `intent_verify_edit`, `intent_undo_edit`
+
+Connect and use a provider in this order:
+
+1. Start the Vite dev server and open the route being edited.
+2. Enable Codex or Claude under `Settings > AI connections` and save.
+3. Confirm that an `intent-layer` entry was merged into `.codex/config.toml` for Codex or `.mcp.json` for Claude without replacing existing settings.
+4. Close an already running AI session and start a **new session**. This alpha does not assume MCP hot reload inside an active session.
+5. Select the element in the browser, then request the edit in normal language. The agent calls MCP tools when needed; users do not need to type tool names.
+6. Review the preview diff. When the request says preview only, source must remain unchanged until approval.
+7. Inspect verify output after apply, and request undo in the same conversation when necessary.
+
+Example requests:
+
+```text
+Inspect the gap candidates for the card selected in the browser and preview value 6. Do not apply it yet.
+Apply that preview and verify both source and runtime.
+At md, change the selected Flex layout to a column with gap-6 and center only its first child. Show the grouped diff first.
+Undo the last Intent Layer operation.
+```
+
+When the MCP client asks for approval before a source-changing tool, inspect the preview before approving it. The project operation lock serializes applies when Codex and Claude are both open, but avoid assigning the same element to both providers at once.
 
 Property and literal-text edits use `find → inspect_element → preview_edit → apply → verify → optional undo`. For Grid or Flex, first select an element inside the target layout in the browser, then use `inspect_layout → preview_layout`; apply, verify, and undo reuse the same tools.
 
@@ -183,6 +344,7 @@ The package ships built `dist/cli.js`, `dist/vite.js`, `dist/mcp.js`, an `intent
 
 ## Documentation
 
+- This README: the current user manual for installation, GUI editing, AI connections, settings, and updates
 - [PRODUCT_PLAN_EN.md](./PRODUCT_PLAN_EN.md): product scope and decisions
 - [DEMO_WALKTHROUGH_EN.md](./DEMO_WALKTHROUGH_EN.md): reproducible demo
 - [FAILURE_MODES_EN.md](./FAILURE_MODES_EN.md): failures and recovery
