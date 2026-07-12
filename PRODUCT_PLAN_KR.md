@@ -139,16 +139,15 @@ AI Integration: optional Codex/Cursor/Claude command plan / plugin
 `INTENT_LAYER`의 차별점은 다음이다.
 
 ```text
-1. 코드와 화면 사이의 Intent Document 규격
+1. 코드와 화면을 잇는 source binding과 semantic operation 계약
 2. AI 호출 없는 deterministic patch
 3. line diff가 아닌 intent diff
-4. confidence 기반 편집 가능성 표시
-5. 코드/문서 drift 감지
-6. 에이전트가 raw code가 아니라 intent operation/task를 다루게 하는 기반
-7. 외부 agent 실행은 기본 command plan으로 두고, 직접 실행은 명시적 opt-in으로 제한
+4. source hash 기반 drift 거부와 guarded undo
+5. 사람 GUI와 AI MCP가 공유하는 동일한 patch engine
+6. 지원하지 않는 편집을 숨기지 않는 read-only/handoff 경계
 ```
 
-즉, 단순 visual editor가 아니라 **UI 코드를 위한 Prisma-like 중간 레이어**를 지향한다.
+즉, 단순 visual editor가 아니라 사람과 AI가 함께 쓰는 **guarded UI source actuator**를 지향한다.
 
 ## 6. 타깃 사용자
 
@@ -184,97 +183,79 @@ AI Integration: optional Codex/Cursor/Claude command plan / plugin
 
 v1.0은 "작지만 바로 출시 가능한 제품"이어야 한다.
 
-### 7.1 지원 스택
+### 7.1 지원 계약과 검증 매트릭스
 
-정식 지원:
+지원 여부는 네 단계로 말한다.
 
-```text
-React
-Vite
-TypeScript / TSX
-Tailwind CSS
-literal className
-단순 cn()/clsx()
-```
+| 상태 | 의미 |
+| --- | --- |
+| 검증 완료 | 자동 회귀 테스트와 실제 브라우저 흐름이 모두 있다. |
+| 부분 지원 | source fixture 또는 parser 테스트는 있지만 설치부터 브라우저 적용까지의 전체 증거는 없다. |
+| 미검증 | 구조상 동작할 수 있어도 release contract로 주장하지 않는다. |
+| 의도적 제외 | 잘못 고칠 위험이나 범위 비용 때문에 read-only 또는 Agent handoff로 보낸다. |
 
-제한적 지원:
+2026-07-12 기준 실제 검증 환경은 Node.js 20/22, npm, React 18.3.1, Vite 6.4.3, TypeScript 5.9.3, Tailwind CSS 3.4.19, Playwright Chromium 149다. Windows에서 전체 검증했고 GitHub Actions는 Ubuntu의 Node.js 20/22 경로를 갖는다. React 19, Vite 7 이상, Tailwind CSS 4 실제 앱, pnpm/yarn/bun, Firefox/WebKit, macOS는 아직 정식 지원이 아니다.
 
-```text
-shadcn/ui
-CSS variables
-simple CSS modules
-same-file one-hop variable dependency handoff context
-imported variable 선언 내부 one-hop dependency handoff context
-related 선언 내부 named import dependency handoff context
-object property 기반 className handoff context
-workspace package import 기반 variable handoff context
-external npm package import reference 기반 handoff context
-local 및 one-hop relative import 기반 variant/cva handoff context
-tsconfig paths alias + one-hop/multi-hop named barrel re-export 기반 variant/cva handoff context
-tsconfig paths alias + 다단계 barrel re-export 기반 imported variable handoff context
-```
+React API를 재구현하거나 Hook을 오버라이드하지 않는다. 이 제품의 지원 단위는 API 이름이 아니라 **브라우저 DOM으로 렌더되는 intrinsic JSX가 원본 JSX/TSX에 어떤 형태로 남아 있는가**다. [React API reference](https://react.dev/reference/react)의 Hook, Context, `memo`, `lazy`, transition API는 intrinsic JSX를 그대로 포함하면 일반 AST traversal을 통과하지만, runtime에서 만든 class 문자열은 추론하지 않는다.
 
-미지원:
+| React source 형태 | 상태 | 동작 |
+| --- | --- | --- |
+| 함수/arrow component의 intrinsic JSX와 정적 `className` | 검증 완료 | DOM 선택, source binding, token patch, HMR, undo |
+| class component의 `render()` 안 intrinsic JSX | 부분 지원 | binding과 component 이름 단위 테스트 완료. 실제 브라우저 E2E는 아직 없다. |
+| fragment, conditional, `map`, `forwardRef`, `Suspense` fallback, portal 인자의 JSX | 부분 지원 | AST traversal 단위 테스트 완료. portal/모든 wrapper의 실제 클릭 E2E는 아직 없다. |
+| `import React from "react"`, namespace import, named/aliased import의 intrinsic `createElement` | 부분 지원 | module import 이름과 literal tag/object props를 확인한다. nested scope에서 같은 이름을 shadowing하는 edge case는 아직 미검증이다. |
+| `cn()`/`clsx()`의 문자열 인자와 양쪽이 문자열인 조건 분기 | 부분 지원 | literal range만 편집한다. 현재 runtime에서 활성인 분기만 거르는 UI는 아직 없다. |
+| 재사용 컴포넌트 구현 내부 intrinsic 요소 | 검증 완료 | 같은 source id의 모든 렌더 인스턴스에 적용되고 shared 상태를 표시한다. |
+| `<Button className=...>` 또는 `<motion.div>` 같은 커스텀/member 컴포넌트 호출부 | 의도적 제외 | prop이 실제 DOM에 전달된다고 추측하지 않고 구현 내부 요소에 바인딩한다. |
+| `cloneElement`, import 없는 전역 `React.createElement`, compiled `jsx/jsxs` 호출 | 의도적 제외 | provenance 또는 원본 source range가 불명확하다. |
+| React Server Components, server-only DOM, React Native | 미검증 | 현재 Vite browser DOM adapter의 범위 밖이다. |
 
-```text
-Next.js 정식 지원
-styled-components
-Emotion
-복잡한 CSS cascade 편집
-Tailwind arbitrary value 전범위
-동적 className 완전 해석
-external npm package source 분석/직접 patch, variant 함수 의미, 임의 깊이 cross-file/transitive variable data flow 기반 variant graph 해석
-Figma import
-AI 자동 리팩터링
-```
+[Vite plugin contract](https://vite.dev/guide/api-plugin)의 `apply: "serve"` 경계를 사용한다. 계측과 overlay는 개발 서버에서만 동작하며 production bundle은 금지 marker 0건을 별도 gate로 검사한다. Vite transform 결과는 현재 source map을 반환하지 않으므로 debugger 위치 보존은 다음 안정화 작업이다.
 
-### 7.2 지원 편집
+Tailwind CSS 3의 정적 config와 표준 utility는 검증 완료다. Tailwind CSS 4의 [`@theme` 변수](https://tailwindcss.com/docs/theme)는 정적 parser 테스트만 있으므로 부분 지원이다. config 코드를 실행하거나 plugin utility 의미를 추론하지 않는다.
 
-v1.0에서 반드시 잘해야 하는 편집 범위:
+### 7.2 직접 편집 계약
 
-```text
-spacing:
-  padding
-  margin
-  gap
+현재 직접 편집하는 범위:
 
-layout:
-  flex direction
-  grid columns
-  width ratio 일부
-  alignment 일부
+- spacing: padding, margin, gap, 유효한 음수 margin
+- sizing: width, height, min/max, size
+- layout: display, numeric grid columns/column start/span, flex direction/wrap/value, align/justify/content/self
+- typography: font size, font weight, line height
+- color: background, text, border, divide, ring/outline/decoration/accent/caret/fill/stroke/shadow color의 알려진 palette와 정적 project token
+- shape/effect: border radius, shadow size, opacity, ring width, transition 종류
+- variant: 기존 responsive/state/arbitrary variant prefix를 보존한 단일 token 교체
 
-typography:
-  font size
-  font weight
-  line height
+Grid Layout Composer는 일반 token dropdown보다 좁다. 같은 TSX 파일, 정적 한 줄 `className`, 기존 `grid` 부모와 바인딩된 직계 자식, base/sm/md/lg, 1~12열, numeric `grid-cols`/`col-start`/`col-span`, 단순 양수 `fr` template만 그룹 편집한다.
 
-color:
-  background color
-  text color
-  border color
+현재 read-only 또는 handoff 범위:
 
-shape:
-  border radius
-  border width
+- runtime variable, property access, template expression, object형 `clsx`, `cva`/variant 의미
+- custom breakpoint와 xl/2xl Grid 편집, grid row/row-span, order/reorder, Flex composer
+- `minmax()`, named line, CSS variable를 포함한 복합 arbitrary Grid template
+- cross-file Grid 자식, 반복된 source id의 인스턴스별 배치, 외부 package source patch
+- styled-components, Emotion, 전체 CSS cascade, CSS Modules declaration 직접 편집
+- Next.js/RSC adapter, Figma import, 결정론적 패치로 위장한 AI 자동 리팩터링
 
-responsive:
-  sm/md/lg variant 표시
-  단순 breakpoint별 값 수정
-```
+### 7.3 다음 기능과 정리 결정
 
-### 7.3 v1.0 핵심 기능
+P0 안정화는 production 계측 제거, React factory provenance 확인, semantic flex 후보 분리, invalid negative utility 거부, 프로젝트 드라이브 temp 격리, 오래된 raw-TS bin 제거까지 완료했다.
 
-1. 브라우저 오버레이
-2. 요소 선택
-3. 소스 파일/컴포넌트 추적
-4. Tailwind token을 의미 knob로 표시
-5. knob 변경 시 deterministic code patch
-6. safe patch preview
-7. undo/revert
-8. intent diff
-9. confidence 표시
-10. `.intent.yml` 문서 생성/갱신
+P1은 다음 순서로 진행한다.
+
+1. `cn()`/`clsx()`에서 클릭한 인스턴스에 실제 활성인 token을 구분해 비활성 분기 오편집을 막는다.
+2. source apply 전 임시 DOM preview, color swatch, spacing/size stepper처럼 dropdown보다 빠른 시각 control을 제공한다.
+3. Vite transform source map을 보존한다.
+4. Tailwind CSS 4 실제 Vite 앱, React 19, 다음 Vite major, pnpm fixture를 독립 호환성 gate로 만든다.
+5. project breakpoint를 읽어 Grid의 xl/2xl/custom breakpoint와 row/row-span을 지원한다.
+6. 같은 안전 계약으로 Flex Layout Composer를 검증한다.
+
+정리 원칙:
+
+- 기본 비활성인 legacy Markdown Agent queue는 동결한다. 회귀 수정 외 새 analyzer/CLI/UI를 추가하지 않고, 실제 사용 증거가 없으면 v1 전에 별도 compatibility package로 추출하거나 제거한다.
+- `.intent/components/*.intent.yml` 영속 문서, confidence model, AI semantic label은 현재 direct-edit 가치를 높이지 않으므로 v1 release gate에서 제외한다. 독립 A/B 결과가 필요성을 보여줄 때만 재개한다.
+- corpus coverage는 parser 범위 지표일 뿐 제품 성공률이 아니다. 새 prose benchmark 문서를 만들지 않고 JSON report만 갱신한다.
+- Next.js, VS Code extension, Figma와 새 styling adapter는 React/Vite/Tailwind 호환성 matrix와 실제 사용자 A/B가 통과하기 전 시작하지 않는다.
 
 ## 8. 사용자 경험
 
@@ -298,9 +279,9 @@ npm run dev
 5. 패널에 다음 정보 표시
    - 컴포넌트 이름
    - 파일 경로
-   - 역할/의도
+   - source hash와 className binding 종류
    - 편집 가능한 layout/style 속성
-   - confidence
+   - shared render 수와 unsupported reason
 6. 사용자가 padding/gap/color 등 수정
 7. 적용 전 patch preview 표시
 8. Apply 클릭
@@ -362,138 +343,21 @@ changes:
     to: 24px
 ```
 
-## 9. Intent Document 규격
+## 9. 현재 Intent Artifact 계약
 
-제품의 핵심 자산은 새 문서 규격이다.
+현재 핵심 자산은 큰 서술형 문서가 아니라 **검증 가능한 source binding과 semantic operation**이다.
 
-권장 확장자:
+| Artifact | 현재 상태 | 역할 |
+| --- | --- | --- |
+| `.intent/graph.intent.json` | 사용 중 | Vite session들이 publish한 최신 DOM-to-source binding graph |
+| `.intent/operations/*.intent-op.json` | 사용 중 | apply/undo에 필요한 원문, 적용 후 hash, range와 상태 |
+| `.intent/diffs/*.intent-diff.yml` | 사용 중 | 사람이 읽는 semantic change summary |
+| `.intent/components/*.intent.yml` | 예약, 자동 생성 안 함 | 독립 A/B가 지속적 component intent의 가치를 증명할 때만 재개 |
+| `.intent/schema/` | setup 자산 | 현재 artifact 형식과 workspace version 확인 |
 
-```text
-*.intent.yml
-*.intent-diff.yml
-*.intent-op.json
-```
+직접 patch에서 source path와 offset을 AI나 브라우저가 임의로 제출할 수 없다. 서버가 현재 graph의 element id와 semantic property로 binding을 다시 찾고, project root 내부 경로인지 확인하며, preview/apply/undo마다 source hash와 원문을 검증한다.
 
-내부 저장:
-
-```text
-.intent/
-  graph.intent.json
-  components/
-    ProductGrid.intent.yml
-    ProductCard.intent.yml
-  operations/
-    2026-06-29_001.intent-op.json
-  diffs/
-    last.intent-diff.yml
-  schema/
-    intent.schema.json
-    intent-op.schema.json
-    intent-diff.schema.json
-```
-
-### 9.1 Intent Document 예시
-
-```yaml
-version: 0.1
-kind: component-intent
-
-component:
-  id: cmp_product_grid
-  name: ProductGrid
-  source:
-    file: src/components/ProductGrid.tsx
-    export: ProductGrid
-    range:
-      start: 120
-      end: 420
-
-purpose:
-  label: 상품 목록 그리드
-  description: 상품 배열을 카드 형태로 반복 표시한다.
-  confidence: 0.82
-  origin: ai-assisted
-
-structure:
-  root:
-    id: node_grid_root
-    role: collection
-    label: 상품 카드 목록
-    source:
-      file: src/components/ProductGrid.tsx
-      xid: x_8f31a
-      range:
-        start: 180
-        end: 390
-    repeat:
-      sourceExpression: products
-      itemName: product
-    layout:
-      type:
-        value: grid
-        confidence: 1.0
-        binding:
-          kind: tailwind-token
-          token: grid
-      columns:
-        value: 3
-        unit: count
-        editable: true
-        confidence: 1.0
-        binding:
-          kind: tailwind-token
-          token: grid-cols-3
-          range:
-            start: 214
-            end: 225
-      gap:
-        value: 16
-        unit: px
-        editable: true
-        confidence: 1.0
-        binding:
-          kind: tailwind-token
-          token: gap-4
-          range:
-            start: 226
-            end: 231
-
-validation:
-  sourceHash: "fingerprint:..."
-  generatedAt: "2026-06-29T00:00:00Z"
-```
-
-### 9.2 중요한 필드
-
-`binding`:
-
-```text
-문서가 코드와 연결되는 핵심 필드.
-binding 없는 intent는 설명일 뿐 patch 불가.
-```
-
-`confidence`:
-
-```text
-추적 확실도.
-낮으면 read-only 또는 AI-assisted 모드로 처리.
-```
-
-`origin`:
-
-```text
-deterministic: 코드에서 확실히 추출
-ai-assisted: AI가 의미 추정
-user-authored: 사람이 확인/수정
-```
-
-`sourceHash`:
-
-```text
-코드와 intent 문서 drift 감지.
-MVP 구현은 local deterministic source fingerprint를 사용하고,
-필요하면 배포 단계에서 cryptographic hash로 교체할 수 있다.
-```
+`purpose`, `origin`, 수치형 `confidence` 같은 필드는 구현된 사실이 아니다. 이를 다시 도입하려면 사용자에게 보이는 결정 또는 안전 경계를 실제로 개선하는 회귀 테스트가 먼저 필요하다. 현재의 안전 판정은 모호한 점수 대신 `editable`, 구체적인 `unsupportedReason`, stale hash와 runtime verification 상태로 표현한다.
 
 ## 10. 내부 아키텍처
 
@@ -883,7 +747,6 @@ Next.js adapter
 - [x] undo/revert + pending history
 - [x] intent diff
 - [x] `.intent` 폴더 생성
-- [ ] confidence 표시
 - [x] patch 실패 시 안전 중단
 - [x] 문서/튜토리얼
 
@@ -932,7 +795,7 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 ### v0.2 (부분 완료)
 
 - [x] color/radius/typography
-- [ ] component intent document 저장
+- 보류: component intent document 저장은 독립 A/B가 필요성을 보일 때 재개
 - [x] intent diff
 - [x] undo/revert
 
@@ -940,7 +803,7 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 
 - [x] simple `cn()`/`clsx()` support
 - [x] responsive variants
-- [ ] confidence model
+- 보류: confidence model은 v1 release gate에서 제외
 - [x] selected component summary
 
 ### v0.4 (다음 검증)
@@ -955,6 +818,11 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 - [ ] 5개 이상 독립 저장소의 실제 작업 20개 A/B (`product-ab-evaluation.json`: collecting, 0 paired tasks)
 - [x] legacy Agent HTTP/UI opt-in 경계와 evaluator artifact 격리
 - [x] Lumina Chromium setup/Grid/HMR/undo/mobile CI
+- [x] dev-only instrumentation과 production bundle marker 0건 gate
+- [x] import provenance 기반 React `createElement` binding
+- [ ] runtime-active conditional token 구분
+- [ ] Vite transform source map
+- [ ] React 19/Tailwind 4/다음 Vite major/pnpm 호환성 fixture
 
 ### v1.0
 
@@ -966,6 +834,8 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 - 초기 사용자 피드백 루프
 
 ### v1.1+
+
+아래 항목은 독립 A/B와 v1 compatibility gate가 통과한 뒤에만 시작한다.
 
 - Next.js adapter
 - VS Code extension
@@ -997,7 +867,7 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 살아남는 조건:
 
 ```text
-1. Intent Document 규격을 제품의 핵심으로 만든다.
+1. source binding과 semantic operation contract를 제품의 핵심으로 만든다.
 2. deterministic patch를 기본 경로로 삼는다.
 3. AI는 보조층으로만 사용한다.
 4. React/Vite/Tailwind로 좁게 시작한다.

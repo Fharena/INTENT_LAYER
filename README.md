@@ -57,6 +57,22 @@ npm run dev
 
 When no Vite config exists but `@vitejs/plugin-react` is installed, it creates a conventional `vite.config.ts`. Later configuration stays in the browser panel.
 
+## Verified Compatibility
+
+"Supported" below means there is an automated fixture or a real browser round trip as of 2026-07-12. It does not imply every release or API in a similarly named ecosystem works.
+
+| Area | Currently verified | Not yet officially supported |
+| --- | --- | --- |
+| Runtime | Node.js 20/22 CI, local Windows Node.js 22.16, npm | Node.js 18 or older, pnpm/yarn/bun install flows |
+| React | React 18.3.1, intrinsic JSX, fragment/conditional/map traversal, `forwardRef`, JSX inside `Suspense`/portals, provenance-checked imported `createElement` | React 19 compatibility guarantee, React Server Components, React Native, `cloneElement` source provenance |
+| Vite | Vite 6.4.3 dev server, HMR, static config setup, zero production instrumentation gate | Vite 7+, SSR/library mode, automatic edits to dynamic configs |
+| TypeScript | TypeScript 5.9.3 parser, TSX end-to-end flow, JSX/TSX instrumentation | Recovering source from compiled JSX runtime calls or arbitrary Babel/SWC output |
+| Tailwind | Tailwind CSS 3.4.19 browser flow, static `tailwind.config.*`, variant preservation | Full Tailwind CSS 4 app flow, dynamic config execution, arbitrary plugin-utility semantics |
+| Tailwind v4 | Unit-tested static `@theme` and CSS-variable candidate parsing | Install/HMR/patch E2E through `@tailwindcss/vite` |
+| Browser/OS | Playwright Chromium 149, local Windows, GitHub Actions Ubuntu path | Firefox, WebKit/Safari, macOS |
+
+Intent Layer does not override React Hooks, Context, `memo`, or `lazy`. Code using those APIs follows the same AST path when intrinsic JSX and a supported `className` remain in project source; strings assembled only at runtime are not inferred. A custom component's `className` prop is not guessed to be a DOM node. The binding targets the intrinsic element in that component's rendered implementation instead.
+
 ## Direct-Edit Surface
 
 Direct edits currently target static JSX `className` values, string literals inside `cn()` or `clsx()`, and intrinsic `React.createElement()` calls.
@@ -75,7 +91,7 @@ The Grid Layout Composer directly edits only an existing grid and direct childre
 ## Safety Model
 
 - JSX is analyzed through one TypeScript AST path. JSX-looking strings and comments are ignored.
-- `data-intent-id` exists only in Vite transform output and is never written to source.
+- `data-intent-id` and the overlay client exist only in Vite dev-server transforms and are written to neither source nor production bundles.
 - Apply validates both the binding source hash and original token.
 - A file change between preview and apply is rejected again.
 - Undo accepts only the **latest pending patch** with the expected post-apply source hash.
@@ -114,18 +130,22 @@ Everyday checks:
 ```bash
 npm run typecheck
 npm run test
+npm run test:e2e:install
 npm run test:e2e
 npm run build
+npm run test:production-build
 npm run test:mcp-package
 ```
 
 Full release check:
 
 ```bash
-npm run eval
+npm run verify
 ```
 
-`npm run eval` covers tarball installation, installed CLI and Vite exports, real Vite HTTP preview/apply/revert, multi-file graph refresh, grouped Grid apply/undo, external corpora, and 56 performance and safety gates. `test:e2e` uses Chromium against Lumina to verify setup, selection, asymmetric Grid ratios, HMR, byte-for-byte undo, and the mobile panel. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
+`npm run verify` runs type checking, Vitest, package/demo builds, the production-bundle contamination gate, the installed-package MCP smoke test, Chromium E2E, evaluation gates, and product A/B aggregation. `npm run eval` is the subset covering tarball installation, installed CLI and Vite exports, real Vite HTTP preview/apply/revert, multi-file graph refresh, grouped Grid apply/undo, external corpora, and 56 performance and safety gates. `test:e2e` uses Lumina to verify setup, selection, asymmetric Grid ratios, HMR, byte-for-byte undo, and the mobile panel. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
+
+OS temp files and Playwright browsers used by tests live under the repository's `.intent/tmp/`. On Windows the wrapper rejects a temp path on a different drive, so testing a D-drive workspace cannot silently fill the C drive again.
 
 `npm run benchmark:mcp` records local mechanical latency for inspect, preview, apply, undo, and in-memory MCP calls in [mcp-alpha-evaluation.json](./reports/performance/mcp-alpha-evaluation.json). These numbers do not prove agent task success or product value.
 

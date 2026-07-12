@@ -31,6 +31,7 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Prefer established structured parsers and APIs. JSX source binding uses the TypeScript AST as its single source of truth.
 - Simple Tailwind edits, apply, validation, and undo are deterministic and must not call an LLM.
 - On Windows, never place test fixtures, temporary repositories, browser artifacts, package smoke output, or benchmark scratch data on `C:`. Use `D:\SJWORK\INTENT_LAYER\.intent\tmp` by default and set `TEMP`/`TMP` to that D-drive directory before commands that use the OS temp folder.
+- Treat the verified compatibility table in `README_KR.md` / `README.md` as the support contract. Do not claim a React, Vite, Tailwind, package-manager, browser, or OS version without a fixture or browser round trip.
 
 ## Overlay UX
 
@@ -51,7 +52,7 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 ## Patch Safety
 
 - Instrument only real intrinsic JSX nodes from the TypeScript AST.
-- Never write `data-intent-id` into source files.
+- Instrument only during Vite `serve`. Never write `data-intent-id` into source files or production bundles; `npm run test:production-build` is a release gate.
 - Validate source hash and old token during preview and again before apply.
 - Use minimal source ranges, never full-file code generation for a token change.
 - Persist the post-apply source hash with the operation.
@@ -96,7 +97,7 @@ Historical spike, launch, handoff, and prose benchmark documents belong in Git h
 
 ## Verification
 
-Windows test sessions must prepare the D-drive temp directory first:
+Repository test scripts use `scripts/run-with-project-temp.mjs`, which keeps OS temp and Playwright browsers under `.intent/tmp/` and rejects a cross-drive Windows temp path. When running an external tool outside those scripts, prepare the D-drive temp directory first:
 
 ```powershell
 New-Item -ItemType Directory -Force D:\SJWORK\INTENT_LAYER\.intent\tmp | Out-Null
@@ -109,17 +110,19 @@ Every meaningful core change should run:
 ```bash
 npm run typecheck
 npm run test
+npm run test:e2e:install
 npm run test:e2e
 npm run build
+npm run test:production-build
 ```
 
 Before a release claim, also run:
 
 ```bash
-npm run eval
+npm run verify
 ```
 
-`npm run eval` must exit non-zero for any failed gate. Keep fixture evidence separate from independent external evidence. Coverage is an observed allowlist metric, not proof of edit success.
+`npm run verify` includes `npm run eval`; both must exit non-zero for any failed gate. Keep fixture evidence separate from independent external evidence. Coverage is an observed allowlist metric, not proof of edit success.
 
 The next product proof should use held-out repositories and measure:
 

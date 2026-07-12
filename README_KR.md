@@ -57,6 +57,22 @@ npm run dev
 
 Vite 설정 파일이 없지만 `@vitejs/plugin-react`가 설치된 일반 React 프로젝트라면 표준 `vite.config.ts`를 만든다. 이후 설정 변경은 브라우저 패널에서 처리한다.
 
+## 검증된 호환성
+
+아래에서 "지원"은 이름이 비슷한 기술 전반이 아니라, 2026-07-12 현재 자동 테스트나 실제 브라우저 라운드트립이 있는 범위를 뜻한다.
+
+| 영역 | 현재 검증된 범위 | 아직 정식 지원이 아닌 범위 |
+| --- | --- | --- |
+| Runtime | Node.js 20/22 CI, Windows 로컬 Node.js 22.16, npm | Node.js 18 이하, pnpm/yarn/bun 설치 흐름 |
+| React | React 18.3.1, intrinsic JSX, fragment/conditional/map traversal, `forwardRef`, `Suspense`/portal 안 JSX, import 출처가 확인된 `createElement` | React 19 호환 보증, React Server Components, React Native, `cloneElement` source provenance |
+| Vite | Vite 6.4.3 dev server, HMR, 정적 config 설정, production 계측 0건 검사 | Vite 7 이상, SSR/library mode, 동적 config 자동 수정 |
+| TypeScript | TypeScript 5.9.3 parser, TSX 전체 라운드트립, JSX/TSX 파일 계측 | 빌드된 JSX runtime 호출 분석, 임의 Babel/SWC transform 뒤 source 복원 |
+| Tailwind | Tailwind CSS 3.4.19 전체 브라우저 흐름, 정적 `tailwind.config.*`, variant 보존 | Tailwind CSS 4 실제 앱 전체 흐름, 동적 config 실행, plugin utility의 임의 의미 추론 |
+| Tailwind v4 | `@theme`/CSS 변수 후보의 정적 parser 단위 테스트 | `@tailwindcss/vite`를 사용한 설치·HMR·패치 E2E |
+| Browser/OS | Playwright Chromium 149, Windows 로컬, GitHub Actions Ubuntu 경로 | Firefox, WebKit/Safari, macOS |
+
+React Hook, Context, `memo`, `lazy` 같은 API를 오버라이드하지는 않는다. 해당 API를 쓰더라도 프로젝트 소스 안에 intrinsic JSX와 지원 가능한 `className`이 남아 있으면 같은 AST 경로로 처리하며, Hook이 runtime에서 조합한 문자열 자체는 해석하지 않는다. 커스텀 컴포넌트의 `className` prop 호출부도 DOM node로 추측하지 않고, 실제로 렌더된 intrinsic 요소의 구현 소스에 바인딩한다.
+
 ## 직접 편집 범위
 
 현재 직접 편집은 JSX의 정적 `className`, `cn()`/`clsx()` 안의 문자열 리터럴과 intrinsic `React.createElement()`을 대상으로 한다.
@@ -75,7 +91,7 @@ Grid Layout Composer는 같은 TSX 파일의 정적 `className`을 가진 기존
 ## 안전 규칙
 
 - JSX는 TypeScript AST 한 경로로 분석한다. 문자열이나 주석 속 JSX 모양 텍스트는 instrumentation하지 않는다.
-- `data-intent-id`는 Vite transform 결과에만 넣고 디스크 소스에는 쓰지 않는다.
+- `data-intent-id`와 overlay client는 Vite 개발 서버 transform에만 넣고 디스크 소스와 production bundle에는 쓰지 않는다.
 - apply 전 binding source hash와 원래 토큰을 모두 확인한다.
 - preview와 apply 사이에 파일이 바뀌어도 다시 거부한다.
 - undo는 적용 후 전체 source hash가 맞는 **최신 pending patch**만 처리한다.
@@ -114,18 +130,22 @@ node dist/cli.js mcp --root .
 ```bash
 npm run typecheck
 npm run test
+npm run test:e2e:install
 npm run test:e2e
 npm run build
+npm run test:production-build
 npm run test:mcp-package
 ```
 
 출시 전 전체 검증:
 
 ```bash
-npm run eval
+npm run verify
 ```
 
-`npm run eval`은 tarball 설치, 설치된 CLI와 Vite export, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, Grid 그룹 apply/undo, 외부 corpus와 56개 성능·안전 gate를 실행한다. `test:e2e`는 Lumina 사이트에서 설정, 선택, 비대칭 Grid 비율 변경, HMR, byte-for-byte undo와 모바일 panel을 Chromium으로 검증한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록된다.
+`npm run verify`는 typecheck, Vitest, package/demo build, production bundle 오염 검사, 설치 package MCP smoke, Chromium E2E, 평가 gate와 제품 A/B 집계를 순서대로 실행한다. `npm run eval`은 그중 tarball 설치, 설치된 CLI와 Vite export, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, Grid 그룹 apply/undo, 외부 corpus와 56개 성능·안전 gate를 담당한다. `test:e2e`는 Lumina 사이트에서 설정, 선택, 비대칭 Grid 비율 변경, HMR, byte-for-byte undo와 모바일 panel을 검증한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록된다.
+
+테스트용 OS temp와 Playwright browser는 저장소의 `.intent/tmp/` 아래에 둔다. Windows에서는 workspace와 다른 드라이브의 temp 경로를 거부하므로, D 드라이브 저장소 테스트가 다시 C 드라이브를 채우지 않는다.
 
 `npm run benchmark:mcp`는 inspect, preview, apply, undo와 in-memory MCP 호출의 로컬 기계 지연을 [mcp-alpha-evaluation.json](./reports/performance/mcp-alpha-evaluation.json)에 기록한다. 이 수치는 Agent 작업 성공률이나 제품 가치를 증명하지 않는다.
 
