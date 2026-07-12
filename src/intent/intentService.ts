@@ -6,7 +6,7 @@ import { inspectFlexLayout as inspectFlexLayoutRequest, planFlexLayout } from ".
 import { IntentGraphStore } from "./graphStore";
 import { inspectGridLayout as inspectGridLayoutRequest, planGridLayout } from "./gridLayout";
 import { sourceHash } from "./hash";
-import { queryRuntimeToken } from "./runtimeSession";
+import { queryRuntimeToken, readRuntimeSelection } from "./runtimeSession";
 import {
   applyLiteralTextPatch,
   applyTokenPatch,
@@ -28,14 +28,17 @@ import { describeProjectTailwindToken, projectCandidatesForToken, readProjectThe
 import type {
   FlexLayoutApplyRequest,
   FlexLayoutEditRequest,
+  FlexLayoutItemEdit,
   FlexLayoutInspectRequest,
   FlexLayoutInspection,
   FlexLayoutPreviewResult,
   IntentBinding,
   IntentGraph,
+  IntentRuntimeLayoutScope,
   LiteralTextEditRequest,
   GridLayoutApplyRequest,
   GridLayoutEditRequest,
+  GridLayoutItemEdit,
   GridLayoutInspectRequest,
   GridLayoutInspection,
   GridLayoutPreviewResult,
@@ -128,6 +131,44 @@ export interface IntentVerifyResult {
   renderedInstanceCount?: number;
   matchingInstanceCount?: number;
   detail: string;
+}
+
+export interface IntentSelectedLayoutInspectRequest {
+  breakpoint: string;
+}
+
+export type IntentSelectedLayoutEditRequest =
+  | {
+      kind: "grid";
+      breakpoint: string;
+      columns?: number | null;
+      rows?: number | null;
+      columnTemplate?: number[] | null;
+      items: GridLayoutItemEdit[];
+    }
+  | {
+      kind: "flex";
+      breakpoint: string;
+      direction?: FlexLayoutEditRequest["direction"];
+      wrap?: FlexLayoutEditRequest["wrap"];
+      justify?: FlexLayoutEditRequest["justify"];
+      align?: FlexLayoutEditRequest["align"];
+      gap?: string | null;
+      items: FlexLayoutItemEdit[];
+    };
+
+export interface IntentSelectedLayoutInspection {
+  ok: true;
+  kind: IntentRuntimeLayoutScope["kind"];
+  selectedId: string;
+  scope: IntentRuntimeLayoutScope;
+  inspection: GridLayoutInspection | FlexLayoutInspection;
+}
+
+interface CurrentLayoutSelection {
+  ok: true;
+  selectedId: string;
+  scope: IntentRuntimeLayoutScope;
 }
 
 interface StoredPreview {
@@ -388,6 +429,127 @@ export class IntentService {
     };
   }
 
+  private currentLayoutSelection(): CurrentLayoutSelection | PatchFailure {
+    const runtime = readRuntimeSelection(this.rootDir);
+    if (!runtime.selection) {
+      return failure(
+        "missing-runtime-selection",
+        "Select an element in the connected browser before inspecting its layout."
+      );
+    }
+    const freshUntil = Date.parse(runtime.freshUntil);
+    if (!Number.isFinite(freshUntil) || freshUntil <= Date.now()) {
+      return failure(
+        "stale-runtime-selection",
+        "The browser selection expired. Select the element again before editing its layout.",
+        runtime.selection.id
+      );
+    }
+    const scope = runtime.selection.layout;
+    if (!scope) {
+      return failure(
+        "missing-layout-selection",
+        "The current browser selection is not inside a supported Grid or Flex container.",
+        runtime.selection.id
+      );
+    }
+    if (scope.renderedParentCount !== 1) {
+      return failure(
+        "repeated-layout-runtime",
+        "The selected layout parent has multiple rendered instances, so a source-scoped grouped edit is ambiguous.",
+        scope.parentId
+      );
+    }
+    return { ok: true, selectedId: runtime.selection.id, scope };
+  }
+
+  inspectSelectedLayout(
+    request: IntentSelectedLayoutInspectRequest
+  ): IntentSelectedLayoutInspection | PatchFailure {
+    const breakpoint = request.breakpoint.trim();
+    if (!breakpoint) return failure("invalid-breakpoint", "A layout breakpoint is required.");
+    const current = this.currentLayoutSelection();
+    if (!current.ok) return current;
+    const scopedRequest = {
+      parentId: current.scope.parentId,
+      childIds: current.scope.childIds,
+      unboundChildCount: current.scope.unboundChildCount,
+      breakpoint
+    };
+    const inspection =
+      current.scope.kind === "grid"
+        ? this.inspectGridLayout(scopedRequest)
+        : this.inspectFlexLayout(scopedRequest);
+    if (!inspection.ok) return inspection;
+    return {
+      ok: true,
+      kind: current.scope.kind,
+      selectedId: current.selectedId,
+      scope: current.scope,
+      inspection
+    };
+  }
+
+  previewSelectedLayout(
+    request: IntentSelectedLayoutEditRequest
+  ): GridLayoutPreviewResult | FlexLayoutPreviewResult | PatchFailure {
+    const breakpoint = request.breakpoint.trim();
+    if (!breakpoint) return failure("invalid-breakpoint", "A layout breakpoint is required.");
+    const current = this.currentLayoutSelection();
+    if (!current.ok) return current;
+    if (request.kind !== current.scope.kind) {
+      return failure(
+        "layout-kind-mismatch",
+        `The browser selected a ${current.scope.kind} layout, not ${request.kind}.`,
+        current.scope.parentId
+      );
+    }
+
+    const raw = request as unknown as Record<string, unknown>;
+    if (request.kind === "grid") {
+      if (["direction", "wrap", "justify", "align", "gap"].some((key) => raw[key] !== undefined)) {
+        return failure("invalid-layout-fields", "Flex fields cannot be used in a Grid layout edit.");
+      }
+      if (request.items.some((item) => "alignSelf" in item)) {
+        return failure("invalid-layout-fields", "Flex item fields cannot be used in a Grid layout edit.");
+      }
+      return this.previewGridLayout({
+        parentId: current.scope.parentId,
+        childIds: current.scope.childIds,
+        unboundChildCount: current.scope.unboundChildCount,
+        breakpoint,
+        columns: request.columns,
+        rows: request.rows,
+        columnTemplate: request.columnTemplate,
+        items: request.items
+      });
+    }
+
+    if (["columns", "rows", "columnTemplate"].some((key) => raw[key] !== undefined)) {
+      return failure("invalid-layout-fields", "Grid fields cannot be used in a Flex layout edit.");
+    }
+    if (
+      request.items.some(
+        (item) =>
+          "columnStart" in item || "columnSpan" in item || "rowStart" in item || "rowSpan" in item
+      )
+    ) {
+      return failure("invalid-layout-fields", "Grid item fields cannot be used in a Flex layout edit.");
+    }
+    return this.previewFlexLayout({
+      parentId: current.scope.parentId,
+      childIds: current.scope.childIds,
+      unboundChildCount: current.scope.unboundChildCount,
+      breakpoint,
+      direction: request.direction,
+      wrap: request.wrap,
+      justify: request.justify,
+      align: request.align,
+      gap: request.gap,
+      items: request.items
+    });
+  }
+
   inspectGridLayout(request: GridLayoutInspectRequest): GridLayoutInspection | PatchFailure {
     this.refreshGraph();
     return inspectGridLayoutRequest(
@@ -641,6 +803,23 @@ export class IntentService {
       return { ...replay.result, idempotentReplay: true };
     }
 
+    const groupedPatch = this.gridLayoutPreviews.has(input.previewId)
+      ? this.applyGridLayout({ previewId: input.previewId })
+      : this.flexLayoutPreviews.has(input.previewId)
+        ? this.applyFlexLayout({ previewId: input.previewId })
+        : null;
+    if (groupedPatch) {
+      if (!groupedPatch.ok) return groupedPatch;
+      const result: IntentSemanticApply = {
+        ok: true,
+        operationId: this.operationId(groupedPatch),
+        idempotentReplay: false,
+        patch: groupedPatch
+      };
+      this.idempotentApplies.set(input.idempotencyKey, { previewId: input.previewId, result });
+      return result;
+    }
+
     const stored = this.previews.get(input.previewId);
     if (!stored) return failure("missing-preview", "Preview not found. Create a new preview before applying.");
     if (Date.now() > stored.expiresAtMs) {
@@ -698,8 +877,12 @@ export class IntentService {
     }
 
     const source = fs.readFileSync(patch.file, "utf8");
-    const token = source.slice(patch.range.start, patch.range.start + patch.nextToken.length);
-    const verified = sourceHash(source) === patch.sourceHashAfter && token === patch.nextToken;
+    const rangeVerified = patch.edits?.length
+      ? patch.edits.every(
+          (edit) => source.slice(edit.appliedRange.start, edit.appliedRange.end) === edit.newText
+        )
+      : source.slice(patch.range.start, patch.range.start + patch.nextToken.length) === patch.nextToken;
+    const verified = sourceHash(source) === patch.sourceHashAfter && rangeVerified;
     return {
       ok: verified,
       operationId: this.operationId(patch),
@@ -716,7 +899,9 @@ export class IntentService {
     if (!sourceResult.ok) return sourceResult;
     const patch = this.operationFor(operationId);
     if (!patch) return sourceResult;
-    if (patch.kind === "literal-text") return sourceResult;
+    if (patch.kind === "literal-text" || patch.kind === "grid-layout" || patch.kind === "flex-layout") {
+      return sourceResult;
+    }
 
     const runtime = await queryRuntimeToken(this.rootDir, patch.id, patch.nextToken);
     return {

@@ -27,7 +27,9 @@ try {
   const expected = [
     "intent_find_elements",
     "intent_inspect_element",
+    "intent_inspect_layout",
     "intent_preview_edit",
+    "intent_preview_layout",
     "intent_apply_edit",
     "intent_undo_edit",
     "intent_verify_edit"

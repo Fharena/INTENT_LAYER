@@ -77,6 +77,11 @@ describe("Grid Layout Composer", () => {
     expect(changed).toContain("col-span-6 rounded-lg bg-red-50 col-start-1");
     expect(changed).toContain("col-span-4 rounded-lg bg-blue-50 col-start-7");
     expect(changed).toContain("col-span-10");
+    expect(service.verifySemanticEdit(applied.operationFile)).toMatchObject({
+      ok: true,
+      source: "verified",
+      runtime: "unavailable"
+    });
 
     const reverted = service.revertLatest();
     expect(reverted.ok).toBe(true);

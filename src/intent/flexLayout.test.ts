@@ -78,6 +78,12 @@ describe("Flex Layout Composer", () => {
 
     expect(service.applyFlexLayout({ previewId: preview.previewId }).ok).toBe(true);
     expect(fs.readFileSync(file, "utf8")).toContain("flex-col flex-wrap items-center justify-between gap-panel");
+    const operation = service.undoHistory().entries[0];
+    expect(service.verifySemanticEdit(operation.operationFile)).toMatchObject({
+      ok: true,
+      source: "verified",
+      runtime: "unavailable"
+    });
     expect(service.revertLatest().ok).toBe(true);
     expect(fs.readFileSync(file, "utf8")).toBe(source);
   });

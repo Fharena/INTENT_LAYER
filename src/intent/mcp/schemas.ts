@@ -21,8 +21,48 @@ export const previewEditInput = {
   scope: z.literal("source").optional().describe("Only deterministic source scope is currently supported.")
 };
 
+export const inspectLayoutInput = {
+  breakpoint: z.string().trim().min(1).default("base").describe("Tailwind breakpoint to inspect, such as base or md.")
+};
+
+export const previewLayoutInput = {
+  kind: z.enum(["grid", "flex"]).describe("Layout kind returned by inspect_layout."),
+  breakpoint: z.string().trim().min(1).default("base").describe("Tailwind breakpoint returned by inspect_layout."),
+  columns: z.number().int().min(1).max(12).nullable().optional().describe("Grid column count, or null to remove a non-base override."),
+  rows: z.number().int().min(1).max(12).nullable().optional().describe("Grid row count, or null to remove an override."),
+  columnTemplate: z
+    .array(z.number().positive().max(12))
+    .min(1)
+    .max(12)
+    .nullable()
+    .optional()
+    .describe("Grid fractional track weights, or null to remove an arbitrary template."),
+  direction: z.enum(["row", "row-reverse", "col", "col-reverse"]).nullable().optional(),
+  wrap: z.enum(["nowrap", "wrap", "wrap-reverse"]).nullable().optional(),
+  justify: z
+    .enum(["normal", "start", "end", "center", "between", "around", "evenly", "stretch"])
+    .nullable()
+    .optional(),
+  align: z.enum(["start", "end", "center", "baseline", "stretch"]).nullable().optional(),
+  gap: z.string().trim().min(1).nullable().optional().describe("Exact Flex gap token returned by inspect_layout."),
+  items: z
+    .array(
+      z.object({
+        id: z.string().min(1).describe("Direct child id returned by inspect_layout."),
+        columnStart: z.number().int().min(1).max(12).nullable().optional(),
+        columnSpan: z.number().int().min(1).max(12).nullable().optional(),
+        rowStart: z.number().int().min(1).max(12).nullable().optional(),
+        rowSpan: z.number().int().min(1).max(12).nullable().optional(),
+        alignSelf: z.enum(["auto", "start", "end", "center", "stretch", "baseline"]).nullable().optional()
+      })
+    )
+    .max(100)
+    .default([])
+    .describe("Only changed direct children, using ids from inspect_layout.")
+};
+
 export const applyEditInput = {
-  previewId: z.string().uuid().describe("Preview id returned by preview_edit."),
+  previewId: z.string().uuid().describe("Preview id returned by preview_edit or preview_layout."),
   idempotencyKey: z.string().min(8).max(200).describe("Stable unique key for this intended apply operation.")
 };
 

@@ -20,7 +20,7 @@ export function registerIntentResources(server: McpServer, service: IntentServic
     "intent://selection/current",
     {
       title: "Current Intent Layer selection",
-      description: "The element most recently selected in the browser overlay.",
+      description: "The element and nearest supported layout scope most recently selected in the browser overlay.",
       mimeType: "application/json"
     },
     async (uri) => jsonResource(uri, readRuntimeSelection(service.rootDir))

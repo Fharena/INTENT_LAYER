@@ -1,4 +1,4 @@
-import { candidatesForToken, splitTailwindVariant } from "./tailwind";
+import { candidatesForToken, describeTailwindToken, splitTailwindVariant } from "./tailwind";
 import type {
   AgentResultArtifact,
   AgentQueueSignal,
@@ -598,6 +598,9 @@ function recordClientMetric(metric: ClientMetric) {
 
 function publishRuntimeSelection(binding: IntentBinding | null, element: HTMLElement | null) {
   const rect = element?.getBoundingClientRect() ?? null;
+  const gridScope = binding ? runtimeLayoutScope(binding.id, "grid") : null;
+  const flexScope = gridScope || !binding ? null : runtimeLayoutScope(binding.id, "flex");
+  const layoutScope = gridScope ?? flexScope;
   const hidesText =
     element instanceof HTMLInputElement ||
     element instanceof HTMLTextAreaElement ||
@@ -615,6 +618,15 @@ function publishRuntimeSelection(binding: IntentBinding | null, element: HTMLEle
           y: Number(rect.y.toFixed(2)),
           width: Number(rect.width.toFixed(2)),
           height: Number(rect.height.toFixed(2))
+        }
+      : null,
+    layout: layoutScope
+      ? {
+          kind: gridScope ? "grid" : "flex",
+          parentId: layoutScope.parentId,
+          childIds: layoutScope.childIds,
+          unboundChildCount: layoutScope.unboundChildCount,
+          renderedParentCount: layoutScope.renderedParentCount
         }
       : null
   };
@@ -2162,6 +2174,8 @@ function renderGridLayoutComposer(
 
   const section = createSection(t("layoutComposer"), "ready");
   section.dataset.intentLayoutComposer = "true";
+  section.dataset.intentLayoutSelectedRole =
+    runtime.parentId === binding.id ? "parent" : runtime.childIds.includes(binding.id) ? "child" : "descendant";
   const tabs = document.createElement("div");
   tabs.className = "intent-layer-layout-tabs";
   const body = document.createElement("div");
@@ -2732,11 +2746,32 @@ function flexAlignCss(value: FlexLayoutAlign | FlexLayoutAlignSelf): string {
   return value;
 }
 
-function flexGapPreview(token: string): string {
-  const value = /^gap-(.+)$/.exec(token)?.[1] ?? "2";
-  if (value === "px") return "1px";
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? `${Math.min(32, Math.max(0, numeric * 2))}px` : "8px";
+function flexGapPreview(token: string): { value: string; exact: boolean } {
+  const probe = document.createElement("div");
+  probe.className = token;
+  probe.style.position = "fixed";
+  probe.style.visibility = "hidden";
+  probe.style.pointerEvents = "none";
+  probe.style.display = "flex";
+  document.body.appendChild(probe);
+  const computedGap = getComputedStyle(probe).columnGap;
+  probe.remove();
+  if (computedGap && computedGap !== "normal" && (computedGap !== "0px" || token === "gap-0")) {
+    return { value: computedGap, exact: true };
+  }
+
+  const raw = /^gap-(.+)$/.exec(token)?.[1] ?? "0";
+  if (raw === "px") return { value: "1px", exact: true };
+  const arbitrary = /^\[(.+)\]$/.exec(raw)?.[1]?.replace(/_/g, " ");
+  if (arbitrary && CSS.supports("gap", arbitrary)) return { value: arbitrary, exact: true };
+  const variable = getComputedStyle(document.documentElement).getPropertyValue(`--spacing-${raw}`).trim();
+  if (variable && CSS.supports("gap", variable)) return { value: variable, exact: true };
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric)) {
+    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    return { value: `${Math.max(0, numeric * rootFontSize * 0.25)}px`, exact: false };
+  }
+  return { value: "8px", exact: false };
 }
 
 function renderFlexLayoutComposer(
@@ -2749,6 +2784,8 @@ function renderFlexLayoutComposer(
 
   const section = createSection(t("flexComposer"), "ready");
   section.dataset.intentFlexComposer = "true";
+  section.dataset.intentLayoutSelectedRole =
+    runtime.parentId === binding.id ? "parent" : runtime.childIds.includes(binding.id) ? "child" : "descendant";
   const tabs = document.createElement("div");
   tabs.className = "intent-layer-layout-tabs";
   const body = document.createElement("div");
@@ -2908,7 +2945,9 @@ function renderFlexLayoutComposer(
       canvas.style.flexWrap = wrap;
       canvas.style.justifyContent = flexJustifyCss(justify);
       canvas.style.alignItems = flexAlignCss(align);
-      canvas.style.gap = flexGapPreview(gap);
+      const gapPreview = flexGapPreview(gap);
+      canvas.style.setProperty("gap", gapPreview.value, "important");
+      canvas.dataset.intentGapExact = String(gapPreview.exact);
       items.forEach((item, index) => {
         const block = document.createElement("div");
         block.className = "intent-layer-layout-block";
@@ -4440,7 +4479,35 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     );
     if (flexComposer) content.appendChild(flexComposer);
 
-    const directSection = createSection(t("directEdit"), editableTokens.length > 0 ? "ready" : "warn");
+    const composerManagedProperties = new Set<string>();
+    if (layoutComposer?.dataset.intentLayoutSelectedRole === "parent") {
+      composerManagedProperties.add("layout.display");
+      composerManagedProperties.add("layout.gridColumns");
+    } else if (layoutComposer?.dataset.intentLayoutSelectedRole === "child") {
+      composerManagedProperties.add("layout.columnStart");
+      composerManagedProperties.add("layout.columnSpan");
+    }
+    if (flexComposer?.dataset.intentLayoutSelectedRole === "parent") {
+      for (const property of [
+        "layout.display",
+        "layout.flexDirection",
+        "layout.flexWrap",
+        "layout.justifyContent",
+        "layout.alignItems",
+        "layout.gap"
+      ]) {
+        composerManagedProperties.add(property);
+      }
+    } else if (flexComposer?.dataset.intentLayoutSelectedRole === "child") {
+      composerManagedProperties.add("layout.alignSelf");
+    }
+    const directEditableTokens = editableTokens.filter((token) => {
+      const semantic = describeTailwindToken(token.token);
+      return !semantic || !composerManagedProperties.has(semantic.property);
+    });
+
+    const directSection = createSection(t("directEdit"), directEditableTokens.length > 0 ? "ready" : "warn");
+    directSection.dataset.intentDirectEdit = "true";
     if (runtimeInactiveCount > 0) {
       const runtimeNote = document.createElement("p");
       runtimeNote.className = "intent-layer-runtime-note";
@@ -4448,7 +4515,12 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
       runtimeNote.textContent = `${t("runtimeInactive")} (${runtimeInactiveCount})`;
       directSection.appendChild(runtimeNote);
     }
-    if (editableTokens.length === 0 && !binding.textContent) {
+    if (
+      directEditableTokens.length === 0 &&
+      !binding.textContent &&
+      !layoutComposer &&
+      !flexComposer
+    ) {
       const empty = document.createElement("p");
       empty.textContent = t("inspectableNoTokens");
       empty.style.fontSize = "12px";
@@ -4458,7 +4530,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
 
     const tokenList = document.createElement("div");
     tokenList.className = "intent-layer-token-list";
-    for (const token of editableTokens) {
+    for (const token of directEditableTokens) {
       renderTokenRow(
         tokenList,
         binding,
@@ -4480,10 +4552,16 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
         }
       );
     }
-    if (editableTokens.length > 0) {
+    if (directEditableTokens.length > 0) {
       directSection.appendChild(tokenList);
     }
-    content.appendChild(directSection);
+    if (
+      directEditableTokens.length > 0 ||
+      runtimeInactiveCount > 0 ||
+      (!binding.textContent && !layoutComposer && !flexComposer)
+    ) {
+      content.appendChild(directSection);
+    }
 
     if (latestSetupStatus?.settings.agent.legacyQueueEnabled) {
       const legacyHandoff = document.createElement("details");

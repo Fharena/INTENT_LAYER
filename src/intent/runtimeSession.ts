@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type {
   IntentBinding,
+  IntentRuntimeLayoutScope,
   IntentRuntimeSession,
   IntentRuntimeSelection,
   IntentRuntimeSelectionRequest,
@@ -66,6 +67,36 @@ function compactClassTokens(value: string[] | undefined): string[] {
     .map((token) => token.slice(0, 240));
 }
 
+function compactRuntimeId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const id = value.trim();
+  return id && id.length <= 240 && !/\s/.test(id) ? id : null;
+}
+
+function compactRuntimeCount(value: unknown, maximum: number): number {
+  return typeof value === "number" && Number.isInteger(value)
+    ? Math.max(0, Math.min(value, maximum))
+    : 0;
+}
+
+function compactLayoutScope(value: unknown): IntentRuntimeLayoutScope | null {
+  if (!value || typeof value !== "object") return null;
+  const scope = value as Partial<IntentRuntimeLayoutScope>;
+  if (scope.kind !== "grid" && scope.kind !== "flex") return null;
+  const parentId = compactRuntimeId(scope.parentId);
+  if (!parentId || !Array.isArray(scope.childIds)) return null;
+  const childIds = [
+    ...new Set(scope.childIds.map((id) => compactRuntimeId(id)).filter((id): id is string => Boolean(id)))
+  ].slice(0, 100);
+  return {
+    kind: scope.kind,
+    parentId,
+    childIds,
+    unboundChildCount: compactRuntimeCount(scope.unboundChildCount, 10_000),
+    renderedParentCount: compactRuntimeCount(scope.renderedParentCount, 10_000)
+  };
+}
+
 export function writeRuntimeSelection(
   rootDir: string,
   entry: IntentBinding | undefined,
@@ -91,7 +122,8 @@ export function writeRuntimeSelection(
           role: compactText(request.role ?? undefined) || null,
           classTokens: compactClassTokens(request.classTokens),
           visible: request.visible ?? false,
-          rect: request.rect ?? null
+          rect: request.rect ?? null,
+          layout: compactLayoutScope(request.layout)
         }
       : null
   };
@@ -124,7 +156,8 @@ function readSelectionFile(file: string, sessionId: string | null): IntentRuntim
           selection: value.selection
             ? {
                 ...value.selection,
-                classTokens: compactClassTokens(value.selection.classTokens)
+                classTokens: compactClassTokens(value.selection.classTokens),
+                layout: compactLayoutScope(value.selection.layout)
               }
             : null
         }

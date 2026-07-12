@@ -97,6 +97,19 @@ test("composes a same-file flex layout through visual controls and exact undo", 
 
   const composer = panel.locator('[data-intent-flex-composer="true"]');
   await expect(composer).toBeVisible();
+  await expect
+    .poll(() => {
+      if (!fs.existsSync(selectionFile)) return null;
+      const selection = JSON.parse(fs.readFileSync(selectionFile, "utf8")) as {
+        selection?: { layout?: { kind?: string; childIds?: string[]; renderedParentCount?: number } | null };
+      };
+      return selection.selection?.layout ?? null;
+    })
+    .toMatchObject({ kind: "flex", childIds: expect.any(Array), renderedParentCount: 1 });
+  await expect(panel.locator('[data-intent-token="flex"]')).toHaveCount(0);
+  await expect(panel.locator('[data-intent-token="items-center"]')).toHaveCount(0);
+  await expect(panel.locator('[data-intent-token="justify-between"]')).toHaveCount(0);
+  await expect(panel.locator('[data-intent-token="max-w-6xl"]')).toBeVisible();
   await composer.locator('[data-intent-breakpoint="base"]').click();
   await composer.locator('[data-intent-flex-property="direction"][data-intent-flex-value="col"]').click();
   await composer.locator('[data-intent-flex-property="wrap"][data-intent-flex-value="wrap"]').click();
@@ -104,6 +117,9 @@ test("composes a same-file flex layout through visual controls and exact undo", 
   await composer.locator('select[data-intent-flex-property="align"]').selectOption("start");
   await composer.locator('select[data-intent-flex-property="gap"]').selectOption("gap-6");
   await composer.locator('select[data-intent-flex-property="align-self"]').first().selectOption("center");
+  const canvas = composer.locator('[data-intent-flex-canvas="true"]');
+  await expect(canvas).toHaveAttribute("data-intent-gap-exact", "true");
+  await expect.poll(() => canvas.evaluate((element) => getComputedStyle(element).gap)).toBe("24px");
 
   await composer.locator('[data-intent-action="flex-preview"]').click();
   const apply = composer.locator('[data-intent-action="flex-apply"]');

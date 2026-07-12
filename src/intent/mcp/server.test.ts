@@ -26,6 +26,24 @@ function fixture() {
   return { rootDir, file, source, entry: entries[0] };
 }
 
+function flexFixture() {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "intent-layer-mcp-layout-"));
+  roots.push(rootDir);
+  const file = path.join(rootDir, "src", "App.tsx");
+  const source =
+    'export function App(){ return <section className="flex items-center justify-between gap-4"><article className="self-auto rounded">A</article><article className="rounded">B</article></section>; }';
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, source, "utf8");
+  const entries = instrumentSource({ code: source, file, rootDir }).entries;
+  const parent = entries.find((entry) => entry.tagName === "section");
+  const children = entries.filter((entry) => entry.tagName === "article");
+  if (!parent || children.length !== 2) throw new Error("Invalid MCP Flex fixture.");
+  const store = new IntentGraphStore(rootDir);
+  store.replaceFileEntries(file, entries);
+  store.publish();
+  return { rootDir, file, source, parent, children };
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
 });
@@ -115,6 +133,16 @@ describe("Intent Layer MCP", () => {
         selection: { id: entry.id, route: "/demo", text: "App", classTokens: ["gap-4", "p-4"] }
       });
 
+      const missingLayout = await client.callTool({
+        name: "intent_inspect_layout",
+        arguments: { breakpoint: "base" }
+      });
+      expect(missingLayout.structuredContent).toMatchObject({
+        ok: false,
+        reason: "missing-layout-selection"
+      });
+      expect(missingLayout.isError).toBe(true);
+
       const undone = await client.callTool({
         name: "intent_undo_edit",
         arguments: { operationId }
@@ -163,6 +191,133 @@ describe("Intent Layer MCP", () => {
       });
       expect(missing.structuredContent).toMatchObject({ ok: false, source: "missing" });
       expect(missing.isError).toBe(true);
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
+  it("uses the browser-selected Flex scope for a guarded grouped edit", async () => {
+    const { rootDir, file, source, parent, children } = flexFixture();
+    writeRuntimeSelection(rootDir, parent, {
+      id: parent.id,
+      route: "/layout",
+      classTokens: ["flex", "items-center", "justify-between", "gap-4"],
+      layout: {
+        kind: "flex",
+        parentId: parent.id,
+        childIds: children.map((child) => child.id),
+        unboundChildCount: 0,
+        renderedParentCount: 1
+      }
+    });
+    const { server } = createIntentMcpServer({ rootDir });
+    const client = new Client({ name: "intent-layer-layout-test", version: "1.0.0" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+
+    try {
+      const inspected = await client.callTool({
+        name: "intent_inspect_layout",
+        arguments: { breakpoint: "base" }
+      });
+      expect(inspected.structuredContent).toMatchObject({
+        ok: true,
+        kind: "flex",
+        selectedId: parent.id,
+        scope: {
+          parentId: parent.id,
+          childIds: children.map((child) => child.id)
+        },
+        inspection: {
+          direction: { effective: "row" },
+          gap: { effective: "gap-4" }
+        }
+      });
+
+      const wrongKind = await client.callTool({
+        name: "intent_preview_layout",
+        arguments: { kind: "grid", breakpoint: "base", columns: 2, items: [] }
+      });
+      expect(wrongKind.structuredContent).toMatchObject({
+        ok: false,
+        reason: "layout-kind-mismatch"
+      });
+
+      const forgedChild = await client.callTool({
+        name: "intent_preview_layout",
+        arguments: {
+          kind: "flex",
+          breakpoint: "base",
+          items: [{ id: "forged-child-id", alignSelf: "center" }]
+        }
+      });
+      expect(forgedChild.structuredContent).toMatchObject({
+        ok: false,
+        reason: "flex-child-out-of-scope"
+      });
+
+      const previewed = await client.callTool({
+        name: "intent_preview_layout",
+        arguments: {
+          kind: "flex",
+          breakpoint: "base",
+          direction: "col",
+          gap: "gap-6",
+          items: [{ id: children[0].id, alignSelf: "center" }]
+        }
+      });
+      const previewId = String(
+        (previewed.structuredContent as Record<string, unknown> | undefined)?.previewId
+      );
+      expect(previewed.structuredContent).toMatchObject({
+        ok: true,
+        parentId: parent.id,
+        affectedBindingCount: 2,
+        patch: { kind: "flex-layout" }
+      });
+      expect(fs.readFileSync(file, "utf8")).toBe(source);
+
+      const applied = await client.callTool({
+        name: "intent_apply_edit",
+        arguments: { previewId, idempotencyKey: "mcp-flex-layout-edit" }
+      });
+      const operationId = String(
+        (applied.structuredContent as Record<string, unknown> | undefined)?.operationId
+      );
+      expect(applied.structuredContent).toMatchObject({
+        ok: true,
+        patch: { kind: "flex-layout" }
+      });
+      const changed = fs.readFileSync(file, "utf8");
+      expect(changed).toContain("flex-col");
+      expect(changed).toContain("gap-6");
+      expect(changed).toContain("self-center");
+
+      const replayed = await client.callTool({
+        name: "intent_apply_edit",
+        arguments: { previewId, idempotencyKey: "mcp-flex-layout-edit" }
+      });
+      expect(replayed.structuredContent).toMatchObject({ ok: true, idempotentReplay: true });
+      expect(fs.readFileSync(file, "utf8")).toBe(changed);
+
+      const verified = await client.callTool({
+        name: "intent_verify_edit",
+        arguments: { operationId }
+      });
+      expect(verified.structuredContent).toMatchObject({
+        ok: true,
+        source: "verified",
+        runtime: "unavailable"
+      });
+
+      const undone = await client.callTool({
+        name: "intent_undo_edit",
+        arguments: { operationId }
+      });
+      expect(undone.structuredContent).toMatchObject({ ok: true, reverted: true });
+      expect(fs.readFileSync(file, "utf8")).toBe(source);
     } finally {
       await client.close();
       await server.close();

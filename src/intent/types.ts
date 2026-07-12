@@ -50,6 +50,14 @@ export interface IntentGraph {
   entries: Record<string, IntentBinding>;
 }
 
+export interface IntentRuntimeLayoutScope {
+  kind: "grid" | "flex";
+  parentId: string;
+  childIds: string[];
+  unboundChildCount: number;
+  renderedParentCount: number;
+}
+
 export interface IntentRuntimeSelectionRequest {
   id: string | null;
   route?: string;
@@ -63,6 +71,7 @@ export interface IntentRuntimeSelectionRequest {
     width: number;
     height: number;
   } | null;
+  layout?: IntentRuntimeLayoutScope | null;
 }
 
 export interface IntentRuntimeSelection {
@@ -81,6 +90,7 @@ export interface IntentRuntimeSelection {
     classTokens: string[];
     visible: boolean;
     rect: IntentRuntimeSelectionRequest["rect"];
+    layout: IntentRuntimeLayoutScope | null;
   };
 }
 

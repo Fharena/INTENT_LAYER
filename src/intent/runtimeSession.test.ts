@@ -105,7 +105,14 @@ describe("runtime sessions", () => {
       {
         id: "first-id",
         route: "/first",
-        classTokens: ["p-4", "bg-brand", "p-4", " invalid token ", ""]
+        classTokens: ["p-4", "bg-brand", "p-4", " invalid token ", ""],
+        layout: {
+          kind: "flex",
+          parentId: " parent-id ",
+          childIds: ["child-a", "child-a", " invalid child ", "child-b"],
+          unboundChildCount: -3,
+          renderedParentCount: 1
+        }
       },
       first.sessionId
     );
@@ -113,11 +120,22 @@ describe("runtime sessions", () => {
 
     expect(readRuntimeSelection(root, first.sessionId)).toMatchObject({
       sessionId: first.sessionId,
-      selection: { id: "first-id", route: "/first", classTokens: ["p-4", "bg-brand"] }
+      selection: {
+        id: "first-id",
+        route: "/first",
+        classTokens: ["p-4", "bg-brand"],
+        layout: {
+          kind: "flex",
+          parentId: "parent-id",
+          childIds: ["child-a", "child-b"],
+          unboundChildCount: 0,
+          renderedParentCount: 1
+        }
+      }
     });
     expect(readRuntimeSelection(root, second.sessionId)).toMatchObject({
       sessionId: second.sessionId,
-      selection: { id: "second-id", route: "/second" }
+      selection: { id: "second-id", route: "/second", layout: null }
     });
     expect(Date.parse(readRuntimeSelection(root).freshUntil)).toBeGreaterThan(Date.now());
 
