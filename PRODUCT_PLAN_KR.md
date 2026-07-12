@@ -378,7 +378,7 @@ src/intent/
   mcp/               stdio tools, resources and client setup
 ```
 
-외부에서 독립 버전이 필요한 실제 consumer가 생기기 전에는 monorepo package 분리를 하지 않는다. `vitePlugin.ts`와 MCP는 파일을 직접 수정하지 않고 모두 `IntentService`를 호출한다. MCP의 6개 도구는 stdio로만 노출하며 remote HTTP/OAuth server는 현재 범위가 아니다.
+외부에서 독립 버전이 필요한 실제 consumer가 생기기 전에는 monorepo package 분리를 하지 않는다. `vitePlugin.ts`와 MCP는 파일을 직접 수정하지 않고 모두 `IntentService`를 호출한다. MCP의 8개 도구는 stdio로만 노출하며 remote HTTP/OAuth server는 현재 범위가 아니다. Grid/Flex용 추가 도구는 검사와 미리보기만 담당하고 적용·검증·되돌리기는 기존 공통 도구를 재사용한다.
 
 ### 10.2 의존성 원칙
 
@@ -668,6 +668,7 @@ DOM 자식이 세 개여도 source id가 같으면 세 개를 따로 배치할 �
 ```text
 selected grid DOM
   -> parent id + ordered direct-child ids
+  -> session-scoped selection file (GUI and MCP shared scope)
   -> server-side support inspection
   -> semantic layout request (breakpoint/row/column/start/span)
   -> guarded grouped className preview
@@ -687,7 +688,7 @@ selected grid DOM
 - 3~8개 자식 layout preview p95 20ms 이하, apply p95 50ms 이하
 - 독립 사용자 과제에서 prompt-only 대비 첫 성공 시간 또는 재시도 횟수 중 하나를 30% 이상 개선
 
-2026-07-12 로컬 evaluator에서 custom breakpoint와 row placement를 포함한 8개 자식 Grid 20회가 부분 쓰기 0건, byte restore 20/20, preview/apply p95 5.051/3.559ms를 기록했다. 기계 안전/지연 gate는 통과했지만 독립 사용자 A/B는 표본 0이므로 drag reorder와 여러 파일 트랜잭션은 계속 보류한다.
+2026-07-12 로컬 evaluator에서 custom breakpoint와 row placement를 포함한 8개 자식 Grid 20회가 부분 쓰기 0건과 byte restore 20/20을 기록했다. 현재 p95와 threshold 판정은 실행마다 `reports/performance/spike-evaluation.json`에 갱신한다. 기계 안전/지연 gate는 통과했지만 독립 사용자 A/B는 표본 0이므로 drag reorder와 여러 파일 트랜잭션은 계속 보류한다.
 
 ### 14.6 Flex Layout Composer 설계
 
@@ -695,7 +696,7 @@ Flex는 기존 base `flex`/`inline-flex` 부모와 직계 자식을 GUI로 읽�
 
 Grid와 같은 안전 계약을 사용한다. 모든 참여자는 한 파일의 정적 단일행 className이어야 하고, runtime 직계 자식 id가 유일해야 한다. 서버가 breakpoint 상속과 token 범위를 다시 해석하고, expiring preview 뒤 전체 source hash와 각 원문을 검증한 다음 파일을 한 번만 쓴다. `gap-x`/`gap-y`, unknown plugin utility, 반복 id, 교차 파일 자식은 전체 작업을 거부한다.
 
-DOM 순서와 keyboard/screen-reader 순서가 달라질 수 있는 `order`/drag reorder는 지원하지 않는다. 2026-07-12 evaluator의 8개 자식 Flex 20회는 부분 쓰기 0건, byte restore 20/20, preview/apply p95 2.706/4.035ms를 기록했다.
+DOM 순서와 keyboard/screen-reader 순서가 달라질 수 있는 `order`/drag reorder는 지원하지 않는다. 2026-07-12 evaluator의 8개 자식 Flex 20회는 부분 쓰기 0건과 byte restore 20/20을 기록했다. 현재 지연 수치는 `reports/performance/spike-evaluation.json`을 단일 근거로 사용한다.
 
 ## 15. 제품화 전략
 
@@ -830,6 +831,7 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 - [x] guarded literal text edit와 MCP `content.text`
 - [x] project breakpoint와 Grid row/start/span
 - [x] 같은 파일 정적 Flex Layout Composer
+- [x] 최근 브라우저 선택 범위를 재사용하는 MCP Grid/Flex inspect/preview와 공통 apply/verify/undo
 - [x] session-scoped selection과 multi-Vite graph merge fixture
 - [ ] 5개 이상 독립 저장소의 실제 작업 20개 A/B (`product-ab-evaluation.json`: collecting, 0 paired tasks)
 - [x] legacy Agent HTTP/UI opt-in 경계와 evaluator artifact 격리

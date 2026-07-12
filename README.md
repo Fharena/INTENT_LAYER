@@ -114,12 +114,15 @@ The Flex Layout Composer uses the same one-file, static-className, unique-direct
 After enabling a provider in Settings and starting a new Codex or Claude session, the client can use these local MCP tools:
 
 - `intent_find_elements`, `intent_inspect_element`
+- `intent_inspect_layout`, `intent_preview_layout`
 - `intent_preview_edit`, `intent_apply_edit`
 - `intent_verify_edit`, `intent_undo_edit`
 
-The browser selection is exposed as `intent://selection/current`. AI clients submit semantic properties and candidate values, never source offsets or raw patches. `content.text` uses the same six MCP tools for the guarded literal-text subset above. Apply revalidates an expiring preview, source hash, file lock, and idempotency key. With a connected browser, verify also checks that every rendered source instance contains the new class token after HMR.
+Property and literal-text edits use `find → inspect_element → preview_edit → apply → verify → optional undo`. For Grid or Flex, first select an element inside the target layout in the browser, then use `inspect_layout → preview_layout`; apply, verify, and undo reuse the same tools.
 
-For `intent_verify_edit`, `runtime: unavailable` returns `ok: false` even when the source patch is intact, but it is not marked as an MCP tool execution error. This lets an agent handle successful source verification separately from missing visual evidence. Source drift and missing operations remain tool errors.
+The browser selection is exposed as `intent://selection/current`, including the nearest Grid/Flex parent and source-bound direct-child scope. AI clients cannot submit source offsets, raw patches, or the layout parent and full child scope. The server resolves them from a selection made within the last 30 minutes, then rejects repeated parent instances, unbound or duplicate children, dynamic classNames, and cross-file participants. Apply revalidates the expiring preview, source hash, file lock, and idempotency key.
+
+With a connected browser, a single class-token edit verifies every rendered source instance after HMR. On this path, `runtime: unavailable` returns `ok: false` even when source is intact, but is not an MCP execution error. Literal text and grouped Grid/Flex currently perform source verification only, so they may return `ok: true` with `runtime: unavailable`; that is not visual evidence. Source drift and missing operations remain tool errors.
 
 Unsupported structural changes return `handoff-required` with an exact source pointer for normal agent editing. The Markdown queue and its HTTP routes are off by default and open only after enabling the advanced compatibility toggle.
 
@@ -150,7 +153,7 @@ Full release check:
 npm run verify
 ```
 
-`npm run verify` runs type checking, Vitest, package/demo builds, the production-bundle contamination gate, the installed-package MCP smoke test, Chromium E2E, a pinned pnpm install/build, evaluation gates, and product A/B aggregation. `npm run eval` covers tarball installation, installed CLI plus Vite exports/type declarations, real Vite HTTP preview/apply/revert, multi-file graph refresh, external corpora, and 62 performance and safety gates. Literal text, Grid, and Flex each currently complete 20/20 grouped round trips with zero partial writes; their local preview/apply p95 values are 2.474/3.663ms, 5.051/3.559ms, and 2.706/4.035ms respectively. These are mechanical local timings, not product-value A/B evidence.
+`npm run verify` runs type checking, Vitest, package/demo builds, the production-bundle contamination gate, the installed-package MCP smoke test, Chromium E2E, a pinned pnpm install/build, evaluation gates, and product A/B aggregation. `npm run eval` covers tarball installation, installed CLI plus Vite exports/type declarations, real Vite HTTP preview/apply/revert, multi-file graph refresh, external corpora, and 62 performance and safety gates. Literal text, Grid, and Flex each currently complete 20/20 grouped round trips with zero partial writes and byte restoration 20/20. Current p95 and gate results are regenerated in [spike-evaluation.json](./reports/performance/spike-evaluation.json); local mechanical timing is not product-value A/B evidence.
 
 `test:e2e` covers the React 18/Tailwind 3 Lumina site and the React 19/Tailwind 4 Modern fixture, including setup, selection, literal text, Grid rows/custom breakpoints, Flex, runtime branches, DOM preview, HMR, original-TSX source-map composition, byte-for-byte undo, and the mobile panel. The Modern fixture force-refreshes pnpm's local `file:` package copy before running, so stale `dist` cannot pass. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
 

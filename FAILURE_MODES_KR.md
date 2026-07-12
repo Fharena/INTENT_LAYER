@@ -210,12 +210,17 @@ npm run import:external-corpus -- <independent-react-tailwind-project-or-samples
 
 ## 12. MCP 편집 또는 검증이 거부됨
 
-- `preview-expired`: 5분이 지난 preview다. `intent_preview_edit`부터 다시 수행한다.
+- `preview-expired`: 5분이 지난 preview다. 속성은 `intent_preview_edit`, layout은 `intent_preview_layout`부터 다시 수행한다.
+- `missing-runtime-selection`: 브라우저 선택이 없다. Vite 화면에서 요소를 다시 선택한다.
+- `stale-runtime-selection`: 마지막 선택의 30분 유효시간이 지났다. 같은 화면이어도 요소를 다시 선택한다.
+- `missing-layout-selection`: 현재 요소가 지원하는 Grid/Flex 범위 안에 없거나 브라우저가 이전 client를 사용 중이다. 새로고침 후 layout 안쪽 요소를 선택한다.
+- `repeated-layout-runtime`: 같은 layout parent source id가 여러 번 렌더돼 source-scoped 결과가 모호하다. 인스턴스별 차이는 component prop/refactor로 처리한다.
+- `layout-kind-mismatch`: `intent_inspect_layout`이 반환한 `kind`와 다른 종류로 preview했다. 검사 결과를 그대로 사용한다.
 - `source-hash-mismatch`: preview 뒤 파일이 바뀌었다. 현재 요소를 다시 inspect한다.
 - `file-locked`: GUI나 다른 AI 작업이 같은 파일을 수정 중이다. 해당 작업이 끝난 뒤 새 preview를 만든다.
 - operation journal lock은 서로 다른 파일을 고치는 provider도 짧게 직렬화한다. 5초 이상 계속 잠기면 중단된 Intent Layer 프로세스와 `.intent/runtime/locks/` 상태를 확인한다.
 - `idempotency-key-conflict`: 다른 preview에 이미 쓴 key다. 새 작업 key를 사용한다.
-- `runtime: unavailable`: source는 검증됐지만 Vite 또는 브라우저가 연결되지 않았다. 시각 검증 성공으로 해석하지 않는다.
+- `runtime: unavailable`: source는 검증됐지만 Vite/browser 렌더 검증을 사용할 수 없다. 특히 literal text와 grouped Grid/Flex는 현재 source만 검증하므로 시각 검증 성공으로 해석하지 않는다.
 - `runtime: drifted`: source는 바뀌었지만 일부 렌더 인스턴스에 새 token이 없다. HMR 상태와 동적 className 조건을 확인한다.
 
 ## 13. DOM 미리보기가 원복되거나 조건부 토큰이 보이지 않음

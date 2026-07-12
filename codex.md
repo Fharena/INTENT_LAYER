@@ -69,6 +69,8 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Project theme candidates come from static Tailwind config and known CSS entry points. Never execute user config to discover candidates, and never duplicate candidate arrays into the intent graph; fetch them only for selected tokens.
 - Order project breakpoints only when a numeric min-width is statically available. Exclude `raw`, max-only, CSS-variable, and dynamically computed screens rather than guessing responsive inheritance.
 - Runtime selection is session-scoped. Preserve `sessionId` and freshness, merge graph entries by file ownership, and retain source-hash rejection as the final drift guard.
+- Persist the nearest supported Grid/Flex parent plus bound direct-child ids with the browser selection. MCP layout edits must use `inspect_layout -> preview_layout -> apply_edit -> verify_edit -> optional undo_edit`; callers never supply the parent or complete child scope.
+- Reject missing/stale layout selections and repeated parent instances before planning. Grouped Grid/Flex verification is source-only until a real multi-range browser verifier exists; `runtime: unavailable` is not visual success.
 - The npm compatibility fixture under `test-sites/modern-tailwind-v4` gates React 19, Vite 8, Tailwind CSS 4, package type declarations, production overlay stripping, and the browser edit round trip. Do not weaken it to make an unsupported package surface appear green.
 - Modern compatibility and E2E commands must force-refresh the pinned pnpm `file:` dependency after `build:package`; a cached fixture copy is not evidence for the current source tree. Keep the pin on a non-vulnerable release and require a clean `npm audit`.
 

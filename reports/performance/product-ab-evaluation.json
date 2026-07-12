@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-12T08:55:21.347Z",
+  "generatedAt": "2026-07-12T12:16:19.097Z",
   "status": "collecting",
   "scope": "Independent paired user-task outcomes only. Corpus coverage, synthetic fixtures, and mechanical latency are excluded.",
   "inputFile": "reports/performance/product-ab-observations.jsonl",

@@ -135,9 +135,18 @@ npx intent-layer dev
 6. 승인 뒤 `apply → verify`를 수행하고 source와 렌더 인스턴스가 모두 verified인지 확인한다.
 7. `intent_undo_edit`로 원복한다.
 
-같은 6개 도구로 literal text도 검증할 수 있다. plain JSX text가 선택된 상태에서 `property: "content.text"`와 새 문자열을 preview/apply하고, source 검증 뒤 undo한다.
+Literal text도 같은 공통 apply/verify/undo 경로를 사용한다. plain JSX text가 선택된 상태에서 `property: "content.text"`와 새 문자열을 preview/apply하고, source 검증 뒤 undo한다.
 
-패키지 stdio 경로만 빠르게 검사할 때는 `npm run build:package && npm run test:mcp-package`를 사용한다.
+Grid/Flex AI 편집은 다음 순서로 확인한다.
+
+1. 브라우저에서 layout 부모 또는 그 안의 직계/하위 요소를 선택한다.
+2. `intent_inspect_layout`을 호출해 실제 선택에서 계산된 kind, 부모, 직계 자식과 breakpoint 값을 확인한다.
+3. 반환된 값과 바꿀 자식 id만 사용해 `intent_preview_layout`을 호출한다. 부모 id와 전체 자식 범위는 요청에 넣지 않는다.
+4. grouped diff의 모든 className 변경을 검토한 뒤 기존 `intent_apply_edit`로 적용한다.
+5. `intent_verify_edit`에서 `source: verified`를 확인한다. grouped layout의 `runtime: unavailable`은 아직 시각 검증을 수행하지 않았다는 뜻이다.
+6. `intent_undo_edit`로 파일이 byte-for-byte 원복되는지 확인한다.
+
+패키지 stdio 경로와 8개 도구 목록만 빠르게 검사할 때는 `npm run build:package && npm run test:mcp-package`를 사용한다.
 
 전체 브라우저 회귀는 `npm run test:e2e`로 실행한다. Lumina는 설정, 비대칭 Grid, custom breakpoint/행 배치, HMR, exact undo와 모바일 축소/확대를 확인한다. Modern fixture는 literal text, Flex, 조건 분기, swatch, spacing stepper, source-free DOM preview와 React 19/Tailwind 4 전체 라운드트립을 확인한다.
 
@@ -149,6 +158,7 @@ npx intent-layer dev
 - 단순 Tailwind token 변경에는 LLM을 호출하지 않는다.
 - 지원하지 않는 동적 `className`은 위험하게 patch하지 않고 read-only handoff로 내려간다.
 - AI도 raw source offset을 쓰지 않고 GUI와 같은 `IntentService`를 사용한다.
+- AI layout 편집 범위는 호출자가 만들지 않고 최근 브라우저 선택에서 서버가 결정한다.
 - 브라우저가 연결돼 있으면 HMR 뒤 렌더된 class token까지 검증한다.
 - 적용된 patch는 review를 위해 operation과 intent diff artifact를 남긴다.
 - Grid/Flex 배치는 여러 className을 하나의 guarded operation으로 preview/apply/undo한다.

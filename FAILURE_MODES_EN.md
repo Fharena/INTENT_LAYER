@@ -210,12 +210,17 @@ The panel reports a stopped dev server, invalid HTTP response, or JSON parse fai
 
 ## 12. An MCP edit or verification is rejected
 
-- `preview-expired`: the five-minute preview expired; start again with `intent_preview_edit`.
+- `preview-expired`: the five-minute preview expired; start again with `intent_preview_edit` for properties or `intent_preview_layout` for layout.
+- `missing-runtime-selection`: there is no browser selection; select the element again in the Vite page.
+- `stale-runtime-selection`: the 30-minute selection lifetime expired; reselect the element even if the page still looks unchanged.
+- `missing-layout-selection`: the current element is outside a supported Grid/Flex scope, or the browser still runs an older client; refresh and select inside the layout.
+- `repeated-layout-runtime`: the layout parent source id renders more than once, making a source-scoped grouped result ambiguous; use a component prop or refactor for per-instance differences.
+- `layout-kind-mismatch`: the preview kind differs from `intent_inspect_layout`; reuse the returned kind.
 - `source-hash-mismatch`: the file changed after preview; inspect the current element again.
 - `file-locked`: the GUI or another AI operation is editing the same file; wait and create a new preview.
 - The operation journal briefly serializes providers even when they edit different files. If it remains locked for more than five seconds, inspect abandoned Intent Layer processes and `.intent/runtime/locks/`.
 - `idempotency-key-conflict`: the key already belongs to another preview; use a new operation key.
-- `runtime: unavailable`: source is verified but Vite or the browser is disconnected; do not report visual success.
+- `runtime: unavailable`: source is verified, but Vite/browser rendering cannot be checked. Literal text and grouped Grid/Flex currently verify source only, so do not report visual success.
 - `runtime: drifted`: source changed but at least one rendered instance lacks the new token; inspect HMR and dynamic class conditions.
 
 ## 13. A DOM preview resets or a conditional token is missing

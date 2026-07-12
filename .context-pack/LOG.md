@@ -2,62 +2,6 @@
 
 Append-only operational log.
 
-## 2026-06-30T12:53:40+09:00
-- Branch: main
-- HEAD: 69fcc9a63efc
-- Dirty files: none
-- Dirty diff hash: clean
-- Verification: not recorded
-
-## 2026-06-30T13:04:54+09:00
-- Branch: main
-- HEAD: be7afbf46930
-- Dirty files: none
-- Dirty diff hash: clean
-- Verification: not recorded
-
-## 2026-06-30T13:12:25+09:00
-- Branch: main
-- HEAD: 5ac7f5157164
-- Dirty files: none
-- Dirty diff hash: clean
-- Verification: not recorded
-
-## 2026-06-30T13:19:51+09:00
-- Branch: main
-- HEAD: bcba3b87a48a
-- Dirty files: none
-- Dirty diff hash: clean
-- Verification: not recorded
-
-## 2026-06-30T13:27:08+09:00
-- Branch: main
-- HEAD: 9cafb4e8910f
-- Dirty files: none
-- Dirty diff hash: clean
-- Verification: not recorded
-
-## 2026-06-30T13:33:04+09:00
-- Branch: main
-- HEAD: 4debf40a000d
-- Dirty files: none
-- Dirty diff hash: clean
-- Verification: not recorded
-
-## 2026-06-30T13:41:34+09:00
-- Branch: main
-- HEAD: 2ee1c794ff68
-- Dirty files: none
-- Dirty diff hash: clean
-- Verification: not recorded
-
-## 2026-06-30T13:48:40+09:00
-- Branch: main
-- HEAD: 5d944789fd55
-- Dirty files: none
-- Dirty diff hash: clean
-- Verification: not recorded
-
 ## 2026-06-30T13:53:03+09:00
 - Branch: main
 - HEAD: 3bd55aa11c39
@@ -259,4 +203,10 @@ Append-only operational log.
 - HEAD: 4fc50614175a
 - Dirty files: none
 - Dirty diff hash: clean
+- Verification: not recorded
+## 2026-07-12T21:19:34+09:00
+- Branch: feat/ai-native-mcp
+- HEAD: a22efbff41ca
+- Dirty files: .claude/launch.json, AGENTS.md, DEMO_WALKTHROUGH_EN.md, DEMO_WALKTHROUGH_KR.md, FAILURE_MODES_EN.md, FAILURE_MODES_KR.md, PRODUCT_PLAN_EN.md, PRODUCT_PLAN_KR.md, README.md, README_KR.md, codex.md, e2e/modern.spec.ts, reports/performance/ai-corpus-audit.json, reports/performance/corpus-audit.json, reports/performance/product-ab-evaluation.json, reports/performance/spike-evaluation.json, scripts/smoke-mcp-package.mjs, src/intent/client.ts, src/intent/flexLayout.test.ts, src/intent/gridLayout.test.ts, src/intent/intentService.ts, src/intent/mcp/resources.ts, src/intent/mcp/schemas.ts, src/intent/mcp/server.test.ts, src/intent/mcp/tools.ts, src/intent/runtimeSession.test.ts, src/intent/runtimeSession.ts, src/intent/types.ts
+- Dirty diff hash: sha256:8c3c1c6da4d0fbbfe4e8dd84
 - Verification: not recorded

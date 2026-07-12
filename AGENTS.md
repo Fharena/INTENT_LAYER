@@ -145,10 +145,12 @@ For grouped Grid/Flex edits, require one source file, validate every original cl
 Codex and Claude should use the local MCP tools for supported edits:
 
 ```text
-find -> inspect -> preview -> apply -> verify -> optional undo
+property/text: find -> inspect_element -> preview_edit -> apply_edit -> verify_edit -> optional undo_edit
+Grid/Flex: browser select -> inspect_layout -> preview_layout -> apply_edit -> verify_edit -> optional undo_edit
 ```
 
 - Never accept source offsets, raw patches, or arbitrary file paths from an AI client.
+- Never accept a Grid/Flex parent id or complete child scope from an AI client. Resolve the nearest layout scope from the fresh browser selection; only changed child ids returned by `inspect_layout` may appear in a preview request.
 - Resolve ranges from the current graph and semantic property on the server.
 - Require an expiring preview before apply.
 - Revalidate source hash inside a per-file atomic lock.

@@ -114,12 +114,15 @@ Flex Layout Composer도 같은 파일·정적 className·유일한 직계 자식
 설정에서 provider 연결을 켠 뒤 Codex 또는 Claude를 새로 시작하면 다음 로컬 MCP 도구를 사용할 수 있다.
 
 - `intent_find_elements`, `intent_inspect_element`
+- `intent_inspect_layout`, `intent_preview_layout`
 - `intent_preview_edit`, `intent_apply_edit`
 - `intent_verify_edit`, `intent_undo_edit`
 
-브라우저에서 선택한 요소는 `intent://selection/current`로 공유된다. AI는 source offset이나 raw patch를 보내지 않고 의미 속성과 후보 값만 요청한다. `content.text`는 위와 같은 안전한 literal text 범위에서 기존 6개 MCP 도구로 편집할 수 있다. apply는 expiring preview, source hash, 파일 잠금과 idempotency key를 다시 검증한다. 브라우저가 연결돼 있으면 HMR 뒤 모든 렌더 인스턴스에 새 class token이 존재하는지도 확인한다.
+일반 속성과 literal text는 `find → inspect_element → preview_edit → apply → verify → optional undo` 순서로 처리한다. Grid/Flex는 브라우저에서 대상 안쪽 요소를 먼저 고른 뒤 `inspect_layout → preview_layout`을 사용하고, 적용·검증·되돌리기는 같은 도구를 재사용한다.
 
-`intent_verify_edit`에서 `runtime: unavailable`은 source가 온전하더라도 `ok: false`다. 다만 MCP tool execution error로 표시하지 않아 Agent가 성공한 source 검증과 누락된 시각 증거를 따로 처리할 수 있다. Source drift나 missing operation은 계속 tool error다.
+브라우저 선택은 `intent://selection/current`로 공유되며, 가장 가까운 Grid/Flex 부모와 source-bound 직계 자식 범위도 함께 저장된다. AI는 source offset, raw patch, layout 부모나 전체 자식 범위를 제출하지 못한다. 서버는 30분 안의 현재 선택에서 범위를 해석하고, 반복 렌더 부모, unbound/중복 자식, 동적 className 또는 교차 파일 참여자를 다시 거부한다. apply는 expiring preview, source hash, 파일 잠금과 idempotency key를 재검증한다.
+
+단일 class token은 브라우저가 연결돼 있으면 HMR 뒤 모든 렌더 인스턴스도 확인한다. 이 경로에서 `runtime: unavailable`은 source가 온전해도 `ok: false`지만 MCP 실행 오류는 아니다. Literal text와 grouped Grid/Flex는 현재 source 검증만 수행하므로 `ok: true`, `runtime: unavailable`일 수 있으며, 이를 시각 검증 성공으로 해석하면 안 된다. Source drift나 missing operation은 계속 tool error다.
 
 직접 지원하지 않는 구조 변경은 `handoff-required`로 내려가며, Agent가 일반 코드 편집으로 처리할 수 있도록 정확한 source pointer를 제공한다. 기존 Markdown queue와 HTTP 경로는 기본적으로 꺼져 있으며 설정의 고급 호환성 toggle을 명시적으로 켠 프로젝트에서만 열린다.
 
@@ -150,7 +153,7 @@ npm run test:mcp-package
 npm run verify
 ```
 
-`npm run verify`는 typecheck, Vitest, package/demo build, production bundle 오염 검사, 설치 package MCP smoke, Chromium E2E, 고정 버전 pnpm 설치/빌드, 평가 gate와 제품 A/B 집계를 순서대로 실행한다. `npm run eval`은 그중 tarball 설치, 설치된 CLI와 Vite export/type declaration, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, 외부 corpus와 62개 성능·안전 gate를 담당한다. 현재 텍스트·Grid·Flex는 각각 20회 grouped round trip에서 부분 쓰기 0건과 byte restore 20/20을 기록했고, preview/apply p95는 각각 2.474/3.663ms, 5.051/3.559ms, 2.706/4.035ms다. 이 수치는 로컬 기계 메커니즘 지연이며 사용자 가치 A/B가 아니다.
+`npm run verify`는 typecheck, Vitest, package/demo build, production bundle 오염 검사, 설치 package MCP smoke, Chromium E2E, 고정 버전 pnpm 설치/빌드, 평가 gate와 제품 A/B 집계를 순서대로 실행한다. `npm run eval`은 그중 tarball 설치, 설치된 CLI와 Vite export/type declaration, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, 외부 corpus와 62개 성능·안전 gate를 담당한다. 현재 텍스트·Grid·Flex는 각각 20회 grouped round trip에서 부분 쓰기 0건과 byte restore 20/20을 기록했다. 현재 p95와 gate 결과는 실행할 때마다 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 갱신하며, 로컬 기계 지연을 사용자 가치 A/B로 해석하지 않는다.
 
 `test:e2e`는 React 18/Tailwind 3 Lumina와 React 19/Tailwind 4 Modern fixture에서 설정, 선택, literal text, Grid 행/custom breakpoint, Flex, runtime 조건 분기, DOM 미리보기, HMR, 원본 TSX source map, byte-for-byte undo와 모바일 panel을 검증한다. Modern fixture는 실행 전에 pnpm의 로컬 `file:` package 사본을 강제로 갱신하므로 이전 `dist`로 통과할 수 없다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록된다.
 

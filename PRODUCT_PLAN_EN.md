@@ -376,7 +376,7 @@ src/intent/
   mcp/               stdio tools, resources, and client setup
 ```
 
-The alpha stays in one package until a real external consumer needs independent versioning. Neither `vitePlugin.ts` nor MCP writes files directly; both call `IntentService`. Six MCP tools are exposed over local stdio only. Remote HTTP and OAuth servers are out of scope.
+The alpha stays in one package until a real external consumer needs independent versioning. Neither `vitePlugin.ts` nor MCP writes files directly; both call `IntentService`. Eight MCP tools are exposed over local stdio only. The Grid/Flex additions inspect and preview; existing shared tools still apply, verify, and undo. Remote HTTP and OAuth servers are out of scope.
 
 ### 10.2 Dependency Principles
 
@@ -666,6 +666,7 @@ The browser sends only the selected parent id and ordered direct-child ids. The 
 ```text
 selected grid DOM
   -> parent id + ordered direct-child ids
+  -> session-scoped selection file (shared GUI and MCP scope)
   -> server-side support inspection
   -> semantic layout request (breakpoint/row/column/start/span)
   -> guarded grouped className preview
@@ -685,7 +686,7 @@ selected grid DOM
 - p95 preview under 20ms and apply under 50ms for 3-8 children
 - at least 30% improvement in either time to first success or retry count against prompt-only held-out tasks
 
-On 2026-07-12, the local evaluator completed 20/20 eight-child Grid round trips including a custom breakpoint and row placement, with zero partial writes, byte restoration 20/20, and preview/apply p95 of 5.051/3.559ms. Mechanical safety and latency pass, but independent-user A/B still has zero samples, so drag reordering and cross-file transactions remain deferred.
+On 2026-07-12, the local evaluator completed 20/20 eight-child Grid round trips including a custom breakpoint and row placement, with zero partial writes and byte restoration 20/20. Current p95 and threshold results are regenerated in `reports/performance/spike-evaluation.json`. Mechanical safety and latency pass, but independent-user A/B still has zero samples, so drag reordering and cross-file transactions remain deferred.
 
 ### 14.6 Flex Layout Composer Design
 
@@ -693,7 +694,7 @@ Flex reads an existing base `flex`/`inline-flex` parent and direct children, the
 
 It uses the same Grid safety contract. Every participant must have a static single-line className in one file, and runtime direct-child ids must be unique. The server resolves responsive inheritance and token ranges, then validates the full source hash and every original range after an expiring preview before one file write. Axis-specific `gap-x`/`gap-y`, unknown plugin utilities, repeated ids, and cross-file children reject the entire operation.
 
-The composer does not expose `order` or drag reordering because visual order can diverge from keyboard and screen-reader order. On 2026-07-12, the evaluator completed 20/20 eight-child Flex round trips with zero partial writes, byte restoration 20/20, and preview/apply p95 of 2.706/4.035ms.
+The composer does not expose `order` or drag reordering because visual order can diverge from keyboard and screen-reader order. On 2026-07-12, the evaluator completed 20/20 eight-child Flex round trips with zero partial writes and byte restoration 20/20. The generated `reports/performance/spike-evaluation.json` is the single source for current latency values.
 
 ## 15. Productization Strategy
 
@@ -828,6 +829,7 @@ Can the architecture scale to large projects?
 - [x] guarded literal text edit plus MCP `content.text`
 - [x] project breakpoints and Grid row/start/span
 - [x] same-file static Flex Layout Composer
+- [x] MCP Grid/Flex inspect/preview using the recent browser scope plus shared apply/verify/undo
 - [x] session-scoped selection and multi-Vite graph merge fixture
 - [ ] 20 held-out tasks against prompt-only workflows (`product-ab-evaluation.json`: collecting, 0 paired tasks)
 - [x] opt-in legacy Agent HTTP/UI boundary and evaluator artifact isolation

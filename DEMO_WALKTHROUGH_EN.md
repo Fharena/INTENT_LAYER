@@ -135,9 +135,18 @@ npx intent-layer dev
 6. After approval, run `apply → verify` and confirm both source and rendered instances are verified.
 7. Restore the source with `intent_undo_edit`.
 
-The same six tools support guarded literal text. With a plain JSX text node selected, preview and apply `property: "content.text"`, verify source, then undo.
+Literal text uses the same shared apply, verify, and undo path. With a plain JSX text node selected, preview and apply `property: "content.text"`, verify source, then undo.
 
-For a quick packaged-stdio check, run `npm run build:package && npm run test:mcp-package`.
+Verify AI-driven Grid/Flex editing with this sequence:
+
+1. Select the layout parent or any direct/descendant element inside it in the browser.
+2. Call `intent_inspect_layout` and inspect the kind, parent, direct children, and breakpoint values derived from the live selection.
+3. Call `intent_preview_layout` with returned values and only the child ids being changed. Do not submit a parent id or full child scope.
+4. Review every className change in the grouped diff, then apply it with the existing `intent_apply_edit`.
+5. Confirm `source: verified` with `intent_verify_edit`. For grouped layout edits, `runtime: unavailable` means visual verification has not run.
+6. Use `intent_undo_edit` and confirm byte-for-byte restoration.
+
+For a quick packaged-stdio and eight-tool inventory check, run `npm run build:package && npm run test:mcp-package`.
 
 Run all browser regressions with `npm run test:e2e`. Lumina covers setup, asymmetric Grid editing, a custom breakpoint with row placement, HMR, exact undo, and mobile collapse/expand behavior. The Modern fixture covers literal text, Flex, conditional branches, swatches, the spacing stepper, source-free DOM preview, and the complete React 19/Tailwind 4 round trip.
 
@@ -149,6 +158,7 @@ Use this positioning:
 - Simple Tailwind token changes do not call an LLM.
 - Unsupported dynamic `className` expressions degrade to read-only handoff instead of unsafe patching.
 - AI clients never submit raw source offsets and use the same `IntentService` as the GUI.
+- AI layout scope is decided by the server from the recent browser selection, not constructed by the caller.
 - With a connected browser, verification checks rendered class tokens after HMR.
 - Every applied patch writes operation and intent diff artifacts for review.
 - Grid and Flex placement preview, apply, and undo multiple classNames as one guarded operation.
