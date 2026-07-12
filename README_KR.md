@@ -96,7 +96,7 @@ Grid Layout Composer는 같은 TSX 파일의 정적 `className`을 가진 기존
 
 브라우저에서 선택한 요소는 `intent://selection/current`로 공유된다. AI는 source offset이나 raw patch를 보내지 않고 의미 속성과 후보 값만 요청한다. apply는 expiring preview, source hash, 파일 잠금과 idempotency key를 다시 검증한다. 브라우저가 연결돼 있으면 HMR 뒤 모든 렌더 인스턴스에 새 class token이 존재하는지도 확인한다.
 
-`intent_verify_edit`에서 `runtime: unavailable`은 source가 온전하더라도 `ok: false`다. 브라우저를 확인하지 못한 상태를 시각 검증 성공으로 보고하지 않는다.
+`intent_verify_edit`에서 `runtime: unavailable`은 source가 온전하더라도 `ok: false`다. 다만 MCP tool execution error로 표시하지 않아 Agent가 성공한 source 검증과 누락된 시각 증거를 따로 처리할 수 있다. Source drift나 missing operation은 계속 tool error다.
 
 직접 지원하지 않는 구조 변경은 `handoff-required`로 내려가며, Agent가 일반 코드 편집으로 처리할 수 있도록 정확한 source pointer를 제공한다. 기존 Markdown queue와 HTTP 경로는 기본적으로 꺼져 있으며 설정의 고급 호환성 toggle을 명시적으로 켠 프로젝트에서만 열린다.
 

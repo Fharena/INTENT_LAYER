@@ -96,7 +96,7 @@ After enabling a provider in Settings and starting a new Codex or Claude session
 
 The browser selection is exposed as `intent://selection/current`. AI clients submit semantic properties and candidate values, never source offsets or raw patches. Apply revalidates an expiring preview, source hash, file lock, and idempotency key. With a connected browser, verify also checks that every rendered source instance contains the new class token after HMR.
 
-For `intent_verify_edit`, `runtime: unavailable` returns `ok: false` even when the source patch is intact. A disconnected browser is never reported as visual verification success.
+For `intent_verify_edit`, `runtime: unavailable` returns `ok: false` even when the source patch is intact, but it is not marked as an MCP tool execution error. This lets an agent handle successful source verification separately from missing visual evidence. Source drift and missing operations remain tool errors.
 
 Unsupported structural changes return `handoff-required` with an exact source pointer for normal agent editing. The Markdown queue and its HTTP routes are off by default and open only after enabling the advanced compatibility toggle.
 

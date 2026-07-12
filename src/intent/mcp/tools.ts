@@ -83,6 +83,11 @@ export function registerIntentTools(server: McpServer, service: IntentService): 
       inputSchema: verifyEditInput,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true }
     },
-    async ({ operationId }) => toolResult(await service.verifySemanticEditWithRuntime(operationId))
+    async ({ operationId }) => {
+      const result = await service.verifySemanticEditWithRuntime(operationId);
+      return toolResult(result, {
+        isError: result.source !== "verified" || result.runtime === "drifted"
+      });
+    }
   );
 }

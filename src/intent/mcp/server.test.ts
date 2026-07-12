@@ -93,7 +93,7 @@ describe("Intent Layer MCP", () => {
         source: "verified",
         runtime: "unavailable"
       });
-      expect(verified.isError).toBe(true);
+      expect(verified.isError).toBe(false);
 
       const resources = await client.listResources();
       expect(resources.resources.map((resource) => resource.uri)).toContain("intent://graph/current");
@@ -114,6 +114,13 @@ describe("Intent Layer MCP", () => {
       });
       expect(undone.structuredContent).toMatchObject({ ok: true, reverted: true });
       expect(fs.readFileSync(file, "utf8")).toBe(source);
+
+      const missing = await client.callTool({
+        name: "intent_verify_edit",
+        arguments: { operationId }
+      });
+      expect(missing.structuredContent).toMatchObject({ ok: false, source: "missing" });
+      expect(missing.isError).toBe(true);
     } finally {
       await client.close();
       await server.close();
