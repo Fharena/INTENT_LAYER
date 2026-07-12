@@ -56,6 +56,8 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 
 - Instrument only real intrinsic JSX nodes from the TypeScript AST.
 - Instrument only during Vite `serve`. Never write `data-intent-id` into source files or production bundles; `npm run test:production-build` is a release gate.
+- Preserve original TSX source maps through instrumentation and appended overlay code. The browser E2E must prove final `sourcesContent` equals the source file and contains neither injected ids nor the overlay bootstrap.
+- Keep the resolved project root's `.intent/**` and `.intent-agent-queue.json*` outside Vite file watching. Anchor patterns to that root; a global `**/.intent/**` also ignores test projects located under the repository's `.intent/tmp`. Runtime graph, operation, and queue writes must not trigger page reloads.
 - Validate source hash and old token during preview and again before apply.
 - Use minimal source ranges, never full-file code generation for a token change.
 - Persist the post-apply source hash with the operation.
@@ -66,6 +68,7 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Project theme candidates come from static Tailwind config and known CSS entry points. Never execute user config to discover candidates, and never duplicate candidate arrays into the intent graph; fetch them only for selected tokens.
 - Runtime selection is session-scoped. Preserve `sessionId` and freshness, merge graph entries by file ownership, and retain source-hash rejection as the final drift guard.
 - The npm compatibility fixture under `test-sites/modern-tailwind-v4` gates React 19, Vite 8, Tailwind CSS 4, package type declarations, production overlay stripping, and the browser edit round trip. Do not weaken it to make an unsupported package surface appear green.
+- The pinned pnpm gate must force-refresh the local `file:` dependency after `build:package`; a cached fixture copy is not evidence for the current source tree. Keep the pin on a non-vulnerable release and require a clean `npm audit`.
 
 ## Agent Boundary
 

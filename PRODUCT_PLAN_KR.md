@@ -194,7 +194,7 @@ v1.0은 "작지만 바로 출시 가능한 제품"이어야 한다.
 | 미검증 | 구조상 동작할 수 있어도 release contract로 주장하지 않는다. |
 | 의도적 제외 | 잘못 고칠 위험이나 범위 비용 때문에 read-only 또는 Agent handoff로 보낸다. |
 
-2026-07-12 기준 실제 검증 환경은 Node.js 20/22, npm, React 18.3.1/19.2.7, Vite 6.4.3/8.1.4, TypeScript 5.9.3, Tailwind CSS 3.4.19/4.3.2, Playwright Chromium 149다. Windows에서 전체 검증했고 GitHub Actions는 Ubuntu의 Node.js 20/22 경로를 갖는다. pnpm/yarn/bun, Firefox/WebKit, macOS는 아직 정식 지원이 아니다.
+2026-07-12 기준 실제 검증 환경은 Node.js 20/22, npm, pnpm 10.34.5, React 18.3.1/19.2.7, Vite 6.4.3/8.1.4, TypeScript 5.9.3, Tailwind CSS 3.4.19/4.3.2, Playwright Chromium 149다. Windows에서 전체 검증했고 GitHub Actions는 Ubuntu의 Node.js 20/22 경로를 갖는다. yarn/bun, Firefox/WebKit, macOS는 아직 정식 지원이 아니다.
 
 React API를 재구현하거나 Hook을 오버라이드하지 않는다. 이 제품의 지원 단위는 API 이름이 아니라 **브라우저 DOM으로 렌더되는 intrinsic JSX가 원본 JSX/TSX에 어떤 형태로 남아 있는가**다. [React API reference](https://react.dev/reference/react)의 Hook, Context, `memo`, `lazy`, transition API는 intrinsic JSX를 그대로 포함하면 일반 AST traversal을 통과하지만, runtime에서 만든 class 문자열은 추론하지 않는다.
 
@@ -210,7 +210,7 @@ React API를 재구현하거나 Hook을 오버라이드하지 않는다. 이 제
 | `cloneElement`, import 없는 전역 `React.createElement`, compiled `jsx/jsxs` 호출 | 의도적 제외 | provenance 또는 원본 source range가 불명확하다. |
 | React Server Components, server-only DOM, React Native | 미검증 | 현재 Vite browser DOM adapter의 범위 밖이다. |
 
-[Vite plugin contract](https://vite.dev/guide/api-plugin)의 `apply: "serve"` 경계를 사용한다. 계측과 overlay는 개발 서버에서만 동작하며 production bundle은 금지 marker 0건을 별도 gate로 검사한다. Vite transform 결과는 현재 source map을 반환하지 않으므로 debugger 위치 보존은 다음 안정화 작업이다.
+[Vite plugin contract](https://vite.dev/guide/api-plugin)의 `apply: "serve"` 경계를 사용한다. 계측과 overlay는 개발 서버에서만 동작하며 production bundle은 금지 marker 0건을 별도 gate로 검사한다. MagicString range insertion이 원본 TSX `sourcesContent`를 포함한 source map을 반환하고 Vite/React 후속 transform과 합성되는지 브라우저 E2E로 검사한다. `.intent/**`와 queue signal은 Vite watcher에서 제외해 graph/operation 기록이 page reload를 다시 일으키지 않게 한다.
 
 Tailwind CSS 3의 정적 config와 표준 utility를 검증했고, Tailwind CSS 4.3.2의 [`@theme` 변수](https://tailwindcss.com/docs/theme), `@tailwindcss/vite` dev/build, project color 후보, HMR patch와 undo를 React 19/Vite 8 브라우저 fixture로 검증했다. config 코드를 실행하거나 plugin utility 의미를 추론하지 않는다.
 
@@ -241,13 +241,12 @@ Grid Layout Composer는 일반 token dropdown보다 좁다. 같은 TSX 파일, �
 
 P0 안정화는 production 계측 제거, React factory provenance 확인, semantic flex 후보 분리, invalid negative utility 거부, 프로젝트 드라이브 temp 격리, 오래된 raw-TS bin 제거까지 완료했다.
 
-P1에서 runtime-active 조건 분기 필터, source apply 전 DOM-only preview, color swatch, 수치 순서 spacing stepper, React 19/Tailwind CSS 4/Vite 8 npm 호환성 gate를 완료했다. 남은 순서는 다음과 같다.
+P1에서 runtime-active 조건 분기 필터, source apply 전 DOM-only preview, color swatch, 수치 순서 spacing stepper, Vite source map/자체 artifact 감시 제외, React 19/Tailwind CSS 4/Vite 8의 npm·pnpm 호환성 gate를 완료했다. 남은 순서는 다음과 같다.
 
 1. 5개 이상 독립 저장소의 실제 작업으로 prompt-only 대비 첫 성공 시간과 patch 품질을 A/B 측정한다.
-2. Vite transform source map을 보존한다.
-3. pnpm 설치 fixture를 추가하고 yarn/bun은 수요가 확인될 때 검증한다.
-4. project breakpoint를 읽어 Grid의 xl/2xl/custom breakpoint와 row/row-span을 지원한다.
-5. 같은 안전 계약으로 Flex Layout Composer를 검증한다.
+2. project breakpoint를 읽어 Grid의 xl/2xl/custom breakpoint와 row/row-span을 지원한다.
+3. 같은 안전 계약으로 Flex Layout Composer를 검증한다.
+4. yarn/bun은 실제 사용자 수요가 확인될 때 설치 호환성을 검증한다.
 
 정리 원칙:
 
@@ -820,9 +819,9 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 - [x] dev-only instrumentation과 production bundle marker 0건 gate
 - [x] import provenance 기반 React `createElement` binding
 - [x] runtime-active conditional token 구분과 DOM-only candidate preview
-- [ ] Vite transform source map
+- [x] Vite transform source map과 원본 TSX 브라우저 합성 gate
 - [x] React 19/Tailwind 4/Vite 8 npm 호환성 fixture
-- [ ] pnpm 설치 호환성 fixture
+- [x] pnpm 10.34.5 fresh-install 호환성 fixture와 외부 pnpm 브라우저 round trip
 
 ### v1.0
 

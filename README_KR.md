@@ -64,9 +64,9 @@ Vite 설정 파일이 없지만 `@vitejs/plugin-react`가 설치된 일반 React
 
 | 영역 | 현재 검증된 범위 | 아직 정식 지원이 아닌 범위 |
 | --- | --- | --- |
-| Runtime | Node.js 20/22 CI, Windows 로컬 Node.js 22.16, npm | Node.js 18 이하, pnpm/yarn/bun 설치 흐름 |
+| Runtime | Node.js 20/22 CI, Windows 로컬 Node.js 22.16, npm, pnpm 10.34.5 설치/빌드 gate와 실제 pnpm 브라우저 round trip | Node.js 18 이하, yarn/bun 설치 흐름 |
 | React | React 18.3.1과 19.2.7, intrinsic JSX, fragment/conditional/map traversal, `forwardRef`, `Suspense`/portal 안 JSX, import 출처가 확인된 `createElement` | React Server Components, React Native, `cloneElement` source provenance |
-| Vite | Vite 6.4.3과 8.1.4 dev server, HMR, 정적 config 설정, production 계측 0건 검사 | SSR/library mode, 동적 config 자동 수정 |
+| Vite | Vite 6.4.3과 8.1.4 dev server, HMR, 원본 TSX로 합성되는 source map, `.intent` runtime artifact 감시 제외, 정적 config 설정, production 계측 0건 검사 | SSR/library mode, 동적 config 자동 수정 |
 | TypeScript | TypeScript 5.9.3 parser, TSX 전체 라운드트립, JSX/TSX 파일 계측 | 빌드된 JSX runtime 호출 분석, 임의 Babel/SWC transform 뒤 source 복원 |
 | Tailwind | Tailwind CSS 3.4.19와 4.3.2 브라우저 흐름, 정적 `tailwind.config.*`, v4 `@theme`, variant 보존 | 동적 config 실행, plugin utility의 임의 의미 추론 |
 | Tailwind v4 | `@tailwindcss/vite` 설치, `@theme` 색상 후보, DOM 미리보기, HMR patch와 정확한 undo | 외부 plugin이 만든 임의 utility 의미 추론 |
@@ -146,7 +146,7 @@ npm run test:mcp-package
 npm run verify
 ```
 
-`npm run verify`는 typecheck, Vitest, package/demo build, production bundle 오염 검사, 설치 package MCP smoke, Chromium E2E, 평가 gate와 제품 A/B 집계를 순서대로 실행한다. `npm run eval`은 그중 tarball 설치, 설치된 CLI와 Vite export/type declaration, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, Grid 그룹 apply/undo, 외부 corpus와 56개 성능·안전 gate를 담당한다. `test:e2e`는 React 18/Tailwind 3 Lumina와 React 19/Tailwind 4 Modern fixture에서 설정, 선택, Grid, runtime 조건 분기, DOM 미리보기, HMR, byte-for-byte undo와 모바일 panel을 검증한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록된다.
+`npm run verify`는 typecheck, Vitest, package/demo build, production bundle 오염 검사, 설치 package MCP smoke, Chromium E2E, 고정 버전 pnpm 설치/빌드, 평가 gate와 제품 A/B 집계를 순서대로 실행한다. `npm run eval`은 그중 tarball 설치, 설치된 CLI와 Vite export/type declaration, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, Grid 그룹 apply/undo, 외부 corpus와 56개 성능·안전 gate를 담당한다. `test:e2e`는 React 18/Tailwind 3 Lumina와 React 19/Tailwind 4 Modern fixture에서 설정, 선택, Grid, runtime 조건 분기, DOM 미리보기, HMR, 원본 TSX source map, byte-for-byte undo와 모바일 panel을 검증한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록된다.
 
 테스트용 OS temp와 Playwright browser는 저장소의 `.intent/tmp/` 아래에 둔다. Windows에서는 workspace와 다른 드라이브의 temp 경로를 거부하므로, D 드라이브 저장소 테스트가 다시 C 드라이브를 채우지 않는다.
 
@@ -155,6 +155,8 @@ npm run verify
 실제 브라우저 선택부터 stdio MCP 적용, 3개 재사용 인스턴스 검증과 undo까지의 기록은 [mcp-browser-roundtrip.json](./reports/performance/mcp-browser-roundtrip.json)에 있다.
 
 외부 corpus 수치는 **현재 allowlist가 관찰된 토큰 중 몇 개에 후보를 제공하는지**를 나타낸다. 실제 편집 성공률이나 패치 품질을 뜻하지 않는다. `npm run eval:product-ab`는 독립 사용자의 동일 작업 Intent Layer/프롬프트 조건을 쌍으로 집계한다. 현재 [product-ab-evaluation.json](./reports/performance/product-ab-evaluation.json)은 표본 0의 `collecting` 상태이며, 5개 저장소·20개 paired task 전에는 제품 우위를 주장하지 않는다.
+
+[외부 호환성 파일럿](./reports/performance/external-compatibility-pilot.json)은 고정된 공개 저장소 5개에서 193개 파일, 1,706개 binding, 가중 직접 편집 binding coverage 84.58%와 pnpm 브라우저 apply/undo 1회를 기록한다. 저자가 직접 실행했고 prompt-only 쌍이 없으므로 이 수치는 독립 A/B에 포함하지 않는다. 파일럿에서 발견한 Vite runtime artifact 재로딩과 pnpm 로컬 패키지 캐시 문제는 각각 회귀 테스트와 강제 재설치 gate로 고정했다.
 
 ## CLI
 

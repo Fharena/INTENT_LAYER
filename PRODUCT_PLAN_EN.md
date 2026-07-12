@@ -192,7 +192,7 @@ Support is reported at four evidence levels.
 | Unverified | It may work structurally, but it is not a release contract. |
 | Intentionally excluded | The case becomes read-only or an agent handoff because guessing would be unsafe or too broad. |
 
-The verified environment on 2026-07-12 is Node.js 20/22, npm, React 18.3.1/19.2.7, Vite 6.4.3/8.1.4, TypeScript 5.9.3, Tailwind CSS 3.4.19/4.3.2, and Playwright Chromium 149. Full verification ran on Windows, and GitHub Actions defines Ubuntu paths for Node.js 20/22. pnpm/yarn/bun, Firefox/WebKit, and macOS are not official support yet.
+The verified environment on 2026-07-12 is Node.js 20/22, npm, pnpm 10.34.5, React 18.3.1/19.2.7, Vite 6.4.3/8.1.4, TypeScript 5.9.3, Tailwind CSS 3.4.19/4.3.2, and Playwright Chromium 149. Full verification ran on Windows, and GitHub Actions defines Ubuntu paths for Node.js 20/22. yarn/bun, Firefox/WebKit, and macOS are not official support yet.
 
 Intent Layer does not reimplement React APIs or override Hooks. Its support unit is not an API name; it is **the source shape of intrinsic JSX that renders to browser DOM**. Hooks, Context, `memo`, `lazy`, and transition APIs in the [React API reference](https://react.dev/reference/react) pass through ordinary AST traversal when intrinsic JSX remains in project source. Class strings assembled only at runtime are not inferred.
 
@@ -208,7 +208,7 @@ Intent Layer does not reimplement React APIs or override Hooks. Its support unit
 | `cloneElement`, an unimported global `React.createElement`, or compiled `jsx/jsxs` calls | Intentionally excluded | Provenance or original source ranges are ambiguous. |
 | React Server Components, server-only DOM, and React Native | Unverified | They are outside the current Vite browser-DOM adapter. |
 
-The plugin uses the `apply: "serve"` boundary from the [Vite plugin contract](https://vite.dev/guide/api-plugin). Instrumentation and the overlay run only in the dev server, and a separate gate asserts zero forbidden markers in production bundles. The transform currently returns no source map, so debugger-position preservation is a remaining stabilization item.
+The plugin uses the `apply: "serve"` boundary from the [Vite plugin contract](https://vite.dev/guide/api-plugin). Instrumentation and the overlay run only in the dev server, and a separate gate asserts zero forbidden markers in production bundles. MagicString range insertion returns a map containing the original TSX `sourcesContent`; browser E2E verifies that Vite and React compose later transforms back to that source. `.intent/**` and the queue signal are excluded from Vite watching so graph and operation writes cannot trigger reload loops.
 
 Static Tailwind CSS 3 configuration and standard utilities are verified. A React 19/Vite 8 browser fixture verifies Tailwind CSS 4.3.2 [`@theme` variables](https://tailwindcss.com/docs/theme), `@tailwindcss/vite` development and production builds, project color candidates, HMR patching, and undo. The product never executes config code or guesses arbitrary plugin-utility semantics.
 
@@ -239,13 +239,12 @@ Current read-only or handoff cases:
 
 P0 stabilization is complete for production-instrumentation removal, React factory provenance, semantic flex candidate grouping, invalid negative-utility rejection, workspace-drive temp isolation, and removal of the stale raw-TypeScript bin.
 
-P1 has completed runtime-active conditional filtering, DOM-only preview before source apply, color swatches, numerically ordered spacing steppers, and an npm compatibility gate for React 19/Tailwind CSS 4/Vite 8. Remaining work proceeds in this order:
+P1 has completed runtime-active conditional filtering, DOM-only preview before source apply, color swatches, numerically ordered spacing steppers, Vite source maps and self-artifact watch exclusion, and npm/pnpm compatibility gates for React 19/Tailwind CSS 4/Vite 8. Remaining work proceeds in this order:
 
 1. Measure time-to-first-success and patch quality against prompt-only work on real tasks from at least five independent repositories.
-2. Preserve Vite transform source maps.
-3. Add a pnpm install fixture; validate yarn or bun only after demand is observed.
-4. Read project breakpoints and add xl/2xl/custom breakpoint plus row/row-span Grid editing.
-5. Validate a Flex Layout Composer under the same grouped-patch safety contract.
+2. Read project breakpoints and add xl/2xl/custom breakpoint plus row/row-span Grid editing.
+3. Validate a Flex Layout Composer under the same grouped-patch safety contract.
+4. Validate yarn or bun installation only after real user demand is observed.
 
 Cleanup rules:
 
@@ -818,9 +817,9 @@ Can the architecture scale to large projects?
 - [x] dev-only instrumentation and a zero-marker production-bundle gate
 - [x] import-provenance React `createElement` binding
 - [x] runtime-active conditional-token filtering and DOM-only candidate preview
-- [ ] Vite transform source maps
+- [x] Vite transform source maps with original-TSX browser composition gate
 - [x] React 19/Tailwind 4/Vite 8 npm compatibility fixture
-- [ ] pnpm install compatibility fixture
+- [x] pnpm 10.34.5 fresh-install fixture and external pnpm browser round trip
 
 ### v1.0
 

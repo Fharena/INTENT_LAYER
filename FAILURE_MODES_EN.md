@@ -263,3 +263,7 @@ The candidate provider reads static objects from `tailwind.config.{js,ts,cjs,mjs
 ## 16. Codex reads a selection from another browser tab
 
 Each Vite session keeps its own selection, while `intent://selection/current` returns the most recent selection among live sessions. Check `sessionId`, `selectedAt`, `freshUntil`, and `route` in the resource. Re-selecting the element in the intended tab updates current. An expired selection must not be treated as confirmed context.
+
+## 17. Vite repeatedly reloads when an `.intent` file changes
+
+The current plugin excludes only `.intent/**` and `.intent-agent-queue.json*` under the resolved Vite project root. If reloads continue, first verify that the installed `intent-layer` package contains the latest build and fully restart the dev server. Existing user `server.watch.ignored` patterns should merge with these entries; if another plugin later replaces `ignored`, add the same root-anchored patterns there. Do not use a global `**/.intent/**`: it also ignores an entire test project located under `.intent/tmp`. Neither this watcher setting nor overlay instrumentation enters production builds.

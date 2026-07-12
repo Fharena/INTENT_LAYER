@@ -64,9 +64,9 @@ When no Vite config exists but `@vitejs/plugin-react` is installed, it creates a
 
 | Area | Currently verified | Not yet officially supported |
 | --- | --- | --- |
-| Runtime | Node.js 20/22 CI, local Windows Node.js 22.16, npm | Node.js 18 or older, pnpm/yarn/bun install flows |
+| Runtime | Node.js 20/22 CI, local Windows Node.js 22.16, npm, a pinned pnpm 10.34.5 install/build gate, and one real pnpm browser round trip | Node.js 18 or older, yarn/bun install flows |
 | React | React 18.3.1 and 19.2.7, intrinsic JSX, fragment/conditional/map traversal, `forwardRef`, JSX inside `Suspense`/portals, provenance-checked imported `createElement` | React Server Components, React Native, `cloneElement` source provenance |
-| Vite | Vite 6.4.3 and 8.1.4 dev servers, HMR, static config setup, zero production instrumentation gate | SSR/library mode, automatic edits to dynamic configs |
+| Vite | Vite 6.4.3 and 8.1.4 dev servers, HMR, source maps composed to original TSX, `.intent` runtime-artifact watch exclusion, static config setup, and a zero-production-instrumentation gate | SSR/library mode, automatic edits to dynamic configs |
 | TypeScript | TypeScript 5.9.3 parser, TSX end-to-end flow, JSX/TSX instrumentation | Recovering source from compiled JSX runtime calls or arbitrary Babel/SWC output |
 | Tailwind | Tailwind CSS 3.4.19 and 4.3.2 browser flows, static `tailwind.config.*`, v4 `@theme`, variant preservation | Dynamic config execution and arbitrary plugin-utility semantics |
 | Tailwind v4 | `@tailwindcss/vite` install, `@theme` color candidates, DOM preview, HMR patch, and exact undo | Inferring arbitrary utilities created by external plugins |
@@ -146,7 +146,7 @@ Full release check:
 npm run verify
 ```
 
-`npm run verify` runs type checking, Vitest, package/demo builds, the production-bundle contamination gate, the installed-package MCP smoke test, Chromium E2E, evaluation gates, and product A/B aggregation. `npm run eval` is the subset covering tarball installation, installed CLI plus Vite exports/type declarations, real Vite HTTP preview/apply/revert, multi-file graph refresh, grouped Grid apply/undo, external corpora, and 56 performance and safety gates. `test:e2e` covers the React 18/Tailwind 3 Lumina site and the React 19/Tailwind 4 Modern fixture, including setup, selection, Grid editing, runtime branches, DOM preview, HMR, byte-for-byte undo, and the mobile panel. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
+`npm run verify` runs type checking, Vitest, package/demo builds, the production-bundle contamination gate, the installed-package MCP smoke test, Chromium E2E, a pinned pnpm install/build, evaluation gates, and product A/B aggregation. `npm run eval` is the subset covering tarball installation, installed CLI plus Vite exports/type declarations, real Vite HTTP preview/apply/revert, multi-file graph refresh, grouped Grid apply/undo, external corpora, and 56 performance and safety gates. `test:e2e` covers the React 18/Tailwind 3 Lumina site and the React 19/Tailwind 4 Modern fixture, including setup, selection, Grid editing, runtime branches, DOM preview, HMR, original-TSX source-map composition, byte-for-byte undo, and the mobile panel. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
 
 OS temp files and Playwright browsers used by tests live under the repository's `.intent/tmp/`. On Windows the wrapper rejects a temp path on a different drive, so testing a D-drive workspace cannot silently fill the C drive again.
 
@@ -155,6 +155,8 @@ OS temp files and Playwright browsers used by tests live under the repository's 
 The real browser-selection-to-stdio-MCP flow, including verification across three reused instances and undo, is recorded in [mcp-browser-roundtrip.json](./reports/performance/mcp-browser-roundtrip.json).
 
 External corpus percentages measure how many observed tokens receive a candidate from the current allowlist. They are not evidence of real edit success or patch quality. `npm run eval:product-ab` aggregates paired Intent Layer and prompt-only observations from independent users. [product-ab-evaluation.json](./reports/performance/product-ab-evaluation.json) is currently `collecting` with zero observations; no product-advantage claim is made before five repositories and twenty paired tasks.
+
+The [external compatibility pilot](./reports/performance/external-compatibility-pilot.json) records 193 files, 1,706 bindings, 84.58% weighted direct-edit binding coverage, and one pnpm browser apply/undo round trip across five pinned public repositories. It was operated by the author and has no prompt-only pair, so it is excluded from independent A/B evidence. The pilot exposed a Vite runtime-artifact reload loop and stale pnpm local-package caching; both now have release gates.
 
 ## CLI
 

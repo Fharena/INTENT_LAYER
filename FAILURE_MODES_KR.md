@@ -263,3 +263,7 @@ candidate provider는 `tailwind.config.{js,ts,cjs,mjs,cts,mts}`의 정적 object
 ## 16. Codex가 다른 브라우저 탭의 선택을 읽음
 
 각 Vite session의 선택은 따로 보존되지만 `intent://selection/current`는 살아 있는 session 중 가장 최근 선택을 반환한다. 응답의 `sessionId`, `selectedAt`, `freshUntil`, `route`를 확인한다. 의도한 탭에서 요소를 다시 선택하면 current가 갱신된다. 만료된 선택을 자동으로 성공 컨텍스트로 간주하지 않는다.
+
+## 17. `.intent` 파일이 바뀔 때 Vite가 반복해서 reload됨
+
+현재 plugin은 **해당 Vite project root 아래의** `.intent/**`와 `.intent-agent-queue.json*`만 watcher에서 자동 제외한다. 반복 reload가 보이면 설치된 `intent-layer`가 최신 빌드인지 먼저 확인하고 dev server를 완전히 재시작한다. 사용자 `server.watch.ignored` 규칙은 합쳐져야 하며, 다른 plugin이 `ignored`를 나중에 덮어쓰는 경우 그 plugin 설정에도 project-root 기준의 같은 두 패턴을 추가한다. 전역 `**/.intent/**`는 `.intent/tmp` 아래 테스트 프로젝트 전체까지 무시하므로 사용하지 않는다. production build에는 이 watcher 설정이나 overlay 계측이 들어가지 않는다.
