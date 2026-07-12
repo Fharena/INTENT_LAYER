@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-11T17:20:54.389Z",
+  "generatedAt": "2026-07-12T03:13:37.757Z",
   "scope": "Local mechanical latency only; this does not measure agent task success or product value.",
   "environment": {
     "platform": "win32",
@@ -17,43 +17,43 @@
   "latency": {
     "inspect": {
       "count": 200,
-      "minMs": 0.616,
-      "medianMs": 1.061,
-      "p95Ms": 1.714,
-      "maxMs": 4.973,
-      "meanMs": 1.137
+      "minMs": 1.742,
+      "medianMs": 2.291,
+      "p95Ms": 3.277,
+      "maxMs": 6.803,
+      "meanMs": 2.429
     },
     "preview": {
       "count": 100,
-      "minMs": 0.633,
-      "medianMs": 0.853,
-      "p95Ms": 1.207,
-      "maxMs": 1.804,
-      "meanMs": 0.903
+      "minMs": 1.906,
+      "medianMs": 2.291,
+      "p95Ms": 3.237,
+      "maxMs": 3.717,
+      "meanMs": 2.4
     },
     "apply": {
       "count": 20,
-      "minMs": 11.211,
-      "medianMs": 13.139,
-      "p95Ms": 17.572,
-      "maxMs": 18.36,
-      "meanMs": 13.627
+      "minMs": 11.665,
+      "medianMs": 12.659,
+      "p95Ms": 14.718,
+      "maxMs": 15.965,
+      "meanMs": 13.006
     },
     "undo": {
       "count": 20,
-      "minMs": 12.974,
-      "medianMs": 15.876,
-      "p95Ms": 18.561,
-      "maxMs": 18.788,
-      "meanMs": 16.136
+      "minMs": 13.727,
+      "medianMs": 15.917,
+      "p95Ms": 17.553,
+      "maxMs": 18.093,
+      "meanMs": 15.909
     },
     "mcpFind": {
       "count": 100,
-      "minMs": 0.486,
-      "medianMs": 0.67,
-      "p95Ms": 1.183,
-      "maxMs": 5.401,
-      "meanMs": 0.778
+      "minMs": 1.652,
+      "medianMs": 2.307,
+      "p95Ms": 3.293,
+      "maxMs": 6.181,
+      "meanMs": 2.445
     }
   },
   "safety": {
