@@ -36,6 +36,23 @@ async function pickModernCard(page: Page): Promise<void> {
   });
 }
 
+test("composes instrumentation through Vite back to the original TSX source", async ({ request }) => {
+  const response = await request.get("/src/App.tsx");
+  expect(response.ok()).toBe(true);
+  const transformed = await response.text();
+  const encodedMap = transformed.match(
+    /sourceMappingURL=data:application\/json;base64,([^\r\n]+)/
+  )?.[1];
+  expect(encodedMap).toBeTruthy();
+  const sourceMap = JSON.parse(Buffer.from(encodedMap!, "base64").toString("utf8")) as {
+    sourcesContent?: string[];
+  };
+
+  expect(sourceMap.sourcesContent).toContain(originalSource);
+  expect(sourceMap.sourcesContent?.join("\n")).not.toContain("data-intent-id");
+  expect(sourceMap.sourcesContent?.join("\n")).not.toContain("initIntentOverlay");
+});
+
 test.afterAll(() => {
   if (fs.readFileSync(appFile, "utf8") !== originalSource) fs.writeFileSync(appFile, originalSource, "utf8");
   if (originalSettings === null) fs.rmSync(settingsFile, { force: true });

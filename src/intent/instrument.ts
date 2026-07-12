@@ -1,4 +1,5 @@
 import path from "node:path";
+import MagicString, { type SourceMap } from "magic-string";
 import ts from "typescript";
 import { shortHash, sourceHash } from "./hash";
 import { tokenizeClassName } from "./tailwind";
@@ -34,8 +35,15 @@ interface ReactFactoryBindings {
 
 export interface InstrumentResult {
   code: string;
+  map: SourceMap | null;
   entries: IntentBinding[];
   transformMs: number;
+}
+
+interface InstrumentOptions {
+  append?: string;
+  prepend?: string;
+  sourceMap?: boolean;
 }
 
 function isIntrinsicTag(tagName: ts.JsxTagNameExpression): boolean {
@@ -183,17 +191,32 @@ function tokensFromSegments(segments: SourceSegment[]): { value: string; tokens:
   return { value: combinedValue, tokens };
 }
 
-function insertText(code: string, insertions: Insertion[]): string {
-  if (insertions.length === 0) return code;
-
-  const parts: string[] = [];
-  let cursor = 0;
-  for (const insertion of insertions) {
-    parts.push(code.slice(cursor, insertion.position), insertion.text);
-    cursor = insertion.position;
+function transformText(
+  code: string,
+  file: string,
+  insertions: Insertion[],
+  options: InstrumentOptions
+): { code: string; map: SourceMap | null } {
+  if (insertions.length === 0 && !options.prepend && !options.append) {
+    return { code, map: null };
   }
-  parts.push(code.slice(cursor));
-  return parts.join("");
+
+  const transformed = new MagicString(code, { filename: file });
+  for (const insertion of [...insertions].sort((left, right) => left.position - right.position)) {
+    transformed.appendLeft(insertion.position, insertion.text);
+  }
+  if (options.prepend) transformed.prepend(options.prepend);
+  if (options.append) transformed.append(options.append);
+  return {
+    code: transformed.toString(),
+    map: options.sourceMap
+      ? transformed.generateMap({
+          hires: "boundary",
+          includeContent: true,
+          source: file
+        })
+      : null
+  };
 }
 
 function getClassNameBinding(
@@ -324,10 +347,16 @@ export function instrumentSource(params: {
   code: string;
   file: string;
   rootDir: string;
+  options?: InstrumentOptions;
 }): InstrumentResult {
   const started = performance.now();
   if (!params.code.includes("className")) {
-    return { code: params.code, entries: [], transformMs: Number((performance.now() - started).toFixed(3)) };
+    const transformed = transformText(params.code, params.file, [], params.options ?? {});
+    return {
+      ...transformed,
+      entries: [],
+      transformMs: Number((performance.now() - started).toFixed(3))
+    };
   }
 
   const sourceFile = ts.createSourceFile(
@@ -441,7 +470,8 @@ export function instrumentSource(params: {
       }
     }
   }
+  const transformed = transformText(params.code, params.file, insertions, params.options ?? {});
   const transformMs = Number((performance.now() - started).toFixed(3));
   for (const entry of entries) entry.transformMs = transformMs;
-  return { code: insertText(params.code, insertions), entries, transformMs };
+  return { ...transformed, entries, transformMs };
 }

@@ -51,10 +51,11 @@
     "test:mcp-package": "node scripts/run-with-project-temp.mjs node scripts/smoke-mcp-package.mjs",
     "test:production-build": "node scripts/check-production-build.mjs",
     "test:compat-modern": "npm run build:package && npm run typecheck --prefix test-sites/modern-tailwind-v4 && npm run build --prefix test-sites/modern-tailwind-v4 && node scripts/check-production-build.mjs test-sites/modern-tailwind-v4/dist",
+    "test:compat-pnpm": "npm run build:package && pnpm --dir test-sites/modern-tailwind-v4 install --force --frozen-lockfile --ignore-scripts --store-dir ../../.intent/tmp/pnpm-store && pnpm --dir test-sites/modern-tailwind-v4 typecheck && pnpm --dir test-sites/modern-tailwind-v4 build && node scripts/check-production-build.mjs test-sites/modern-tailwind-v4/dist",
     "benchmark:mcp": "node scripts/run-with-project-temp.mjs tsx scripts/benchmark-mcp.ts",
     "eval:product-ab": "node scripts/run-with-project-temp.mjs tsx scripts/summarize-product-ab.ts",
     "test:watch": "node scripts/run-with-project-temp.mjs vitest",
-    "verify": "npm run typecheck && npm run test && npm run build && npm run test:production-build && npm run test:compat-modern && npm run test:mcp-package && npm run test:e2e && npm run eval && npm run eval:product-ab",
+    "verify": "npm run typecheck && npm run test && npm run build && npm run test:production-build && npm run test:compat-modern && npm run test:mcp-package && npm run test:e2e && npm run test:compat-pnpm && npm run eval && npm run eval:product-ab",
     "prepack": "npm run build:package",
     "intent": "tsx src/intent/cli.ts",
     "intent:init": "tsx src/intent/cli.ts init",
@@ -81,6 +82,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "magic-string": "^0.30.21",
     "typescript": "^5.7.2",
     "zod": "^4.4.3"
   },
@@ -95,6 +97,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "esbuild": "^0.28.1",
+    "pnpm": "10.34.5",
     "postcss": "^8.4.49",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

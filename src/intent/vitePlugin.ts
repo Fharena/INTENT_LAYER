@@ -4,7 +4,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import type { Plugin, ViteDevServer } from "vite";
+import { normalizePath, type Plugin, type ViteDevServer } from "vite";
 import { launchAgentTask } from "./agentLaunch";
 import { claimAgentTask, failAgentTask, refreshAgentQueueSignal } from "./agentQueue";
 import { recordAgentResult } from "./agentResult";
@@ -98,12 +98,17 @@ function invalidateChangedFile(server: ViteDevServer, file: string) {
   server.moduleGraph.invalidateAll();
 }
 
-function overlayBootstrapCode(code: string): string {
+function intentRuntimeWatchIgnorePatterns(rootDir: string): string[] {
+  const root = normalizePath(path.resolve(rootDir));
+  return [`${root}/.intent/**`, `${root}/.intent-agent-queue.json*`];
+}
+
+function overlayBootstrapSuffix(code: string): string {
   if (code.includes(virtualClientId)) {
-    return code;
+    return "";
   }
 
-  return `${code}
+  return `
 import { initIntentOverlay as __intentLayerInitOverlay } from "${virtualClientId}";
 if (import.meta.env.DEV) {
   __intentLayerInitOverlay();
@@ -142,7 +147,6 @@ function transpileVirtualModule(source: string, fileName: string): string {
 }
 
 export function intentLayerSpike(): Plugin {
-  let isServe = false;
   let runtimeSessionId: string | null = null;
   const runtimeToken = randomBytes(24).toString("hex");
   const graphStore = new IntentGraphStore(process.cwd());
@@ -154,9 +158,18 @@ export function intentLayerSpike(): Plugin {
     apply: "serve",
     enforce: "pre",
 
+    config(config) {
+      return {
+        server: {
+          watch: {
+            ignored: intentRuntimeWatchIgnorePatterns(config.root ?? process.cwd())
+          }
+        }
+      };
+    },
+
     configResolved(config) {
       graphStore.setRootDir(config.root);
-      isServe = config.command === "serve";
     },
 
     resolveId(id) {
@@ -190,7 +203,11 @@ export function intentLayerSpike(): Plugin {
       const result = instrumentSource({
         code,
         file: id,
-        rootDir: graphStore.rootDir
+        rootDir: graphStore.rootDir,
+        options: {
+          append: overlayBootstrapSuffix(code),
+          sourceMap: true
+        }
       });
 
       graphStore.replaceFileEntries(id, result.entries);
@@ -201,8 +218,8 @@ export function intentLayerSpike(): Plugin {
       }
 
       return {
-        code: isServe ? overlayBootstrapCode(result.code) : result.code,
-        map: null
+        code: result.code,
+        map: result.map
       };
     },
 

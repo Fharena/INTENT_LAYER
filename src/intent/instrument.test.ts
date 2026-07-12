@@ -24,6 +24,43 @@ describe("instrumentSource", () => {
     expect(result.code.match(/data-intent-id=/g)).toHaveLength(1);
   });
 
+  it("maps instrumentation and appended runtime code back to the original source", () => {
+    const code = `export function Card() { return <div className="p-4">Mapped</div>; }`;
+    const result = instrumentSource({
+      code,
+      file,
+      rootDir,
+      options: {
+        append: "\nconst __intentRuntime = true;\n",
+        sourceMap: true
+      }
+    });
+
+    expect(result.code).toContain('className="p-4" data-intent-id=');
+    expect(result.code).toContain("const __intentRuntime = true");
+    expect(result.map).not.toBeNull();
+    expect(result.map?.sources).toEqual([file.replace(/\\/g, "/")]);
+    expect(result.map?.sourcesContent).toEqual([code]);
+    expect(result.map?.mappings.length).toBeGreaterThan(0);
+  });
+
+  it("preserves appended runtime code and its source map without className bindings", () => {
+    const code = `export const answer = 42;`;
+    const result = instrumentSource({
+      code,
+      file,
+      rootDir,
+      options: {
+        append: "\nconst __intentRuntime = true;\n",
+        sourceMap: true
+      }
+    });
+
+    expect(result.entries).toEqual([]);
+    expect(result.code).toBe(`${code}\nconst __intentRuntime = true;\n`);
+    expect(result.map?.sourcesContent).toEqual([code]);
+  });
+
   it("maps static and cn literal tokens to exact source ranges", () => {
     const code = [
       "export const Card = ({ active }: { active: boolean }) => (",

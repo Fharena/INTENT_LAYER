@@ -1,5 +1,7 @@
 import type { IncomingMessage } from "node:http";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { mergeConfig, normalizePath, type ConfigEnv, type UserConfig } from "vite";
 import { intentLayer, intentMutationRequestAllowed, isLoopbackAddress } from "./vitePlugin";
 
 function request(address: string, token: string): IncomingMessage {
@@ -12,6 +14,25 @@ function request(address: string, token: string): IncomingMessage {
 describe("Intent Layer dev-server mutation boundary", () => {
   it("never instruments production builds", () => {
     expect(intentLayer().apply).toBe("serve");
+  });
+
+  it("keeps runtime artifacts out of the Vite watcher", async () => {
+    const hook = intentLayer().config;
+    expect(typeof hook).toBe("function");
+    const root = path.resolve(".intent/tmp/nested-project");
+    const expected = [
+      `${normalizePath(root)}/.intent/**`,
+      `${normalizePath(root)}/.intent-agent-queue.json*`
+    ];
+    const config = await (hook as (config: UserConfig, env: ConfigEnv) => UserConfig)(
+      { root },
+      { command: "serve", mode: "development", isSsrBuild: false, isPreview: false }
+    );
+    expect(config.server?.watch?.ignored).toEqual(expected);
+    expect(
+      mergeConfig({ server: { watch: { ignored: ["**/coverage/**"] } } }, config).server?.watch
+        ?.ignored
+    ).toEqual(["**/coverage/**", ...expected]);
   });
 
   it("accepts only a matching session token from loopback", () => {

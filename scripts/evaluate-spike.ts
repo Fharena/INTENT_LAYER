@@ -90,6 +90,12 @@ interface PackageSmokeResult {
   viteImportExitCode: number | null;
   installedViteTransformExitCode: number | null;
   installedViteDevServerExitCode: number | null;
+  installedViteDevServerFailure: {
+    error: string | null;
+    stdout: string;
+    stderr: string;
+    processStderr: string;
+  } | null;
   packageFileCount: number;
   packageSize: number;
   packageUnpackedSize: number;
@@ -592,6 +598,7 @@ function packageSmoke(): PackageSmokeResult {
       "let stdout = \"\";",
       "let stderr = \"\";",
       "let port = null;",
+      "let stage = \"initialize\";",
       "",
       "try {",
       "  if (!fs.existsSync(viteBin)) throw new Error(`Missing Vite bin: ${viteBin}`);",
@@ -635,6 +642,7 @@ function packageSmoke(): PackageSmokeResult {
       "  child.stderr.on(\"data\", (chunk) => { stderr += chunk; });",
       "",
       "  const baseUrl = `http://127.0.0.1:${port}`;",
+      "  stage = \"initial-module\";",
       "  const home = await waitFetch(`${baseUrl}/`, 10000);",
       "  const module = await waitFetch(`${baseUrl}/src/App.tsx`, 10000);",
       "  const graph = await waitFetch(`${baseUrl}/__intent/graph`, 10000);",
@@ -717,11 +725,13 @@ function packageSmoke(): PackageSmokeResult {
       "  const apply = await postJson(`${baseUrl}/__intent/apply`, patchRequest, intentToken);",
       "  const sourceAfterApply = fs.readFileSync(path.join(root, \"src\", \"App.tsx\"), \"utf8\");",
       "  const applyRefreshStarted = performance.now();",
+      "  stage = \"module-after-apply\";",
       "  const moduleAfterApply = await waitFetchMatch(",
       "    () => moduleRequestUrl(baseUrl, \"src/App.tsx\"),",
       "    10000,",
       "    (result) => result.status === 200 && result.body.includes(\"gap-6\")",
       "  );",
+      "  stage = \"graph-after-apply\";",
       "  const graphAfterApply = await waitFetchMatch(",
       "    `${baseUrl}/__intent/graph`,",
       "    10000,",
@@ -751,11 +761,13 @@ function packageSmoke(): PackageSmokeResult {
       "  const revertRefreshStarted = performance.now();",
       "  const revertLast = await postJson(`${baseUrl}/__intent/revert-last`, {}, intentToken);",
       "  const sourceAfterRevert = fs.readFileSync(path.join(root, \"src\", \"App.tsx\"), \"utf8\");",
+      "  stage = \"module-after-revert\";",
       "  const moduleAfterRevert = await waitFetchMatch(",
       "    () => moduleRequestUrl(baseUrl, \"src/App.tsx\"),",
       "    10000,",
       "    (result) => result.status === 200 && result.body.includes(\"gap-4\") && !result.body.includes(\"gap-6\")",
       "  );",
+      "  stage = \"graph-after-revert\";",
       "  const graphAfterRevert = await waitFetchMatch(",
       "    `${baseUrl}/__intent/graph`,",
       "    10000,",
@@ -797,6 +809,7 @@ function packageSmoke(): PackageSmokeResult {
       "      \"\"",
       "    ].join(\"\\n\")",
       "  );",
+      "  stage = \"multi-file-app\";",
       "  const multiApp = await waitFetchMatch(",
       "    () => moduleRequestUrl(baseUrl, \"src/App.tsx\"),",
       "    10000,",
@@ -817,11 +830,13 @@ function packageSmoke(): PackageSmokeResult {
       "    path.join(root, \"src\", \"Card.tsx\"),",
       "    fs.readFileSync(path.join(root, \"src\", \"Card.tsx\"), \"utf8\").replace(\"gap-4\", \"gap-8\")",
       "  );",
+      "  stage = \"multi-file-card-after-change\";",
       "  const multiCardAfterChange = await waitFetchMatch(",
       "    () => moduleRequestUrl(baseUrl, \"src/Card.tsx\"),",
       "    10000,",
       "    (result) => result.status === 200 && result.body.includes(\"gap-8\")",
       "  );",
+      "  stage = \"multi-file-graph-after-change\";",
       "  const multiGraphAfterChange = await waitFetchMatch(",
       "    `${baseUrl}/__intent/graph`,",
       "    10000,",
@@ -1049,7 +1064,7 @@ function packageSmoke(): PackageSmokeResult {
       "    multiFileRefreshTargetPass: false,",
       "    multiFileMs: 0,",
       "    ms: Number((performance.now() - started).toFixed(3)),",
-      "    error: error instanceof Error ? error.message : String(error),",
+      "    error: `${stage}: ${error instanceof Error ? error.message : String(error)}`,",
       "    stdout: truncate(stdout),",
       "    stderr: truncate(stderr)",
       "  }));",
@@ -1152,6 +1167,9 @@ function packageSmoke(): PackageSmokeResult {
     multiFileRefreshTargetPass?: boolean;
     multiFileMs?: number;
     ms?: number;
+    error?: string;
+    stdout?: string;
+    stderr?: string;
   } = {};
   try {
     installedViteDevServerReport = JSON.parse(installedViteDevServer.stdout) as typeof installedViteDevServerReport;
@@ -1175,6 +1193,15 @@ function packageSmoke(): PackageSmokeResult {
     viteImportExitCode: viteImport.exitCode,
     installedViteTransformExitCode: installedViteTransform.exitCode,
     installedViteDevServerExitCode: installedViteDevServer.exitCode,
+    installedViteDevServerFailure:
+      installedViteDevServer.exitCode === 0 && installedViteDevServerReport.ok === true
+        ? null
+        : {
+            error: installedViteDevServerReport.error ?? null,
+            stdout: installedViteDevServerReport.stdout ?? "",
+            stderr: installedViteDevServerReport.stderr ?? "",
+            processStderr: installedViteDevServer.stderr.slice(0, 1200)
+          },
     packageFileCount: files.length,
     packageSize: dryRunPackage?.size ?? 0,
     packageUnpackedSize: dryRunPackage?.unpackedSize ?? 0,
