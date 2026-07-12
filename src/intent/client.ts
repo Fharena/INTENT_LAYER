@@ -4,6 +4,15 @@ import type {
   AgentQueueSignal,
   ClientMetric,
   AgentTaskResult,
+  FlexLayoutAlign,
+  FlexLayoutAlignSelf,
+  FlexLayoutApplyRequest,
+  FlexLayoutDirection,
+  FlexLayoutEditRequest,
+  FlexLayoutInspection,
+  FlexLayoutJustify,
+  FlexLayoutPreviewResult,
+  FlexLayoutWrap,
   GridLayoutApplyRequest,
   GridLayoutBreakpoint,
   GridLayoutEditRequest,
@@ -12,6 +21,7 @@ import type {
   IntentBinding,
   IntentGraph,
   IntentRuntimeSelectionRequest,
+  LiteralTextEditRequest,
   PatchRequest,
   IntentToken,
   PatchApplyResult,
@@ -46,6 +56,9 @@ type SetupApplyResponse = IntentSetupResult | PatchFailure;
 type GridLayoutInspectResponse = GridLayoutInspection | PatchFailure;
 type GridLayoutPreviewResponse = GridLayoutPreviewResult | PatchFailure;
 type GridLayoutApplyResponse = (PatchApplyResult & { binding?: IntentBinding | null }) | PatchFailure;
+type FlexLayoutInspectResponse = FlexLayoutInspection | PatchFailure;
+type FlexLayoutPreviewResponse = FlexLayoutPreviewResult | PatchFailure;
+type FlexLayoutApplyResponse = (PatchApplyResult & { binding?: IntentBinding | null }) | PatchFailure;
 
 const intentSessionToken = "__INTENT_LAYER_SESSION_TOKEN__";
 
@@ -130,6 +143,14 @@ type TextKey =
   | "english"
   | "expand"
   | "expertTrace"
+  | "flexAlign"
+  | "flexComposer"
+  | "flexDirection"
+  | "flexGap"
+  | "flexJustify"
+  | "flexLoading"
+  | "flexSelf"
+  | "flexWrap"
   | "guardedHandoff"
   | "healthReady"
   | "healthSetup"
@@ -146,6 +167,8 @@ type TextKey =
   | "layoutLoading"
   | "layoutPreview"
   | "layoutRatio"
+  | "layoutRows"
+  | "layoutHeight"
   | "layoutSpan"
   | "legacyAgent"
   | "minimize"
@@ -183,6 +206,9 @@ type TextKey =
   | "sourceHash"
   | "sharedSource"
   | "singleRender"
+  | "textApply"
+  | "textEdit"
+  | "textPreview"
   | "undo"
   | "undoHistory"
   | "undoHistoryEmpty"
@@ -284,6 +310,14 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     english: "English",
     expand: "펼치기",
     expertTrace: "검증 근거",
+    flexAlign: "교차축 정렬",
+    flexComposer: "Flex 배치",
+    flexDirection: "방향",
+    flexGap: "간격",
+    flexJustify: "주축 정렬",
+    flexLoading: "Flex source binding을 확인하는 중입니다.",
+    flexSelf: "개별 정렬",
+    flexWrap: "줄바꿈",
     guardedHandoff: "Agent 전달",
     healthReady: "준비",
     healthSetup: "설정 필요",
@@ -300,6 +334,8 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     layoutLoading: "Grid source binding을 확인하는 중입니다.",
     layoutPreview: "배치 미리보기",
     layoutRatio: "비율",
+    layoutRows: "행 수",
+    layoutHeight: "높이",
     layoutSpan: "너비",
     legacyAgent: "기존 Agent 큐 (고급 호환성)",
     minimize: "접기",
@@ -337,6 +373,9 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     sourceHash: "Source hash",
     sharedSource: "공유 source",
     singleRender: "단일 렌더",
+    textApply: "텍스트 적용",
+    textEdit: "문구 수정",
+    textPreview: "텍스트 미리보기",
     undo: "되돌리기",
     undoHistory: "되돌리기 기록",
     undoHistoryEmpty: "대기 중인 되돌리기 작업이 없습니다.",
@@ -408,6 +447,14 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     english: "English",
     expand: "Expand",
     expertTrace: "Validation trace",
+    flexAlign: "Cross-axis alignment",
+    flexComposer: "Flex layout",
+    flexDirection: "Direction",
+    flexGap: "Gap",
+    flexJustify: "Main-axis alignment",
+    flexLoading: "Checking flex source bindings.",
+    flexSelf: "Item alignment",
+    flexWrap: "Wrapping",
     guardedHandoff: "Agent handoff",
     healthReady: "Ready",
     healthSetup: "Setup needed",
@@ -424,6 +471,8 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     layoutLoading: "Checking grid source bindings.",
     layoutPreview: "Preview layout",
     layoutRatio: "Ratio",
+    layoutRows: "Rows",
+    layoutHeight: "Height",
     layoutSpan: "Span",
     legacyAgent: "Legacy agent queue (advanced compatibility)",
     minimize: "Minimize",
@@ -461,6 +510,9 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     sourceHash: "Source hash",
     sharedSource: "Shared source",
     singleRender: "Single render",
+    textApply: "Apply text",
+    textEdit: "Edit copy",
+    textPreview: "Preview text",
     undo: "Undo",
     undoHistory: "Undo history",
     undoHistoryEmpty: "No pending undo operations.",
@@ -1279,6 +1331,58 @@ function ensureOverlayStyles() {
   background: linear-gradient(135deg, rgba(216, 154, 74, 0.56), rgba(193, 105, 181, 0.42)) !important;
 }
 
+.intent-layer-flex-controls {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.intent-layer-flex-control {
+  display: grid !important;
+  gap: 5px !important;
+}
+
+.intent-layer-flex-segmented {
+  display: grid !important;
+  gap: 4px !important;
+}
+
+[data-intent-overlay-root] .intent-layer-flex-segmented button {
+  min-width: 0 !important;
+  min-height: 27px !important;
+  padding: 4px !important;
+  overflow: hidden !important;
+  font-size: 9px !important;
+  text-overflow: ellipsis !important;
+}
+
+[data-intent-overlay-root] .intent-layer-flex-segmented button[data-intent-active="true"] {
+  border-color: rgba(98, 217, 255, 0.56) !important;
+  background: rgba(98, 217, 255, 0.12) !important;
+  color: #eefaff !important;
+}
+
+.intent-layer-flex-canvas {
+  display: flex !important;
+  min-height: 92px !important;
+  align-content: flex-start !important;
+  overflow: auto !important;
+}
+
+.intent-layer-flex-canvas .intent-layer-layout-block {
+  min-width: 38px !important;
+  min-height: 30px !important;
+  padding: 5px !important;
+}
+
+.intent-layer-flex-item-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(112px, 0.65fr) !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 7px 0 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
 .intent-layer-layout-items {
   display: grid !important;
 }
@@ -1879,7 +1983,7 @@ function createPanel() {
   return panel;
 }
 
-interface RuntimeGridScope {
+interface RuntimeLayoutScope {
   parentId: string;
   renderedParentCount: number;
   childIds: string[];
@@ -1894,14 +1998,25 @@ interface GridComposerItemState {
   span: number;
   startChanged: boolean;
   spanChanged: boolean;
+  rowStart: number | null;
+  rowSpan: number;
+  rowStartChanged: boolean;
+  rowSpanChanged: boolean;
 }
 
-function runtimeGridScope(selectedId: string): RuntimeGridScope | null {
+function runtimeLayoutScope(selectedId: string, expected: "grid" | "flex"): RuntimeLayoutScope | null {
   const selected = elementsForIntentId(selectedId)[0];
   if (!selected) return null;
   let parent: HTMLElement | null = selected;
   while (parent) {
-    if (parent.hasAttribute("data-intent-id") && window.getComputedStyle(parent).display === "grid") break;
+    if (parent.hasAttribute("data-intent-id")) {
+      const display = window.getComputedStyle(parent).display;
+      const kind = display === "grid" ? "grid" : display === "flex" || display === "inline-flex" ? "flex" : null;
+      if (kind) {
+        if (kind !== expected) return null;
+        break;
+      }
+    }
     parent = parent.parentElement;
   }
   const parentId = parent?.getAttribute("data-intent-id");
@@ -1916,7 +2031,8 @@ function runtimeGridScope(selectedId: string): RuntimeGridScope | null {
       continue;
     }
     childIds.push(id);
-    const text = child.textContent?.replace(/\s+/g, " ").trim() ?? "";
+    const visibleText = child instanceof HTMLElement ? child.innerText : "";
+    const text = (visibleText || child.textContent || "").replace(/\s+/g, " ").trim();
     labels.set(id, text ? `${index + 1}. ${text.slice(0, 28)}` : `${index + 1}. ${child.tagName.toLowerCase()}`);
   }
   return {
@@ -1929,10 +2045,111 @@ function runtimeGridScope(selectedId: string): RuntimeGridScope | null {
 }
 
 function viewportBreakpoint(): GridLayoutBreakpoint {
+  if (window.innerWidth >= 1536) return "2xl";
+  if (window.innerWidth >= 1280) return "xl";
   if (window.innerWidth >= 1024) return "lg";
   if (window.innerWidth >= 768) return "md";
   if (window.innerWidth >= 640) return "sm";
   return "base";
+}
+
+function renderLiteralTextEditor(
+  binding: IntentBinding,
+  setStatus: (message: string) => void,
+  rerender: (message: string, binding?: IntentBinding | null) => void
+): HTMLElement | null {
+  const sourceText = binding.textContent?.value;
+  if (!sourceText) return null;
+
+  const section = createSection(t("textEdit"), "ready");
+  section.dataset.intentTextEditor = "true";
+  const input = document.createElement("textarea");
+  input.value = sourceText;
+  input.rows = 2;
+  input.maxLength = 500;
+  input.dataset.intentTextInput = "true";
+  const actions = document.createElement("div");
+  actions.className = "intent-layer-layout-actions";
+  const preview = createButton(t("textPreview"));
+  preview.dataset.intentAction = "text-preview";
+  const apply = createButton(t("textApply"), "primary");
+  apply.dataset.intentAction = "text-apply";
+  apply.disabled = true;
+  const previewBox = document.createElement("pre");
+  previewBox.className = "intent-layer-code-box";
+  previewBox.style.display = "none";
+  let previewedText: string | null = null;
+
+  const requestBody = (): LiteralTextEditRequest => ({
+    id: binding.id,
+    oldText: sourceText,
+    nextText: input.value
+  });
+  input.addEventListener("input", () => {
+    if (input.value === previewedText) return;
+    previewedText = null;
+    apply.disabled = true;
+    previewBox.style.display = "none";
+  });
+  preview.addEventListener("click", async () => {
+    preview.disabled = true;
+    apply.disabled = true;
+    try {
+      const result = await requestJson<PreviewResponse>("/__intent/text/preview", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(requestBody())
+      });
+      previewBox.style.display = "block";
+      if (!result.ok) {
+        previewedText = null;
+        previewBox.textContent = result.detail ?? result.reason;
+        setStatus(`Text preview rejected: ${result.reason}`);
+        return;
+      }
+      previewedText = input.value;
+      apply.disabled = false;
+      previewBox.textContent = `- ${sourceText}\n+ ${input.value}`;
+      setStatus(
+        overlayLanguage === "ko"
+          ? "텍스트 source range를 확인했습니다."
+          : "Validated the literal text source range."
+      );
+    } catch (error) {
+      previewedText = null;
+      previewBox.style.display = "block";
+      previewBox.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+      setStatus(previewBox.textContent);
+    } finally {
+      preview.disabled = false;
+    }
+  });
+  apply.addEventListener("click", async () => {
+    if (previewedText === null || previewedText !== input.value) return;
+    apply.disabled = true;
+    try {
+      const result = await requestJson<PatchResponse>("/__intent/text/apply", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(requestBody())
+      });
+      if (!result.ok) {
+        setStatus(`Text apply rejected: ${result.reason}`);
+        return;
+      }
+      const message =
+        overlayLanguage === "ko"
+          ? "텍스트를 source에 적용했습니다."
+          : "Applied the literal text source patch.";
+      rerender(message, result.binding ?? binding);
+    } catch (error) {
+      setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
+    }
+  });
+
+  actions.append(preview, apply);
+  section.append(input, actions, previewBox);
+  return section;
 }
 
 function renderGridLayoutComposer(
@@ -1940,7 +2157,7 @@ function renderGridLayoutComposer(
   setStatus: (message: string) => void,
   rerender: (message: string, binding?: IntentBinding | null) => void
 ): HTMLElement | null {
-  const runtime = runtimeGridScope(binding.id);
+  const runtime = runtimeLayoutScope(binding.id, "grid");
   if (!runtime) return null;
 
   const section = createSection(t("layoutComposer"), "ready");
@@ -1954,22 +2171,26 @@ function renderGridLayoutComposer(
   body.appendChild(loading);
   section.append(tabs, body);
 
-  let activeBreakpoint = viewportBreakpoint();
+  let activeBreakpoint: GridLayoutBreakpoint = "base";
   let requestSequence = 0;
   const tabButtons = new Map<GridLayoutBreakpoint, HTMLButtonElement>();
-  for (const breakpoint of ["base", "sm", "md", "lg"] as GridLayoutBreakpoint[]) {
-    const button = createButton(breakpoint);
-    button.dataset.intentBreakpoint = breakpoint;
-    button.dataset.intentActive = breakpoint === activeBreakpoint ? "true" : "false";
-    button.title = breakpoint === "base" ? "Base styles" : `${breakpoint}: responsive styles`;
-    button.addEventListener("click", () => {
-      if (breakpoint === activeBreakpoint) return;
-      activeBreakpoint = breakpoint;
-      for (const [value, tab] of tabButtons) tab.dataset.intentActive = value === breakpoint ? "true" : "false";
-      void loadInspection();
-    });
-    tabButtons.set(breakpoint, button);
-    tabs.appendChild(button);
+  function renderBreakpointTabs(breakpoints: GridLayoutBreakpoint[]) {
+    tabs.innerHTML = "";
+    tabButtons.clear();
+    for (const breakpoint of breakpoints) {
+      const button = createButton(breakpoint);
+      button.dataset.intentBreakpoint = breakpoint;
+      button.dataset.intentActive = breakpoint === activeBreakpoint ? "true" : "false";
+      button.title = breakpoint === "base" ? "Base styles" : `${breakpoint}: responsive styles`;
+      button.addEventListener("click", () => {
+        if (breakpoint === activeBreakpoint) return;
+        activeBreakpoint = breakpoint;
+        for (const [value, tab] of tabButtons) tab.dataset.intentActive = value === breakpoint ? "true" : "false";
+        void loadInspection();
+      });
+      tabButtons.set(breakpoint, button);
+      tabs.appendChild(button);
+    }
   }
 
   async function loadInspection() {
@@ -1998,6 +2219,15 @@ function renderGridLayoutComposer(
         section.dataset.intentState = "warn";
         return;
       }
+      if (tabButtons.size === 0) {
+        const preferred = viewportBreakpoint();
+        activeBreakpoint = result.supportedBreakpoints.includes(preferred) ? preferred : "base";
+        renderBreakpointTabs(result.supportedBreakpoints);
+        if (activeBreakpoint !== result.breakpoint) {
+          void loadInspection();
+          return;
+        }
+      }
       section.dataset.intentState = "ready";
       renderEditor(result);
     } catch (error) {
@@ -2014,6 +2244,9 @@ function renderGridLayoutComposer(
     let columns = inspection.columns.effective ?? 1;
     const initialColumns = columns;
     let columnsChanged = false;
+    let rows = inspection.rows.effective ?? 1;
+    const initialRows = rows;
+    let rowsChanged = false;
     let columnTemplate = inspection.columnTemplate.effective
       ? [...inspection.columnTemplate.effective]
       : null;
@@ -2026,11 +2259,22 @@ function renderGridLayoutComposer(
       start: item.columnStart.effective,
       span: item.columnSpan.effective ?? 1,
       startChanged: false,
-      spanChanged: false
+      spanChanged: false,
+      rowStart: item.rowStart.effective,
+      rowSpan: item.rowSpan.effective ?? 1,
+      rowStartChanged: false,
+      rowSpanChanged: false
     }));
 
     function hasChanges() {
-      return columnsChanged || templateChanged || items.some((item) => item.startChanged || item.spanChanged);
+      return (
+        columnsChanged ||
+        rowsChanged ||
+        templateChanged ||
+        items.some(
+          (item) => item.startChanged || item.spanChanged || item.rowStartChanged || item.rowSpanChanged
+        )
+      );
     }
 
     function requestBody(): GridLayoutEditRequest {
@@ -2040,14 +2284,19 @@ function renderGridLayoutComposer(
         unboundChildCount: runtime!.unboundChildCount,
         breakpoint: inspection.breakpoint,
         items: items
-          .filter((item) => item.startChanged || item.spanChanged)
+          .filter(
+            (item) => item.startChanged || item.spanChanged || item.rowStartChanged || item.rowSpanChanged
+          )
           .map((item) => ({
             id: item.id,
             ...(item.startChanged ? { columnStart: item.start } : {}),
-            ...(item.spanChanged ? { columnSpan: item.span } : {})
+            ...(item.spanChanged ? { columnSpan: item.span } : {}),
+            ...(item.rowStartChanged ? { rowStart: item.rowStart } : {}),
+            ...(item.rowSpanChanged ? { rowSpan: item.rowSpan } : {})
           }))
       };
       if (columnsChanged) edit.columns = columns;
+      if (rowsChanged) edit.rows = rows;
       if (templateChanged) edit.columnTemplate = columnTemplate;
       return edit;
     }
@@ -2070,6 +2319,21 @@ function renderGridLayoutComposer(
     addColumn.disabled = Boolean(columnTemplate);
     stepper.append(removeColumn, columnOutput, addColumn);
     toolbar.append(columnsLabel, stepper);
+    const rowsLabel = document.createElement("span");
+    rowsLabel.className = "intent-layer-section-title";
+    rowsLabel.textContent = t("layoutRows");
+    const rowStepper = document.createElement("div");
+    rowStepper.className = "intent-layer-layout-stepper";
+    const removeRow = createButton("−");
+    removeRow.title = "Remove one grid row";
+    removeRow.dataset.intentAction = "grid-row-remove";
+    const rowOutput = document.createElement("output");
+    rowOutput.textContent = String(rows);
+    const addRow = createButton("+");
+    addRow.title = "Add one grid row";
+    addRow.dataset.intentAction = "grid-row-add";
+    rowStepper.append(removeRow, rowOutput, addRow);
+    toolbar.append(rowsLabel, rowStepper);
 
     const trackEditor = document.createElement("div");
     trackEditor.className = "intent-layer-layout-tracks";
@@ -2133,11 +2397,15 @@ function renderGridLayoutComposer(
       canvas.style.gridTemplateColumns = columnTemplate
         ? columnTemplate.map((weight) => `${weight}fr`).join(" ")
         : `repeat(${columns}, minmax(0, 1fr))`;
+      canvas.style.gridTemplateRows = `repeat(${rows}, minmax(34px, auto))`;
       items.forEach((item, index) => {
         const block = document.createElement("div");
         block.className = "intent-layer-layout-block";
         const safeSpan = Math.max(1, Math.min(item.span, columns));
         block.style.gridColumn = item.start === null ? `span ${safeSpan}` : `${item.start} / span ${safeSpan}`;
+        const safeRowSpan = Math.max(1, Math.min(item.rowSpan, rows));
+        block.style.gridRow =
+          item.rowStart === null ? `span ${safeRowSpan}` : `${item.rowStart} / span ${safeRowSpan}`;
         block.textContent = String(index + 1);
         block.title = `${item.label}; ${item.start === null ? "auto" : `column ${item.start}`}; span ${safeSpan}`;
         canvas.appendChild(block);
@@ -2153,6 +2421,19 @@ function renderGridLayoutComposer(
         if (item.start !== null && item.start + item.span - 1 > columns) {
           item.start = Math.max(1, columns - item.span + 1);
           item.startChanged = true;
+        }
+      }
+    }
+
+    function clampItemsToRows() {
+      for (const item of items) {
+        if (item.rowSpan > rows) {
+          item.rowSpan = rows;
+          item.rowSpanChanged = true;
+        }
+        if (item.rowStart !== null && item.rowStart + item.rowSpan - 1 > rows) {
+          item.rowStart = Math.max(1, rows - item.rowSpan + 1);
+          item.rowStartChanged = true;
         }
       }
     }
@@ -2173,6 +2454,21 @@ function renderGridLayoutComposer(
     removeColumn.addEventListener("click", () => changeColumns(-1));
     addColumn.addEventListener("click", () => changeColumns(1));
 
+    function changeRows(delta: number) {
+      const next = Math.max(1, Math.min(12, rows + delta));
+      if (next === rows) return;
+      rows = next;
+      rowsChanged = rows !== initialRows;
+      rowOutput.textContent = String(rows);
+      clampItemsToRows();
+      invalidatePreview();
+      drawCanvas();
+      renderItemControls();
+    }
+
+    removeRow.addEventListener("click", () => changeRows(-1));
+    addRow.addEventListener("click", () => changeRows(1));
+
     function renderItemControls() {
       itemList.innerHTML = "";
       items.forEach((item) => {
@@ -2186,23 +2482,48 @@ function renderGridLayoutComposer(
         name.title = item.label;
         const meta = document.createElement("span");
         meta.className = "intent-layer-layout-item-meta";
-        const auto = createButton("↺");
-        auto.className += " intent-layer-layout-auto";
-        auto.title = t("layoutAuto");
-        head.append(name, meta, auto);
+        const columnAuto = createButton("↺");
+        columnAuto.className += " intent-layer-layout-auto";
+        columnAuto.title = `${t("layoutAuto")} (${t("layoutColumns")})`;
+        head.append(name, meta, columnAuto);
         const strip = document.createElement("div");
         strip.className = "intent-layer-layout-strip";
+        strip.dataset.intentGridAxis = "column";
         strip.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
         const cells: HTMLButtonElement[] = [];
+        const rowHead = document.createElement("div");
+        rowHead.className = "intent-layer-layout-item-head";
+        const rowLabel = document.createElement("span");
+        rowLabel.className = "intent-layer-layout-item-name";
+        rowLabel.textContent = t("layoutRows");
+        const rowAuto = createButton("↺");
+        rowAuto.className += " intent-layer-layout-auto";
+        rowAuto.title = `${t("layoutAuto")} (${t("layoutRows")})`;
+        rowHead.append(rowLabel, rowAuto);
+        const rowStrip = document.createElement("div");
+        rowStrip.className = "intent-layer-layout-strip";
+        rowStrip.dataset.intentGridAxis = "row";
+        rowStrip.style.gridTemplateColumns = `repeat(${rows}, minmax(0, 1fr))`;
+        const rowCells: HTMLButtonElement[] = [];
         let dragStart: number | null = null;
+        let rowDragStart: number | null = null;
 
         function updateVisuals() {
-          meta.textContent = `${item.start === null ? "auto" : item.start} · ${t("layoutSpan")} ${item.span}`;
+          meta.textContent = `C ${item.start === null ? "auto" : item.start}×${item.span} · R ${
+            item.rowStart === null ? "auto" : item.rowStart
+          }×${item.rowSpan}`;
           cells.forEach((cell, index) => {
             const selected = item.start !== null && index + 1 >= item.start && index + 1 < item.start + item.span;
             const autoWidth = item.start === null && index < item.span;
             cell.dataset.intentSelected = selected ? "true" : "false";
             cell.dataset.intentAuto = autoWidth ? "true" : "false";
+          });
+          rowCells.forEach((cell, index) => {
+            const selected =
+              item.rowStart !== null && index + 1 >= item.rowStart && index + 1 < item.rowStart + item.rowSpan;
+            const autoHeight = item.rowStart === null && index < item.rowSpan;
+            cell.dataset.intentSelected = selected ? "true" : "false";
+            cell.dataset.intentAuto = autoHeight ? "true" : "false";
           });
           drawCanvas();
         }
@@ -2227,6 +2548,26 @@ function renderGridLayoutComposer(
           setRange(endIndex);
         });
 
+        function setRowRange(endIndex: number) {
+          if (rowDragStart === null) return;
+          const low = Math.min(rowDragStart, endIndex);
+          const high = Math.max(rowDragStart, endIndex);
+          item.rowStart = low + 1;
+          item.rowSpan = high - low + 1;
+          item.rowStartChanged = true;
+          item.rowSpanChanged = true;
+          invalidatePreview();
+          updateVisuals();
+        }
+
+        rowStrip.addEventListener("pointermove", (event) => {
+          if (rowDragStart === null) return;
+          const rect = rowStrip.getBoundingClientRect();
+          const position = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
+          const endIndex = Math.max(0, Math.min(rows - 1, Math.floor((position / rect.width) * rows)));
+          setRowRange(endIndex);
+        });
+
         for (let index = 0; index < columns; index += 1) {
           const cell = createButton("");
           cell.className += " intent-layer-layout-cell";
@@ -2247,14 +2588,40 @@ function renderGridLayoutComposer(
           cells.push(cell);
           strip.appendChild(cell);
         }
-        auto.addEventListener("click", () => {
+        for (let index = 0; index < rows; index += 1) {
+          const cell = createButton("");
+          cell.className += " intent-layer-layout-cell";
+          cell.title = `Row ${index + 1}`;
+          cell.setAttribute("aria-label", `Row ${index + 1}`);
+          cell.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            rowDragStart = index;
+            setRowRange(index);
+            window.addEventListener(
+              "pointerup",
+              () => {
+                rowDragStart = null;
+              },
+              { once: true }
+            );
+          });
+          rowCells.push(cell);
+          rowStrip.appendChild(cell);
+        }
+        columnAuto.addEventListener("click", () => {
           item.start = null;
           item.startChanged = true;
           invalidatePreview();
           updateVisuals();
         });
+        rowAuto.addEventListener("click", () => {
+          item.rowStart = null;
+          item.rowStartChanged = true;
+          invalidatePreview();
+          updateVisuals();
+        });
         updateVisuals();
-        wrapper.append(head, strip);
+        wrapper.append(head, strip, rowHead, rowStrip);
         itemList.appendChild(wrapper);
       });
     }
@@ -2331,6 +2698,432 @@ function renderGridLayoutComposer(
     body.append(toolbar);
     if (columnTemplate) body.append(trackEditor);
     body.append(canvas, itemList, actions, previewBox);
+  }
+
+  void loadInspection();
+  return section;
+}
+
+interface FlexComposerItemState {
+  id: string;
+  label: string;
+  alignSelf: FlexLayoutAlignSelf;
+  initialAlignSelf: FlexLayoutAlignSelf;
+}
+
+function flexJustifyCss(value: FlexLayoutJustify): string {
+  const values: Record<FlexLayoutJustify, string> = {
+    normal: "normal",
+    start: "flex-start",
+    end: "flex-end",
+    center: "center",
+    between: "space-between",
+    around: "space-around",
+    evenly: "space-evenly",
+    stretch: "stretch"
+  };
+  return values[value];
+}
+
+function flexAlignCss(value: FlexLayoutAlign | FlexLayoutAlignSelf): string {
+  if (value === "auto") return "auto";
+  if (value === "start") return "flex-start";
+  if (value === "end") return "flex-end";
+  return value;
+}
+
+function flexGapPreview(token: string): string {
+  const value = /^gap-(.+)$/.exec(token)?.[1] ?? "2";
+  if (value === "px") return "1px";
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? `${Math.min(32, Math.max(0, numeric * 2))}px` : "8px";
+}
+
+function renderFlexLayoutComposer(
+  binding: IntentBinding,
+  setStatus: (message: string) => void,
+  rerender: (message: string, binding?: IntentBinding | null) => void
+): HTMLElement | null {
+  const runtime = runtimeLayoutScope(binding.id, "flex");
+  if (!runtime) return null;
+
+  const section = createSection(t("flexComposer"), "ready");
+  section.dataset.intentFlexComposer = "true";
+  const tabs = document.createElement("div");
+  tabs.className = "intent-layer-layout-tabs";
+  const body = document.createElement("div");
+  body.className = "intent-layer-control-grid";
+  const loading = document.createElement("p");
+  loading.textContent = t("flexLoading");
+  body.appendChild(loading);
+  section.append(tabs, body);
+
+  let activeBreakpoint: GridLayoutBreakpoint = "base";
+  let requestSequence = 0;
+  const tabButtons = new Map<GridLayoutBreakpoint, HTMLButtonElement>();
+
+  function renderBreakpointTabs(breakpoints: GridLayoutBreakpoint[]) {
+    tabs.innerHTML = "";
+    tabButtons.clear();
+    for (const breakpoint of breakpoints) {
+      const button = createButton(breakpoint);
+      button.dataset.intentBreakpoint = breakpoint;
+      button.dataset.intentActive = breakpoint === activeBreakpoint ? "true" : "false";
+      button.title = breakpoint === "base" ? "Base styles" : `${breakpoint}: responsive styles`;
+      button.addEventListener("click", () => {
+        if (breakpoint === activeBreakpoint) return;
+        activeBreakpoint = breakpoint;
+        for (const [value, tab] of tabButtons) tab.dataset.intentActive = value === breakpoint ? "true" : "false";
+        void loadInspection();
+      });
+      tabButtons.set(breakpoint, button);
+      tabs.appendChild(button);
+    }
+  }
+
+  async function loadInspection() {
+    const sequence = ++requestSequence;
+    body.innerHTML = "";
+    const nextLoading = document.createElement("p");
+    nextLoading.textContent = t("flexLoading");
+    body.appendChild(nextLoading);
+    try {
+      const result = await requestJson<FlexLayoutInspectResponse>("/__intent/flex-layout/inspect", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          parentId: runtime!.parentId,
+          childIds: runtime!.childIds,
+          unboundChildCount: runtime!.unboundChildCount,
+          breakpoint: activeBreakpoint
+        })
+      });
+      if (sequence !== requestSequence || !body.isConnected) return;
+      if (!result.ok) {
+        body.innerHTML = "";
+        const blocked = document.createElement("p");
+        blocked.textContent = result.detail ?? result.reason;
+        body.appendChild(blocked);
+        section.dataset.intentState = "warn";
+        return;
+      }
+      if (tabButtons.size === 0) {
+        const preferred = viewportBreakpoint();
+        activeBreakpoint = result.supportedBreakpoints.includes(preferred) ? preferred : "base";
+        renderBreakpointTabs(result.supportedBreakpoints);
+        if (activeBreakpoint !== result.breakpoint) {
+          void loadInspection();
+          return;
+        }
+      }
+      section.dataset.intentState = "ready";
+      renderEditor(result);
+    } catch (error) {
+      if (sequence !== requestSequence || !body.isConnected) return;
+      body.innerHTML = "";
+      const failed = document.createElement("p");
+      failed.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+      body.appendChild(failed);
+      section.dataset.intentState = "warn";
+    }
+  }
+
+  function renderEditor(inspection: FlexLayoutInspection) {
+    let direction = inspection.direction.effective;
+    const initialDirection = direction;
+    let wrap = inspection.wrap.effective;
+    const initialWrap = wrap;
+    let justify = inspection.justify.effective;
+    const initialJustify = justify;
+    let align = inspection.align.effective;
+    const initialAlign = align;
+    let gap = inspection.gap.effective ?? "gap-0";
+    const initialGap = gap;
+    let previewId: string | null = null;
+    const items: FlexComposerItemState[] = inspection.items.map((item) => ({
+      id: item.id,
+      label: runtime!.labels.get(item.id) ?? item.label,
+      alignSelf: item.alignSelf.effective,
+      initialAlignSelf: item.alignSelf.effective
+    }));
+
+    body.innerHTML = "";
+    const controls = document.createElement("div");
+    controls.className = "intent-layer-flex-controls";
+    const canvas = document.createElement("div");
+    canvas.className = "intent-layer-layout-canvas intent-layer-flex-canvas";
+    canvas.dataset.intentFlexCanvas = "true";
+    const itemList = document.createElement("div");
+    itemList.className = "intent-layer-layout-items";
+    const actions = document.createElement("div");
+    actions.className = "intent-layer-layout-actions";
+    const preview = createButton(t("layoutPreview"));
+    preview.dataset.intentAction = "flex-preview";
+    const apply = createButton(t("layoutApply"), "primary");
+    apply.dataset.intentAction = "flex-apply";
+    apply.disabled = true;
+    const previewBox = document.createElement("pre");
+    previewBox.className = "intent-layer-code-box";
+    previewBox.style.display = "none";
+    actions.append(preview, apply);
+
+    function hasChanges(): boolean {
+      return (
+        direction !== initialDirection ||
+        wrap !== initialWrap ||
+        justify !== initialJustify ||
+        align !== initialAlign ||
+        gap !== initialGap ||
+        items.some((item) => item.alignSelf !== item.initialAlignSelf)
+      );
+    }
+
+    function invalidatePreview(): void {
+      previewId = null;
+      apply.disabled = true;
+      previewBox.style.display = "none";
+      previewBox.textContent = "";
+    }
+
+    function requestBody(): FlexLayoutEditRequest {
+      return {
+        parentId: runtime!.parentId,
+        childIds: runtime!.childIds,
+        unboundChildCount: runtime!.unboundChildCount,
+        breakpoint: inspection.breakpoint,
+        ...(direction !== initialDirection ? { direction } : {}),
+        ...(wrap !== initialWrap ? { wrap } : {}),
+        ...(justify !== initialJustify ? { justify } : {}),
+        ...(align !== initialAlign ? { align } : {}),
+        ...(gap !== initialGap ? { gap } : {}),
+        items: items
+          .filter((item) => item.alignSelf !== item.initialAlignSelf)
+          .map((item) => ({ id: item.id, alignSelf: item.alignSelf }))
+      };
+    }
+
+    function drawCanvas(): void {
+      canvas.innerHTML = "";
+      canvas.style.flexDirection = direction === "col" ? "column" : direction === "col-reverse" ? "column-reverse" : direction;
+      canvas.style.flexWrap = wrap;
+      canvas.style.justifyContent = flexJustifyCss(justify);
+      canvas.style.alignItems = flexAlignCss(align);
+      canvas.style.gap = flexGapPreview(gap);
+      items.forEach((item, index) => {
+        const block = document.createElement("div");
+        block.className = "intent-layer-layout-block";
+        block.style.alignSelf = flexAlignCss(item.alignSelf);
+        block.textContent = String(index + 1);
+        block.title = `${item.label}; self-${item.alignSelf}`;
+        canvas.appendChild(block);
+      });
+    }
+
+    function segmentedControl<T extends string>(
+      labelText: string,
+      property: string,
+      values: readonly T[],
+      current: () => T,
+      change: (value: T) => void
+    ): HTMLElement {
+      const wrapper = document.createElement("div");
+      wrapper.className = "intent-layer-flex-control";
+      const label = document.createElement("div");
+      label.className = "intent-layer-section-title";
+      label.textContent = labelText;
+      const group = document.createElement("div");
+      group.className = "intent-layer-flex-segmented";
+      group.style.gridTemplateColumns = `repeat(${values.length}, minmax(0, 1fr))`;
+      const buttons: HTMLButtonElement[] = [];
+      for (const value of values) {
+        const button = createButton(value);
+        button.dataset.intentFlexProperty = property;
+        button.dataset.intentFlexValue = value;
+        button.dataset.intentActive = value === current() ? "true" : "false";
+        button.addEventListener("click", () => {
+          change(value);
+          for (const candidate of buttons) {
+            candidate.dataset.intentActive = candidate.dataset.intentFlexValue === current() ? "true" : "false";
+          }
+          invalidatePreview();
+          drawCanvas();
+        });
+        buttons.push(button);
+        group.appendChild(button);
+      }
+      wrapper.append(label, group);
+      return wrapper;
+    }
+
+    function selectControl<T extends string>(
+      labelText: string,
+      property: string,
+      values: readonly T[],
+      current: T,
+      change: (value: T) => void
+    ): HTMLElement {
+      const label = document.createElement("label");
+      label.className = "intent-layer-flex-control";
+      const title = document.createElement("span");
+      title.textContent = labelText;
+      const select = document.createElement("select");
+      select.dataset.intentFlexProperty = property;
+      for (const value of values) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      }
+      select.value = current;
+      select.addEventListener("change", () => {
+        change(select.value as T);
+        invalidatePreview();
+        drawCanvas();
+      });
+      label.append(title, select);
+      return label;
+    }
+
+    controls.append(
+      segmentedControl(
+        t("flexDirection"),
+        "direction",
+        ["row", "row-reverse", "col", "col-reverse"] as const,
+        () => direction,
+        (value) => {
+          direction = value;
+        }
+      ),
+      segmentedControl(
+        t("flexWrap"),
+        "wrap",
+        ["nowrap", "wrap", "wrap-reverse"] as const,
+        () => wrap,
+        (value) => {
+          wrap = value;
+        }
+      ),
+      selectControl(
+        t("flexJustify"),
+        "justify",
+        ["normal", "start", "end", "center", "between", "around", "evenly", "stretch"] as const,
+        justify,
+        (value) => {
+          justify = value;
+        }
+      ),
+      selectControl(
+        t("flexAlign"),
+        "align",
+        ["start", "end", "center", "baseline", "stretch"] as const,
+        align,
+        (value) => {
+          align = value;
+        }
+      ),
+      selectControl(t("flexGap"), "gap", inspection.gap.candidates, gap, (value) => {
+        gap = value;
+      })
+    );
+
+    for (const item of items) {
+      const row = document.createElement("label");
+      row.className = "intent-layer-flex-item-row";
+      const name = document.createElement("span");
+      name.className = "intent-layer-layout-item-name";
+      name.textContent = item.label;
+      name.title = item.label;
+      const select = document.createElement("select");
+      select.dataset.intentFlexProperty = "align-self";
+      select.dataset.intentFlexItem = item.id;
+      for (const value of ["auto", "start", "end", "center", "stretch", "baseline"] as const) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      }
+      select.value = item.alignSelf;
+      select.title = t("flexSelf");
+      select.addEventListener("change", () => {
+        item.alignSelf = select.value as FlexLayoutAlignSelf;
+        invalidatePreview();
+        drawCanvas();
+      });
+      row.append(name, select);
+      itemList.appendChild(row);
+    }
+
+    preview.addEventListener("click", async () => {
+      if (!hasChanges()) {
+        setStatus(overlayLanguage === "ko" ? "바뀐 Flex 배치가 없습니다." : "The flex layout has not changed.");
+        return;
+      }
+      preview.disabled = true;
+      try {
+        const result = await requestJson<FlexLayoutPreviewResponse>("/__intent/flex-layout/preview", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(requestBody())
+        });
+        previewBox.style.display = "block";
+        if (!result.ok) {
+          previewId = null;
+          apply.disabled = true;
+          previewBox.textContent = result.detail ?? result.reason;
+          setStatus(`Flex preview rejected: ${result.reason}`);
+          return;
+        }
+        previewId = result.previewId;
+        apply.disabled = false;
+        const impact = runtime!.renderedParentCount > 1
+          ? ` · ${runtime!.renderedParentCount} ${overlayLanguage === "ko" ? "개 렌더" : "renders"}`
+          : "";
+        previewBox.textContent = [
+          `${t("layoutAffected")}: ${result.affectedBindingCount}${impact}`,
+          ...(result.patch.edits ?? []).flatMap((edit) => [`- ${edit.oldText}`, `+ ${edit.newText}`])
+        ].join("\n");
+        setStatus(
+          overlayLanguage === "ko"
+            ? `Flex 배치 ${result.affectedBindingCount}개 source 범위를 확인했습니다.`
+            : `Previewed ${result.affectedBindingCount} flex source ranges.`
+        );
+      } catch (error) {
+        previewId = null;
+        apply.disabled = true;
+        previewBox.style.display = "block";
+        previewBox.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+        setStatus(previewBox.textContent);
+      } finally {
+        preview.disabled = false;
+      }
+    });
+
+    apply.addEventListener("click", async () => {
+      if (!previewId) return;
+      apply.disabled = true;
+      const request: FlexLayoutApplyRequest = { previewId };
+      try {
+        const result = await requestJson<FlexLayoutApplyResponse>("/__intent/flex-layout/apply", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(request)
+        });
+        if (!result.ok) {
+          setStatus(`Flex apply rejected: ${result.reason}`);
+          return;
+        }
+        const message =
+          overlayLanguage === "ko"
+            ? `Flex 배치를 ${result.edits?.length ?? 0}개 source 범위에 적용했습니다.`
+            : `Applied the flex layout across ${result.edits?.length ?? 0} source ranges.`;
+        rerender(message, result.binding ?? binding);
+      } catch (error) {
+        setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
+      }
+    });
+
+    drawCanvas();
+    body.append(controls, canvas, itemList, actions, previewBox);
   }
 
   void loadInspection();
@@ -3587,8 +4380,27 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
       ? allEditableTokens.filter((item) => runtimeActiveTokens.has(item.token))
       : allEditableTokens;
     const runtimeInactiveCount = allEditableTokens.length - editableTokens.length;
-    renderWorkflowRail(content, binding, editableTokens.length);
+    renderWorkflowRail(content, binding, editableTokens.length + (binding.textContent ? 1 : 0));
     renderIntentMap(content, binding, effectiveScope, editableTokens);
+
+    const textEditor = renderLiteralTextEditor(
+      binding,
+      (message) => {
+        statusLine.textContent = message;
+      },
+      (message, refreshedBinding) => {
+        if (refreshedBinding) {
+          panel.dispatchEvent(
+            new CustomEvent<BindingRefreshDetail>("intent:binding-refreshed", {
+              detail: { binding: refreshedBinding, message }
+            })
+          );
+          return;
+        }
+        renderBinding(panel, binding, message, effectiveScope);
+      }
+    );
+    if (textEditor) content.appendChild(textEditor);
 
     const layoutComposer = renderGridLayoutComposer(
       binding,
@@ -3609,6 +4421,25 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
     );
     if (layoutComposer) content.appendChild(layoutComposer);
 
+    const flexComposer = renderFlexLayoutComposer(
+      binding,
+      (message) => {
+        statusLine.textContent = message;
+      },
+      (message, refreshedBinding) => {
+        if (refreshedBinding) {
+          panel.dispatchEvent(
+            new CustomEvent<BindingRefreshDetail>("intent:binding-refreshed", {
+              detail: { binding: refreshedBinding, message }
+            })
+          );
+          return;
+        }
+        renderBinding(panel, binding, message, effectiveScope);
+      }
+    );
+    if (flexComposer) content.appendChild(flexComposer);
+
     const directSection = createSection(t("directEdit"), editableTokens.length > 0 ? "ready" : "warn");
     if (runtimeInactiveCount > 0) {
       const runtimeNote = document.createElement("p");
@@ -3617,7 +4448,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
       runtimeNote.textContent = `${t("runtimeInactive")} (${runtimeInactiveCount})`;
       directSection.appendChild(runtimeNote);
     }
-    if (editableTokens.length === 0) {
+    if (editableTokens.length === 0 && !binding.textContent) {
       const empty = document.createElement("p");
       empty.textContent = t("inspectableNoTokens");
       empty.style.fontSize = "12px";

@@ -2,15 +2,18 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { IntentFileLockedError, withIntentFileLock, withIntentOperationLock } from "./fileLock";
+import { inspectFlexLayout as inspectFlexLayoutRequest, planFlexLayout } from "./flexLayout";
 import { IntentGraphStore } from "./graphStore";
 import { inspectGridLayout as inspectGridLayoutRequest, planGridLayout } from "./gridLayout";
 import { sourceHash } from "./hash";
 import { queryRuntimeToken } from "./runtimeSession";
 import {
+  applyLiteralTextPatch,
   applyTokenPatch,
   applyPlannedPatch,
   discardPendingUndo,
   pendingUndoStackFromOperationLog,
+  planLiteralTextPatch,
   planTokenPatch,
   readPatchConflictReport,
   recordPatchApplyInOperationLog,
@@ -21,10 +24,16 @@ import {
   revertTokenPatch,
   undoHistoryFromStack
 } from "./patch";
-import { describeProjectTailwindToken } from "./themeCandidates";
+import { describeProjectTailwindToken, projectCandidatesForToken, readProjectThemeCatalog } from "./themeCandidates";
 import type {
+  FlexLayoutApplyRequest,
+  FlexLayoutEditRequest,
+  FlexLayoutInspectRequest,
+  FlexLayoutInspection,
+  FlexLayoutPreviewResult,
   IntentBinding,
   IntentGraph,
+  LiteralTextEditRequest,
   GridLayoutApplyRequest,
   GridLayoutEditRequest,
   GridLayoutInspectRequest,
@@ -71,6 +80,7 @@ export interface IntentElementInspection {
       classNameKind: IntentBinding["className"]["kind"];
     };
     confidence: "high" | "read-only";
+    literalText: string | null;
     properties: IntentEditableProperty[];
   };
 }
@@ -122,12 +132,17 @@ export interface IntentVerifyResult {
 
 interface StoredPreview {
   preview: IntentSemanticPreview;
-  request: PatchRequest;
+  request: PatchRequest | LiteralTextEditRequest;
   expiresAtMs: number;
 }
 
 interface StoredGridLayoutPreview {
   preview: GridLayoutPreviewResult;
+  expiresAtMs: number;
+}
+
+interface StoredFlexLayoutPreview {
+  preview: FlexLayoutPreviewResult;
   expiresAtMs: number;
 }
 
@@ -163,6 +178,7 @@ export class IntentService {
   private undoStack: PatchApplyResult[] = [];
   private readonly previews = new Map<string, StoredPreview>();
   private readonly gridLayoutPreviews = new Map<string, StoredGridLayoutPreview>();
+  private readonly flexLayoutPreviews = new Map<string, StoredFlexLayoutPreview>();
   private readonly idempotentApplies = new Map<string, IdempotentApply>();
 
   constructor(readonly graphStore: IntentGraphStore, options: IntentServiceOptions = {}) {
@@ -194,6 +210,10 @@ export class IntentService {
     return planTokenPatch(this.getEntry(request.id), request);
   }
 
+  previewLiteralText(request: LiteralTextEditRequest): PatchPreview | PatchFailure {
+    return planLiteralTextPatch(this.getEntry(request.id), request);
+  }
+
   applyToken(request: PatchRequest): PatchApplyResult | PatchFailure {
     const entry = this.getEntry(request.id);
     if (!entry) return applyTokenPatch(this.rootDir, entry, request);
@@ -202,6 +222,28 @@ export class IntentService {
       return withIntentOperationLock(this.rootDir, () =>
         withIntentFileLock(this.rootDir, entry.file, () => {
           const result = applyTokenPatch(this.rootDir, this.getEntry(request.id), request);
+          if (result.ok) {
+            this.undoStack.push(result);
+            recordPatchApplyInOperationLog(this.rootDir, result);
+            this.refreshChangedFile(result.file);
+          }
+          return result;
+        })
+      );
+    } catch (error) {
+      if (error instanceof IntentFileLockedError) return failure(error.code, error.message, request.id);
+      throw error;
+    }
+  }
+
+  applyLiteralText(request: LiteralTextEditRequest): PatchApplyResult | PatchFailure {
+    const entry = this.getEntry(request.id);
+    if (!entry) return applyLiteralTextPatch(this.rootDir, entry, request);
+
+    try {
+      return withIntentOperationLock(this.rootDir, () =>
+        withIntentFileLock(this.rootDir, entry.file, () => {
+          const result = applyLiteralTextPatch(this.rootDir, this.getEntry(request.id), request);
           if (result.ok) {
             this.undoStack.push(result);
             recordPatchApplyInOperationLog(this.rootDir, result);
@@ -299,7 +341,14 @@ export class IntentService {
         if (query.tag && entry.tagName.toLowerCase() !== query.tag.toLowerCase()) return false;
         if (query.token && !entry.tokens.some((token) => token.token === query.token)) return false;
         if (!needle) return true;
-        return [entry.id, entry.relativeFile, entry.componentName ?? "", entry.tagName, entry.className.value]
+        return [
+          entry.id,
+          entry.relativeFile,
+          entry.componentName ?? "",
+          entry.tagName,
+          entry.className.value,
+          entry.textContent?.value ?? ""
+        ]
           .join(" ")
           .toLowerCase()
           .includes(needle);
@@ -333,6 +382,7 @@ export class IntentService {
           classNameKind: entry.className.kind
         },
         confidence: entry.className.kind === "read-only" ? "read-only" : "high",
+        literalText: entry.textContent?.value ?? null,
         properties: this.propertiesFor(entry)
       }
     };
@@ -340,12 +390,20 @@ export class IntentService {
 
   inspectGridLayout(request: GridLayoutInspectRequest): GridLayoutInspection | PatchFailure {
     this.refreshGraph();
-    return inspectGridLayoutRequest((id) => this.graphStore.get(id), request);
+    return inspectGridLayoutRequest(
+      (id) => this.graphStore.get(id),
+      request,
+      readProjectThemeCatalog(this.rootDir).breakpoints
+    );
   }
 
   previewGridLayout(request: GridLayoutEditRequest): GridLayoutPreviewResult | PatchFailure {
     this.refreshGraph();
-    const plan = planGridLayout((id) => this.graphStore.get(id), request);
+    const plan = planGridLayout(
+      (id) => this.graphStore.get(id),
+      request,
+      readProjectThemeCatalog(this.rootDir).breakpoints
+    );
     if (!plan.ok) return plan;
     const previewId = randomUUID();
     const expiresAtMs = Date.now() + this.previewTtlMs;
@@ -393,6 +451,73 @@ export class IntentService {
     }
   }
 
+  inspectFlexLayout(request: FlexLayoutInspectRequest): FlexLayoutInspection | PatchFailure {
+    this.refreshGraph();
+    const catalog = readProjectThemeCatalog(this.rootDir);
+    return inspectFlexLayoutRequest(
+      (id) => this.graphStore.get(id),
+      request,
+      catalog.breakpoints,
+      projectCandidatesForToken(this.rootDir, "gap-4")
+    );
+  }
+
+  previewFlexLayout(request: FlexLayoutEditRequest): FlexLayoutPreviewResult | PatchFailure {
+    this.refreshGraph();
+    const catalog = readProjectThemeCatalog(this.rootDir);
+    const plan = planFlexLayout(
+      (id) => this.graphStore.get(id),
+      request,
+      catalog.breakpoints,
+      projectCandidatesForToken(this.rootDir, "gap-4")
+    );
+    if (!plan.ok) return plan;
+    const previewId = randomUUID();
+    const expiresAtMs = Date.now() + this.previewTtlMs;
+    const preview: FlexLayoutPreviewResult = {
+      ok: true,
+      previewId,
+      expiresAt: new Date(expiresAtMs).toISOString(),
+      parentId: request.parentId,
+      breakpoint: request.breakpoint,
+      affectedBindingCount: plan.affectedBindingCount,
+      patch: plan.patch
+    };
+    this.flexLayoutPreviews.set(previewId, { preview, expiresAtMs });
+    this.prunePreviews();
+    return preview;
+  }
+
+  applyFlexLayout(request: FlexLayoutApplyRequest): PatchApplyResult | PatchFailure {
+    const stored = this.flexLayoutPreviews.get(request.previewId);
+    if (!stored) return failure("missing-preview", "Flex layout preview not found. Create a new preview before applying.");
+    if (Date.now() > stored.expiresAtMs) {
+      this.flexLayoutPreviews.delete(request.previewId);
+      return failure("preview-expired", "The flex layout preview expired. Create a new preview before applying.");
+    }
+
+    const patch = stored.preview.patch;
+    const entry = this.getEntry(stored.preview.parentId);
+    if (!entry) return failure("missing-binding", "The selected flex parent no longer has a source binding.");
+    try {
+      return withIntentOperationLock(this.rootDir, () =>
+        withIntentFileLock(this.rootDir, patch.file, () => {
+          const result = applyPlannedPatch(this.rootDir, this.getEntry(stored.preview.parentId), patch);
+          if (result.ok) {
+            this.undoStack.push(result);
+            recordPatchApplyInOperationLog(this.rootDir, result);
+            this.flexLayoutPreviews.delete(request.previewId);
+            this.refreshChangedFile(result.file);
+          }
+          return result;
+        })
+      );
+    } catch (error) {
+      if (error instanceof IntentFileLockedError) return failure(error.code, error.message, stored.preview.parentId);
+      throw error;
+    }
+  }
+
   previewSemanticEdit(
     request: IntentSemanticEditRequest
   ): IntentSemanticPreview | PatchFailure {
@@ -406,6 +531,37 @@ export class IntentService {
 
     const entry = this.getEntry(request.targetId);
     if (!entry) return failure("missing-binding", "No source binding exists for this intent id.", request.targetId);
+    if (request.property === "content.text") {
+      if (!entry.textContent) {
+        return failure(
+          "text-not-literal",
+          "This element does not have one directly editable literal JSX text child.",
+          request.targetId
+        );
+      }
+      const textRequest: LiteralTextEditRequest = {
+        id: request.targetId,
+        oldText: entry.textContent.value,
+        nextText: request.value
+      };
+      const patch = planLiteralTextPatch(entry, textRequest);
+      if (!patch.ok) return patch;
+      const previewId = randomUUID();
+      const expiresAtMs = Date.now() + this.previewTtlMs;
+      const preview: IntentSemanticPreview = {
+        ok: true,
+        previewId,
+        expiresAt: new Date(expiresAtMs).toISOString(),
+        targetId: request.targetId,
+        property: request.property,
+        value: request.value,
+        scope: "source",
+        patch
+      };
+      this.previews.set(previewId, { preview, request: textRequest, expiresAtMs });
+      this.prunePreviews();
+      return preview;
+    }
     const matches = this.propertiesFor(entry).filter(
       (property) =>
         property.property === request.property &&
@@ -506,7 +662,10 @@ export class IntentService {
       return failure("source-hash-mismatch", "The source changed after preview. Create a new preview.");
     }
 
-    const patch = this.applyToken(stored.request);
+    const patch =
+      stored.preview.patch.kind === "literal-text"
+        ? this.applyLiteralText(stored.request as LiteralTextEditRequest)
+        : this.applyToken(stored.request as PatchRequest);
     if (!patch.ok) return patch;
     const result: IntentSemanticApply = {
       ok: true,
@@ -557,6 +716,7 @@ export class IntentService {
     if (!sourceResult.ok) return sourceResult;
     const patch = this.operationFor(operationId);
     if (!patch) return sourceResult;
+    if (patch.kind === "literal-text") return sourceResult;
 
     const runtime = await queryRuntimeToken(this.rootDir, patch.id, patch.nextToken);
     return {
@@ -579,7 +739,7 @@ export class IntentService {
   }
 
   private propertiesFor(entry: IntentBinding): IntentEditableProperty[] {
-    return entry.tokens.flatMap((token) => {
+    const properties: IntentEditableProperty[] = entry.tokens.flatMap((token) => {
       if (!token.editable) return [];
       const semantic = describeProjectTailwindToken(this.rootDir, token.token);
       if (!semantic || semantic.candidates.length < 2) return [];
@@ -594,6 +754,17 @@ export class IntentService {
         }
       ];
     });
+    if (entry.textContent) {
+      properties.push({
+        property: "content.text",
+        value: entry.textContent.value,
+        token: entry.textContent.value,
+        variant: null,
+        category: "content",
+        candidates: []
+      });
+    }
+    return properties;
   }
 
   private refreshGraph(): void {
@@ -631,6 +802,9 @@ export class IntentService {
     }
     for (const [id, preview] of this.gridLayoutPreviews) {
       if (preview.expiresAtMs < now) this.gridLayoutPreviews.delete(id);
+    }
+    for (const [id, preview] of this.flexLayoutPreviews) {
+      if (preview.expiresAtMs < now) this.flexLayoutPreviews.delete(id);
     }
   }
 }

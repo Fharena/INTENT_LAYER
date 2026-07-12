@@ -53,6 +53,74 @@ test("composes instrumentation through Vite back to the original TSX source", as
   expect(sourceMap.sourcesContent?.join("\n")).not.toContain("initIntentOverlay");
 });
 
+test("previews, applies, and undoes one guarded literal JSX text edit", async ({ page }) => {
+  const originalText = "Edit the rendered branch, not a dormant token.";
+  const nextText = "Edit the active branch with confidence.";
+  expect(originalSource).toContain(`>${originalText}</h2>`);
+  await page.goto("/");
+  await ensureEditor(page);
+  const panel = page.locator("[data-intent-overlay-root]");
+  await panel.locator('[data-intent-action="pick"]').click();
+  await page.getByRole("heading", { name: originalText }).evaluate((element) => {
+    element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  });
+
+  const editor = panel.locator("[data-intent-text-editor]");
+  await expect(editor).toBeVisible();
+  const input = editor.locator("[data-intent-text-input]");
+  const apply = editor.locator('[data-intent-action="text-apply"]');
+  await input.fill(nextText);
+  await expect(apply).toBeDisabled();
+  await editor.locator('[data-intent-action="text-preview"]').click();
+  await expect(apply).toBeEnabled();
+  expect(fs.readFileSync(appFile, "utf8")).toBe(originalSource);
+
+  await apply.click();
+  await expect.poll(() => fs.readFileSync(appFile, "utf8")).toContain(`>${nextText}</h2>`);
+  await expect(page.getByRole("heading", { name: nextText })).toBeVisible();
+  await panel.locator('[data-intent-action="undo"]').click();
+  await expect.poll(() => fs.readFileSync(appFile, "utf8")).toBe(originalSource);
+  await expect(page.getByRole("heading", { name: originalText })).toBeVisible();
+});
+
+test("composes a same-file flex layout through visual controls and exact undo", async ({ page }) => {
+  expect(originalSource).toContain(
+    'className="mx-auto flex max-w-6xl items-center justify-between border-b border-zinc-800 pb-6"'
+  );
+  await page.goto("/");
+  await ensureEditor(page);
+  const panel = page.locator("[data-intent-overlay-root]");
+  await panel.locator('[data-intent-action="pick"]').click();
+  await page.locator("header").evaluate((element) => {
+    element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  });
+
+  const composer = panel.locator('[data-intent-flex-composer="true"]');
+  await expect(composer).toBeVisible();
+  await composer.locator('[data-intent-breakpoint="base"]').click();
+  await composer.locator('[data-intent-flex-property="direction"][data-intent-flex-value="col"]').click();
+  await composer.locator('[data-intent-flex-property="wrap"][data-intent-flex-value="wrap"]').click();
+  await composer.locator('select[data-intent-flex-property="justify"]').selectOption("center");
+  await composer.locator('select[data-intent-flex-property="align"]').selectOption("start");
+  await composer.locator('select[data-intent-flex-property="gap"]').selectOption("gap-6");
+  await composer.locator('select[data-intent-flex-property="align-self"]').first().selectOption("center");
+
+  await composer.locator('[data-intent-action="flex-preview"]').click();
+  const apply = composer.locator('[data-intent-action="flex-apply"]');
+  await expect(apply).toBeEnabled();
+  expect(fs.readFileSync(appFile, "utf8")).toBe(originalSource);
+  await apply.click();
+  await expect.poll(() => fs.readFileSync(appFile, "utf8")).toContain(
+    "items-start justify-center border-b border-zinc-800 pb-6 flex-col flex-wrap gap-6"
+  );
+  await expect.poll(() => fs.readFileSync(appFile, "utf8")).toContain('className="min-w-0 self-center"');
+  await expect(page.locator("header")).toHaveClass(/\bflex-col\b/);
+
+  await panel.locator('[data-intent-action="undo"]').click();
+  await expect.poll(() => fs.readFileSync(appFile, "utf8")).toBe(originalSource);
+  await expect(page.locator("header")).not.toHaveClass(/\bflex-col\b/);
+});
+
 test.afterAll(() => {
   if (fs.readFileSync(appFile, "utf8") !== originalSource) fs.writeFileSync(appFile, originalSource, "utf8");
   if (originalSettings === null) fs.rmSync(settingsFile, { force: true });

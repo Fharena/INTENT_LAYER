@@ -8,14 +8,17 @@ import { runCli } from "../src/intent/cli";
 import { readAgentTaskMetadata, refreshAgentQueueSignal } from "../src/intent/agentQueue";
 import { recordAgentResult } from "../src/intent/agentResult";
 import { createAgentTask } from "../src/intent/agentTask";
+import { planFlexLayout } from "../src/intent/flexLayout";
 import { planGridLayout } from "../src/intent/gridLayout";
 import { instrumentSource } from "../src/intent/instrument";
 import {
   applyPlannedPatch,
+  applyLiteralTextPatch,
   applyTokenPatch,
   discardPendingUndo,
   pendingUndoHistoryFromOperationLog,
   pendingUndoStackFromOperationLog,
+  planLiteralTextPatch,
   planTokenPatch,
   readPatchConflictReport,
   recordPatchApplyInOperationLog,
@@ -26,6 +29,7 @@ import {
 } from "../src/intent/patch";
 import type { IntentBinding, IntentGraph } from "../src/intent/types";
 import { intentLayer } from "../src/intent/vitePlugin";
+import { candidatesForToken } from "../src/intent/tailwind";
 
 const rootDir = process.cwd();
 const reportsDir = path.join(rootDir, "reports", "performance");
@@ -4611,7 +4615,7 @@ const gridLayoutPreviewTargetMs = 20;
 const gridLayoutApplyTargetMs = 50;
 const gridLayoutSource = [
   "export function Grid(){ return (",
-  '  <section className="grid grid-cols-12 gap-4">',
+  '  <section className="grid grid-cols-12 grid-rows-2 gap-4">',
   ...Array.from(
     { length: gridLayoutChildCount },
     (_, index) => `    <article className="col-span-1 rounded-lg bg-slate-${index + 1}00">${index + 1}</article>`
@@ -4642,14 +4646,17 @@ for (let iteration = 0; iteration < gridLayoutIterations; iteration += 1) {
   const plan = planGridLayout((id) => entries.get(id), {
     parentId: parent.id,
     childIds: children.map((child) => child.id),
-    breakpoint: "base",
+    breakpoint: "dashboard",
     columns: 10,
+    rows: 4,
     items: children.map((child, index) => ({
       id: child.id,
       columnStart: (index % 5) + 1,
-      columnSpan: index % 2 === 0 ? 2 : 1
+      columnSpan: index % 2 === 0 ? 2 : 1,
+      rowStart: Math.floor(index / 2) + 1,
+      rowSpan: 1
     }))
-  });
+  }, ["base", "sm", "md", "lg", "dashboard"]);
   if (!plan.ok) continue;
   gridLayoutPreviewTimes.push(plan.patch.metrics.previewMs);
   const applied = applyPlannedPatch(gridLayoutFixtureDir, parent, plan.patch);
@@ -4672,6 +4679,134 @@ for (let iteration = 0; iteration < gridLayoutIterations; iteration += 1) {
 const gridLayoutPreviewP95Ms = percentile(gridLayoutPreviewTimes, 0.95);
 const gridLayoutApplyP95Ms = percentile(gridLayoutApplyTimes, 0.95);
 const gridLayoutRevertP95Ms = percentile(gridLayoutRevertTimes, 0.95);
+
+const literalTextFixtureDir = path.join(tmpDir, "literal-text-benchmark");
+const literalTextFixtureFile = path.join(literalTextFixtureDir, "src", "Title.tsx");
+const literalTextIterations = 20;
+const literalTextPreviewTargetMs = 20;
+const literalTextApplyTargetMs = 50;
+const literalTextSource = 'export function Title(){ return <h2 className="font-semibold">Original heading</h2>; }';
+fs.rmSync(literalTextFixtureDir, { recursive: true, force: true });
+fs.mkdirSync(path.dirname(literalTextFixtureFile), { recursive: true });
+const literalTextPreviewTimes: number[] = [];
+const literalTextApplyTimes: number[] = [];
+const literalTextRevertTimes: number[] = [];
+let literalTextRoundTripsPassed = 0;
+let literalTextPartialWriteCount = 0;
+for (let iteration = 0; iteration < literalTextIterations; iteration += 1) {
+  fs.writeFileSync(literalTextFixtureFile, literalTextSource, "utf8");
+  const entry = instrumentSource({
+    code: literalTextSource,
+    file: literalTextFixtureFile,
+    rootDir: literalTextFixtureDir
+  }).entries[0];
+  if (!entry?.textContent) continue;
+  const request = {
+    id: entry.id,
+    oldText: "Original heading",
+    nextText: "Edited heading"
+  };
+  const preview = planLiteralTextPatch(entry, request);
+  if (!preview.ok) continue;
+  literalTextPreviewTimes.push(preview.metrics.previewMs);
+  const applied = applyLiteralTextPatch(literalTextFixtureDir, entry, request);
+  if (!applied.ok) {
+    if (fs.readFileSync(literalTextFixtureFile, "utf8") !== literalTextSource) literalTextPartialWriteCount += 1;
+    continue;
+  }
+  literalTextApplyTimes.push(applied.metrics.applyMs);
+  const changedSource = fs.readFileSync(literalTextFixtureFile, "utf8");
+  const currentEntry = instrumentSource({
+    code: changedSource,
+    file: literalTextFixtureFile,
+    rootDir: literalTextFixtureDir
+  }).entries.find((candidate) => candidate.id === entry.id);
+  const reverted = revertTokenPatch(literalTextFixtureDir, applied, currentEntry);
+  if (!reverted.ok) continue;
+  literalTextRevertTimes.push(reverted.metrics.revertMs);
+  if (fs.readFileSync(literalTextFixtureFile, "utf8") === literalTextSource) literalTextRoundTripsPassed += 1;
+}
+const literalTextPreviewP95Ms = percentile(literalTextPreviewTimes, 0.95);
+const literalTextApplyP95Ms = percentile(literalTextApplyTimes, 0.95);
+const literalTextRevertP95Ms = percentile(literalTextRevertTimes, 0.95);
+
+const flexLayoutFixtureDir = path.join(tmpDir, "flex-layout-benchmark");
+const flexLayoutFixtureFile = path.join(flexLayoutFixtureDir, "src", "Flex.tsx");
+const flexLayoutChildCount = 8;
+const flexLayoutIterations = 20;
+const flexLayoutPreviewTargetMs = 20;
+const flexLayoutApplyTargetMs = 50;
+const flexLayoutSource = [
+  "export function Flex(){ return (",
+  '  <section className="flex flex-row flex-nowrap items-stretch justify-start gap-4">',
+  ...Array.from(
+    { length: flexLayoutChildCount },
+    (_, index) => `    <article className="rounded-lg bg-slate-${index + 1}00">${index + 1}</article>`
+  ),
+  "  </section>",
+  "); }"
+].join("\n");
+fs.rmSync(flexLayoutFixtureDir, { recursive: true, force: true });
+fs.mkdirSync(path.dirname(flexLayoutFixtureFile), { recursive: true });
+const flexLayoutPreviewTimes: number[] = [];
+const flexLayoutApplyTimes: number[] = [];
+const flexLayoutRevertTimes: number[] = [];
+let flexLayoutRoundTripsPassed = 0;
+let flexLayoutPartialWriteCount = 0;
+for (let iteration = 0; iteration < flexLayoutIterations; iteration += 1) {
+  fs.writeFileSync(flexLayoutFixtureFile, flexLayoutSource, "utf8");
+  const instrumented = instrumentSource({
+    code: flexLayoutSource,
+    file: flexLayoutFixtureFile,
+    rootDir: flexLayoutFixtureDir
+  });
+  const parent = instrumented.entries.find((entry) => entry.tagName === "section");
+  const children = instrumented.entries
+    .filter((entry) => entry.tagName === "article")
+    .sort((left, right) => left.className.start - right.className.start);
+  if (!parent || children.length !== flexLayoutChildCount) continue;
+  const entries = new Map(instrumented.entries.map((entry) => [entry.id, entry]));
+  const plan = planFlexLayout(
+    (id) => entries.get(id),
+    {
+      parentId: parent.id,
+      childIds: children.map((child) => child.id),
+      breakpoint: "dashboard",
+      direction: "col",
+      wrap: "wrap",
+      justify: "between",
+      align: "center",
+      gap: "gap-6",
+      items: children.map((child, index) => ({
+        id: child.id,
+        alignSelf: index % 2 === 0 ? "start" : "end"
+      }))
+    },
+    ["base", "sm", "md", "lg", "dashboard"],
+    candidatesForToken("gap-4")
+  );
+  if (!plan.ok) continue;
+  flexLayoutPreviewTimes.push(plan.patch.metrics.previewMs);
+  const applied = applyPlannedPatch(flexLayoutFixtureDir, parent, plan.patch);
+  if (!applied.ok) {
+    if (fs.readFileSync(flexLayoutFixtureFile, "utf8") !== flexLayoutSource) flexLayoutPartialWriteCount += 1;
+    continue;
+  }
+  flexLayoutApplyTimes.push(applied.metrics.applyMs);
+  const changedSource = fs.readFileSync(flexLayoutFixtureFile, "utf8");
+  const currentParent = instrumentSource({
+    code: changedSource,
+    file: flexLayoutFixtureFile,
+    rootDir: flexLayoutFixtureDir
+  }).entries.find((entry) => entry.id === parent.id);
+  const reverted = revertTokenPatch(flexLayoutFixtureDir, applied, currentParent);
+  if (!reverted.ok) continue;
+  flexLayoutRevertTimes.push(reverted.metrics.revertMs);
+  if (fs.readFileSync(flexLayoutFixtureFile, "utf8") === flexLayoutSource) flexLayoutRoundTripsPassed += 1;
+}
+const flexLayoutPreviewP95Ms = percentile(flexLayoutPreviewTimes, 0.95);
+const flexLayoutApplyP95Ms = percentile(flexLayoutApplyTimes, 0.95);
+const flexLayoutRevertP95Ms = percentile(flexLayoutRevertTimes, 0.95);
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -4768,6 +4903,8 @@ const report = {
   gridLayout: {
     iterations: gridLayoutIterations,
     childCount: gridLayoutChildCount,
+    breakpoint: "dashboard",
+    editsRows: true,
     completedRoundTrips: gridLayoutRoundTripsPassed,
     partialWriteCount: gridLayoutPartialWriteCount,
     byteRestorePass: gridLayoutRoundTripsPassed === gridLayoutIterations,
@@ -4789,6 +4926,66 @@ const report = {
       samples: gridLayoutRevertTimes,
       averageMs: average(gridLayoutRevertTimes),
       p95Ms: gridLayoutRevertP95Ms
+    }
+  },
+  literalText: {
+    iterations: literalTextIterations,
+    completedRoundTrips: literalTextRoundTripsPassed,
+    partialWriteCount: literalTextPartialWriteCount,
+    byteRestorePass: literalTextRoundTripsPassed === literalTextIterations,
+    preview: {
+      samples: literalTextPreviewTimes,
+      averageMs: average(literalTextPreviewTimes),
+      p95Ms: literalTextPreviewP95Ms,
+      targetMs: literalTextPreviewTargetMs,
+      pass:
+        literalTextPreviewTimes.length === literalTextIterations &&
+        literalTextPreviewP95Ms <= literalTextPreviewTargetMs
+    },
+    apply: {
+      samples: literalTextApplyTimes,
+      averageMs: average(literalTextApplyTimes),
+      p95Ms: literalTextApplyP95Ms,
+      targetMs: literalTextApplyTargetMs,
+      pass:
+        literalTextApplyTimes.length === literalTextIterations &&
+        literalTextApplyP95Ms <= literalTextApplyTargetMs
+    },
+    revert: {
+      samples: literalTextRevertTimes,
+      averageMs: average(literalTextRevertTimes),
+      p95Ms: literalTextRevertP95Ms
+    }
+  },
+  flexLayout: {
+    iterations: flexLayoutIterations,
+    childCount: flexLayoutChildCount,
+    breakpoint: "dashboard",
+    completedRoundTrips: flexLayoutRoundTripsPassed,
+    partialWriteCount: flexLayoutPartialWriteCount,
+    byteRestorePass: flexLayoutRoundTripsPassed === flexLayoutIterations,
+    preview: {
+      samples: flexLayoutPreviewTimes,
+      averageMs: average(flexLayoutPreviewTimes),
+      p95Ms: flexLayoutPreviewP95Ms,
+      targetMs: flexLayoutPreviewTargetMs,
+      pass:
+        flexLayoutPreviewTimes.length === flexLayoutIterations &&
+        flexLayoutPreviewP95Ms <= flexLayoutPreviewTargetMs
+    },
+    apply: {
+      samples: flexLayoutApplyTimes,
+      averageMs: average(flexLayoutApplyTimes),
+      p95Ms: flexLayoutApplyP95Ms,
+      targetMs: flexLayoutApplyTargetMs,
+      pass:
+        flexLayoutApplyTimes.length === flexLayoutIterations &&
+        flexLayoutApplyP95Ms <= flexLayoutApplyTargetMs
+    },
+    revert: {
+      samples: flexLayoutRevertTimes,
+      averageMs: average(flexLayoutRevertTimes),
+      p95Ms: flexLayoutRevertP95Ms
     }
   },
   cli: {
@@ -5910,6 +6107,22 @@ const report = {
     gridLayoutApplyPerformancePass:
       gridLayoutApplyTimes.length === gridLayoutIterations &&
       gridLayoutApplyP95Ms <= gridLayoutApplyTargetMs,
+    literalTextSafetyPass:
+      literalTextRoundTripsPassed === literalTextIterations && literalTextPartialWriteCount === 0,
+    literalTextPreviewPerformancePass:
+      literalTextPreviewTimes.length === literalTextIterations &&
+      literalTextPreviewP95Ms <= literalTextPreviewTargetMs,
+    literalTextApplyPerformancePass:
+      literalTextApplyTimes.length === literalTextIterations &&
+      literalTextApplyP95Ms <= literalTextApplyTargetMs,
+    flexLayoutSafetyPass:
+      flexLayoutRoundTripsPassed === flexLayoutIterations && flexLayoutPartialWriteCount === 0,
+    flexLayoutPreviewPerformancePass:
+      flexLayoutPreviewTimes.length === flexLayoutIterations &&
+      flexLayoutPreviewP95Ms <= flexLayoutPreviewTargetMs,
+    flexLayoutApplyPerformancePass:
+      flexLayoutApplyTimes.length === flexLayoutIterations &&
+      flexLayoutApplyP95Ms <= flexLayoutApplyTargetMs,
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
     supportedDirectCoveragePass: corpus.editableCoverage.supportedDirect >= 0.5,

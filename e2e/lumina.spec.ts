@@ -66,6 +66,35 @@ test("configures, edits an asymmetric grid, verifies HMR, and undoes exactly", a
   await expect(colorRow.locator("option", { hasText: "bg-copper" })).toHaveCount(1);
 });
 
+test("uses a project breakpoint and edits grid rows through the visual composer", async ({ page }) => {
+  await page.goto("/");
+  await ensureEditor(page);
+  const panel = page.locator("[data-intent-overlay-root]");
+
+  await panel.locator('[data-intent-action="pick"]').click();
+  await page.locator("#top > div.grid").click({ position: { x: 220, y: 120 } });
+  const composer = panel.locator('[data-intent-layout-composer="true"]');
+  await expect(composer).toBeVisible();
+  const projectBreakpoint = composer.locator('[data-intent-breakpoint="dashboard"]');
+  await expect(projectBreakpoint).toBeVisible();
+  await projectBreakpoint.click();
+  await composer.locator('[data-intent-action="grid-row-add"]').click();
+  await composer.locator('[data-intent-action="grid-row-add"]').click();
+  await composer.locator('[data-intent-grid-axis="row"]').first().getByRole("button", { name: "Row 2" }).click();
+
+  await composer.locator('[data-intent-action="grid-preview"]').click();
+  const apply = composer.locator('[data-intent-action="grid-apply"]');
+  await expect(apply).toBeEnabled();
+  await apply.click();
+  await expect.poll(() => fs.readFileSync(appFile, "utf8")).toContain("dashboard:grid-rows-3");
+  await expect.poll(() => fs.readFileSync(appFile, "utf8")).toContain(
+    "dashboard:row-start-2 dashboard:row-span-1"
+  );
+
+  await panel.locator('[data-intent-action="undo"]').click();
+  await expect.poll(() => fs.readFileSync(appFile, "utf8")).toBe(originalSource);
+});
+
 test("keeps the overlay inside a mobile viewport and preserves collapse controls", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");

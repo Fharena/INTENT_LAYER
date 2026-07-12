@@ -72,6 +72,35 @@ describe("project Tailwind candidates", () => {
     expect(projectCandidatesForToken(root, "bg-canvas")).not.toContain("bg-[var(--unrelated-duration)]");
   });
 
+  it("reads and orders project breakpoints without executing Tailwind config", () => {
+    const root = workspace();
+    fs.writeFileSync(
+      path.join(root, "tailwind.config.ts"),
+      `export default { theme: { screens: {
+        mobile: "30rem",
+        desktop: { min: "90rem" },
+        print: { raw: "print" }
+      } } } satisfies Record<string, unknown>;\n`,
+      "utf8"
+    );
+
+    expect(readProjectThemeCatalog(root).breakpoints).toEqual(["base", "mobile", "desktop"]);
+  });
+
+  it("merges Tailwind v4 breakpoint variables with defaults and honors initial", () => {
+    const root = workspace();
+    fs.writeFileSync(
+      path.join(root, "src", "index.css"),
+      `@theme {
+        --breakpoint-sm: initial;
+        --breakpoint-3xl: 120rem;
+      }\n`,
+      "utf8"
+    );
+
+    expect(readProjectThemeCatalog(root).breakpoints).toEqual(["base", "md", "lg", "xl", "2xl", "3xl"]);
+  });
+
   it("publishes project candidates on source bindings", () => {
     const root = workspace();
     const file = path.join(root, "src", "App.tsx");

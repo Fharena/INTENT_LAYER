@@ -6,6 +6,7 @@ import { sourceHash } from "./hash";
 import type {
   IntentBinding,
   IntentToken,
+  LiteralTextEditRequest,
   PatchApplyResult,
   PatchConflictArtifact,
   PatchConflictReport,
@@ -14,6 +15,7 @@ import type {
   PatchConflictSummary,
   PatchFailure,
   PatchOperationLog,
+  PatchKind,
   PatchPreview,
   PatchRequest,
   PatchRevertResult,
@@ -130,6 +132,68 @@ export function planTokenPatch(
     metrics: {
       previewMs: Number((performance.now() - started).toFixed(3))
     }
+  };
+}
+
+function validLiteralText(value: string): boolean {
+  return (
+    value.length > 0 &&
+    value.length <= 500 &&
+    value.trim() === value &&
+    !/[\r\n<>{}&]/.test(value)
+  );
+}
+
+export function planLiteralTextPatch(
+  entry: IntentBinding | undefined,
+  request: LiteralTextEditRequest
+): PatchPreview | PatchFailure {
+  const started = performance.now();
+  const failed = (reason: string, detail: string): PatchFailure => ({
+    ok: false,
+    id: request.id,
+    reason,
+    detail,
+    metrics: { previewMs: Number((performance.now() - started).toFixed(3)) }
+  });
+  if (!entry) return failed("missing-binding", "No source binding exists for the selected intent id.");
+  if (!entry.textContent) {
+    return failed(
+      "text-not-literal",
+      "Direct text editing requires one plain, single-line JSX text child with no expressions or nested elements."
+    );
+  }
+  if (!validLiteralText(request.nextText)) {
+    return failed(
+      "invalid-literal-text",
+      "Text must be 1-500 trimmed characters without line breaks, JSX delimiters, braces, or entities."
+    );
+  }
+  if (request.nextText === request.oldText) return failed("no-change", "The requested text already matches source.");
+  const source = fs.readFileSync(entry.file, "utf8");
+  const currentHash = sourceHash(source);
+  if (currentHash !== entry.sourceHash) {
+    return failed("source-hash-mismatch", "The file changed after selection. Re-select the element.");
+  }
+  const binding = entry.textContent;
+  if (request.oldText !== binding.value || source.slice(binding.start, binding.end) !== request.oldText) {
+    return failed("old-text-mismatch", "The stored JSX text no longer matches the requested original text.");
+  }
+  const patchedSource = `${source.slice(0, binding.start)}${request.nextText}${source.slice(binding.end)}`;
+  return {
+    ok: true,
+    kind: "literal-text",
+    id: entry.id,
+    file: entry.file,
+    relativeFile: entry.relativeFile,
+    oldToken: request.oldText,
+    nextToken: request.nextText,
+    range: { start: binding.start, end: binding.end },
+    before: lineSnippet(source, binding.start),
+    after: lineSnippet(patchedSource, binding.start),
+    sourceHashBefore: currentHash,
+    sourceHashAfter: sourceHash(patchedSource),
+    metrics: { previewMs: Number((performance.now() - started).toFixed(3)) }
   };
 }
 
@@ -314,7 +378,7 @@ function writeIntentArtifacts(params: {
   rootDir: string;
   entry: IntentBinding;
   preview: PatchPreview;
-  kind?: "tailwind-token-replace" | "tailwind-token-revert" | "grid-layout" | "grid-layout-revert";
+  kind?: PatchKind;
 }) {
   const { rootDir, entry, preview, kind = "tailwind-token-replace" } = params;
   const timestamp = `${timestampSlug()}_${randomUUID()}`;
@@ -854,6 +918,22 @@ export function applyTokenPatch(
     : result;
 }
 
+export function applyLiteralTextPatch(
+  rootDir: string,
+  entry: IntentBinding | undefined,
+  request: LiteralTextEditRequest
+): PatchApplyResult | PatchFailure {
+  const preview = planLiteralTextPatch(entry, request);
+  return preview.ok ? applyPlannedPatch(rootDir, entry, preview) : preview;
+}
+
+function revertKind(kind: PatchPreview["kind"]): PatchKind {
+  if (kind === "literal-text") return "literal-text-revert";
+  if (kind === "grid-layout") return "grid-layout-revert";
+  if (kind === "flex-layout") return "flex-layout-revert";
+  return "tailwind-token-revert";
+}
+
 function revertGroupedPatch(
   rootDir: string,
   lastPatch: PatchApplyResult,
@@ -862,6 +942,7 @@ function revertGroupedPatch(
   currentHash: string,
   started: number
 ): PatchRevertResult | PatchFailure {
+  const inverseKind = revertKind(lastPatch.kind);
   const edits = lastPatch.edits ?? [];
   const mismatch = edits.find(
     (edit) => source.slice(edit.appliedRange.start, edit.appliedRange.end) !== edit.newText
@@ -910,7 +991,7 @@ function revertGroupedPatch(
   fs.writeFileSync(lastPatch.file, revertedSource, "utf8");
   const preview: PatchPreview = {
     ok: true,
-    kind: "grid-layout-revert",
+    kind: inverseKind,
     id: lastPatch.id,
     file: lastPatch.file,
     relativeFile: lastPatch.relativeFile,
@@ -924,12 +1005,12 @@ function revertGroupedPatch(
     edits: inverseEdits,
     metrics: { previewMs: 0 }
   };
-  const artifacts = writeIntentArtifacts({ rootDir, entry, preview, kind: "grid-layout-revert" });
+  const artifacts = writeIntentArtifacts({ rootDir, entry, preview, kind: inverseKind });
 
   return {
     ok: true,
     reverted: true,
-    kind: "grid-layout-revert",
+    kind: inverseKind,
     id: lastPatch.id,
     file: lastPatch.file,
     relativeFile: lastPatch.relativeFile,
@@ -1037,7 +1118,7 @@ export function revertTokenPatch(
 
   const preview: PatchPreview = {
     ok: true,
-    kind: "tailwind-token-revert",
+    kind: revertKind(lastPatch.kind),
     id: lastPatch.id,
     file: lastPatch.file,
     relativeFile: lastPatch.relativeFile,
@@ -1059,13 +1140,13 @@ export function revertTokenPatch(
     rootDir,
     entry,
     preview,
-    kind: "tailwind-token-revert"
+    kind: preview.kind
   });
 
   return {
     ok: true,
     reverted: true,
-    kind: "tailwind-token-revert",
+    kind: preview.kind,
     id: lastPatch.id,
     file: lastPatch.file,
     relativeFile: lastPatch.relativeFile,

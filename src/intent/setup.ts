@@ -236,13 +236,14 @@ export function initIntentWorkspace(rootDir: string): IntentWorkspaceInitResult 
         version: 1,
         kind: "intent-op.schema",
         required: ["version", "kind", "target", "change"],
-        supportedKinds: ["tailwind-token-replace"],
+        supportedKinds: ["tailwind-token-replace", "literal-text", "grid-layout", "flex-layout"],
         target: {
           required: ["id"],
           optional: ["componentName", "file", "tagName", "range"]
         },
         change: {
-          required: ["from", "to"]
+          scalarRequired: ["from", "to"],
+          groupedRequired: ["count", "edits"]
         }
       },
       null,

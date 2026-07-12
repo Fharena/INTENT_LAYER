@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { instrumentSource } from "./instrument";
 import {
+  applyLiteralTextPatch,
   applyTokenPatch,
   pendingUndoStackFromOperationLog,
   recordPatchApplyInOperationLog,
@@ -91,6 +92,46 @@ describe("safe token patches", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("revert-source-hash-mismatch");
     expect(fs.readFileSync(file, "utf8")).toBe(drifted);
+  });
+
+  it("applies and safely reverts one guarded literal JSX text edit", () => {
+    const source = 'export function App(){ return <h1 className="text-2xl">Original title</h1>; }';
+    const { rootDir, file, entry } = fixture(source);
+    const applied = applyLiteralTextPatch(rootDir, entry, {
+      id: entry.id,
+      oldText: "Original title",
+      nextText: "새로운 제목"
+    });
+
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) return;
+    expect(applied.kind).toBe("literal-text");
+    expect(fs.readFileSync(file, "utf8")).toBe(source.replace("Original title", "새로운 제목"));
+    const reverted = revertTokenPatch(rootDir, applied, currentEntry(rootDir, file));
+    expect(reverted).toMatchObject({ ok: true, kind: "literal-text-revert" });
+    expect(fs.readFileSync(file, "utf8")).toBe(source);
+  });
+
+  it("rejects unsafe or non-literal JSX text without writing source", () => {
+    const nestedSource =
+      'export function App(){ return <h1 className="text-2xl"><span>Nested</span></h1>; }';
+    const nested = fixture(nestedSource);
+    const nestedResult = applyLiteralTextPatch(nested.rootDir, nested.entry, {
+      id: nested.entry.id,
+      oldText: "Nested",
+      nextText: "Changed"
+    });
+    expect(nestedResult).toMatchObject({ ok: false, reason: "text-not-literal" });
+    expect(fs.readFileSync(nested.file, "utf8")).toBe(nestedSource);
+
+    const literal = fixture('export function App(){ return <h1 className="text-2xl">Title</h1>; }');
+    const unsafeResult = applyLiteralTextPatch(literal.rootDir, literal.entry, {
+      id: literal.entry.id,
+      oldText: "Title",
+      nextText: "<script>"
+    });
+    expect(unsafeResult).toMatchObject({ ok: false, reason: "invalid-literal-text" });
+    expect(fs.readFileSync(literal.file, "utf8")).toBe(literal.source);
   });
 
   it("enforces latest-first persistent undo", async () => {

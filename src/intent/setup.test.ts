@@ -40,6 +40,16 @@ describe("GUI-first setup", () => {
     expect(fs.existsSync(path.join(root, ".codex", "config.toml"))).toBe(false);
     expect(fs.existsSync(path.join(root, ".mcp.json"))).toBe(false);
     expect(fs.existsSync(path.join(root, ".intent-agent-queue.json"))).toBe(false);
+    const operationSchema = JSON.parse(
+      fs.readFileSync(path.join(root, ".intent", "schema", "intent-op.schema.json"), "utf8")
+    ) as { supportedKinds: string[]; change: Record<string, string[]> };
+    expect(operationSchema.supportedKinds).toEqual([
+      "tailwind-token-replace",
+      "literal-text",
+      "grid-layout",
+      "flex-layout"
+    ]);
+    expect(operationSchema.change.groupedRequired).toEqual(["count", "edits"]);
   });
 
   it("adds only explicitly enabled project-local MCP integrations", () => {

@@ -27,12 +27,16 @@ import type {
   AgentTaskRequest,
   AgentTaskStatusUpdateRequest,
   ClientMetric,
+  FlexLayoutApplyRequest,
+  FlexLayoutEditRequest,
+  FlexLayoutInspectRequest,
   GridLayoutApplyRequest,
   GridLayoutEditRequest,
   GridLayoutInspectRequest,
   IntentSetupRequest,
   IntentRuntimeSelectionRequest,
   IntentRuntimeTokenResult,
+  LiteralTextEditRequest,
   PatchConflictResolveRequest,
   PatchRequest,
   PatchUndoDiscardRequest,
@@ -456,6 +460,33 @@ export function intentLayerSpike(): Plugin {
           return;
         }
 
+        if (
+          (url.pathname === "/__intent/text/preview" || url.pathname === "/__intent/text/apply") &&
+          request.method === "POST"
+        ) {
+          try {
+            const body = JSON.parse(await readBody(request)) as LiteralTextEditRequest;
+            if (url.pathname === "/__intent/text/apply") {
+              const result = intentService.applyLiteralText(body);
+              writeJson(
+                response,
+                result.ok ? 200 : 409,
+                result.ok ? { ...result, binding: intentService.getEntry(result.id) ?? null } : result
+              );
+            } else {
+              const result = intentService.previewLiteralText(body);
+              writeJson(response, result.ok ? 200 : 409, result);
+            }
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
         if (url.pathname === "/__intent/grid-layout/inspect" && request.method === "POST") {
           try {
             const body = JSON.parse(await readBody(request)) as GridLayoutInspectRequest;
@@ -490,6 +521,57 @@ export function intentLayerSpike(): Plugin {
           try {
             const body = JSON.parse(await readBody(request)) as GridLayoutApplyRequest;
             const result = intentService.applyGridLayout(body);
+            writeJson(
+              response,
+              result.ok ? 200 : 409,
+              result.ok
+                ? { ...result, binding: intentService.getEntry(result.id) ?? null }
+                : result
+            );
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/flex-layout/inspect" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as FlexLayoutInspectRequest;
+            const result = intentService.inspectFlexLayout(body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/flex-layout/preview" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as FlexLayoutEditRequest;
+            const result = intentService.previewFlexLayout(body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/flex-layout/apply" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as FlexLayoutApplyRequest;
+            const result = intentService.applyFlexLayout(body);
             writeJson(
               response,
               result.ok ? 200 : 409,

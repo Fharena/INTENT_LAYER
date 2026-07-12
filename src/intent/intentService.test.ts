@@ -29,6 +29,24 @@ afterEach(() => {
 });
 
 describe("IntentService semantic edits", () => {
+  it("previews, applies, and undoes guarded literal JSX text", () => {
+    const { file, source, entry, service } = fixture();
+    expect(service.inspectElement(entry.id)).toMatchObject({
+      ok: true,
+      element: { literalText: "App" }
+    });
+    const request = { id: entry.id, oldText: "App", nextText: "새 앱 제목" };
+    const preview = service.previewLiteralText(request);
+    expect(preview).toMatchObject({ ok: true, kind: "literal-text" });
+    expect(fs.readFileSync(file, "utf8")).toBe(source);
+
+    const applied = service.applyLiteralText(request);
+    expect(applied).toMatchObject({ ok: true, kind: "literal-text" });
+    expect(fs.readFileSync(file, "utf8")).toBe(source.replace(">App</", ">새 앱 제목</"));
+    expect(service.revertLatest()).toMatchObject({ ok: true, kind: "literal-text-revert" });
+    expect(fs.readFileSync(file, "utf8")).toBe(source);
+  });
+
   it("inspects, previews, applies, verifies, replays, and undoes one semantic token edit", () => {
     const { file, source, entry, service } = fixture();
     const inspected = service.inspectElement(entry.id);

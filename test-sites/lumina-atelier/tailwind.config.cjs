@@ -3,6 +3,9 @@ module.exports = {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      screens: {
+        dashboard: "90rem"
+      },
       fontFamily: {
         display: ["Cormorant Garamond", "Georgia", "serif"],
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"]
@@ -17,4 +20,3 @@ module.exports = {
   },
   plugins: []
 };
-

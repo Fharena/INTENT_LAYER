@@ -106,6 +106,62 @@ describe("Grid Layout Composer", () => {
     expect(preview.patch.after).toContain("md:col-start-1 md:col-span-5");
   });
 
+  it("uses project breakpoints and edits row tracks in the grouped transaction", () => {
+    const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "intent-layer-grid-rows-"));
+    roots.push(rootDir);
+    const file = path.join(rootDir, "src", "App.tsx");
+    const source = [
+      "export function App(){ return (",
+      '  <section className="grid grid-cols-6 grid-rows-2 gap-4">',
+      '    <article className="col-span-3 row-span-1">A</article>',
+      '    <article className="col-span-3 row-span-1">B</article>',
+      "  </section>",
+      "); }"
+    ].join("\n");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(
+      path.join(rootDir, "tailwind.config.ts"),
+      'export default { theme: { extend: { screens: { dashboard: "90rem" } } } };\n',
+      "utf8"
+    );
+    fs.writeFileSync(file, source, "utf8");
+    const entries = instrumentSource({ code: source, file, rootDir }).entries;
+    const parent = entries.find((entry) => entry.tagName === "section")!;
+    const children = entries.filter((entry) => entry.tagName === "article");
+    const store = new IntentGraphStore(rootDir);
+    store.replaceFileEntries(file, entries);
+    const service = new IntentService(store);
+    const childIds = children.map((child) => child.id);
+
+    const inspection = service.inspectGridLayout({ parentId: parent.id, childIds, breakpoint: "dashboard" });
+    expect(inspection).toMatchObject({
+      ok: true,
+      supportedBreakpoints: ["base", "sm", "md", "lg", "xl", "dashboard", "2xl"],
+      rows: { explicit: null, effective: 2 }
+    });
+    if (!inspection.ok) return;
+    expect(inspection.items[0]).toMatchObject({
+      rowStart: { explicit: null, effective: null },
+      rowSpan: { explicit: null, effective: 1 }
+    });
+
+    const preview = service.previewGridLayout({
+      parentId: parent.id,
+      childIds,
+      breakpoint: "dashboard",
+      rows: 4,
+      items: [{ id: children[0].id, rowStart: 2, rowSpan: 2 }]
+    });
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) return;
+    expect(preview.patch.after).toContain("dashboard:grid-rows-4");
+    expect(preview.patch.after).toContain("dashboard:row-start-2 dashboard:row-span-2");
+    expect(service.applyGridLayout({ previewId: preview.previewId }).ok).toBe(true);
+    expect(fs.readFileSync(file, "utf8")).toContain("dashboard:grid-rows-4");
+    expect(service.revertLatest().ok).toBe(true);
+    expect(fs.readFileSync(file, "utf8")).toBe(source);
+  });
+
   it("edits simple fractional templates used by asymmetric production grids", () => {
     const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "intent-layer-grid-template-"));
     roots.push(rootDir);
@@ -184,6 +240,15 @@ describe("Grid Layout Composer", () => {
         items: [{ id: children[0].id, columnStart: 7, columnSpan: 3 }]
       })
     ).toMatchObject({ ok: false, reason: "grid-placement-overflow" });
+    expect(
+      service.previewGridLayout({
+        parentId: parent.id,
+        childIds: children.map((child) => child.id),
+        breakpoint: "base",
+        rows: 2,
+        items: [{ id: children[0].id, rowStart: 2, rowSpan: 2 }]
+      })
+    ).toMatchObject({ ok: false, reason: "grid-row-placement-overflow" });
   });
 
   it("rejects dynamic className and cross-file child transactions", () => {

@@ -64,7 +64,13 @@ describe("Intent Layer MCP", () => {
       });
       expect(inspected.structuredContent).toMatchObject({
         ok: true,
-        element: { properties: expect.arrayContaining([expect.objectContaining({ property: "layout.gap" })]) }
+        element: {
+          literalText: "App",
+          properties: expect.arrayContaining([
+            expect.objectContaining({ property: "layout.gap" }),
+            expect.objectContaining({ property: "content.text", value: "App" })
+          ])
+        }
       });
 
       const previewed = await client.callTool({
@@ -114,6 +120,41 @@ describe("Intent Layer MCP", () => {
         arguments: { operationId }
       });
       expect(undone.structuredContent).toMatchObject({ ok: true, reverted: true });
+      expect(fs.readFileSync(file, "utf8")).toBe(source);
+
+      const textPreview = await client.callTool({
+        name: "intent_preview_edit",
+        arguments: { targetId: entry.id, property: "content.text", value: "MCP title" }
+      });
+      const textPreviewId = String(
+        (textPreview.structuredContent as Record<string, unknown> | undefined)?.previewId
+      );
+      const textApply = await client.callTool({
+        name: "intent_apply_edit",
+        arguments: { previewId: textPreviewId, idempotencyKey: "mcp-literal-text-edit" }
+      });
+      const textOperationId = String(
+        (textApply.structuredContent as Record<string, unknown> | undefined)?.operationId
+      );
+      expect(textApply.structuredContent).toMatchObject({ ok: true });
+      expect(fs.readFileSync(file, "utf8")).toBe(source.replace(">App</", ">MCP title</"));
+      const textVerified = await client.callTool({
+        name: "intent_verify_edit",
+        arguments: { operationId: textOperationId }
+      });
+      expect(textVerified.structuredContent).toMatchObject({
+        ok: true,
+        source: "verified",
+        runtime: "unavailable"
+      });
+      const textUndone = await client.callTool({
+        name: "intent_undo_edit",
+        arguments: { operationId: textOperationId }
+      });
+      expect(textUndone.structuredContent).toMatchObject({
+        ok: true,
+        kind: "literal-text-revert"
+      });
       expect(fs.readFileSync(file, "utf8")).toBe(source);
 
       const missing = await client.callTool({

@@ -117,7 +117,13 @@ function withVariant(originalToken: string, nextBase: string): string {
   return `${splitTailwindVariant(originalToken).variantPrefix}${nextBase}`;
 }
 
-export type GridLayoutTokenProperty = "columns" | "columnStart" | "columnSpan";
+export type GridLayoutTokenProperty =
+  | "columns"
+  | "rows"
+  | "columnStart"
+  | "columnSpan"
+  | "rowStart"
+  | "rowSpan";
 
 export interface GridLayoutToken {
   breakpoint: string;
@@ -154,12 +160,15 @@ export function gridTemplateToken(weights: number[], breakpoint = "base"): strin
 
 export function parseGridLayoutToken(token: string): GridLayoutToken | null {
   const { variantPrefix, base } = splitTailwindVariant(token);
-  const match = /^(grid-cols|col-start|col-span)-(\d+)$/.exec(base);
+  const match = /^(grid-cols|grid-rows|col-start|col-span|row-start|row-span)-(\d+)$/.exec(base);
   if (!match) return null;
   const properties: Record<string, GridLayoutTokenProperty> = {
     "grid-cols": "columns",
+    "grid-rows": "rows",
     "col-start": "columnStart",
-    "col-span": "columnSpan"
+    "col-span": "columnSpan",
+    "row-start": "rowStart",
+    "row-span": "rowSpan"
   };
   return {
     breakpoint: variantPrefix ? variantPrefix.slice(0, -1) : "base",
@@ -175,8 +184,11 @@ export function gridLayoutToken(
 ): string {
   const prefixes: Record<GridLayoutTokenProperty, string> = {
     columns: "grid-cols",
+    rows: "grid-rows",
     columnStart: "col-start",
-    columnSpan: "col-span"
+    columnSpan: "col-span",
+    rowStart: "row-start",
+    rowSpan: "row-span"
   };
   return `${breakpoint === "base" ? "" : `${breakpoint}:`}${prefixes[property]}-${value}`;
 }

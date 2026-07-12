@@ -4,7 +4,7 @@ import ts from "typescript";
 import { shortHash, sourceHash } from "./hash";
 import { tokenizeClassName } from "./tailwind";
 import { createProjectCandidateResolver } from "./themeCandidates";
-import type { IntentBinding, IntentToken } from "./types";
+import type { IntentBinding, IntentLiteralTextBinding, IntentToken } from "./types";
 
 interface SourceSegment {
   start: number;
@@ -343,6 +343,23 @@ function createElementInsertion(props: ts.ObjectLiteralExpression, id: string): 
   };
 }
 
+function literalJsxTextBinding(node: ts.JsxElement, code: string): IntentLiteralTextBinding | null {
+  if (node.children.length !== 1 || !ts.isJsxText(node.children[0])) return null;
+  const child = node.children[0];
+  const start = child.getFullStart();
+  const end = child.getEnd();
+  const value = code.slice(start, end);
+  if (
+    value.length === 0 ||
+    value.length > 500 ||
+    value.trim() !== value ||
+    /[\r\n<>{}&]/.test(value)
+  ) {
+    return null;
+  }
+  return { kind: "literal", start, end, value };
+}
+
 export function instrumentSource(params: {
   code: string;
   file: string;
@@ -371,6 +388,16 @@ export function instrumentSource(params: {
   const insertions: Insertion[] = [];
   const entries: IntentBinding[] = [];
   const relativeFile = path.relative(params.rootDir, params.file).replace(/\\/g, "/");
+  const textByOpeningStart = new Map<number, IntentLiteralTextBinding>();
+
+  const collectLiteralText = (node: ts.Node) => {
+    if (ts.isJsxElement(node)) {
+      const textContent = literalJsxTextBinding(node, params.code);
+      if (textContent) textByOpeningStart.set(node.openingElement.getStart(sourceFile), textContent);
+    }
+    ts.forEachChild(node, collectLiteralText);
+  };
+  collectLiteralText(sourceFile);
 
   function visit(node: ts.Node, componentName: string | null) {
     let currentComponentName = componentName;
@@ -412,6 +439,7 @@ export function instrumentSource(params: {
               dynamicSegments: className.dynamicSegments,
               unsupportedReason: className.unsupportedReason
             },
+            textContent: textByOpeningStart.get(node.getStart(sourceFile)),
             tokens: className.tokens
           });
         }

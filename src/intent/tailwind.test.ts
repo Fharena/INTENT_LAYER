@@ -87,6 +87,12 @@ describe("Tailwind direct-edit candidates", () => {
       value: 4
     });
     expect(gridLayoutToken("columnSpan", 7, "lg")).toBe("lg:col-span-7");
+    expect(parseGridLayoutToken("dashboard:row-start-3")).toEqual({
+      breakpoint: "dashboard",
+      property: "rowStart",
+      value: 3
+    });
+    expect(gridLayoutToken("rowSpan", 2, "xl")).toBe("xl:row-span-2");
     expect(categorizeTailwindToken("col-span-5")).toBe("layout");
     expect(describeTailwindToken("col-span-5")).toMatchObject({
       property: "layout.columnSpan",

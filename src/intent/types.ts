@@ -16,6 +16,13 @@ export interface IntentToken {
   editable: boolean;
 }
 
+export interface IntentLiteralTextBinding {
+  kind: "literal";
+  start: number;
+  end: number;
+  value: string;
+}
+
 export interface IntentBinding {
   id: string;
   file: string;
@@ -33,6 +40,7 @@ export interface IntentBinding {
     dynamicSegments: number;
     unsupportedReason?: string;
   };
+  textContent?: IntentLiteralTextBinding;
   tokens: IntentToken[];
 }
 
@@ -247,6 +255,12 @@ export interface PatchRequest {
   sourceEnd?: number;
 }
 
+export interface LiteralTextEditRequest {
+  id: string;
+  oldText: string;
+  nextText: string;
+}
+
 export interface PatchTextEdit {
   id: string;
   label: string;
@@ -262,9 +276,19 @@ export interface PatchTextEdit {
   newText: string;
 }
 
+export type PatchKind =
+  | "tailwind-token-replace"
+  | "tailwind-token-revert"
+  | "literal-text"
+  | "literal-text-revert"
+  | "grid-layout"
+  | "grid-layout-revert"
+  | "flex-layout"
+  | "flex-layout-revert";
+
 export interface PatchPreview {
   ok: true;
-  kind?: "tailwind-token-replace" | "tailwind-token-revert" | "grid-layout" | "grid-layout-revert";
+  kind?: PatchKind;
   id: string;
   file: string;
   relativeFile: string;
@@ -284,7 +308,7 @@ export interface PatchPreview {
   };
 }
 
-export type GridLayoutBreakpoint = "base" | "sm" | "md" | "lg";
+export type GridLayoutBreakpoint = string;
 
 export interface GridLayoutInspectRequest {
   parentId: string;
@@ -305,6 +329,7 @@ export interface GridLayoutInspection {
   breakpoint: GridLayoutBreakpoint;
   supportedBreakpoints: GridLayoutBreakpoint[];
   columns: GridLayoutResolvedValue;
+  rows: GridLayoutResolvedValue;
   columnTemplate: {
     explicit: number[] | null;
     effective: number[] | null;
@@ -314,6 +339,8 @@ export interface GridLayoutInspection {
     label: string;
     columnStart: GridLayoutResolvedValue;
     columnSpan: GridLayoutResolvedValue;
+    rowStart: GridLayoutResolvedValue;
+    rowSpan: GridLayoutResolvedValue;
   }>;
 }
 
@@ -321,10 +348,13 @@ export interface GridLayoutItemEdit {
   id: string;
   columnStart?: number | null;
   columnSpan?: number | null;
+  rowStart?: number | null;
+  rowSpan?: number | null;
 }
 
 export interface GridLayoutEditRequest extends GridLayoutInspectRequest {
   columns?: number | null;
+  rows?: number | null;
   columnTemplate?: number[] | null;
   items: GridLayoutItemEdit[];
 }
@@ -340,6 +370,75 @@ export interface GridLayoutPreviewResult {
 }
 
 export interface GridLayoutApplyRequest {
+  previewId: string;
+}
+
+export type FlexLayoutBreakpoint = string;
+export type FlexLayoutDirection = "row" | "row-reverse" | "col" | "col-reverse";
+export type FlexLayoutWrap = "nowrap" | "wrap" | "wrap-reverse";
+export type FlexLayoutJustify = "normal" | "start" | "end" | "center" | "between" | "around" | "evenly" | "stretch";
+export type FlexLayoutAlign = "start" | "end" | "center" | "baseline" | "stretch";
+export type FlexLayoutAlignSelf = "auto" | "start" | "end" | "center" | "stretch" | "baseline";
+
+export interface FlexLayoutResolvedValue<T extends string> {
+  explicit: T | null;
+  effective: T;
+}
+
+export interface FlexLayoutInspectRequest {
+  parentId: string;
+  childIds: string[];
+  unboundChildCount?: number;
+  breakpoint: FlexLayoutBreakpoint;
+}
+
+export interface FlexLayoutInspection {
+  ok: true;
+  parentId: string;
+  relativeFile: string;
+  breakpoint: FlexLayoutBreakpoint;
+  supportedBreakpoints: FlexLayoutBreakpoint[];
+  direction: FlexLayoutResolvedValue<FlexLayoutDirection>;
+  wrap: FlexLayoutResolvedValue<FlexLayoutWrap>;
+  justify: FlexLayoutResolvedValue<FlexLayoutJustify>;
+  align: FlexLayoutResolvedValue<FlexLayoutAlign>;
+  gap: {
+    explicit: string | null;
+    effective: string | null;
+    candidates: string[];
+  };
+  items: Array<{
+    id: string;
+    label: string;
+    alignSelf: FlexLayoutResolvedValue<FlexLayoutAlignSelf>;
+  }>;
+}
+
+export interface FlexLayoutItemEdit {
+  id: string;
+  alignSelf?: FlexLayoutAlignSelf | null;
+}
+
+export interface FlexLayoutEditRequest extends FlexLayoutInspectRequest {
+  direction?: FlexLayoutDirection | null;
+  wrap?: FlexLayoutWrap | null;
+  justify?: FlexLayoutJustify | null;
+  align?: FlexLayoutAlign | null;
+  gap?: string | null;
+  items: FlexLayoutItemEdit[];
+}
+
+export interface FlexLayoutPreviewResult {
+  ok: true;
+  previewId: string;
+  expiresAt: string;
+  parentId: string;
+  breakpoint: FlexLayoutBreakpoint;
+  affectedBindingCount: number;
+  patch: PatchPreview;
+}
+
+export interface FlexLayoutApplyRequest {
   previewId: string;
 }
 

@@ -18,7 +18,7 @@ export default function App() {
   return (
     <main className="min-h-screen bg-canvas px-6 py-12 text-zinc-100 sm:px-10 lg:px-16">
       <header className="mx-auto flex max-w-6xl items-center justify-between border-b border-zinc-800 pb-6">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-widest text-teal-300">Intent Layer Lab</p>
           <h1 className="mt-2 text-2xl font-semibold text-white">Modern stack compatibility</h1>
         </div>

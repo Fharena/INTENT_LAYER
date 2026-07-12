@@ -86,6 +86,23 @@ describe("instrumentSource", () => {
     }
   });
 
+  it("binds only one plain direct JSX text child to an exact source range", () => {
+    const code = [
+      'export function App(){ return <>',
+      '  <h1 className="text-2xl">한 줄 제목</h1>',
+      '  <p className="text-sm"><strong>Nested</strong> text</p>',
+      '  <span className="text-sm">{label}</span>',
+      '  <em className="text-sm">Tom &amp; Jerry</em>',
+      '</>; }'
+    ].join("\n");
+    const result = instrumentSource({ code, file, rootDir });
+
+    expect(result.entries[0].textContent).toMatchObject({ kind: "literal", value: "한 줄 제목" });
+    const text = result.entries[0].textContent!;
+    expect(code.slice(text.start, text.end)).toBe("한 줄 제목");
+    expect(result.entries.slice(1).every((entry) => entry.textContent === undefined)).toBe(true);
+  });
+
   it("keeps runtime expressions inspectable but read-only", () => {
     const code = "export function App(){ return <div className={styles.card}>Card</div>; }";
     const result = instrumentSource({ code, file, rootDir });

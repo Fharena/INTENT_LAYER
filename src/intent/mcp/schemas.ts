@@ -16,7 +16,7 @@ export const inspectElementInput = {
 export const previewEditInput = {
   targetId: z.string().min(1).describe("Intent id to edit."),
   property: z.string().min(1).describe("Semantic property returned by inspect_element."),
-  value: z.string().min(1).describe("Candidate value or token returned by inspect_element."),
+  value: z.string().min(1).describe("Candidate value returned by inspect_element, or replacement copy for content.text."),
   variant: z.string().nullable().optional().describe("Variant such as hover when the property is ambiguous."),
   scope: z.literal("source").optional().describe("Only deterministic source scope is currently supported.")
 };
