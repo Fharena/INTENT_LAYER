@@ -30,6 +30,7 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Korean is a complete product language. English remains available for external contributors.
 - Prefer established structured parsers and APIs. JSX source binding uses the TypeScript AST as its single source of truth.
 - Simple Tailwind edits, apply, validation, and undo are deterministic and must not call an LLM.
+- On Windows, never place test fixtures, temporary repositories, browser artifacts, package smoke output, or benchmark scratch data on `C:`. Use `D:\SJWORK\INTENT_LAYER\.intent\tmp` by default and set `TEMP`/`TMP` to that D-drive directory before commands that use the OS temp folder.
 
 ## Overlay UX
 
@@ -94,6 +95,14 @@ FAILURE_MODES_KR.md / FAILURE_MODES_EN.md
 Historical spike, launch, handoff, and prose benchmark documents belong in Git history. Numeric truth belongs in `reports/performance/*.json`.
 
 ## Verification
+
+Windows test sessions must prepare the D-drive temp directory first:
+
+```powershell
+New-Item -ItemType Directory -Force D:\SJWORK\INTENT_LAYER\.intent\tmp | Out-Null
+$env:TEMP = "D:\SJWORK\INTENT_LAYER\.intent\tmp"
+$env:TMP = $env:TEMP
+```
 
 Every meaningful core change should run:
 

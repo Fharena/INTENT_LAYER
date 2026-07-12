@@ -207,6 +207,8 @@ Legacy pickup model:
 
 ## Performance Rules
 
+On Windows, all test fixtures and temporary artifacts must stay on `D:`. Use `D:\SJWORK\INTENT_LAYER\.intent\tmp` for temporary repositories, browser output, package smoke files, and benchmark scratch data. Set `TEMP` and `TMP` to that directory before running tools that otherwise use `C:\Users\...\Temp`.
+
 Avoid whole-project analysis by default.
 
 Use this model:
