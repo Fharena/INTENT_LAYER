@@ -192,7 +192,7 @@ Support is reported at four evidence levels.
 | Unverified | It may work structurally, but it is not a release contract. |
 | Intentionally excluded | The case becomes read-only or an agent handoff because guessing would be unsafe or too broad. |
 
-The verified environment on 2026-07-12 is Node.js 20/22, npm, React 18.3.1, Vite 6.4.3, TypeScript 5.9.3, Tailwind CSS 3.4.19, and Playwright Chromium 149. Full verification ran on Windows, and GitHub Actions defines Ubuntu paths for Node.js 20/22. React 19, Vite 7+, a real Tailwind CSS 4 app, pnpm/yarn/bun, Firefox/WebKit, and macOS are not official support yet.
+The verified environment on 2026-07-12 is Node.js 20/22, npm, React 18.3.1/19.2.7, Vite 6.4.3/8.1.4, TypeScript 5.9.3, Tailwind CSS 3.4.19/4.3.2, and Playwright Chromium 149. Full verification ran on Windows, and GitHub Actions defines Ubuntu paths for Node.js 20/22. pnpm/yarn/bun, Firefox/WebKit, and macOS are not official support yet.
 
 Intent Layer does not reimplement React APIs or override Hooks. Its support unit is not an API name; it is **the source shape of intrinsic JSX that renders to browser DOM**. Hooks, Context, `memo`, `lazy`, and transition APIs in the [React API reference](https://react.dev/reference/react) pass through ordinary AST traversal when intrinsic JSX remains in project source. Class strings assembled only at runtime are not inferred.
 
@@ -202,7 +202,7 @@ Intent Layer does not reimplement React APIs or override Hooks. Its support unit
 | Intrinsic JSX inside a class component's `render()` | Partial | Binding and component-name unit coverage exists; there is no browser E2E yet. |
 | Fragments, conditionals, `map`, `forwardRef`, `Suspense` fallback, and JSX passed to portals | Partial | AST traversal unit coverage exists; portal and every wrapper do not yet have click E2E. |
 | Intrinsic `createElement` through default, namespace, named, or aliased imports from `react` | Partial | Binding checks the module import name plus a literal tag and object props. Same-name shadowing in a nested scope is not yet verified. |
-| String arguments and all-string conditional branches inside `cn()`/`clsx()` | Partial | Literal ranges are editable. The panel does not yet filter out the branch inactive in the clicked runtime instance. |
+| String arguments and all-string conditional branches inside `cn()`/`clsx()` | Verified | Only literal ranges are editable, and the panel hides inactive branches absent from the clicked DOM class list. A React 19 `cn()` conditional has browser E2E; `clsx()` uses the same parser path and regression fixture. |
 | Intrinsic elements inside a reused component implementation | Verified | The edit applies to every rendered instance sharing the source id and is labeled shared. |
 | A custom or member-component call such as `<Button className=...>` or `<motion.div>` | Intentionally excluded | The tool does not guess that the prop reaches DOM; it binds to the intrinsic element in the implementation. |
 | `cloneElement`, an unimported global `React.createElement`, or compiled `jsx/jsxs` calls | Intentionally excluded | Provenance or original source ranges are ambiguous. |
@@ -210,7 +210,7 @@ Intent Layer does not reimplement React APIs or override Hooks. Its support unit
 
 The plugin uses the `apply: "serve"` boundary from the [Vite plugin contract](https://vite.dev/guide/api-plugin). Instrumentation and the overlay run only in the dev server, and a separate gate asserts zero forbidden markers in production bundles. The transform currently returns no source map, so debugger-position preservation is a remaining stabilization item.
 
-Static Tailwind CSS 3 configuration and standard utilities are verified. Tailwind CSS 4 [`@theme` variables](https://tailwindcss.com/docs/theme) have static parser tests only and are therefore partial support. The product never executes config code or guesses arbitrary plugin-utility semantics.
+Static Tailwind CSS 3 configuration and standard utilities are verified. A React 19/Vite 8 browser fixture verifies Tailwind CSS 4.3.2 [`@theme` variables](https://tailwindcss.com/docs/theme), `@tailwindcss/vite` development and production builds, project color candidates, HMR patching, and undo. The product never executes config code or guesses arbitrary plugin-utility semantics.
 
 ### 7.2 Direct-Edit Contract
 
@@ -239,14 +239,13 @@ Current read-only or handoff cases:
 
 P0 stabilization is complete for production-instrumentation removal, React factory provenance, semantic flex candidate grouping, invalid negative-utility rejection, workspace-drive temp isolation, and removal of the stale raw-TypeScript bin.
 
-P1 proceeds in this order:
+P1 has completed runtime-active conditional filtering, DOM-only preview before source apply, color swatches, numerically ordered spacing steppers, and an npm compatibility gate for React 19/Tailwind CSS 4/Vite 8. Remaining work proceeds in this order:
 
-1. Distinguish tokens actually active in the clicked `cn()`/`clsx()` instance so an inactive branch cannot be edited accidentally.
-2. Add temporary DOM preview before source apply plus color swatches and spacing/size steppers that are faster than dropdowns.
-3. Preserve Vite transform source maps.
-4. Add independent compatibility gates for a real Tailwind CSS 4 Vite app, React 19, the next Vite major, and pnpm.
-5. Read project breakpoints and add xl/2xl/custom breakpoint plus row/row-span Grid editing.
-6. Validate a Flex Layout Composer under the same grouped-patch safety contract.
+1. Measure time-to-first-success and patch quality against prompt-only work on real tasks from at least five independent repositories.
+2. Preserve Vite transform source maps.
+3. Add a pnpm install fixture; validate yarn or bun only after demand is observed.
+4. Read project breakpoints and add xl/2xl/custom breakpoint plus row/row-span Grid editing.
+5. Validate a Flex Layout Composer under the same grouped-patch safety contract.
 
 Cleanup rules:
 
@@ -818,9 +817,10 @@ Can the architecture scale to large projects?
 - [x] Lumina Chromium setup/Grid/HMR/undo/mobile CI
 - [x] dev-only instrumentation and a zero-marker production-bundle gate
 - [x] import-provenance React `createElement` binding
-- [ ] runtime-active conditional-token filtering
+- [x] runtime-active conditional-token filtering and DOM-only candidate preview
 - [ ] Vite transform source maps
-- [ ] React 19/Tailwind 4/next Vite major/pnpm compatibility fixtures
+- [x] React 19/Tailwind 4/Vite 8 npm compatibility fixture
+- [ ] pnpm install compatibility fixture
 
 ### v1.0
 

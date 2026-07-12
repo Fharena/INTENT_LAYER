@@ -194,7 +194,7 @@ v1.0은 "작지만 바로 출시 가능한 제품"이어야 한다.
 | 미검증 | 구조상 동작할 수 있어도 release contract로 주장하지 않는다. |
 | 의도적 제외 | 잘못 고칠 위험이나 범위 비용 때문에 read-only 또는 Agent handoff로 보낸다. |
 
-2026-07-12 기준 실제 검증 환경은 Node.js 20/22, npm, React 18.3.1, Vite 6.4.3, TypeScript 5.9.3, Tailwind CSS 3.4.19, Playwright Chromium 149다. Windows에서 전체 검증했고 GitHub Actions는 Ubuntu의 Node.js 20/22 경로를 갖는다. React 19, Vite 7 이상, Tailwind CSS 4 실제 앱, pnpm/yarn/bun, Firefox/WebKit, macOS는 아직 정식 지원이 아니다.
+2026-07-12 기준 실제 검증 환경은 Node.js 20/22, npm, React 18.3.1/19.2.7, Vite 6.4.3/8.1.4, TypeScript 5.9.3, Tailwind CSS 3.4.19/4.3.2, Playwright Chromium 149다. Windows에서 전체 검증했고 GitHub Actions는 Ubuntu의 Node.js 20/22 경로를 갖는다. pnpm/yarn/bun, Firefox/WebKit, macOS는 아직 정식 지원이 아니다.
 
 React API를 재구현하거나 Hook을 오버라이드하지 않는다. 이 제품의 지원 단위는 API 이름이 아니라 **브라우저 DOM으로 렌더되는 intrinsic JSX가 원본 JSX/TSX에 어떤 형태로 남아 있는가**다. [React API reference](https://react.dev/reference/react)의 Hook, Context, `memo`, `lazy`, transition API는 intrinsic JSX를 그대로 포함하면 일반 AST traversal을 통과하지만, runtime에서 만든 class 문자열은 추론하지 않는다.
 
@@ -204,7 +204,7 @@ React API를 재구현하거나 Hook을 오버라이드하지 않는다. 이 제
 | class component의 `render()` 안 intrinsic JSX | 부분 지원 | binding과 component 이름 단위 테스트 완료. 실제 브라우저 E2E는 아직 없다. |
 | fragment, conditional, `map`, `forwardRef`, `Suspense` fallback, portal 인자의 JSX | 부분 지원 | AST traversal 단위 테스트 완료. portal/모든 wrapper의 실제 클릭 E2E는 아직 없다. |
 | `import React from "react"`, namespace import, named/aliased import의 intrinsic `createElement` | 부분 지원 | module import 이름과 literal tag/object props를 확인한다. nested scope에서 같은 이름을 shadowing하는 edge case는 아직 미검증이다. |
-| `cn()`/`clsx()`의 문자열 인자와 양쪽이 문자열인 조건 분기 | 부분 지원 | literal range만 편집한다. 현재 runtime에서 활성인 분기만 거르는 UI는 아직 없다. |
+| `cn()`/`clsx()`의 문자열 인자와 양쪽이 문자열인 조건 분기 | 검증 완료 | literal range만 편집하며 클릭한 DOM의 class 목록에 없는 비활성 분기는 패널에서 숨긴다. React 19 `cn()` 조건 분기는 브라우저 E2E, `clsx()`는 같은 parser 경로의 회귀 fixture로 검증한다. |
 | 재사용 컴포넌트 구현 내부 intrinsic 요소 | 검증 완료 | 같은 source id의 모든 렌더 인스턴스에 적용되고 shared 상태를 표시한다. |
 | `<Button className=...>` 또는 `<motion.div>` 같은 커스텀/member 컴포넌트 호출부 | 의도적 제외 | prop이 실제 DOM에 전달된다고 추측하지 않고 구현 내부 요소에 바인딩한다. |
 | `cloneElement`, import 없는 전역 `React.createElement`, compiled `jsx/jsxs` 호출 | 의도적 제외 | provenance 또는 원본 source range가 불명확하다. |
@@ -212,7 +212,7 @@ React API를 재구현하거나 Hook을 오버라이드하지 않는다. 이 제
 
 [Vite plugin contract](https://vite.dev/guide/api-plugin)의 `apply: "serve"` 경계를 사용한다. 계측과 overlay는 개발 서버에서만 동작하며 production bundle은 금지 marker 0건을 별도 gate로 검사한다. Vite transform 결과는 현재 source map을 반환하지 않으므로 debugger 위치 보존은 다음 안정화 작업이다.
 
-Tailwind CSS 3의 정적 config와 표준 utility는 검증 완료다. Tailwind CSS 4의 [`@theme` 변수](https://tailwindcss.com/docs/theme)는 정적 parser 테스트만 있으므로 부분 지원이다. config 코드를 실행하거나 plugin utility 의미를 추론하지 않는다.
+Tailwind CSS 3의 정적 config와 표준 utility를 검증했고, Tailwind CSS 4.3.2의 [`@theme` 변수](https://tailwindcss.com/docs/theme), `@tailwindcss/vite` dev/build, project color 후보, HMR patch와 undo를 React 19/Vite 8 브라우저 fixture로 검증했다. config 코드를 실행하거나 plugin utility 의미를 추론하지 않는다.
 
 ### 7.2 직접 편집 계약
 
@@ -241,14 +241,13 @@ Grid Layout Composer는 일반 token dropdown보다 좁다. 같은 TSX 파일, �
 
 P0 안정화는 production 계측 제거, React factory provenance 확인, semantic flex 후보 분리, invalid negative utility 거부, 프로젝트 드라이브 temp 격리, 오래된 raw-TS bin 제거까지 완료했다.
 
-P1은 다음 순서로 진행한다.
+P1에서 runtime-active 조건 분기 필터, source apply 전 DOM-only preview, color swatch, 수치 순서 spacing stepper, React 19/Tailwind CSS 4/Vite 8 npm 호환성 gate를 완료했다. 남은 순서는 다음과 같다.
 
-1. `cn()`/`clsx()`에서 클릭한 인스턴스에 실제 활성인 token을 구분해 비활성 분기 오편집을 막는다.
-2. source apply 전 임시 DOM preview, color swatch, spacing/size stepper처럼 dropdown보다 빠른 시각 control을 제공한다.
-3. Vite transform source map을 보존한다.
-4. Tailwind CSS 4 실제 Vite 앱, React 19, 다음 Vite major, pnpm fixture를 독립 호환성 gate로 만든다.
-5. project breakpoint를 읽어 Grid의 xl/2xl/custom breakpoint와 row/row-span을 지원한다.
-6. 같은 안전 계약으로 Flex Layout Composer를 검증한다.
+1. 5개 이상 독립 저장소의 실제 작업으로 prompt-only 대비 첫 성공 시간과 patch 품질을 A/B 측정한다.
+2. Vite transform source map을 보존한다.
+3. pnpm 설치 fixture를 추가하고 yarn/bun은 수요가 확인될 때 검증한다.
+4. project breakpoint를 읽어 Grid의 xl/2xl/custom breakpoint와 row/row-span을 지원한다.
+5. 같은 안전 계약으로 Flex Layout Composer를 검증한다.
 
 정리 원칙:
 
@@ -820,9 +819,10 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 - [x] Lumina Chromium setup/Grid/HMR/undo/mobile CI
 - [x] dev-only instrumentation과 production bundle marker 0건 gate
 - [x] import provenance 기반 React `createElement` binding
-- [ ] runtime-active conditional token 구분
+- [x] runtime-active conditional token 구분과 DOM-only candidate preview
 - [ ] Vite transform source map
-- [ ] React 19/Tailwind 4/다음 Vite major/pnpm 호환성 fixture
+- [x] React 19/Tailwind 4/Vite 8 npm 호환성 fixture
+- [ ] pnpm 설치 호환성 fixture
 
 ### v1.0
 

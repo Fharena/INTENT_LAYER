@@ -12,6 +12,7 @@ The current product status is a **working alpha**. Humans use the browser panel 
 Pick a rendered element
   -> inspect component, source file, and source hash
   -> choose an editable Tailwind token
+  -> try the candidate in the DOM only
   -> preview the diff
   -> apply a minimal range patch
   -> verify source and rendered output
@@ -34,7 +35,7 @@ Open the Vite URL and use the Intent Layer panel:
 1. Choose the language and panel position, then optionally connect Codex or Claude.
 2. Finish setup.
 3. Click `Pick`, then choose an element on the page.
-4. Choose a token candidate, preview it, and apply it.
+4. Choose a token candidate to try it in the DOM. Reset it, or validate the source diff and apply it.
 5. Use Undo if the result is not right.
 
 When the selected element is inside CSS Grid, the nearest source-bound ancestor opens `Grid layout` automatically. Choose a breakpoint, drag each child's column range, preview the grouped diff, then apply or undo it as one operation.
@@ -64,11 +65,11 @@ When no Vite config exists but `@vitejs/plugin-react` is installed, it creates a
 | Area | Currently verified | Not yet officially supported |
 | --- | --- | --- |
 | Runtime | Node.js 20/22 CI, local Windows Node.js 22.16, npm | Node.js 18 or older, pnpm/yarn/bun install flows |
-| React | React 18.3.1, intrinsic JSX, fragment/conditional/map traversal, `forwardRef`, JSX inside `Suspense`/portals, provenance-checked imported `createElement` | React 19 compatibility guarantee, React Server Components, React Native, `cloneElement` source provenance |
-| Vite | Vite 6.4.3 dev server, HMR, static config setup, zero production instrumentation gate | Vite 7+, SSR/library mode, automatic edits to dynamic configs |
+| React | React 18.3.1 and 19.2.7, intrinsic JSX, fragment/conditional/map traversal, `forwardRef`, JSX inside `Suspense`/portals, provenance-checked imported `createElement` | React Server Components, React Native, `cloneElement` source provenance |
+| Vite | Vite 6.4.3 and 8.1.4 dev servers, HMR, static config setup, zero production instrumentation gate | SSR/library mode, automatic edits to dynamic configs |
 | TypeScript | TypeScript 5.9.3 parser, TSX end-to-end flow, JSX/TSX instrumentation | Recovering source from compiled JSX runtime calls or arbitrary Babel/SWC output |
-| Tailwind | Tailwind CSS 3.4.19 browser flow, static `tailwind.config.*`, variant preservation | Full Tailwind CSS 4 app flow, dynamic config execution, arbitrary plugin-utility semantics |
-| Tailwind v4 | Unit-tested static `@theme` and CSS-variable candidate parsing | Install/HMR/patch E2E through `@tailwindcss/vite` |
+| Tailwind | Tailwind CSS 3.4.19 and 4.3.2 browser flows, static `tailwind.config.*`, v4 `@theme`, variant preservation | Dynamic config execution and arbitrary plugin-utility semantics |
+| Tailwind v4 | `@tailwindcss/vite` install, `@theme` color candidates, DOM preview, HMR patch, and exact undo | Inferring arbitrary utilities created by external plugins |
 | Browser/OS | Playwright Chromium 149, local Windows, GitHub Actions Ubuntu path | Firefox, WebKit/Safari, macOS |
 
 Intent Layer does not override React Hooks, Context, `memo`, or `lazy`. Code using those APIs follows the same AST path when intrinsic JSX and a supported `className` remain in project source; strings assembled only at runtime are not inferred. A custom component's `className` prop is not guessed to be a DOM node. The binding targets the intrinsic element in that component's rendered implementation instead.
@@ -85,6 +86,8 @@ Direct edits currently target static JSX `className` values, string literals ins
 - shadow, opacity, ring width, and transition
 
 A token is not presented as editable when its only candidate is itself. Project themes are parsed statically rather than executed, and project candidates appear before the generic palette. Dynamic configs that cannot be resolved, `cva`, runtime variables, property access, and template expressions remain inspectable but are not patched directly.
+
+For literal bindings inside `cn()` or `clsx()`, the panel compares candidates with the clicked DOM instance and hides tokens from inactive conditional branches. Choosing a candidate temporarily replaces matching rendered instances of the same source binding without touching source; reset restores the exact original `class` string when runtime has not drifted. Colors expose swatches, spacing exposes numerically ordered `-`/`+` controls, and source Apply remains locked until server-side diff preview succeeds.
 
 The Grid Layout Composer directly edits only an existing grid and direct children with static `className` bindings in one TSX file. It can add, replace, or remove 1-12 track `grid-cols`, `col-start`, and `col-span` tokens at base/sm/md/lg. Simple positive `fr` templates such as `grid-cols-[1.2fr_0.8fr]` expose track-ratio sliders. Repeated source ids, cross-file children, dynamic classNames, compound `minmax()` templates, and DOM reordering safely remain read-only.
 
@@ -143,7 +146,7 @@ Full release check:
 npm run verify
 ```
 
-`npm run verify` runs type checking, Vitest, package/demo builds, the production-bundle contamination gate, the installed-package MCP smoke test, Chromium E2E, evaluation gates, and product A/B aggregation. `npm run eval` is the subset covering tarball installation, installed CLI and Vite exports, real Vite HTTP preview/apply/revert, multi-file graph refresh, grouped Grid apply/undo, external corpora, and 56 performance and safety gates. `test:e2e` uses Lumina to verify setup, selection, asymmetric Grid ratios, HMR, byte-for-byte undo, and the mobile panel. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
+`npm run verify` runs type checking, Vitest, package/demo builds, the production-bundle contamination gate, the installed-package MCP smoke test, Chromium E2E, evaluation gates, and product A/B aggregation. `npm run eval` is the subset covering tarball installation, installed CLI plus Vite exports/type declarations, real Vite HTTP preview/apply/revert, multi-file graph refresh, grouped Grid apply/undo, external corpora, and 56 performance and safety gates. `test:e2e` covers the React 18/Tailwind 3 Lumina site and the React 19/Tailwind 4 Modern fixture, including setup, selection, Grid editing, runtime branches, DOM preview, HMR, byte-for-byte undo, and the mobile panel. Any failed gate exits with code 1. Full evaluation results are written to [spike-evaluation.json](./reports/performance/spike-evaluation.json).
 
 OS temp files and Playwright browsers used by tests live under the repository's `.intent/tmp/`. On Windows the wrapper rejects a temp path on a different drive, so testing a D-drive workspace cannot silently fill the C drive again.
 
@@ -165,7 +168,7 @@ npm run intent:scan -- fixtures/corpus src/App.tsx --write-graph
 node dist/cli.js --help
 ```
 
-The package ships built `dist/cli.js`, `dist/vite.js`, `dist/mcp.js`, and browser virtual-module bundles. Installed users do not execute raw TypeScript or depend on `tsx`.
+The package ships built `dist/cli.js`, `dist/vite.js`, `dist/mcp.js`, an `intent-layer/vite` type declaration, and browser virtual-module bundles. Installed users do not execute raw TypeScript or depend on `tsx`.
 
 ## Documentation
 

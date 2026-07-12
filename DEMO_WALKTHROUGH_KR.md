@@ -44,6 +44,24 @@ MVP 데모에서는 이 좁은 시나리오를 사용한다.
 .intent/diffs/*.intent-diff.yml
 ```
 
+### React 19/Tailwind 4 DOM 미리보기
+
+현대 스택과 시각 control은 별도 fixture에서 확인한다.
+
+```bash
+npm run build:package
+npm run dev --prefix test-sites/modern-tailwind-v4
+```
+
+1. `설정 완료` 뒤 `선택`을 누르고 보라색 `Modern stack compatibility` 카드를 선택한다.
+2. `bg-brand` row에 `bg-accent` swatch가 보이고, 현재 비활성인 `bg-accent` source token 자체는 별도 편집 row로 나타나지 않는지 확인한다.
+3. swatch를 누르면 카드 색은 즉시 바뀌지만 `src/App.tsx`는 그대로인지 확인한다.
+4. `미리보기 원복`으로 원래 DOM class가 돌아오는지 확인한다.
+5. `gap-6`의 `+`를 누르면 수치 순서에 따라 `gap-7`이 되고 source는 아직 그대로인지 확인한다.
+6. `적용`이 잠겨 있는 상태에서 `미리보기`를 누른 뒤에만 활성화되는지 확인한다.
+7. 적용 후 HMR과 source의 `gap-7`을 확인하고, `되돌리기` 한 번으로 원문이 byte-for-byte 복원되는지 확인한다.
+8. 페이지의 `Primary branch`를 `Accent branch`로 바꾸고 다시 선택해 `bg-accent`만 활성 분기 row로 보이는지 확인한다.
+
 ## 3. Grid Layout Composer 흐름
 
 1. `선택`을 누르고 세 카드 중 아무 내부 텍스트나 클릭한다.
@@ -97,7 +115,7 @@ npx intent-layer dev
 
 패키지 stdio 경로만 빠르게 검사할 때는 `npm run build:package && npm run test:mcp-package`를 사용한다.
 
-Lumina 전체 브라우저 회귀는 `npm run test:e2e`로 실행한다. 이 테스트는 설정, 요소 선택, 비대칭 Grid 적용, HMR, exact undo와 모바일 축소/확대를 Chromium에서 확인한다.
+전체 브라우저 회귀는 `npm run test:e2e`로 실행한다. Lumina는 설정, 비대칭 Grid, HMR, exact undo와 모바일 축소/확대를 확인하고, Modern fixture는 조건 분기, swatch, spacing stepper, source-free DOM preview와 React 19/Tailwind 4 전체 라운드트립을 확인한다.
 
 ## 6. 데모 중 강조할 말
 

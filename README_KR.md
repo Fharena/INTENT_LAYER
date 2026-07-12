@@ -12,6 +12,7 @@ INTENT_LAYER는 React/Tailwind 화면을 브라우저에서 클릭하고, 해당
 화면 요소 선택
   -> 소스 파일, 컴포넌트, source hash 확인
   -> 편집 가능한 Tailwind 토큰 선택
+  -> 후보를 DOM에만 임시 반영
   -> diff 미리보기
   -> 최소 range patch 적용
   -> 소스와 렌더 결과 검증
@@ -34,7 +35,7 @@ npm run dev
 1. 첫 설정에서 언어와 패널 위치를 고르고, 필요하면 Codex 또는 Claude 연결을 켠다.
 2. `설정 완료`를 누른다.
 3. `선택`을 누르고 화면 요소를 클릭한다.
-4. 토큰 후보를 고르고 `미리보기`, `적용` 순서로 확인한다.
+4. 토큰 후보를 고르면 DOM에서 먼저 확인할 수 있다. 원복하거나 `미리보기`, `적용` 순서로 source 변경을 확정한다.
 5. 문제가 있으면 `되돌리기`를 누른다.
 
 선택한 요소가 CSS Grid 안에 있으면 가장 가까운 grid 조상의 `Grid 배치`가 자동으로 열린다. breakpoint를 고르고 각 자식의 열 범위를 드래그한 뒤, 그룹 diff를 미리보고 한 번에 적용하거나 되돌릴 수 있다.
@@ -64,11 +65,11 @@ Vite 설정 파일이 없지만 `@vitejs/plugin-react`가 설치된 일반 React
 | 영역 | 현재 검증된 범위 | 아직 정식 지원이 아닌 범위 |
 | --- | --- | --- |
 | Runtime | Node.js 20/22 CI, Windows 로컬 Node.js 22.16, npm | Node.js 18 이하, pnpm/yarn/bun 설치 흐름 |
-| React | React 18.3.1, intrinsic JSX, fragment/conditional/map traversal, `forwardRef`, `Suspense`/portal 안 JSX, import 출처가 확인된 `createElement` | React 19 호환 보증, React Server Components, React Native, `cloneElement` source provenance |
-| Vite | Vite 6.4.3 dev server, HMR, 정적 config 설정, production 계측 0건 검사 | Vite 7 이상, SSR/library mode, 동적 config 자동 수정 |
+| React | React 18.3.1과 19.2.7, intrinsic JSX, fragment/conditional/map traversal, `forwardRef`, `Suspense`/portal 안 JSX, import 출처가 확인된 `createElement` | React Server Components, React Native, `cloneElement` source provenance |
+| Vite | Vite 6.4.3과 8.1.4 dev server, HMR, 정적 config 설정, production 계측 0건 검사 | SSR/library mode, 동적 config 자동 수정 |
 | TypeScript | TypeScript 5.9.3 parser, TSX 전체 라운드트립, JSX/TSX 파일 계측 | 빌드된 JSX runtime 호출 분석, 임의 Babel/SWC transform 뒤 source 복원 |
-| Tailwind | Tailwind CSS 3.4.19 전체 브라우저 흐름, 정적 `tailwind.config.*`, variant 보존 | Tailwind CSS 4 실제 앱 전체 흐름, 동적 config 실행, plugin utility의 임의 의미 추론 |
-| Tailwind v4 | `@theme`/CSS 변수 후보의 정적 parser 단위 테스트 | `@tailwindcss/vite`를 사용한 설치·HMR·패치 E2E |
+| Tailwind | Tailwind CSS 3.4.19와 4.3.2 브라우저 흐름, 정적 `tailwind.config.*`, v4 `@theme`, variant 보존 | 동적 config 실행, plugin utility의 임의 의미 추론 |
+| Tailwind v4 | `@tailwindcss/vite` 설치, `@theme` 색상 후보, DOM 미리보기, HMR patch와 정확한 undo | 외부 plugin이 만든 임의 utility 의미 추론 |
 | Browser/OS | Playwright Chromium 149, Windows 로컬, GitHub Actions Ubuntu 경로 | Firefox, WebKit/Safari, macOS |
 
 React Hook, Context, `memo`, `lazy` 같은 API를 오버라이드하지는 않는다. 해당 API를 쓰더라도 프로젝트 소스 안에 intrinsic JSX와 지원 가능한 `className`이 남아 있으면 같은 AST 경로로 처리하며, Hook이 runtime에서 조합한 문자열 자체는 해석하지 않는다. 커스텀 컴포넌트의 `className` prop 호출부도 DOM node로 추측하지 않고, 실제로 렌더된 intrinsic 요소의 구현 소스에 바인딩한다.
@@ -85,6 +86,8 @@ React Hook, Context, `memo`, `lazy` 같은 API를 오버라이드하지는 않�
 - shadow, opacity, ring width, transition
 
 후보가 자기 자신 하나뿐인 토큰은 편집 가능으로 표시하지 않는다. 프로젝트 theme는 실행하지 않고 정적 AST/CSS만 읽으며 프로젝트 후보를 기본 palette보다 먼저 보여준다. 해석할 수 없는 동적 config, `cva`, runtime 변수, property access, template expression은 inspect 가능하지만 직접 패치하지 않는다.
+
+`cn()`/`clsx()` literal binding에서는 클릭한 DOM 인스턴스의 실제 class 목록과 비교해 비활성 조건 분기 토큰을 편집 목록에서 숨긴다. 후보를 고르면 source를 건드리지 않고 같은 source binding에서 기존 token이 활성인 렌더만 임시 교체하며, runtime drift가 없으면 원래 `class` 문자열을 그대로 복원한다. 색상은 swatch, spacing은 수치 순서 `-`/`+` control을 제공하고, source `적용`은 서버 diff 미리보기가 성공하기 전까지 잠겨 있다.
 
 Grid Layout Composer는 같은 TSX 파일의 정적 `className`을 가진 기존 grid와 직계 자식만 직접 편집한다. base/sm/md/lg에서 1~12열의 `grid-cols`, `col-start`, `col-span`을 그룹 작업으로 추가·교체·제거하며, `grid-cols-[1.2fr_0.8fr]` 같은 단순 양수 `fr` template은 track 비율 slider로 조정한다. 반복된 source id, 교차 파일 자식, 동적 className, 복합 `minmax()` template, DOM 순서 변경은 안전하게 read-only로 내린다.
 
@@ -143,7 +146,7 @@ npm run test:mcp-package
 npm run verify
 ```
 
-`npm run verify`는 typecheck, Vitest, package/demo build, production bundle 오염 검사, 설치 package MCP smoke, Chromium E2E, 평가 gate와 제품 A/B 집계를 순서대로 실행한다. `npm run eval`은 그중 tarball 설치, 설치된 CLI와 Vite export, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, Grid 그룹 apply/undo, 외부 corpus와 56개 성능·안전 gate를 담당한다. `test:e2e`는 Lumina 사이트에서 설정, 선택, 비대칭 Grid 비율 변경, HMR, byte-for-byte undo와 모바일 panel을 검증한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록된다.
+`npm run verify`는 typecheck, Vitest, package/demo build, production bundle 오염 검사, 설치 package MCP smoke, Chromium E2E, 평가 gate와 제품 A/B 집계를 순서대로 실행한다. `npm run eval`은 그중 tarball 설치, 설치된 CLI와 Vite export/type declaration, 실제 Vite HTTP preview/apply/revert, multi-file graph refresh, Grid 그룹 apply/undo, 외부 corpus와 56개 성능·안전 gate를 담당한다. `test:e2e`는 React 18/Tailwind 3 Lumina와 React 19/Tailwind 4 Modern fixture에서 설정, 선택, Grid, runtime 조건 분기, DOM 미리보기, HMR, byte-for-byte undo와 모바일 panel을 검증한다. 하나라도 실패하면 exit code 1로 끝난다. 상세 결과는 [spike-evaluation.json](./reports/performance/spike-evaluation.json)에 기록된다.
 
 테스트용 OS temp와 Playwright browser는 저장소의 `.intent/tmp/` 아래에 둔다. Windows에서는 workspace와 다른 드라이브의 temp 경로를 거부하므로, D 드라이브 저장소 테스트가 다시 C 드라이브를 채우지 않는다.
 
@@ -165,7 +168,7 @@ npm run intent:scan -- fixtures/corpus src/App.tsx --write-graph
 node dist/cli.js --help
 ```
 
-패키지는 `dist/cli.js`, `dist/vite.js`, `dist/mcp.js`와 browser virtual module bundle을 배포한다. 실행 시 raw TypeScript나 `tsx`에 의존하지 않는다.
+패키지는 `dist/cli.js`, `dist/vite.js`, `dist/mcp.js`, `intent-layer/vite` type declaration과 browser virtual module bundle을 배포한다. 실행 시 raw TypeScript나 `tsx`에 의존하지 않는다.
 
 ## 문서
 

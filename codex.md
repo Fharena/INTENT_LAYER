@@ -43,6 +43,9 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Experienced users see component, file, source hash, `className` mode, editable tokens, shared render count, and unsupported reason before patching.
 - Direct edit and Agent handoff stay visually distinct.
 - Reused component edits must show how many rendered instances share the source binding.
+- Literal `cn()`/`clsx()` bindings show only tokens active on the clicked DOM instance; persisted runtime selection includes the observed class tokens.
+- Candidate selection is a reversible DOM-only preview. Preserve the exact original `class` attribute, and keep source Apply disabled until guarded server preview succeeds.
+- Prefer color swatches and numerically ordered spacing steppers over forcing every high-frequency edit through a dropdown.
 - Selecting an element inside a source-bound CSS Grid should expose the nearest supported grid ancestor; users should not have to click a narrow gap to select the parent.
 - Grid layout UI stays constrained to existing CSS Grid and semantic placement controls. Do not expand it into an infinite canvas or DOM reorder tool without comparative user evidence.
 - Simple positive-`fr` arbitrary templates are supported through track ratio controls. `minmax()`, variables, named lines, rows, and reorder remain explicit boundaries.
@@ -62,6 +65,7 @@ Do not add speculative analyzers, document formats, queue commands, package boun
 - Repeated source ids, cross-file grid children, dynamic className participants, and unsupported templates are explicit read-only boundaries, never partial-success cases.
 - Project theme candidates come from static Tailwind config and known CSS entry points. Never execute user config to discover candidates, and never duplicate candidate arrays into the intent graph; fetch them only for selected tokens.
 - Runtime selection is session-scoped. Preserve `sessionId` and freshness, merge graph entries by file ownership, and retain source-hash rejection as the final drift guard.
+- The npm compatibility fixture under `test-sites/modern-tailwind-v4` gates React 19, Vite 8, Tailwind CSS 4, package type declarations, production overlay stripping, and the browser edit round trip. Do not weaken it to make an unsupported package surface appear green.
 
 ## Agent Boundary
 

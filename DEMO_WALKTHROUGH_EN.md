@@ -44,6 +44,24 @@ Expected artifact output:
 .intent/diffs/*.intent-diff.yml
 ```
 
+### React 19/Tailwind 4 DOM Preview
+
+Use the separate fixture for the modern stack and visual controls:
+
+```bash
+npm run build:package
+npm run dev --prefix test-sites/modern-tailwind-v4
+```
+
+1. Finish setup, click `Pick`, and select the purple `Modern stack compatibility` card.
+2. Confirm the `bg-brand` row exposes a `bg-accent` swatch while the currently inactive `bg-accent` source token is not shown as a separate editable row.
+3. Click the swatch. The card should change immediately while `src/App.tsx` remains byte-for-byte unchanged.
+4. Use `Reset preview` and confirm the original DOM class returns.
+5. Click `+` for `gap-6`; numeric ordering should select `gap-7` while source remains unchanged.
+6. Confirm Apply is locked until server-side Preview succeeds.
+7. Apply, verify HMR plus `gap-7` in source, then use one Undo to restore the original bytes.
+8. Switch the page from `Primary branch` to `Accent branch`, pick the card again, and confirm only `bg-accent` is exposed as the active branch row.
+
 ## 3. Grid Layout Composer Flow
 
 1. Click `Pick`, then click any text inside one of the three cards.
@@ -97,7 +115,7 @@ npx intent-layer dev
 
 For a quick packaged-stdio check, run `npm run build:package && npm run test:mcp-package`.
 
-Run the complete Lumina browser regression with `npm run test:e2e`. Chromium verifies setup, element selection, asymmetric Grid apply, HMR, exact undo, and mobile collapse/expand behavior.
+Run all browser regressions with `npm run test:e2e`. Lumina covers setup, asymmetric Grid editing, HMR, exact undo, and mobile collapse/expand behavior. The Modern fixture covers conditional branches, swatches, the spacing stepper, source-free DOM preview, and the complete React 19/Tailwind 4 round trip.
 
 ## 6. What To Say During The Demo
 

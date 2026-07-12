@@ -218,6 +218,12 @@ npm run import:external-corpus -- <independent-react-tailwind-project-or-samples
 - `runtime: unavailable`: source는 검증됐지만 Vite 또는 브라우저가 연결되지 않았다. 시각 검증 성공으로 해석하지 않는다.
 - `runtime: drifted`: source는 바뀌었지만 일부 렌더 인스턴스에 새 token이 없다. HMR 상태와 동적 className 조건을 확인한다.
 
+## 13. DOM 미리보기가 원복되거나 조건부 토큰이 보이지 않음
+
+후보 선택 직후의 색상/간격 변경은 source patch가 아니라 임시 DOM 미리보기다. 다른 요소 선택, 패널 재렌더, Grid 작업, apply 또는 undo를 시작하면 자동으로 원복된다. 서버 `미리보기`가 성공하기 전에는 `적용` 버튼도 잠겨 있다.
+
+`cn()`/`clsx()` literal 조건 분기에서는 클릭한 DOM 인스턴스에 실제로 없는 token을 숨긴다. 다른 분기를 고치려면 앱 상태를 그 분기로 바꾼 뒤 요소를 다시 선택한다. 미리보기 중 React가 같은 요소의 `class`를 새로 렌더했다면 원복 동작은 오래된 snapshot으로 덮지 않고 React의 최신 결과를 보존한다. 이 경우 요소를 다시 선택해 현재 source/runtime 상태에서 시작한다.
+
 Codex 또는 Claude에 도구가 보이지 않으면 패널 설정의 AI 연결 상태와 프로젝트 `.codex/config.toml`/`.mcp.json`을 확인한 뒤 새 세션을 시작한다. 설정이 있는데도 `serverReady`가 false면 package 설치 또는 `dist/mcp.js` 빌드가 빠진 상태다. Intent Layer는 전역 provider 설정을 수정하지 않는다.
 
 ## 13. Grid 배치가 read-only로 표시됨

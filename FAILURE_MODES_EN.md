@@ -218,6 +218,12 @@ The panel reports a stopped dev server, invalid HTTP response, or JSON parse fai
 - `runtime: unavailable`: source is verified but Vite or the browser is disconnected; do not report visual success.
 - `runtime: drifted`: source changed but at least one rendered instance lacks the new token; inspect HMR and dynamic class conditions.
 
+## 13. A DOM preview resets or a conditional token is missing
+
+A color or spacing change shown immediately after candidate selection is a temporary DOM preview, not a source patch. Picking another element, rerendering the panel, starting a Grid operation, applying, or undoing restores it automatically. Source Apply also stays locked until server-side Preview succeeds.
+
+For literal conditional branches inside `cn()` or `clsx()`, the panel hides tokens absent from the clicked DOM instance. Move the app into the other state and pick the element again to edit that branch. If React renders a new `class` value on the same element during preview, reset preserves React's newer result instead of overwriting it with a stale snapshot. Pick the element again to continue from current source and runtime state.
+
 If Codex or Claude does not list the tools, check AI connection status and the project-local `.codex/config.toml` or `.mcp.json`, then start a new session. If config exists but `serverReady` is false, the package install or built `dist/mcp.js` entry is missing. Intent Layer never edits global provider configuration.
 
 ## 13. Grid layout appears as read-only
