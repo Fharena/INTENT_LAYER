@@ -46,12 +46,20 @@ Settings remain available from the panel. Enabling an AI connection merges only 
 
 ## Install In Another Vite Project
 
-Node.js 20 or newer is required. The package is not published to npm yet, so use a local tarball:
+Node.js 20 or newer is required. Until `npm view intent-layer@alpha version` succeeds, verify installation through a local tarball:
 
 ```bash
 npm pack
 cd <target-vite-project>
 npm install <intent-layer-tarball>
+npx intent-layer init
+npm run dev
+```
+
+After the first registry alpha is visible, replace the tarball with:
+
+```bash
+npm install -D intent-layer@alpha
 npx intent-layer init
 npm run dev
 ```
@@ -324,9 +332,265 @@ OS temp files and Playwright browsers used by tests live under the repository's 
 
 The real browser-selection-to-stdio-MCP flow, including verification across three reused instances and undo, is recorded in [mcp-browser-roundtrip.json](./reports/performance/mcp-browser-roundtrip.json).
 
-External corpus percentages measure how many observed tokens receive a candidate from the current allowlist. They are not evidence of real edit success or patch quality. `npm run eval:product-ab` aggregates paired Intent Layer and prompt-only observations from independent users. [product-ab-evaluation.json](./reports/performance/product-ab-evaluation.json) is currently `collecting` with zero observations; no product-advantage claim is made before five repositories and twenty paired tasks.
+External corpus percentages measure how many observed tokens receive a candidate from the current allowlist. They are not evidence of real edit success or patch quality. `npm run eval:product-ab` aggregates paired Intent Layer and prompt-only observations from independent users. [product-ab-evaluation.json](./reports/performance/product-ab-evaluation.json) is currently `collecting` with zero observations; no product-advantage claim is made before five participants, five repositories, twenty paired tasks (forty runs), and every independence gate pass.
 
 The [external compatibility pilot](./reports/performance/external-compatibility-pilot.json) records 193 files, 1,706 bindings, 84.58% weighted direct-edit binding coverage, and one pnpm browser apply/undo round trip across five pinned public repositories. It was operated by the author and has no prompt-only pair, so it is excluded from independent A/B evidence. The pilot exposed a Vite runtime-artifact reload loop and stale pnpm local-package caching; both now have release gates.
+
+## Independent User A/B Test
+
+This study asks whether **Intent Layer gives a user a faster and more accurate first success on the same UI edit than prompt-only work**. Author-operated runs, synthetic agent runs, corpus coverage, and local benchmarks are not independent-user evidence.
+
+### Minimum Sample And Independence Contract
+
+- At least five anonymized participants who did not implement the product or author the solutions
+- At least five distinct real React/Vite/Tailwind repositories
+- Twenty tasks run once per condition, for forty runs total
+- Different participants run the two conditions for one `repository + repositoryCommit + taskId` pair
+- A participant never sees the same task twice, but performs both conditions on different tasks
+- Each task pair uses the same `agentProfile`, which identifies the Codex/Claude client, model, and consequential settings
+
+Twenty pairs are a minimum decision gate, not an automatic claim of statistical significance. Compare success and failure modes first, compare duration only among successful runs, and disclose the small-sample limitation with the result.
+
+### 1. Prepare Participants And Tasks
+
+1. Explain recording, collected fields, and anonymized storage, then obtain participant consent. Use IDs such as `P01` instead of names or email addresses.
+2. Use only repositories for which testing is authorized. Replace private repository names with aliases such as `repo-01`, and never commit the raw observation file.
+3. Limit each task to one visible change that can finish in 10-20 minutes. Example: "Reduce the spacing between the three pricing cards by one step without changing the mobile column count."
+4. Before any run, freeze the base commit, route and starting state, allowed and forbidden files, time limit, exact verification command, and visible acceptance result.
+5. Do not select only direct-edit-friendly work. Predeclare a mix of supported tasks, boundaries, and tasks likely to require agent fallback. Do not exclude a task after seeing a failure.
+6. Keep a private assignment sheet with `pairId`, repository alias, commit, taskId, participant, condition, `agentProfile`, `runOrder`, time limit, and evaluator.
+
+### 2. Define Conditions And Counterbalance
+
+For `intent-layer`, finish installation and first-run setup **before the timer**, then allow the panel or local MCP. For `prompt-only`, disable the Intent Layer Vite plugin and MCP while keeping the same AI client/model and ordinary editing tools. If installation time is the question, measure it in a separate onboarding study rather than mixing it into recurring-edit value.
+
+Randomize assignments before running anything. Give the two conditions for each task to different participants and balance each participant across A and B on different tasks. Do not swap conditions or replace a participant with a more experienced one after a failure.
+
+For example, if P01 runs Intent Layer on T01, P02 runs prompt-only on T01. P01 later runs prompt-only on a **different** task such as T02. This reduces both answer-memory carryover and participant-skill bias.
+
+For an initial five-person, twenty-task study, shuffle the task rows once and freeze the result. On zero-based row `i`, use participant number `(i mod 5) + 1` for Intent Layer and `((i + 1) mod 5) + 1` for prompt-only, mapping those numbers to `P01` through `P05`. Every participant then performs four runs per condition and every pair has different people. Calendar order may vary, but record each participant's chronological sequence from one in `runOrder` and never reshuffle after observing a failure.
+
+### 3. Hold The Environment Constant
+
+1. Start every run from a new clone or worktree at the same original commit and a fresh AI conversation. On Windows, keep scratch work on D, for example `D:\intent-layer-ab\<pair>-<condition>`.
+2. Finish dependency installation, dev-server startup, route navigation, and initial application state before the timer in both conditions. Apply the same cache warm-up policy to both.
+3. Record the common original source commit in `repositoryCommit`, not a condition-specific setup commit. Exclude Intent Layer installation files from the task diff and evaluation.
+4. Give both conditions the same task wording, time limit, and acceptance criteria. Do not reveal a source location or solution hint to only one side.
+5. Participants must not see another participant's screen, diff, or solution prompt. Anyone who has seen a task cannot run its opposite condition.
+
+### 4. Define Timing And Counts
+
+- `durationMs`: starts when the task is revealed and the participant makes the first selection or sends the first prompt; stops when verification passes and the participant declares completion. A timeout is `success: false` with duration set to the time limit.
+- `success`: a condition-blind evaluator checks the final diff against the frozen verification. A failed check, forbidden-file edit, or missing requirement is failure even when the screen looks similar.
+- `retryCount`: additional corrective prompts or apply attempts after the first solution attempt produced a wrong result. Exploration and the initial attempt do not count.
+- `wrongTargetCount`: number of actual edits to the wrong component, binding, or file that had to be reverted or corrected. Hover and a DOM-only preview before apply do not count.
+- `undoCount`: number of already-applied changes reverted through Intent Layer Undo, `git restore`, or a manual inverse edit.
+- `unsupported`: set this to `true` on the Intent Layer observation when direct edit reaches an explicit boundary and agent fallback is used. Use `false` for prompt-only observations.
+
+A screen recording or AI session export is optional. At minimum preserve start/end timestamps, base commit, final diff, verification output, and evaluator decision. Hide the condition from the evaluator and provide only anonymized artifacts.
+
+### 5. Record Observations
+
+The raw input is `reports/performance/product-ab-observations.jsonl`, one JSON object per line. It may contain private repository or participant information and is ignored by Git by default. Only the aggregate `product-ab-evaluation.json` belongs in the public repository.
+
+This PowerShell example appends one run. `agentProfile` must be a stable label that can prove the client, model, and important settings match inside a pair.
+
+```powershell
+$observation = [ordered]@{
+  version          = 2
+  participantId    = "P01"
+  runOrder          = 1
+  agentProfile      = "codex-app:gpt-5-default-2026-07-13"
+  taskId            = "T01-card-gap"
+  repository        = "repo-01"
+  repositoryCommit  = "0123456789abcdef"
+  condition         = "intent-layer"
+  success           = $true
+  durationMs        = 184000
+  retryCount        = 0
+  wrongTargetCount  = 0
+  undoCount         = 0
+  unsupported       = $false
+  evaluator         = "E01"
+  recordedAt        = (Get-Date).ToUniversalTime().ToString("o")
+}
+$observation | ConvertTo-Json -Compress |
+  Add-Content -Encoding utf8 reports/performance/product-ab-observations.jsonl
+```
+
+Append the opposite condition as a new line with its actual participant, `runOrder`, condition, and measurements. Never replace two runs with an average. If a row is wrong, correct it from the original evidence and log the reason in the private assignment sheet.
+
+### 6. Aggregate And Decide
+
+```bash
+npm run eval:product-ab
+```
+
+The command validates JSONL and updates [product-ab-evaluation.json](./reports/performance/product-ab-evaluation.json). An invalid schema, duplicate task/condition, or duplicate `runOrder` for one participant fails with a line number or relevant key. An undersized or non-independent sample still aggregates successfully but remains `status: collecting` with `gates.complete: false`.
+
+`complete` requires all of the following:
+
+- At least five participants, five repositories, and twenty paired tasks
+- Both conditions for every task
+- Different participants inside each task pair
+- Both conditions represented for every participant on different tasks
+- At most one run of imbalance between conditions for each participant
+- The same `agentProfile` inside each task pair
+
+Interpret success rate and `intentOnlySuccessCount`/`promptOnlySuccessCount` first, then wrong-target and undo counts, retries, and median duration among successful runs. "At least 30% better time to first success or retry count" is a product hypothesis, not an automatic victory declaration. Review failure types, unsupported rate, and participant feedback before keeping, narrowing, or expanding scope.
+
+## Release And Operator Checklist
+
+The repository is currently a pre-registry alpha. Closed pilots may use a local tarball or GitHub source. A public npm release should begin under the `alpha` dist-tag. Do not advertise `latest` or a stable release until independent A/B and initial-user feedback pass.
+
+### Owner-Only Actions
+
+The repository agent cannot complete these decisions on the owner's behalf:
+
+- Recruit independent participants, obtain consent, authorize private-repository use, and operate the A/B schedule
+- Create and secure the npm account, verify email, enable 2FA, and choose final package ownership and name
+- Approve and merge GitHub PRs and choose repository visibility, default branch, and protection rules
+- Approve the first authenticated `npm publish` and make the GitHub Release public
+- Decide privacy boundaries, support contact, whether alpha continues, and whether a version becomes `latest`
+
+Codex can prepare a release branch, version diff, verification, tarball inspection, release-note draft, and fixes. The owner still confirms account security, participant consent, and every public release action.
+
+### 1. One-Time Account And Repository Setup
+
+1. Create an [npm](https://www.npmjs.com/) account, verify the email address, then run `npm login` and `npm profile enable-2fa auth-and-writes` to protect login and package writes. Never put recovery codes in the repository or a chat.
+2. Confirm that `npm whoami` reports the intended owner. For an organization scope, also confirm publish permission in that organization.
+3. Choose the final name. `npm view intent-layer name version` returning `E404` only means the name is unregistered at that instant; it does not reserve the name. Check again immediately before publishing.
+4. Under GitHub repository `Settings > Rules > Rulesets`, create a branch ruleset targeting `main`. Require pull requests plus `Core / Node 20`, `Core / Node 22`, `Evaluation gates`, and `Browser / React compatibility`, and block force pushes. Review a separate `v*` tag ruleset so only the owner can create release tags. Follow GitHub's [ruleset rule reference](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets), and enable Issues or another explicit feedback channel.
+5. Manually review the MIT [LICENSE](./LICENSE), repository/bugs/homepage metadata, both READMEs, and the claimed support boundary.
+6. Confirm that `.env` files, tokens, private keys, raw A/B JSONL, customer source, and `.intent/` runtime data enter neither the commit nor the package.
+
+Use the official [npm public-package guide](https://docs.npmjs.com/creating-and-publishing-unscoped-public-packages/) and [GitHub Releases documentation](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases/) as the current source of truth.
+
+### 2. Build A Release Candidate
+
+Never publish directly from a feature branch. Merge its PR into `main`, then create a release branch from current `main`.
+
+```bash
+git status --short
+git switch main
+git pull --ff-only
+git switch -c release/v0.1.0-alpha.1
+npm ci
+npm run verify
+npm audit --omit=dev
+npm pack --dry-run --json
+```
+
+Do not stage personal IDE files or raw observation data shown by `git status`. Every verification command must exit zero. Read the dry-run file list and confirm that credentials, `.intent/`, fixtures, test output, and unexpected source maps are absent; the expected surface is built `dist/`, LICENSE, and user documentation.
+
+The recommended first public version is `0.1.0-alpha.1`.
+
+```bash
+npm version 0.1.0-alpha.1 --no-git-tag-version
+git diff -- package.json package-lock.json
+git add package.json package-lock.json
+git commit -m "chore: prepare v0.1.0-alpha.1"
+git push -u origin release/v0.1.0-alpha.1
+```
+
+Merge only after the version PR's CI passes. A version published to npm cannot be reused, so fix a post-publish problem in `alpha.2` rather than attempting to overwrite `alpha.1`.
+
+### 3. Publish The First npm Alpha
+
+Re-run the complete check from current `main`:
+
+```bash
+git switch main
+git pull --ff-only
+git status --short
+npm ci
+npm run verify
+npm pack --dry-run --json
+npm login
+npm whoami
+npm publish --access public --tag alpha
+```
+
+Do not omit `--tag alpha`; npm otherwise applies its default `latest` tag. After success, verify the registry:
+
+```bash
+npm view intent-layer@0.1.0-alpha.1 name version dist.tarball
+npm dist-tag ls intent-layer
+```
+
+The output should include `alpha: 0.1.0-alpha.1`. For an authentication failure, check account 2FA and package ownership, then use `npm view` to determine whether publish already succeeded before retrying. Never republish a successful version.
+
+### 4. Run A Fresh Registry-Install Smoke Test
+
+A source-workspace `file:` dependency or existing `node_modules` can hide a bad registry package. Install the **registry version** in a new React/Vite/Tailwind project on D:
+
+```powershell
+Set-Location D:\
+npm create vite@latest intent-layer-registry-smoke -- --template react-ts
+Set-Location D:\intent-layer-registry-smoke
+npm install
+npm install -D tailwindcss @tailwindcss/vite intent-layer@alpha
+```
+
+Add the Tailwind plugin to the new template's `vite.config.ts`:
+
+```ts
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [tailwindcss(), react()]
+});
+```
+
+Put `@import "tailwindcss";` at the top of `src/index.css`, then initialize and verify Intent Layer. Follow the [official Tailwind Vite guide](https://tailwindcss.com/docs/installation/using-vite) for the Tailwind portion.
+
+```powershell
+npx intent-layer init
+npx intent-layer doctor
+npm run build
+npm run dev
+```
+
+Then verify all of these in the browser:
+
+1. First-run setup appears and can switch to Korean.
+2. One element completes selection, DOM-only candidate preview, source diff, apply, HMR, and undo.
+3. Enabling Codex or Claude changes only project-local configuration, and a fresh AI session lists the MCP tools.
+4. After stopping dev, `npm run build` succeeds and the production bundle contains neither the panel nor `data-intent-id`.
+5. Removing and reinstalling the package followed by a dev-server restart preserves consistent setup and doctor guidance.
+
+Do not create the GitHub Release after a failed smoke test. Fix the issue and publish a new prerelease version. For a broken alpha already in the registry, prefer `npm deprecate intent-layer@<version> "reason"` over deletion so existing installs receive a warning.
+
+### 5. Tag And Create The GitHub Release
+
+Tag the commit that produced the registry-smoked package:
+
+```bash
+git tag -a v0.1.0-alpha.1 -m "INTENT_LAYER v0.1.0-alpha.1"
+git push origin v0.1.0-alpha.1
+gh release create v0.1.0-alpha.1 --prerelease --generate-notes --title "INTENT_LAYER v0.1.0-alpha.1"
+```
+
+Without GitHub CLI, choose the same tag in the GitHub Releases UI and mark it as a pre-release. Release notes must include:
+
+- The `npm install -D intent-layer@alpha` command
+- React/Vite/Tailwind support matrix and minimum Node version
+- The verified select -> preview -> apply -> verify -> undo flow
+- Current read-only or unsupported boundaries such as dynamic className, cross-file layouts, and Next.js
+- `npm run verify` result and known issues
+- Issue/feedback link and alpha-data handling
+
+### 6. Operate After The First Release
+
+1. Confirm that the README registry command matches the real `alpha` dist-tag/version, updating Korean and English in one commit.
+2. Ask the first five users whether installation completed, time to first selection, first patch success/failure, and the reason they stopped. Fix installation failures and wrong patches before adding feature requests.
+3. Repeat `npm run verify`, dry-run package inspection, a fresh registry-install smoke, and prerelease notes for every release.
+4. Do not run `npm dist-tag add intent-layer@<version> latest` before A/B `gates.complete` and initial-user feedback pass.
+5. Even after they pass, promotion to `latest` remains an explicit owner decision after reviewing the report, known limitations, and rollback plan.
+
+After the first manual publish is stable, prefer [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) over a long-lived npm token. Register the exact GitHub repository, publish workflow filename, and allowed action in npm package settings, then grant `id-token: write` to a GitHub-hosted runner. Under the current requirements, that publish job needs Node 22.14 or newer and npm 11.5.1 or newer; this is separate from the package's Node 20 runtime floor. This repository intentionally has no automatic publish workflow yet; add one only after package ownership and the first alpha are confirmed.
 
 ## CLI
 

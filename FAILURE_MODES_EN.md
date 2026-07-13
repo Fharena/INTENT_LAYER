@@ -289,3 +289,12 @@ Each Vite session keeps its own selection, while `intent://selection/current` re
 ## 20. Vite repeatedly reloads when an `.intent` file changes
 
 The current plugin excludes only `.intent/**` and `.intent-agent-queue.json*` under the resolved Vite project root. If reloads continue, first verify that the installed `intent-layer` package contains the latest build and fully restart the dev server. Existing user `server.watch.ignored` patterns should merge with these entries; if another plugin later replaces `ignored`, add the same root-anchored patterns there. Do not use a global `**/.intent/**`: it also ignores an entire test project located under `.intent/tmp`. Neither this watcher setting nor overlay instrumentation enters production builds.
+
+## 21. Product A/B aggregation fails or remains `collecting`
+
+- `Invalid product A/B observation on line N`: that JSONL row does not satisfy the version 2 schema. Check `participantId`, integer `runOrder` of at least one, `agentProfile`, task/repository/commit, condition, metrics, evaluator, and timestamp. Recover missing values from original run evidence instead of guessing.
+- `Duplicate product A/B condition`: one repository, commit, and task has the same condition twice. Do not average rows or delete one arbitrarily; resolve the duplicate against the private assignment sheet and original evidence.
+- `Duplicate product A/B runOrder`: one participant has the same chronological number on two runs. Use original start timestamps and the assignment sheet to restore that participant's sequence beginning at one.
+- The command succeeds but reports `status: collecting`: this can indicate more than sample size. Inspect `gates` for participant, repository, and pair counts; different participants per pair; both conditions and balanced counts per participant; and one `agentProfile` per pair.
+- A pair run by one person twice or with different models cannot become valid by renaming fields after the fact. Re-run that condition with a new participant from the same original commit.
+- Raw `product-ab-observations.jsonl` is ignored by Git by default. Do not copy PII or private repository source into the aggregate JSON.

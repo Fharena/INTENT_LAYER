@@ -246,9 +246,9 @@ P0 안정화는 production 계측 제거, React factory provenance 확인, seman
 
 P1에서 runtime-active 조건 분기 필터, source apply 전 DOM-only preview, color swatch, 수치 순서 spacing stepper, guarded literal text, project breakpoint/Grid row, Flex composer, Vite source map/자체 artifact 감시 제외, React 19/Tailwind CSS 4/Vite 8의 npm·pnpm 호환성 gate를 완료했다. 남은 외부 검증은 다음과 같다.
 
-1. 5개 이상 독립 저장소의 실제 작업으로 prompt-only 대비 첫 성공 시간과 patch 품질을 A/B 측정한다.
+1. 5명 이상 독립 참가자, 5개 이상 독립 저장소, 20개 paired task(40회 실행)로 prompt-only 대비 첫 성공 시간과 patch 품질을 A/B 측정한다.
 2. yarn/bun은 실제 사용자 수요가 확인될 때 설치 호환성을 검증한다.
-3. A/B와 초기 사용자 피드백이 통과한 뒤 npm registry 공개 배포를 승인한다.
+3. 명시적인 prerelease `alpha`는 release 검증과 owner 승인 뒤 사용자 모집용으로 배포할 수 있다. npm `latest`와 안정판 주장은 A/B와 초기 사용자 피드백이 통과한 뒤에만 승인한다.
 
 정리 원칙:
 
@@ -762,8 +762,9 @@ Next.js adapter
 - [x] 문서/튜토리얼
 - [x] literal text와 Grid/Flex grouped patch 회귀 테스트
 - [x] React 18/19, Tailwind 3/4, Vite 6/8, npm/pnpm 호환 gate
-- [ ] 5개 이상 독립 저장소·20개 paired task 제품 A/B
-- [ ] 승인된 npm registry 공개 배포와 초기 사용자 피드백 루프
+- [ ] 5명 이상·5개 이상 독립 저장소·20개 paired task(40회 실행) 제품 A/B
+- [ ] owner가 승인한 npm `alpha` 배포와 초기 사용자 피드백 루프
+- [ ] A/B와 피드백 통과 뒤 npm `latest` 승격
 
 ## 17. 2주 기술 스파이크
 
@@ -833,7 +834,7 @@ AI에게 말로 시키는 것보다 빠르다는 느낌이 드는가?
 - [x] 같은 파일 정적 Flex Layout Composer
 - [x] 최근 브라우저 선택 범위를 재사용하는 MCP Grid/Flex inspect/preview와 공통 apply/verify/undo
 - [x] session-scoped selection과 multi-Vite graph merge fixture
-- [ ] 5개 이상 독립 저장소의 실제 작업 20개 A/B (`product-ab-evaluation.json`: collecting, 0 paired tasks)
+- [ ] 5명 이상·5개 이상 독립 저장소의 실제 작업 20개 paired A/B, 총 40회 (`product-ab-evaluation.json`: collecting, 0 participants, 0 paired tasks)
 - [x] legacy Agent HTTP/UI opt-in 경계와 evaluator artifact 격리
 - [x] Lumina/Modern Chromium setup/literal/Grid/Flex/HMR/undo/mobile CI
 - [x] dev-only instrumentation과 production bundle marker 0건 gate

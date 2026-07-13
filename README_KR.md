@@ -46,12 +46,20 @@ npm run dev
 
 ## 다른 Vite 프로젝트에 설치
 
-Node.js 20 이상이 필요하다. 아직 npm registry에 출판하지 않았으므로 로컬 tarball로 검증한다.
+Node.js 20 이상이 필요하다. `npm view intent-layer@alpha version`이 아직 실패하는 동안에는 로컬 tarball로 검증한다.
 
 ```bash
 npm pack
 cd <target-vite-project>
 npm install <intent-layer-tarball>
+npx intent-layer init
+npm run dev
+```
+
+첫 registry alpha가 확인된 뒤에는 tarball 대신 다음을 사용한다.
+
+```bash
+npm install -D intent-layer@alpha
 npx intent-layer init
 npm run dev
 ```
@@ -324,9 +332,265 @@ npm run verify
 
 실제 브라우저 선택부터 stdio MCP 적용, 3개 재사용 인스턴스 검증과 undo까지의 기록은 [mcp-browser-roundtrip.json](./reports/performance/mcp-browser-roundtrip.json)에 있다.
 
-외부 corpus 수치는 **현재 allowlist가 관찰된 토큰 중 몇 개에 후보를 제공하는지**를 나타낸다. 실제 편집 성공률이나 패치 품질을 뜻하지 않는다. `npm run eval:product-ab`는 독립 사용자의 동일 작업 Intent Layer/프롬프트 조건을 쌍으로 집계한다. 현재 [product-ab-evaluation.json](./reports/performance/product-ab-evaluation.json)은 표본 0의 `collecting` 상태이며, 5개 저장소·20개 paired task 전에는 제품 우위를 주장하지 않는다.
+외부 corpus 수치는 **현재 allowlist가 관찰된 토큰 중 몇 개에 후보를 제공하는지**를 나타낸다. 실제 편집 성공률이나 패치 품질을 뜻하지 않는다. `npm run eval:product-ab`는 독립 사용자의 동일 작업 Intent Layer/프롬프트 조건을 쌍으로 집계한다. 현재 [product-ab-evaluation.json](./reports/performance/product-ab-evaluation.json)은 표본 0의 `collecting` 상태이며, 5명·5개 저장소·20개 paired task(40회 실행)와 독립성 gate가 모두 통과하기 전에는 제품 우위를 주장하지 않는다.
 
 [외부 호환성 파일럿](./reports/performance/external-compatibility-pilot.json)은 고정된 공개 저장소 5개에서 193개 파일, 1,706개 binding, 가중 직접 편집 binding coverage 84.58%와 pnpm 브라우저 apply/undo 1회를 기록한다. 저자가 직접 실행했고 prompt-only 쌍이 없으므로 이 수치는 독립 A/B에 포함하지 않는다. 파일럿에서 발견한 Vite runtime artifact 재로딩과 pnpm 로컬 패키지 캐시 문제는 각각 회귀 테스트와 강제 재설치 gate로 고정했다.
+
+## 독립 사용자 A/B 테스트 운영
+
+이 테스트의 질문은 "기계적으로 빠른가"가 아니라 **같은 UI 수정에서 Intent Layer가 prompt-only보다 사용자의 첫 성공을 더 빠르고 정확하게 만드는가**다. 저자가 두 조건을 직접 돌린 결과, 합성 Agent 실행, corpus coverage, 로컬 benchmark는 독립 사용자 증거로 세지 않는다.
+
+### 최소 표본과 독립성 기준
+
+- 제품 구현과 정답 작성에 참여하지 않은 익명 참가자 5명 이상
+- 서로 다른 실제 React/Vite/Tailwind 저장소 5개 이상
+- 사전에 정한 task 20개와 조건별 1회씩, 총 40회 실행
+- 같은 `repository + repositoryCommit + taskId` 쌍은 서로 다른 두 참가자가 나눠 수행
+- 한 참가자는 같은 task를 두 번 보지 않지만, 서로 다른 task에서는 두 조건을 모두 수행
+- task 쌍 안에서는 Codex/Claude client, 모델, 추론 설정을 합친 `agentProfile`이 동일
+
+20쌍은 제품 결정을 시작하기 위한 최소 gate일 뿐 통계적 유의성을 자동 보장하지 않는다. 성공률과 실패 원인을 먼저 보고, 성공한 실행의 시간만 비교하며, 표본이 작다는 한계를 결과와 함께 공개한다.
+
+### 1. 참가자와 과제 준비
+
+1. 참가자에게 녹화 여부, 수집 항목, 익명 보관 방식을 알리고 동의를 받는다. 이름이나 이메일 대신 `P01` 같은 ID만 쓴다.
+2. 권한이 있는 저장소만 사용한다. 비공개 저장소 이름은 `repo-01`처럼 가명 처리하고 원시 관찰 파일을 공유 저장소에 commit하지 않는다.
+3. 각 task를 10~20분 안에 끝낼 수 있는 한 가지 눈에 보이는 변경으로 제한한다. 예: "가격 카드 세 개의 간격을 한 단계 줄이고 모바일 열 수는 유지한다."
+4. task마다 기준 commit, 시작 route/state, 허용 파일, 금지 파일, 시간 제한, 정확한 검증 명령과 눈으로 볼 성공 조건을 **실행 전에** 고정한다.
+5. direct edit에 유리한 task만 고르지 않는다. 지원 범위 안/경계/Agent fallback이 필요한 과제를 사전에 섞고, 실패를 본 뒤 task를 제외하지 않는다.
+6. 별도 비공개 배정표에 `pairId`, repository 별칭, commit, taskId, 참가자, condition, `agentProfile`, `runOrder`, 제한 시간, evaluator를 기록한다.
+
+### 2. 조건과 교차 배정
+
+`intent-layer` 조건은 설치와 첫 설정을 **타이머 전에** 끝내고 패널 또는 로컬 MCP를 사용할 수 있게 한다. `prompt-only` 조건은 Intent Layer Vite plugin과 MCP를 끈 채 같은 AI client/model과 일반 편집 도구만 사용한다. 설치 시간까지 재고 싶다면 이 제품 가치 실험과 섞지 말고 별도의 onboarding 연구로 기록한다.
+
+배정은 실행 전에 무작위로 고정한다. 각 task의 두 조건을 다른 참가자에게 주고, 각 참가자가 다른 task에서 A/B를 비슷한 횟수로 맡도록 균형을 맞춘다. 실패 후 조건을 바꾸거나 더 숙련된 참가자로 교체하지 않는다.
+
+예를 들어 T01의 Intent Layer를 P01이 맡았다면 T01의 prompt-only는 P02가 맡는다. P01은 T02 같은 **다른** task에서 prompt-only를 수행한다. 이렇게 하면 같은 사람이 정답을 기억하는 carryover와 사람별 숙련도 차이를 함께 줄일 수 있다.
+
+정확히 5명·20개 task로 시작할 때는 배정표의 task 행을 한 번 무작위 정렬한 뒤 값을 고정한다. 0부터 센 행 `i`에서 Intent Layer 참가자 번호는 `(i mod 5) + 1`, prompt-only 참가자 번호는 `((i + 1) mod 5) + 1`로 정해 `P01`~`P05`에 배정한다. 그러면 각 참가자가 조건별 4회씩 수행하고 같은 pair의 참가자는 항상 다르다. 실제 실행 순서는 일정에 따라 섞어도 되지만 참가자별 시간 순서를 `runOrder`에 1부터 기록하고, 실패를 본 뒤 배정표를 다시 무작위화하지 않는다.
+
+### 3. 실행 환경 고정
+
+1. 각 실행은 같은 원본 commit에서 만든 새 clone 또는 worktree와 새 AI 대화에서 시작한다. Windows 임시 작업은 `D:\intent-layer-ab\<pair>-<condition>`처럼 D 드라이브에 둔다.
+2. 두 조건 모두 의존성 설치, dev server 기동, route 이동과 초기 앱 상태 준비를 타이머 전에 끝낸다. cache warm-up 정책도 두 조건에 똑같이 적용한다.
+3. `repositoryCommit`에는 조건별 설정 commit이 아니라 동일한 원본 source commit을 기록한다. Intent Layer 설치 파일은 task 결과 diff와 평가 대상에서 제외한다.
+4. 참가자에게 같은 task 문구, 같은 제한 시간, 같은 성공 기준만 준다. 한 조건에만 source 위치나 정답 힌트를 추가하지 않는다.
+5. 참가자는 다른 참가자의 화면, diff, 해결 프롬프트를 보지 않는다. 같은 task를 이미 본 사람은 그 task의 반대 조건에 참여하지 않는다.
+
+### 4. 시간과 수치 정의
+
+- `durationMs`: task 문구를 공개하고 참가자가 첫 선택 또는 첫 prompt를 시작한 시점부터, 검증이 통과하고 완료를 선언한 시점까지다. 제한 시간을 넘기면 `success: false`, `durationMs`는 제한 시간으로 기록한다.
+- `success`: 조건을 모르는 evaluator가 최종 diff와 사전 검증을 보고 판정한다. 화면이 비슷해 보여도 검증 실패, 금지 파일 변경, 요구사항 누락은 실패다.
+- `retryCount`: 첫 해결 시도 뒤 잘못된 결과를 고치기 위해 보낸 추가 수정 prompt 또는 새 적용 시도 수다. 탐색 질문과 최초 시도는 세지 않는다.
+- `wrongTargetCount`: 잘못된 컴포넌트, binding 또는 파일을 실제로 수정해 되돌리거나 다시 고친 횟수다. 단순 hover나 적용 전 DOM 미리보기는 세지 않는다.
+- `undoCount`: Intent Layer Undo, `git restore`, 수동 역수정처럼 이미 적용된 변경을 되돌린 횟수다.
+- `unsupported`: Intent Layer direct-edit가 명시적 지원 경계로 내려가 Agent fallback을 사용했으면 Intent Layer 관찰값에 `true`를 기록한다. prompt-only 관찰값에는 `false`를 쓴다.
+
+화면 녹화나 AI session export는 선택 사항이지만, 최소한 시작/종료 시각, 기준 commit, 최종 diff, 검증 출력과 evaluator 판정은 남긴다. evaluator에게는 조건명을 숨기고 익명화한 diff와 결과만 전달한다.
+
+### 5. 관찰값 기록
+
+원시 입력은 `reports/performance/product-ab-observations.jsonl`이며 한 줄에 JSON object 하나다. 이 파일은 개인정보와 비공개 저장소 정보가 섞일 수 있어 기본적으로 Git에서 제외된다. 공개 저장소에는 집계 결과인 `product-ab-evaluation.json`만 남긴다.
+
+PowerShell에서 한 실행을 추가하는 예시는 다음과 같다. `agentProfile`은 client, 모델과 중요한 설정이 같은지 판별할 수 있는 고정 문자열로 작성한다.
+
+```powershell
+$observation = [ordered]@{
+  version          = 2
+  participantId    = "P01"
+  runOrder          = 1
+  agentProfile      = "codex-app:gpt-5-default-2026-07-13"
+  taskId            = "T01-card-gap"
+  repository        = "repo-01"
+  repositoryCommit  = "0123456789abcdef"
+  condition         = "intent-layer"
+  success           = $true
+  durationMs        = 184000
+  retryCount        = 0
+  wrongTargetCount  = 0
+  undoCount         = 0
+  unsupported       = $false
+  evaluator         = "E01"
+  recordedAt        = (Get-Date).ToUniversalTime().ToString("o")
+}
+$observation | ConvertTo-Json -Compress |
+  Add-Content -Encoding utf8 reports/performance/product-ab-observations.jsonl
+```
+
+같은 task의 반대 조건은 `condition`, 참가자, `runOrder`와 실제 측정값을 바꿔 새 줄로 추가한다. 이미 기록한 줄을 평균값으로 덮어쓰지 않는다. 잘못 기록했다면 원본 증거를 확인해 해당 줄을 바로잡고 변경 이유를 비공개 배정표에 남긴다.
+
+### 6. 집계와 판정
+
+```bash
+npm run eval:product-ab
+```
+
+명령은 JSONL을 검증하고 [product-ab-evaluation.json](./reports/performance/product-ab-evaluation.json)을 갱신한다. 잘못된 schema, 같은 task/condition 중복 또는 한 참가자의 `runOrder` 중복은 줄 번호나 관련 key와 함께 실패한다. 표본이 부족하거나 독립성 조건이 깨진 경우 명령 자체는 정상 집계되지만 `status: collecting`, `gates.complete: false`로 남는다.
+
+`complete`에는 다음 조건이 모두 필요하다.
+
+- 참가자 5명 이상, 저장소 5개 이상, paired task 20개 이상
+- 모든 task에 두 조건이 존재
+- task 쌍의 참가자가 서로 다름
+- 모든 참가자가 서로 다른 task에서 두 조건을 모두 경험
+- 참가자별 두 조건 실행 수 차이가 1 이하
+- task 쌍의 `agentProfile`이 동일
+
+판정 순서는 성공률과 `intentOnlySuccessCount`/`promptOnlySuccessCount`, wrong-target와 undo, retry, 성공 실행의 median duration 순서다. "첫 성공 시간 또는 retry 30% 개선"은 제품 가설이지 자동 승리 선언이 아니다. 실패 유형, unsupported 비율과 참가자 피드백까지 함께 보고 범위를 유지·축소·확장한다.
+
+## 배포와 운영자 체크리스트
+
+현재 저장소는 npm 첫 공개 전 alpha다. 닫힌 사용자 파일럿은 로컬 tarball이나 GitHub source로 진행할 수 있고, 공개 npm은 먼저 `alpha` dist-tag로 내보낸다. 독립 A/B와 초기 사용자 피드백이 통과하기 전에는 `latest` 또는 안정판으로 홍보하지 않는다.
+
+### 사용자가 직접 해야 하는 일
+
+다음 항목은 저장소 안의 Agent가 대신 완료할 수 없다.
+
+- 독립 참가자 모집, 동의 획득, 비공개 저장소 사용 권한 확인과 A/B 일정 운영
+- npm 계정 생성, 이메일 확인, 2FA 설정, 최종 package 이름과 소유권 결정
+- GitHub PR 승인/merge, 저장소 공개 여부, default branch와 보호 규칙 설정
+- 첫 `npm publish`의 로그인/2FA 승인과 GitHub Release 공개 승인
+- 개인정보 처리 범위, 지원 연락처, 알파 중단/계속 여부와 `latest` 승격 결정
+
+Codex는 release branch, 버전 변경, 테스트, tarball 검사, release note 초안과 실패 수정은 준비할 수 있다. 계정 보안, 사람 동의와 최종 공개 버튼은 소유자가 확인한다.
+
+### 1. 일회성 계정과 저장소 준비
+
+1. [npm](https://www.npmjs.com/) 계정을 만들고 이메일을 확인한 뒤 `npm login`, `npm profile enable-2fa auth-and-writes`로 로그인과 package write에 2FA를 켠다. recovery code는 저장소나 채팅에 넣지 않는다.
+2. `npm whoami`가 의도한 소유자 계정을 반환하는지 확인한다. 조직 scope를 쓸 경우 해당 조직의 publish 권한도 확인한다.
+3. package 이름을 최종 결정한다. `npm view intent-layer name version`이 `E404`를 반환하면 그 순간 등록되지 않았다는 뜻일 뿐 예약은 아니다. publish 직전에 다시 확인한다.
+4. GitHub 저장소의 `Settings > Rules > Rulesets`에서 `main` 대상 branch ruleset을 만들고 pull request, `Core / Node 20`, `Core / Node 22`, `Evaluation gates`, `Browser / React compatibility` 통과를 요구하며 force push를 막는다. `v*` 대상 tag ruleset도 owner만 release tag를 만들 수 있게 검토한다. 자세한 항목은 [GitHub ruleset 규칙](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)을 따른다. Issues 또는 명시적 피드백 채널도 연다.
+5. 공개 package에 포함되는 MIT [LICENSE](./LICENSE), repository/bugs/homepage metadata, 한영 README와 지원 범위를 사람이 최종 검토한다.
+6. `.env`, token, private key, 원시 A/B JSONL, 고객 source, `.intent/` runtime 파일이 package나 commit에 들어가지 않는지 확인한다.
+
+공식 절차는 [npm 공개 package 배포 문서](https://docs.npmjs.com/creating-and-publishing-unscoped-public-packages/)와 [GitHub Releases 문서](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases/)를 기준으로 한다.
+
+### 2. release 후보 만들기
+
+기능 branch를 바로 publish하지 않는다. PR을 `main`에 merge하고, 최신 `main`에서 별도 release branch를 만든다.
+
+```bash
+git status --short
+git switch main
+git pull --ff-only
+git switch -c release/v0.1.0-alpha.1
+npm ci
+npm run verify
+npm audit --omit=dev
+npm pack --dry-run --json
+```
+
+`git status`에 개인 IDE 파일이나 원시 관찰값이 보이면 stage하지 않는다. `verify`는 모두 exit 0이어야 하고 `npm audit --omit=dev`는 production 취약점을 확인한다. dry-run 목록에서 `dist/`, LICENSE와 사용자 문서 외에 credential, `.intent/`, fixture, test output, source map이 뜻밖에 포함되지 않았는지 직접 읽는다.
+
+첫 공개 후보 권장 버전은 `0.1.0-alpha.1`이다.
+
+```bash
+npm version 0.1.0-alpha.1 --no-git-tag-version
+git diff -- package.json package-lock.json
+git add package.json package-lock.json
+git commit -m "chore: prepare v0.1.0-alpha.1"
+git push -u origin release/v0.1.0-alpha.1
+```
+
+버전 PR의 CI가 모두 통과한 뒤 merge한다. npm version은 한번 공개하면 같은 번호를 다시 사용할 수 없으므로 publish 뒤 문제를 발견하면 내용을 덮어쓰지 말고 `alpha.2`로 올린다.
+
+### 3. 첫 npm alpha 공개
+
+최신 `main`에서 다시 전체 검증과 package 내용을 확인한다.
+
+```bash
+git switch main
+git pull --ff-only
+git status --short
+npm ci
+npm run verify
+npm pack --dry-run --json
+npm login
+npm whoami
+npm publish --access public --tag alpha
+```
+
+`--tag alpha`를 빼면 npm 기본값인 `latest`가 붙으므로 alpha에서는 생략하지 않는다. 성공하면 다음을 확인한다.
+
+```bash
+npm view intent-layer@0.1.0-alpha.1 name version dist.tarball
+npm dist-tag ls intent-layer
+```
+
+`alpha: 0.1.0-alpha.1`이 보여야 한다. 인증 실패는 npm 계정/2FA와 package 소유권을 확인한 뒤 해결하고, publish가 실제 성공했는지는 `npm view`로 먼저 확인한다. 성공한 version에 다시 publish하지 않는다.
+
+### 4. registry에서 새 설치 smoke test
+
+source workspace의 `file:` dependency나 기존 `node_modules`를 재사용하면 registry package 결함을 놓칠 수 있다. D 드라이브의 새 React/Vite/Tailwind 테스트 프로젝트에서 **registry 버전**을 설치한다.
+
+```powershell
+Set-Location D:\
+npm create vite@latest intent-layer-registry-smoke -- --template react-ts
+Set-Location D:\intent-layer-registry-smoke
+npm install
+npm install -D tailwindcss @tailwindcss/vite intent-layer@alpha
+```
+
+새 template의 `vite.config.ts`에 Tailwind plugin을 추가한다.
+
+```ts
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [tailwindcss(), react()]
+});
+```
+
+`src/index.css`의 첫 줄에는 `@import "tailwindcss";`를 두고, 그다음 Intent Layer 설정과 검증을 실행한다. 자세한 Tailwind 부분은 [공식 Vite 설치법](https://tailwindcss.com/docs/installation/using-vite)을 따른다.
+
+```powershell
+npx intent-layer init
+npx intent-layer doctor
+npm run build
+npm run dev
+```
+
+브라우저에서 다음을 실제로 확인한다.
+
+1. 첫 설정 화면과 한국어 전환이 보인다.
+2. 요소 선택, DOM-only 후보, source diff, 적용, HMR, 되돌리기가 한 번 완주한다.
+3. Codex 또는 Claude 연결을 켰을 때 project-local 설정만 생기고 새 AI session에서 MCP 도구가 보인다.
+4. dev server를 끈 뒤 `npm run build`가 통과하고 production bundle에 패널이나 `data-intent-id`가 없다.
+5. package 제거/재설치 후 dev server를 재시작해도 설정과 doctor 안내가 일관된다.
+
+실패하면 GitHub Release를 만들지 않는다. 원인을 고치고 새 prerelease version을 낸다. 이미 공개된 잘못된 alpha는 삭제보다 `npm deprecate intent-layer@<version> "reason"`으로 사용 중단을 알리는 편이 안전하다.
+
+### 5. Git tag와 GitHub Release
+
+registry smoke가 통과한 **그 package version의 commit**에 tag를 단다.
+
+```bash
+git tag -a v0.1.0-alpha.1 -m "INTENT_LAYER v0.1.0-alpha.1"
+git push origin v0.1.0-alpha.1
+gh release create v0.1.0-alpha.1 --prerelease --generate-notes --title "INTENT_LAYER v0.1.0-alpha.1"
+```
+
+GitHub CLI를 쓰지 않으면 GitHub의 Releases 화면에서 같은 tag를 골라 `pre-release`로 만든다. release note에는 다음을 포함한다.
+
+- `npm install -D intent-layer@alpha` 설치 명령
+- React/Vite/Tailwind 지원 matrix와 Node 최소 버전
+- 선택 → 미리보기 → 적용 → 검증 → undo의 검증된 흐름
+- dynamic className, cross-file layout, Next.js 등 현재 read-only/미지원 경계
+- `npm run verify` 결과와 알려진 문제
+- issue/피드백 링크와 alpha 데이터 취급 안내
+
+### 6. 첫 공개 뒤 운영
+
+1. README의 registry 명령과 실제 `alpha` dist-tag/version이 일치하는지 확인하고 한영 문서를 같은 commit에서 갱신한다.
+2. 첫 5명에게 설치 성공 여부, 첫 선택까지 걸린 시간, 첫 patch 성공/실패와 중단 이유를 받는다. 기능 요청보다 설치 실패와 잘못된 patch를 먼저 고친다.
+3. 매 release에서 `npm run verify`, dry-run package 검사, registry fresh-install smoke와 GitHub prerelease note를 반복한다.
+4. A/B `gates.complete`와 초기 사용자 피드백이 통과하기 전에는 `npm dist-tag add intent-layer@<version> latest`를 실행하지 않는다.
+5. 통과 뒤에도 `latest` 승격은 owner가 report, known limitations와 rollback 계획을 검토한 별도 결정으로 남긴다.
+
+첫 수동 publish가 안정되면 장기 npm token 대신 [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/)을 사용한다. npm package 설정에서 GitHub 저장소, publish workflow filename과 허용 action을 정확히 등록하고, GitHub-hosted runner에 `id-token: write`를 부여한다. 현재 요구사항 기준으로 publish job은 Node 22.14 이상과 npm 11.5.1 이상을 사용해야 한다. 이는 package 사용자의 Node 20 최소 버전과 별개다. 현재 저장소에는 자동 publish workflow를 일부러 두지 않았으므로, npm package ownership과 첫 alpha가 확인된 뒤 별도 검토로 추가한다.
 
 ## CLI
 

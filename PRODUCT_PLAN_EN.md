@@ -244,9 +244,9 @@ P0 stabilization is complete for production-instrumentation removal, React facto
 
 P1 has completed runtime-active conditional filtering, DOM-only preview before source apply, color swatches, numerically ordered spacing steppers, guarded literal text, project breakpoint/Grid rows, the Flex composer, Vite source maps and self-artifact watch exclusion, and npm/pnpm compatibility gates for React 19/Tailwind CSS 4/Vite 8. Remaining external validation is:
 
-1. Measure time-to-first-success and patch quality against prompt-only work on real tasks from at least five independent repositories.
+1. Measure time to first success and patch quality against prompt-only work with at least five independent participants, five independent repositories, and twenty paired tasks (forty runs).
 2. Validate yarn or bun installation only after real user demand is observed.
-3. Approve a public npm registry release only after A/B and initial-user feedback pass.
+3. A clearly labeled prerelease `alpha` may recruit users after release verification and owner approval. Approve npm `latest` and stable claims only after A/B and initial-user feedback pass.
 
 Cleanup rules:
 
@@ -760,8 +760,9 @@ Required:
 - [x] documentation and tutorial
 - [x] literal-text and grouped Grid/Flex regression coverage
 - [x] React 18/19, Tailwind 3/4, Vite 6/8, and npm/pnpm compatibility gates
-- [ ] product A/B across at least five independent repositories and twenty paired tasks
-- [ ] approved public npm registry release plus an initial-user feedback loop
+- [ ] product A/B with at least five participants, five independent repositories, and twenty paired tasks (forty runs)
+- [ ] owner-approved npm `alpha` plus an initial-user feedback loop
+- [ ] npm `latest` promotion after A/B and feedback pass
 
 ## 17. Two-week Technical Spike
 
@@ -831,7 +832,7 @@ Can the architecture scale to large projects?
 - [x] same-file static Flex Layout Composer
 - [x] MCP Grid/Flex inspect/preview using the recent browser scope plus shared apply/verify/undo
 - [x] session-scoped selection and multi-Vite graph merge fixture
-- [ ] 20 held-out tasks against prompt-only workflows (`product-ab-evaluation.json`: collecting, 0 paired tasks)
+- [ ] twenty paired held-out tasks across at least five participants and five repositories, forty runs total (`product-ab-evaluation.json`: collecting, 0 participants, 0 paired tasks)
 - [x] opt-in legacy Agent HTTP/UI boundary and evaluator artifact isolation
 - [x] Lumina/Modern Chromium setup/literal/Grid/Flex/HMR/undo/mobile CI
 - [x] dev-only instrumentation and a zero-marker production-bundle gate

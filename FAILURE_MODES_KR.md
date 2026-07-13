@@ -289,3 +289,12 @@ candidate provider는 `tailwind.config.{js,ts,cjs,mjs,cts,mts}`의 정적 object
 ## 20. `.intent` 파일이 바뀔 때 Vite가 반복해서 reload됨
 
 현재 plugin은 **해당 Vite project root 아래의** `.intent/**`와 `.intent-agent-queue.json*`만 watcher에서 자동 제외한다. 반복 reload가 보이면 설치된 `intent-layer`가 최신 빌드인지 먼저 확인하고 dev server를 완전히 재시작한다. 사용자 `server.watch.ignored` 규칙은 합쳐져야 하며, 다른 plugin이 `ignored`를 나중에 덮어쓰는 경우 그 plugin 설정에도 project-root 기준의 같은 두 패턴을 추가한다. 전역 `**/.intent/**`는 `.intent/tmp` 아래 테스트 프로젝트 전체까지 무시하므로 사용하지 않는다. production build에는 이 watcher 설정이나 overlay 계측이 들어가지 않는다.
+
+## 21. 제품 A/B 집계가 실패하거나 계속 `collecting`임
+
+- `Invalid product A/B observation on line N`: JSONL의 해당 줄이 version 2 schema를 따르지 않는다. `participantId`, 1 이상의 정수 `runOrder`, `agentProfile`, task/repository/commit, condition, 수치와 evaluator/시간을 확인한다. 누락값을 추측해 채우지 말고 원본 run 증거에서 복구한다.
+- `Duplicate product A/B condition`: 같은 repository, commit, task에 동일 condition이 두 번 있다. 평균내거나 한 줄을 임의 삭제하지 말고 비공개 배정표와 원본 기록으로 중복 여부를 확인한다.
+- `Duplicate product A/B runOrder`: 한 참가자의 시간 순서 번호가 두 실행에 반복됐다. 원본 시작 시각과 배정표를 확인해 해당 참가자의 1부터 시작하는 순서를 바로잡는다.
+- 명령은 성공했지만 `status: collecting`: 표본 부족만 뜻하지 않는다. `gates`에서 참가자/저장소/paired task 수, 쌍마다 다른 참가자, 참가자별 양쪽 조건과 실행 수 균형, 쌍마다 같은 `agentProfile` 중 실패 항목을 확인한다.
+- 같은 사람이 같은 task의 두 조건을 실행했거나 서로 다른 모델로 실행한 pair는 사후에 이름만 바꿔 유효하게 만들 수 없다. 새 참가자와 동일한 원본 commit으로 해당 run을 다시 수행한다.
+- raw `product-ab-observations.jsonl`은 기본 Git 제외 대상이다. 개인정보나 비공개 저장소 source를 집계 JSON에 옮기지 않는다.
