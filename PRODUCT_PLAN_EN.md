@@ -8,15 +8,22 @@
 - Primary audience: developers, vibe coders, and beginner frontend developers who use AI to generate UI code
 - Initial supported stack: `React + Vite + Tailwind CSS + TypeScript`
 
-### 0.1 Current Implementation Baseline (2026-07-11)
+### 0.1 Current Implementation Baseline (2026-07-12)
 
-The current state is a **working alpha**, not a universal product. Element selection, TypeScript AST source binding, Tailwind candidates, minimal range patches, and latest-first undo guarded by the post-apply source hash are supported as the core path. Agent handoff is optional and has not yet proven that it outperforms direct context passed to an agent.
+The current state is an **AI-native working alpha**, not a universal product. The browser GUI and local MCP share one `IntentService` for selection, TypeScript AST source binding, semantic Tailwind candidates, minimal range patches, and source-hash-guarded undo. The Markdown Agent queue is advanced compatibility rather than the default path.
 
 Current implementation rules:
 
 - JSX analysis uses one TypeScript AST path instead of parallel scanner and AST implementations.
+- Intrinsic JSX and `React.createElement()` are supported, while ambiguous `cloneElement` provenance is not guessed.
 - A token is editable only when it has more than one real candidate.
+- AI clients cannot submit source offsets or raw patches; they request `intentId + semantic property + candidate value`.
+- Apply validates an expiring preview, source hash, atomic file lock, and idempotency key.
+- With a connected browser, Vite HMR is followed by rendered-instance class-token verification.
 - Undo is latest-first rather than arbitrary branch undo.
+- Applies and undos from separate MCP processes are serialized by a project operation lock, and the shared journal is published with atomic rename.
+- Source-changing Vite HTTP requests require both a loopback connection and a session token.
+- When no browser is connected, source verification does not make the overall runtime verify result successful.
 - Vitest regression tests, GitHub Actions CI, and evaluation gates that exit 1 on failure define release readiness.
 - npm tarballs ship built JavaScript under `dist/` instead of raw TypeScript execution.
 - Active documentation is limited to four KR/EN pairs: README, PRODUCT_PLAN, DEMO_WALKTHROUGH, and FAILURE_MODES.
@@ -25,7 +32,7 @@ Later package structures and v1 ideas in this document are hypotheses, not claim
 
 ## 1. One-line Definition
 
-`INTENT_LAYER` is a deterministic intent layer and visual patch tool that helps people inspect, understand, and safely edit AI-generated React/Tailwind UI through semantic controls.
+`INTENT_LAYER` is a deterministic UI actuator that lets people and AI clients share the same React/Tailwind source bindings and guarded patch engine.
 
 Short version:
 
@@ -130,16 +137,15 @@ Most competitors focus on one of these:
 `INTENT_LAYER` differentiates through:
 
 ```text
-1. A formal Intent Document format between code and meaning
+1. Source bindings and a semantic operation contract between code and screen
 2. Deterministic patches without AI calls for every edit
 3. Intent diffs instead of raw line diffs
-4. Confidence-based editability
-5. Code/document drift detection
-6. A foundation for agents to work with intent operations/tasks instead of raw code
-7. External agent execution defaults to command planning; direct execution requires explicit opt-in
+4. Source-hash drift rejection and guarded undo
+5. One patch engine shared by the human GUI and AI MCP clients
+6. Explicit read-only and handoff boundaries for unsupported edits
 ```
 
-This is closer to a **Prisma-like middle layer for UI intent** than a simple visual editor.
+The goal is a **guarded UI source actuator** shared by people and AI, not a generic visual editor.
 
 ## 6. Target Users
 
@@ -153,7 +159,7 @@ This is closer to a **Prisma-like middle layer for UI intent** than a simple vis
 
 For this audience, the browser GUI should be the primary operating surface. CLI commands are supporting tools for install, diagnostics, repeatable evaluation, and automation.
 
-First-run setup should also be GUI-first. After the Vite plugin is registered, the browser overlay should handle Korean/English language choice, `.intent` workspace creation, source binding status, and Codex/Claude hook run-lock status as the default path. The same view should remain available as Settings after onboarding so users can change language, panel position/density, startup behavior, Agent commands, and onboarding reset without extra CLI steps.
+First-run setup should also be GUI-first. After the Vite plugin is registered, the browser overlay handles language, `.intent` workspace creation, source-binding status, and project-local Codex/Claude MCP connections. Only providers explicitly enabled by the user are configured, and global configuration is never modified. Settings remains available after onboarding, while the old Agent queue and CLI-spawn controls live under collapsed advanced compatibility.
 
 ### 6.2 Secondary Users
 
@@ -175,97 +181,79 @@ First-run setup should also be GUI-first. After the Vite plugin is registered, t
 
 v1.0 should be small but shippable.
 
-### 7.1 Supported Stack
+### 7.1 Support Contract And Verification Matrix
 
-Official support:
+Support is reported at four evidence levels.
 
-```text
-React
-Vite
-TypeScript / TSX
-Tailwind CSS
-literal className
-simple cn()/clsx() cases
-```
+| Status | Meaning |
+| --- | --- |
+| Verified | Both automated regression coverage and a real browser flow exist. |
+| Partial | A source fixture or parser test exists, but there is no complete install-to-browser proof. |
+| Unverified | It may work structurally, but it is not a release contract. |
+| Intentionally excluded | The case becomes read-only or an agent handoff because guessing would be unsafe or too broad. |
 
-Limited support:
+The verified environment on 2026-07-12 is Node.js 20/22, npm, pnpm 10.34.5, React 18.3.1/19.2.7, Vite 6.4.3/8.1.4, TypeScript 5.9.3, Tailwind CSS 3.4.19/4.3.2, and Playwright Chromium 149. Full verification ran on Windows, and GitHub Actions defines Ubuntu paths for Node.js 20/22. yarn/bun, Firefox/WebKit, and macOS are not official support yet.
 
-```text
-shadcn/ui
-CSS variables
-simple CSS modules
-same-file one-hop variable dependency handoff context
-one-hop dependency handoff context inside imported variable declarations
-named-import dependency handoff context inside related declarations
-object-property className handoff context
-workspace package import variable handoff context
-external npm package import reference handoff context
-local and one-hop relative-import variant/cva handoff context
-tsconfig paths alias plus one-hop/multi-hop named barrel re-export variant/cva handoff context
-tsconfig paths alias plus multi-hop barrel re-export imported variable handoff context
-```
+Intent Layer does not reimplement React APIs or override Hooks. Its support unit is not an API name; it is **the source shape of intrinsic JSX that renders to browser DOM**. Hooks, Context, `memo`, `lazy`, and transition APIs in the [React API reference](https://react.dev/reference/react) pass through ordinary AST traversal when intrinsic JSX remains in project source. Class strings assembled only at runtime are not inferred.
 
-Not supported in v1.0:
+| React source shape | Status | Behavior |
+| --- | --- | --- |
+| Intrinsic JSX with a static `className` in function/arrow components | Verified | DOM selection, source binding, token patch, HMR, and undo |
+| Intrinsic JSX inside a class component's `render()` | Partial | Binding and component-name unit coverage exists; there is no browser E2E yet. |
+| Fragments, conditionals, `map`, `forwardRef`, `Suspense` fallback, and JSX passed to portals | Partial | AST traversal unit coverage exists; portal and every wrapper do not yet have click E2E. |
+| Intrinsic `createElement` through default, namespace, named, or aliased imports from `react` | Partial | Binding checks the module import name plus a literal tag and object props. Same-name shadowing in a nested scope is not yet verified. |
+| String arguments and all-string conditional branches inside `cn()`/`clsx()` | Verified | Only literal ranges are editable, and the panel hides inactive branches absent from the clicked DOM class list. A React 19 `cn()` conditional has browser E2E; `clsx()` uses the same parser path and regression fixture. |
+| Intrinsic elements inside a reused component implementation | Verified | The edit applies to every rendered instance sharing the source id and is labeled shared. |
+| A custom or member-component call such as `<Button className=...>` or `<motion.div>` | Intentionally excluded | The tool does not guess that the prop reaches DOM; it binds to the intrinsic element in the implementation. |
+| `cloneElement`, an unimported global `React.createElement`, or compiled `jsx/jsxs` calls | Intentionally excluded | Provenance or original source ranges are ambiguous. |
+| React Server Components, server-only DOM, and React Native | Unverified | They are outside the current Vite browser-DOM adapter. |
 
-```text
-Full Next.js support
-styled-components
-Emotion
-complete CSS cascade editing
-full Tailwind arbitrary value support
-complete dynamic className analysis
-external npm package source analysis/direct patching, variant-function meaning, and arbitrary-depth cross-file/transitive variable data-flow variant graph analysis
-Figma import
-AI automatic refactoring
-```
+The plugin uses the `apply: "serve"` boundary from the [Vite plugin contract](https://vite.dev/guide/api-plugin). Instrumentation and the overlay run only in the dev server, and a separate gate asserts zero forbidden markers in production bundles. MagicString range insertion returns a map containing the original TSX `sourcesContent`; browser E2E verifies that Vite and React compose later transforms back to that source. `.intent/**` and the queue signal are excluded from Vite watching so graph and operation writes cannot trigger reload loops.
 
-### 7.2 Supported Edits
+Static Tailwind CSS 3 configuration and standard utilities are verified. A React 19/Vite 8 browser fixture verifies Tailwind CSS 4.3.2 [`@theme` variables](https://tailwindcss.com/docs/theme), `@tailwindcss/vite` development and production builds, project color candidates, HMR patching, and undo. The product never executes config code or guesses arbitrary plugin-utility semantics.
 
-v1.0 should do these very well:
+### 7.2 Direct-Edit Contract
 
-```text
-spacing:
-  padding
-  margin
-  gap
+Current direct edits cover:
 
-layout:
-  flex direction
-  grid columns
-  some width ratios
-  some alignment values
+- spacing: padding, margin, gap, and valid negative margins
+- sizing: width, height, min/max, and size
+- layout: display, numeric grid columns/column start/span, flex direction/wrap/value, align/justify/content/self
+- typography: font size, font weight, and line height
+- color: known palettes and static project tokens for background, text, border, divide, ring/outline/decoration/accent/caret/fill/stroke/shadow colors
+- shape/effects: border radius, shadow size, opacity, ring width, and transition kind
+- variants: single-token replacement while preserving existing responsive, state, or arbitrary-variant prefixes
+- content: one single-line literal text child on intrinsic JSX with a static className binding
 
-typography:
-  font size
-  font weight
-  line height
+The Grid Layout Composer is narrower than the general token dropdown. It requires one TSX file, static single-line `className` values, an existing `grid` parent and bound direct children, default or statically parsed min-width project breakpoints, 1-12 row/column tracks, numeric start/span tokens, or a simple positive column `fr` template.
 
-color:
-  background color
-  text color
-  border color
+The Flex Layout Composer uses the same binding contract and edits only direction, wrapping, justification, alignment, project gap candidates, and per-child `align-self` on an existing base `flex`/`inline-flex` parent.
 
-shape:
-  border radius
-  border width
+Current read-only or handoff cases:
 
-responsive:
-  show sm/md/lg variants
-  edit simple breakpoint-specific values
-```
+- runtime variables, property access, template expressions, object-form `clsx`, and `cva`/variant meaning
+- `raw`, max-only, or dynamically computed breakpoints, plus Grid/Flex ordering and DOM reordering
+- compound arbitrary Grid templates containing `minmax()`, named lines, or CSS variables
+- cross-file Grid/Flex children, per-instance layout for repeated source ids, axis-specific Flex `gap-x`/`gap-y`, and direct patches to external packages
+- styled-components, Emotion, complete CSS cascade editing, and direct CSS Modules declaration editing
+- a Next.js/RSC adapter, Figma import, and AI refactors presented as deterministic patches
 
-### 7.3 Core v1.0 Features
+### 7.3 Next Features And Cleanup Decisions
 
-1. Browser overlay
-2. Element selection
-3. Source file/component mapping
-4. Tailwind token to semantic knob conversion
-5. Deterministic code patch from knob changes
-6. Safe patch preview
-7. Undo/revert
-8. Intent diff
-9. Confidence display
-10. `.intent.yml` document generation and update
+P0 stabilization is complete for production-instrumentation removal, React factory provenance, semantic flex candidate grouping, invalid negative-utility rejection, workspace-drive temp isolation, and removal of the stale raw-TypeScript bin.
+
+P1 has completed runtime-active conditional filtering, DOM-only preview before source apply, color swatches, numerically ordered spacing steppers, guarded literal text, project breakpoint/Grid rows, the Flex composer, Vite source maps and self-artifact watch exclusion, and npm/pnpm compatibility gates for React 19/Tailwind CSS 4/Vite 8. Remaining external validation is:
+
+1. Measure time to first success and patch quality against prompt-only work with at least five independent participants, five independent repositories, and twenty paired tasks (forty runs).
+2. Validate yarn or bun installation only after real user demand is observed.
+3. A clearly labeled prerelease `alpha` may recruit users after release verification and owner approval. Approve npm `latest` and stable claims only after A/B and initial-user feedback pass.
+
+Cleanup rules:
+
+- Freeze the default-disabled legacy Markdown Agent queue. Add no analyzer, CLI, or UI beyond regression fixes; without usage evidence, extract it to a compatibility package or remove it before v1.
+- Persistent `.intent/components/*.intent.yml`, a confidence model, and AI semantic labels are not v1 release gates because they do not currently improve direct-edit value. Resume only if independent A/B evidence shows a need.
+- Corpus coverage measures parser surface, not product success. Update generated JSON reports and do not add benchmark prose documents.
+- Do not begin Next.js, a VS Code extension, Figma, or another styling adapter before the React/Vite/Tailwind compatibility matrix and real-user A/B pass.
 
 ## 8. User Experience
 
@@ -273,26 +261,11 @@ responsive:
 
 ```bash
 npm install -D intent-layer
-```
-
-`vite.config.ts`:
-
-```ts
-import { intentLayer } from "intent-layer/vite"
-
-export default {
-  plugins: [intentLayer()]
-}
-```
-
-Run:
-
-```bash
+npx intent-layer init
 npm run dev
-npx intent-layer
 ```
 
-The package surface is verified through built `dist/cli.js` and the `intent-layer/vite` export. `npm run eval` gates tarball creation and temporary installation, the installed CLI and Vite plugin, real Vite graph/preview/apply/revert HTTP flows, multi-file graph refresh, and missing-plugin doctor guidance. Detailed numbers live only in `reports/performance/spike-evaluation.json`, and any failed gate exits with code 1.
+`init` combines workspace creation with a static Vite-config AST patch. Existing setup remains unchanged, and dynamic plugin expressions are rejected without touching the file. The package surface is verified through built `dist/cli.js` and the `intent-layer/vite` export. `npm run eval` gates tarball creation and temporary installation, the installed CLI and Vite plugin, real Vite graph/preview/apply/revert HTTP flows, multi-file graph refresh, and missing-plugin doctor guidance. Detailed numbers live only in `reports/performance/spike-evaluation.json`, and any failed gate exits with code 1.
 
 ### 8.2 Basic Flow
 
@@ -304,9 +277,9 @@ The package surface is verified through built `dist/cli.js` and the `intent-laye
 5. Panel shows:
    - component name
    - source file
-   - role / inferred purpose
+   - source hash and className binding kind
    - editable layout/style properties
-   - confidence
+   - shared render count and unsupported reason
 6. User edits padding/gap/color/etc.
 7. Patch preview is shown
 8. User clicks Apply
@@ -368,212 +341,66 @@ changes:
     to: 24px
 ```
 
-## 9. Intent Document Format
+## 9. Current Intent Artifact Contract
 
-The core asset of this product is a new document format.
+The current product asset is not a large narrative document. It is a **verifiable source binding plus semantic operation contract**.
 
-Recommended extensions:
+| Artifact | Current status | Role |
+| --- | --- | --- |
+| `.intent/graph.intent.json` | In use | Latest DOM-to-source binding graph published by Vite sessions |
+| `.intent/operations/*.intent-op.json` | In use | Original text, post-apply hash, ranges, and state required for apply/undo |
+| `.intent/diffs/*.intent-diff.yml` | In use | Human-readable semantic change summary |
+| `.intent/components/*.intent.yml` | Reserved; not generated | Resume only if independent A/B proves durable component intent is useful |
+| `.intent/schema/` | Setup asset | Workspace version and current artifact format checks |
 
-```text
-*.intent.yml
-*.intent-diff.yml
-*.intent-op.json
-```
+Neither an AI client nor the browser may submit arbitrary source paths or offsets for a direct patch. The server resolves the binding again from the current graph using element id and semantic property, checks that the path stays inside the project root, and validates source hash plus original text at preview, apply, and undo.
 
-Internal storage:
-
-```text
-.intent/
-  graph.intent.json
-  components/
-    ProductGrid.intent.yml
-    ProductCard.intent.yml
-  operations/
-    2026-06-29_001.intent-op.json
-  diffs/
-    last.intent-diff.yml
-  schema/
-    intent.schema.json
-    intent-op.schema.json
-    intent-diff.schema.json
-```
-
-### 9.1 Intent Document Example
-
-```yaml
-version: 0.1
-kind: component-intent
-
-component:
-  id: cmp_product_grid
-  name: ProductGrid
-  source:
-    file: src/components/ProductGrid.tsx
-    export: ProductGrid
-    range:
-      start: 120
-      end: 420
-
-purpose:
-  label: Product grid
-  description: Displays a product array as repeated cards.
-  confidence: 0.82
-  origin: ai-assisted
-
-structure:
-  root:
-    id: node_grid_root
-    role: collection
-    label: Product card list
-    source:
-      file: src/components/ProductGrid.tsx
-      xid: x_8f31a
-      range:
-        start: 180
-        end: 390
-    repeat:
-      sourceExpression: products
-      itemName: product
-    layout:
-      type:
-        value: grid
-        confidence: 1.0
-        binding:
-          kind: tailwind-token
-          token: grid
-      columns:
-        value: 3
-        unit: count
-        editable: true
-        confidence: 1.0
-        binding:
-          kind: tailwind-token
-          token: grid-cols-3
-          range:
-            start: 214
-            end: 225
-      gap:
-        value: 16
-        unit: px
-        editable: true
-        confidence: 1.0
-        binding:
-          kind: tailwind-token
-          token: gap-4
-          range:
-            start: 226
-            end: 231
-
-validation:
-  sourceHash: "fingerprint:..."
-  generatedAt: "2026-06-29T00:00:00Z"
-```
-
-### 9.2 Key Fields
-
-`binding`:
-
-```text
-The critical field that connects intent to source code.
-Without binding, an intent item is just documentation and cannot be patched safely.
-```
-
-`confidence`:
-
-```text
-How confident the system is about the extraction.
-Low-confidence properties should be read-only or AI-assisted.
-```
-
-`origin`:
-
-```text
-deterministic: extracted confidently from code
-ai-assisted: inferred by AI
-user-authored: confirmed or edited by a human
-```
-
-`sourceHash`:
-
-```text
-Used to detect drift between code and intent documents.
-The MVP implementation uses a local deterministic source fingerprint,
-which can be replaced with a cryptographic hash before distribution if needed.
-```
+Fields such as `purpose`, `origin`, and numeric `confidence` are not implemented facts. Reintroducing them requires a regression-tested user decision or safety boundary that they measurably improve. Current safety is expressed with `editable`, a concrete `unsupportedReason`, stale hashes, and runtime verification state instead of an ambiguous score.
 
 ## 10. Internal Architecture
 
-### 10.1 Package Structure
+### 10.1 Current Alpha Structure
 
 ```text
-packages/
-  core/
-    intent schema
-    operation model
-    diff model
-    confidence model
-
-  tailwind/
-    token parser
-    scale resolver
-    token replacement
-
-  react/
-    JSX AST adapter
-    component/source mapping
-
-  vite/
-    Vite plugin
-    data-intent-id injection
-    HMR integration
-
-  server/
-    local intent server
-    source lookup
-    patch apply
-    cache
-
-  overlay/
-    browser overlay UI
-    element picker
-    knobs panel
-    patch preview
-    pending undo history and branch undo controls
-
-  cli/
-    init
-    dev
-    scan
-    diff
-    check
+src/intent/
+  types.ts           domain contracts
+  instrument.ts      TypeScript AST source binding
+  tailwind.ts        token and semantic-property adapter
+  graphStore.ts      graph revision, publish, and reload
+  intentService.ts   shared GUI/HTTP/MCP use cases
+  patch.ts           preview, apply, operation log, guarded undo
+  fileLock.ts        per-source atomic lock
+  runtimeSession.ts  selection and live Vite session
+  vitePlugin.ts      transform, HTTP, and HMR adapter
+  client.ts          browser overlay
+  mcp/               stdio tools, resources, and client setup
 ```
 
-The MVP implementation ships `init`/`doctor`/`dev`/`scan`/`check`/`apply`/`diff`/`agent-context`/`agent-task`/`agent-result` first.
+The alpha stays in one package until a real external consumer needs independent versioning. Neither `vitePlugin.ts` nor MCP writes files directly; both call `IntentService`. Eight MCP tools are exposed over local stdio only. The Grid/Flex additions inspect and preview; existing shared tools still apply, verify, and undo. Remote HTTP and OAuth servers are out of scope.
 
 ### 10.2 Dependency Principles
 
-`core` must not be tied to a specific framework.
+The service and patch core must not be tied to an AI provider or browser DOM.
 
 ```text
-Core should not directly know React, Vite, Tailwind, or VS Code.
-Adapters should normalize framework-specific data and pass it to core.
+IntentService should not directly know Codex, Claude, or MCP transport details.
+Vite, browser, Tailwind, and MCP adapters pass normalized data to the service.
 ```
 
 Good separation:
 
 ```text
 Core:
-  IntentNode
-  IntentProperty
-  SourceBinding
-  PatchOperation
-  ValidationResult
+  IntentGraphStore
+  IntentService
+  SourceBinding / semantic property
+  PatchOperation / ValidationResult
 
 Adapters:
-  React AST
-  Tailwind tokens
-  Vite HMR
-  Browser DOM
+  TypeScript React AST
+  Tailwind token semantics
+  Vite HTTP/HMR and Browser DOM
+  MCP stdio
 ```
 
 ## 11. Tracking and Performance Strategy
@@ -701,14 +528,27 @@ If intent documents drift away from source code, the product loses trust. `sourc
 
 ## 14. Competitive Differentiation
 
-Adjacent products include:
+### 14.1 July 2026 Qualitative Demand Scan
 
-- Onlook: visual editor for React apps
-- Piny: visual React/Tailwind editing inside VS Code/Cursor
-- Frontman: browser-based AI frontend agent
-- stagewise: selected UI context for coding agents
-- Plasmic/Puck: React visual builders
-- v0/Bolt/Lovable/Replit: AI app/UI builders
+This is directional evidence from public user reports and current product documentation, not a representative market survey.
+
+- [A Lovable user described spending AI credits on one border-color change](https://www.reddit.com/r/lovable/comments/1uisn68/visual_edits_ugh/) as a reason to leave. Small visual edits should be instant and free of model usage.
+- [Claude users are actively looking for a click-an-element-then-request-a-change workflow](https://www.reddit.com/r/ClaudeAI/comments/1tok0a8/visual_ui_editing_with_claude_click_element_in/). Exact selection context is the demand; screenshot narration is only a fallback.
+- [Bolt users report that one requested fix breaks working behavior or rewrites whole files](https://www.reddit.com/r/boltnewbuilders/comments/1i7l1yo/i_really_like_boltnew_but_one_challenge_ive/). Minimal patches, preview, and undo are trust requirements rather than secondary features.
+- Tools such as [react-rewrite](https://www.reddit.com/r/tailwindcss/comments/1smk5vu/i_built_a_visual_editor_overlay_for_react_that/) now write deterministic AST edits into real repositories. Source write-back alone is no longer unique; wrong-node prevention and setup friction are the competitive boundary.
+
+The observed demand is therefore not for another AI generator. It is for **model-free micro-edits, exact element targeting, preservation of existing code, and local repository ownership**.
+
+### 14.2 Current Competitive Map
+
+| Product | Current center | Where INTENT_LAYER should not compete head-on |
+| --- | --- | --- |
+| [Onlook](https://www.onlook.com/for/react) | Broad designer-facing React canvas, AI generation, multiple styling systems | A complete design tool and infinite canvas |
+| [Piny](https://getpiny.com/) | Tailwind visual controls and direct edits inside an IDE, including custom themes | Becoming a VS Code extension product |
+| [stagewise](https://docs.stagewise.io/) | Full agentic IDE with browser, model execution, and diff review | A general IDE or model runtime |
+| [Domscribe](https://www.domscribe.com/) | Build-time stable IDs and bidirectional source/live-DOM MCP context | Competing only on context lookup |
+| [Impeccable Live](https://impeccable.style/docs/live/) | AI-generated design variants for one selected element | Competing on generative design quality |
+| [react-rewrite](https://github.com/donghaxkim/react-rewrite) | Deterministic AST write-back plus drag, reorder, and text editing | Broad canvas manipulation |
 
 Positions to avoid:
 
@@ -721,9 +561,140 @@ another React page builder
 Differentiated position:
 
 ```text
-An intent layer for AI-generated frontend code.
-It creates a human-reviewable semantic layer between raw className and line diffs.
+A provider-neutral deterministic UI operation layer shared by people and multiple AI clients.
+Semantic property -> guarded preview -> minimal patch -> source/runtime verify -> undo as one contract.
 ```
+
+### 14.3 Product Decisions From The Scan
+
+Priorities:
+
+1. Keep small direct edits such as spacing, color, and text local and free of model calls.
+2. Treat zero wrong-node edits, zero full-file rewrites, and no false runtime success as product trust metrics.
+3. Build an adapter that derives candidates from the project's Tailwind theme and CSS variables instead of expanding hard-coded palettes.
+4. Keep Grid and Flex GUI controls limited to semantic tokens on existing layout containers. DOM reordering and dynamic repeated structures remain agent handoffs.
+5. Measure time to first successful edit, retries, wrong-node events, and undo usage against prompt-only workflows on held-out repositories before broadening scope.
+
+Not now:
+
+- infinite canvas, freeform canvas, and sibling reorder. Constrained semantic controls for existing Grid/Flex containers are the exception.
+- simultaneous Next.js and multi-framework expansion
+- multiple AI-generated design variants
+- a general agent IDE or proprietary model runtime
+
+The legacy Agent queue and launch layer remains for alpha compatibility but is closed in default settings, element UI, and HTTP routes. Its pickup integrations open only after the advanced compatibility toggle is enabled. Evaluation uses a dedicated `.intent/tmp/evaluation-agent` store and cannot contaminate the real queue.
+
+### 14.4 Verified Structural Changes And Residual Risks
+
+- Selection is stored per Vite session and current selection records a `sessionId` with a 30-minute freshness deadline. Dead-process sessions are removed. The AI resource returns the newest active selection, but a user keeping multiple live tabs must still confirm which tab they intended.
+- Graph publishing merges per-file ownership under an atomic lock. Fixtures cover two stores publishing different files and deleting one owned file. If two sessions open the same file at different source states, the latest source hash wins and patch validation rejects drift again.
+- The candidate provider reads static objects from `tailwind.config.*` plus known CSS and Tailwind v4 `@theme` locations. It never executes config code and does not generalize dynamic imports, computed functions, or compound arbitrary values. Candidates are fetched on selection instead of being duplicated into the graph.
+- The breakpoint provider orders only default Tailwind screens, numeric string/object `min` values, and v4 `--breakpoint-*` lengths. `raw`, max-only, and CSS-variable values are omitted because their responsive inheritance order cannot be proven.
+- `client.ts` and `cli.ts` are large, but file size alone does not justify a rewrite. Extract only request/render boundaries shared by Grid Composer, literal-text, or theme-adapter work.
+
+### 14.5 Grid Layout Composer Design
+
+#### Job to Be Done
+
+When arranging asymmetric cards, users should not have to describe requests such as "put the second card at column four for five tracks, then make the third card fill the next row." They select each child's column range in the GUI and commit a small Tailwind patch.
+
+This is not a general page builder. It reads an existing CSS Grid and deterministically edits only:
+
+```text
+parent: grid-cols-N, grid-rows-N, or grid-cols-[1.2fr_0.8fr]
+children: col-start/span-N and row-start/span-N
+variants: base, default Tailwind screens, and statically ordered project screens
+```
+
+#### UX Flow
+
+1. The user selects a rendered grid parent.
+2. The panel reconciles its real direct children with source bindings.
+3. It shows breakpoint tabs plus column/row steppers, or column track-ratio sliders for a simple fractional template.
+4. The user selects starts and spans on 1-12 column and row placement strips for each child.
+5. `Preview` shows affected source bindings and before/after className values.
+6. `Apply` writes one grouped operation.
+7. The existing `Undo` restores the entire group at once.
+
+When one source binding renders more than once, the panel shows the source-scope impact count first. An instance-only result requires a prop or variant refactor and is not applied directly.
+
+#### First Implementation Contract
+
+Direct edit:
+
+- a grid parent and every direct child have React/Vite `data-intent-id` bindings
+- parent and child bindings live in one source file
+- every participating `className` is a static string
+- the parent has base `grid` and an effective 1-12 column count; absent base columns use CSS Grid's implicit one column
+- edit one default Tailwind or statically ordered project min-width screen at a time
+- add, replace, or remove `grid-cols`, `grid-rows`, `col-start`, `col-span`, `row-start`, and `row-span`
+- edit a simple arbitrary template containing only positive `fr` tracks
+
+Read-only or agent handoff:
+
+- repeated direct-child source ids such as `.map()` output
+- child component implementations in other files
+- conditional `cn()`/`clsx()`, `cva`, variable references, or template expressions
+- DOM reordering, absolute placement, masonry, or subgrid
+- `raw`, max-only, or dynamically computed project screens
+- `minmax()`, CSS variables, line names, or arbitrary templates over 12 columns
+
+#### Hard Problems and Decisions
+
+**Atomicity across multiple source ranges**
+
+Applying the parent and children separately can leave a half-edited layout. The first implementation accepts only bindings in one file, validates the full source hash and every original className, builds the complete result in memory, and writes the file once. Cross-file transactions require crash recovery and are intentionally deferred.
+
+**Token insertion/removal and offset drift**
+
+Single-token replacement cannot position a child that has no `col-start`. Each className literal becomes one minimal edit range, and the operation stores both its original and post-apply ranges. Apply processes original ranges in descending order; undo processes post-apply ranges in descending order.
+
+**Reusable components versus runtime instances**
+
+Three DOM children with one repeated source id cannot be positioned independently. Duplicate direct-child ids reject direct edit. Source-level edits that affect multiple renders expose their impact count.
+
+**Responsive inheritance**
+
+Without an `md:` token, base or sm values remain effective. Inspection separates explicit from effective values. Requests carry only properties the user changed, and `null` removes a token at that breakpoint. Otherwise the tool would accumulate redundant responsive classes.
+
+**DOM layout versus source layout**
+
+The browser sends only the selected parent id and ordered direct-child ids. The server resolves ids, files, class kinds, and tokens from the current graph. The browser never submits source offsets or raw patches.
+
+#### Internal Data Flow
+
+```text
+selected grid DOM
+  -> parent id + ordered direct-child ids
+  -> session-scoped selection file (shared GUI and MCP scope)
+  -> server-side support inspection
+  -> semantic layout request (breakpoint/row/column/start/span)
+  -> guarded grouped className preview
+  -> expiring preview id
+  -> operation lock + file lock + full validation
+  -> one source write + intent-op + intent-diff
+  -> graph refresh + HMR
+  -> grouped undo
+```
+
+#### Validation Gates
+
+- zero partial writes in supported fixtures
+- zero source writes after injected stale hash or one className mismatch
+- 100% byte-for-byte restoration after grouped undo
+- zero incorrect direct edits for repeated-id and cross-file fixtures
+- p95 preview under 20ms and apply under 50ms for 3-8 children
+- at least 30% improvement in either time to first success or retry count against prompt-only held-out tasks
+
+On 2026-07-12, the local evaluator completed 20/20 eight-child Grid round trips including a custom breakpoint and row placement, with zero partial writes and byte restoration 20/20. Current p95 and threshold results are regenerated in `reports/performance/spike-evaluation.json`. Mechanical safety and latency pass, but independent-user A/B still has zero samples, so drag reordering and cross-file transactions remain deferred.
+
+### 14.6 Flex Layout Composer Design
+
+Flex reads an existing base `flex`/`inline-flex` parent and direct children, then edits only direction, wrapping, justification, alignment, project gap candidates, and child `align-self`. Direction and wrapping use mode controls; alignment and gap use option controls; a small Flex canvas reflects the proposed result before source preview.
+
+It uses the same Grid safety contract. Every participant must have a static single-line className in one file, and runtime direct-child ids must be unique. The server resolves responsive inheritance and token ranges, then validates the full source hash and every original range after an expiring preview before one file write. Axis-specific `gap-x`/`gap-y`, unknown plugin utilities, repeated ids, and cross-file children reject the entire operation.
+
+The composer does not expose `order` or drag reordering because visual order can diverge from keyboard and screen-reader order. On 2026-07-12, the evaluator completed 20/20 eight-child Flex round trips with zero partial writes and byte restoration 20/20. The generated `reports/performance/spike-evaluation.json` is the single source for current latency values.
 
 ## 15. Productization Strategy
 
@@ -773,21 +744,25 @@ For v1.0, adoption matters more than monetization.
 
 Required:
 
-- [ ] React/Vite/Tailwind demo support
-- [ ] `data-intent-id` injection
-- [ ] source sidecar map generation
-- [ ] browser overlay
-- [ ] element selection
-- [ ] source lookup
-- [ ] Tailwind spacing/layout/color/radius parser
-- [ ] knob panel
-- [ ] range patch
-- [ ] undo/revert + pending history
-- [ ] intent diff
-- [ ] `.intent` folder creation
-- [ ] confidence display
-- [ ] safe failure on patch errors
-- [ ] documentation and tutorial
+- [x] React/Vite/Tailwind demo support
+- [x] `data-intent-id` injection
+- [x] source sidecar map generation
+- [x] browser overlay
+- [x] element selection
+- [x] source lookup
+- [x] Tailwind spacing/layout/color/radius parser
+- [x] knob panel
+- [x] range patch
+- [x] undo/revert + pending history
+- [x] intent diff
+- [x] `.intent` folder creation
+- [x] safe failure on patch errors
+- [x] documentation and tutorial
+- [x] literal-text and grouped Grid/Flex regression coverage
+- [x] React 18/19, Tailwind 3/4, Vite 6/8, and npm/pnpm compatibility gates
+- [ ] product A/B with at least five participants, five independent repositories, and twenty paired tasks (forty runs)
+- [ ] owner-approved npm `alpha` plus an initial-user feedback loop
+- [ ] npm `latest` promotion after A/B and feedback pass
 
 ## 17. Two-week Technical Spike
 
@@ -824,26 +799,49 @@ Can the architecture scale to large projects?
 
 ## 18. Roadmap
 
-### v0.1
+### v0.1 (complete)
 
-- Vite plugin
-- React TSX source mapping
-- Tailwind spacing knob
-- patch preview
+- [x] Vite plugin
+- [x] React TSX source mapping
+- [x] Tailwind spacing knob
+- [x] patch preview
 
-### v0.2
+### v0.2 (partial)
 
-- color/radius/typography
-- intent document storage
-- intent diff
-- undo/revert
+- [x] color/radius/typography
+- Hold: resume component intent document storage only if independent A/B shows a need
+- [x] intent diff
+- [x] undo/revert
 
-### v0.3
+### v0.3 (partial)
 
-- simple `cn()`/`clsx()` support
-- responsive variants
-- confidence model
-- selected component summary
+- [x] simple `cn()`/`clsx()` support
+- [x] responsive variants
+- Hold: the confidence model is not a v1 release gate
+- [x] selected component summary
+
+### v0.4 (current alpha)
+
+- [x] provider-neutral local MCP
+- [x] loopback/session-token HTTP boundary
+- [x] multi-process operation journal
+- [x] same-file static Grid Layout Composer plus simple fractional track controls
+- [x] project Tailwind theme/CSS variable candidate adapter
+- [x] guarded literal text edit plus MCP `content.text`
+- [x] project breakpoints and Grid row/start/span
+- [x] same-file static Flex Layout Composer
+- [x] MCP Grid/Flex inspect/preview using the recent browser scope plus shared apply/verify/undo
+- [x] session-scoped selection and multi-Vite graph merge fixture
+- [ ] twenty paired held-out tasks across at least five participants and five repositories, forty runs total (`product-ab-evaluation.json`: collecting, 0 participants, 0 paired tasks)
+- [x] opt-in legacy Agent HTTP/UI boundary and evaluator artifact isolation
+- [x] Lumina/Modern Chromium setup/literal/Grid/Flex/HMR/undo/mobile CI
+- [x] dev-only instrumentation and a zero-marker production-bundle gate
+- [x] import-provenance React `createElement` binding
+- [x] runtime-active conditional-token filtering and DOM-only candidate preview
+- [x] Vite transform source maps with original-TSX browser composition gate
+- [x] React 19/Tailwind 4/Vite 8 npm compatibility fixture
+- [x] pnpm 10.34.5 fresh-install fixture and external pnpm browser round trip
+- [x] 62 evaluator gates plus twenty byte-restore rounds each for text, Grid, and Flex
 
 ### v1.0
 
@@ -855,6 +853,8 @@ Can the architecture scale to large projects?
 - early user feedback loop
 
 ### v1.1+
+
+Start these only after independent A/B and the v1 compatibility gates pass.
 
 - Next.js adapter
 - VS Code extension
@@ -886,7 +886,7 @@ This is not a marketless idea. But if it becomes just a visual editor, it is lat
 Conditions for survival:
 
 ```text
-1. Make the Intent Document format the core product asset.
+1. Make source bindings and the semantic operation contract the core product asset.
 2. Use deterministic patches as the default path.
 3. Use AI only as an assistant layer.
 4. Start narrowly with React/Vite/Tailwind.

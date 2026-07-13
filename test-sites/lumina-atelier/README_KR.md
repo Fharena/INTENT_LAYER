@@ -9,18 +9,13 @@
 - 정적 `className`과 simple `cn()` literal segment가 graph에 잡히는지 확인한다.
 - `intent-layer doctor`, `scan`, `check`로 coverage와 transform 시간을 측정한다.
 
-중요 설정:
-
-```ts
-plugins: [intentLayer(), react()]
-```
-
-`intentLayer()`는 React plugin보다 먼저 둔다. React Refresh transform 뒤에 intent binding이 만들어지면 source hash와 source range가 실제 TSX 파일과 어긋나 direct patch가 안전하게 거부될 수 있다.
+`npx intent-layer init`은 `intentLayer()`가 React plugin보다 먼저 오도록 정적 Vite config를 멱등적으로 설정한다. 이 fixture는 이미 설정돼 있으므로 다시 실행해도 파일이 바뀌지 않아야 한다.
 
 실행:
 
 ```bash
 npm install
+npx intent-layer init
 npm run dev
 ```
 
@@ -39,6 +34,7 @@ npm run intent:check
 - `src/App.tsx`의 hero/nav/card/button Tailwind token을 클릭하거나 scan한다.
 - `gap-*`, `p-*`, `bg-*`, `text-*`, `border-*` 같은 token이 direct-edit 후보로 잡히는지 본다.
 - 복잡한 map/render 구조 안에서도 source binding이 안정적으로 생성되는지 본다.
+- hero의 `md:grid-cols-[1.2fr_0.8fr]`를 Grid 비율 slider로 preview/apply/undo한다.
+- `tailwind.config.cjs`의 `ink`, `porcelain`, `moss`, `copper`가 기본 palette보다 먼저 후보에 나타나는지 본다.
 
-이번 측정 결과는 `TEST_RESULT_KR.md`와 `TEST_RESULT_EN.md`에 남긴다.
-
+저장소 루트의 `npm run test:e2e`가 Chromium에서 설정, 선택, 비대칭 Grid, HMR, exact undo와 390px panel을 자동 검증한다. 수치 결과는 루트 `reports/performance/*.json`만 기준으로 삼는다.

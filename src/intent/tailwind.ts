@@ -1,12 +1,25 @@
 import type { IntentToken, IntentTokenCategory } from "./types";
 
+export interface TailwindSemanticCandidate {
+  value: string;
+  token: string;
+}
+
+export interface TailwindSemanticToken {
+  property: string;
+  value: string;
+  token: string;
+  variant: string | null;
+  candidates: TailwindSemanticCandidate[];
+}
+
 const spacingPattern =
-  /^-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-[\w.[\]/%()!-]+$/;
+  /^(-?)(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-([\w.[\]/%()!-]+)$/;
 const radiusPattern = /^rounded(?:-[trbl]{1,2})?(?:-[\w.[\]/%-]+)?$/;
 const sizingPattern = /^(?:w|h|min-w|min-h|max-w|max-h|size)-[\w.[\]/%()!-]+$/;
 const displayPattern = /^(?:flex|grid|block|inline|inline-block|inline-flex|hidden)$/;
 const layoutPattern =
-  /^(?:grid-cols-\d+|flex-(?:1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)|items-[\w-]+|justify-[\w-]+|content-[\w-]+|self-[\w-]+)$/;
+  /^(?:grid-cols-(?:\d+|\[[^\]]+\])|col-(?:start|span)-\d+|flex-(?:1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)|items-[\w-]+|justify-[\w-]+|content-[\w-]+|self-[\w-]+)$/;
 const typographyPattern =
   /^(?:text-(?:xs|sm|base|lg|xl|[2-9]xl)|font-[\w-]+|leading-[\w.[\]/%-]+)$/;
 const effectPattern =
@@ -87,7 +100,13 @@ const tokenCategoryCache = new Map<string, IntentTokenCategory | null>();
 const classNameTokenCache = new Map<string, IntentToken[]>();
 const maxClassNameTokenCacheSize = 1000;
 
-function splitVariant(token: string): { variantPrefix: string; base: string } {
+function validSpacingMatch(base: string): RegExpMatchArray | null {
+  const match = base.match(spacingPattern);
+  if (!match || (match[1] === "-" && !match[2].startsWith("m"))) return null;
+  return match;
+}
+
+export function splitTailwindVariant(token: string): { variantPrefix: string; base: string } {
   const parts = token.split(":");
   return parts.length === 1
     ? { variantPrefix: "", base: token }
@@ -95,7 +114,83 @@ function splitVariant(token: string): { variantPrefix: string; base: string } {
 }
 
 function withVariant(originalToken: string, nextBase: string): string {
-  return `${splitVariant(originalToken).variantPrefix}${nextBase}`;
+  return `${splitTailwindVariant(originalToken).variantPrefix}${nextBase}`;
+}
+
+export type GridLayoutTokenProperty =
+  | "columns"
+  | "rows"
+  | "columnStart"
+  | "columnSpan"
+  | "rowStart"
+  | "rowSpan";
+
+export interface GridLayoutToken {
+  breakpoint: string;
+  property: GridLayoutTokenProperty;
+  value: number;
+}
+
+export interface GridTemplateToken {
+  breakpoint: string;
+  weights: number[];
+}
+
+export function parseGridTemplateToken(token: string): GridTemplateToken | null {
+  const { variantPrefix, base } = splitTailwindVariant(token);
+  const match = /^grid-cols-\[([^\]]+)\]$/.exec(base);
+  if (!match) return null;
+  const tracks = match[1].split("_");
+  if (tracks.length === 0 || tracks.length > 12) return null;
+  const weights = tracks.map((track) => {
+    const value = /^(\d+(?:\.\d+)?)fr$/.exec(track)?.[1];
+    return value ? Number(value) : Number.NaN;
+  });
+  if (weights.some((value) => !Number.isFinite(value) || value <= 0 || value > 12)) return null;
+  return {
+    breakpoint: variantPrefix ? variantPrefix.slice(0, -1) : "base",
+    weights
+  };
+}
+
+export function gridTemplateToken(weights: number[], breakpoint = "base"): string {
+  const tracks = weights.map((value) => `${Number(value.toFixed(2))}fr`).join("_");
+  return `${breakpoint === "base" ? "" : `${breakpoint}:`}grid-cols-[${tracks}]`;
+}
+
+export function parseGridLayoutToken(token: string): GridLayoutToken | null {
+  const { variantPrefix, base } = splitTailwindVariant(token);
+  const match = /^(grid-cols|grid-rows|col-start|col-span|row-start|row-span)-(\d+)$/.exec(base);
+  if (!match) return null;
+  const properties: Record<string, GridLayoutTokenProperty> = {
+    "grid-cols": "columns",
+    "grid-rows": "rows",
+    "col-start": "columnStart",
+    "col-span": "columnSpan",
+    "row-start": "rowStart",
+    "row-span": "rowSpan"
+  };
+  return {
+    breakpoint: variantPrefix ? variantPrefix.slice(0, -1) : "base",
+    property: properties[match[1]],
+    value: Number(match[2])
+  };
+}
+
+export function gridLayoutToken(
+  property: GridLayoutTokenProperty,
+  value: number,
+  breakpoint = "base"
+): string {
+  const prefixes: Record<GridLayoutTokenProperty, string> = {
+    columns: "grid-cols",
+    rows: "grid-rows",
+    columnStart: "col-start",
+    columnSpan: "col-span",
+    rowStart: "row-start",
+    rowSpan: "row-span"
+  };
+  return `${breakpoint === "base" ? "" : `${breakpoint}:`}${prefixes[property]}-${value}`;
 }
 
 function uniqueCandidates(token: string, bases: string[]): string[] {
@@ -105,9 +200,9 @@ function uniqueCandidates(token: string, bases: string[]): string[] {
 export function categorizeTailwindToken(token: string): IntentTokenCategory | null {
   if (tokenCategoryCache.has(token)) return tokenCategoryCache.get(token) ?? null;
 
-  const { base } = splitVariant(token);
+  const { base } = splitTailwindVariant(token);
   let category: IntentTokenCategory | null = null;
-  if (spacingPattern.test(base)) category = "spacing";
+  if (validSpacingMatch(base)) category = "spacing";
   else if (radiusPattern.test(base)) category = "radius";
   else if (sizingPattern.test(base) || displayPattern.test(base) || layoutPattern.test(base)) category = "layout";
   else if (typographyPattern.test(base)) category = "typography";
@@ -176,12 +271,13 @@ function colorCandidates(token: string, base: string): string[] | null {
 }
 
 export function candidatesForToken(token: string): string[] {
-  const { base } = splitVariant(token);
+  const { base } = splitTailwindVariant(token);
 
-  const spacingMatch = base.match(
-    /^(-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y))-([\w.[\]/%()!-]+)$/
-  );
-  if (spacingMatch) return uniqueCandidates(token, spacingValues.map((value) => `${spacingMatch[1]}-${value}`));
+  const spacingMatch = validSpacingMatch(base);
+  if (spacingMatch) {
+    const prefix = `${spacingMatch[1]}${spacingMatch[2]}`;
+    return uniqueCandidates(token, spacingValues.map((value) => `${prefix}-${value}`));
+  }
 
   const sizingMatch = base.match(/^((?:w|h|min-w|min-h|max-w|max-h|size))-([\w.[\]/%()!-]+)$/);
   if (sizingMatch) return uniqueCandidates(token, sizingValues.map((value) => `${sizingMatch[1]}-${value}`));
@@ -198,12 +294,17 @@ export function candidatesForToken(token: string): string[] {
     );
   }
 
-  const gridMatch = base.match(/^(grid-cols)-(\d+)$/);
+  const gridMatch = base.match(/^(grid-cols|col-start|col-span)-(\d+)$/);
   if (gridMatch) return uniqueCandidates(token, Array.from({ length: 12 }, (_, index) => `${gridMatch[1]}-${index + 1}`));
 
   const flexMatch = base.match(/^(flex)-(1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)$/);
   if (flexMatch) {
-    const values = ["1", "auto", "initial", "none", "row", "row-reverse", "col", "col-reverse", "wrap", "wrap-reverse", "nowrap"];
+    const current = flexMatch[2];
+    const values = ["row", "row-reverse", "col", "col-reverse"].includes(current)
+      ? ["row", "row-reverse", "col", "col-reverse"]
+      : ["wrap", "wrap-reverse", "nowrap"].includes(current)
+        ? ["wrap", "wrap-reverse", "nowrap"]
+        : ["1", "auto", "initial", "none"];
     return uniqueCandidates(token, values.map((value) => `flex-${value}`));
   }
 
@@ -247,4 +348,151 @@ export function candidatesForToken(token: string): string[] {
   }
 
   return colorCandidates(token, base) ?? [token];
+}
+
+function spacingProperty(prefix: string): string | null {
+  const properties: Record<string, string> = {
+    p: "spacing.padding",
+    px: "spacing.paddingX",
+    py: "spacing.paddingY",
+    pt: "spacing.paddingTop",
+    pr: "spacing.paddingRight",
+    pb: "spacing.paddingBottom",
+    pl: "spacing.paddingLeft",
+    m: "spacing.margin",
+    mx: "spacing.marginX",
+    my: "spacing.marginY",
+    mt: "spacing.marginTop",
+    mr: "spacing.marginRight",
+    mb: "spacing.marginBottom",
+    ml: "spacing.marginLeft",
+    gap: "layout.gap",
+    "gap-x": "layout.gapX",
+    "gap-y": "layout.gapY"
+  };
+  return properties[prefix] ?? null;
+}
+
+function colorProperty(prefix: string): string {
+  if (prefix === "bg") return "color.background";
+  if (prefix === "text") return "color.text";
+  if (prefix.startsWith("border")) return "color.border";
+  if (prefix.startsWith("divide")) return "color.divide";
+  if (prefix === "ring-offset") return "color.ringOffset";
+  return `color.${prefix}`;
+}
+
+function semanticParts(base: string): { property: string; value: string } | null {
+  const spacing = validSpacingMatch(base);
+  if (spacing) {
+    const property = spacingProperty(spacing[2]);
+    return property ? { property, value: `${spacing[1]}${spacing[3]}` } : null;
+  }
+
+  const sizing = base.match(/^(w|h|min-w|min-h|max-w|max-h|size)-(.+)$/);
+  if (sizing) {
+    const properties: Record<string, string> = {
+      w: "size.width",
+      h: "size.height",
+      "min-w": "size.minWidth",
+      "min-h": "size.minHeight",
+      "max-w": "size.maxWidth",
+      "max-h": "size.maxHeight",
+      size: "size.both"
+    };
+    return { property: properties[sizing[1]], value: sizing[2] };
+  }
+
+  if (displayPattern.test(base)) return { property: "layout.display", value: base };
+
+  const radius = base.match(/^(rounded(?:-[trbl]{1,2})?)(?:-(.+))?$/);
+  if (radius) return { property: `radius.${radius[1]}`, value: radius[2] ?? "default" };
+
+  const grid = base.match(/^grid-cols-(\d+)$/);
+  if (grid) return { property: "layout.gridColumns", value: grid[1] };
+
+  const columnStart = base.match(/^col-start-(\d+)$/);
+  if (columnStart) return { property: "layout.columnStart", value: columnStart[1] };
+
+  const columnSpan = base.match(/^col-span-(\d+)$/);
+  if (columnSpan) return { property: "layout.columnSpan", value: columnSpan[1] };
+
+  const flex = base.match(/^flex-(1|auto|initial|none|row|row-reverse|col|col-reverse|wrap|wrap-reverse|nowrap)$/);
+  if (flex) {
+    const value = flex[1];
+    const property =
+      value === "row" || value === "row-reverse" || value === "col" || value === "col-reverse"
+        ? "layout.flexDirection"
+        : value === "wrap" || value === "wrap-reverse" || value === "nowrap"
+          ? "layout.flexWrap"
+          : "layout.flex";
+    return { property, value };
+  }
+
+  const alignment = base.match(/^(items|justify|content|self)-(.+)$/);
+  if (alignment) {
+    const properties: Record<string, string> = {
+      items: "layout.alignItems",
+      justify: "layout.justifyContent",
+      content: "layout.alignContent",
+      self: "layout.alignSelf"
+    };
+    return { property: properties[alignment[1]], value: alignment[2] };
+  }
+
+  const textSize = base.match(/^text-(xs|sm|base|lg|xl|[2-9]xl)$/);
+  if (textSize) return { property: "typography.size", value: textSize[1] };
+
+  const fontWeight = base.match(/^font-(thin|extralight|light|normal|medium|semibold|bold|extrabold|black)$/);
+  if (fontWeight) return { property: "typography.weight", value: fontWeight[1] };
+
+  const leading = base.match(/^leading-(.+)$/);
+  if (leading) return { property: "typography.lineHeight", value: leading[1] };
+
+  const shadow = base.match(/^shadow(?:-(none|sm|md|lg|xl|2xl|inner))?$/);
+  if (shadow) return { property: "effect.shadow", value: shadow[1] ?? "default" };
+
+  const opacity = base.match(/^opacity-(\d+)$/);
+  if (opacity) return { property: "effect.opacity", value: opacity[1] };
+
+  const ring = base.match(/^ring(?:-(0|1|2|4|8))?$/);
+  if (ring) return { property: "effect.ringWidth", value: ring[1] ?? "default" };
+
+  const transition = base.match(/^transition(?:-(none|all|colors|opacity|shadow|transform))?$/);
+  if (transition) return { property: "effect.transition", value: transition[1] ?? "default" };
+
+  const color = base.match(
+    /^((?:bg|text|border(?:-[trblxy])?|divide-[xy]|ring|ring-offset|outline|decoration|accent|caret|fill|stroke|shadow))-(.+)$/
+  );
+  if (color) return { property: colorProperty(color[1]), value: color[2] };
+
+  return null;
+}
+
+export function describeTailwindToken(
+  token: string,
+  candidateTokens: string[] = candidatesForToken(token)
+): TailwindSemanticToken | null {
+  const split = splitTailwindVariant(token);
+  const current = semanticParts(split.base);
+  if (!current) return null;
+
+  const candidates: TailwindSemanticCandidate[] = [];
+  const seen = new Set<string>();
+  for (const candidate of candidateTokens) {
+    const candidateParts = semanticParts(splitTailwindVariant(candidate).base);
+    if (!candidateParts || candidateParts.property !== current.property) continue;
+    const key = `${candidateParts.value}\0${candidate}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    candidates.push({ value: candidateParts.value, token: candidate });
+  }
+
+  return {
+    property: current.property,
+    value: current.value,
+    token,
+    variant: split.variantPrefix ? split.variantPrefix.slice(0, -1) : null,
+    candidates
+  };
 }

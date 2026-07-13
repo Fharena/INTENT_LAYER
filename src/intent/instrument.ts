@@ -1,8 +1,10 @@
 import path from "node:path";
+import MagicString, { type SourceMap } from "magic-string";
 import ts from "typescript";
 import { shortHash, sourceHash } from "./hash";
 import { tokenizeClassName } from "./tailwind";
-import type { IntentBinding, IntentToken } from "./types";
+import { createProjectCandidateResolver } from "./themeCandidates";
+import type { IntentBinding, IntentLiteralTextBinding, IntentToken } from "./types";
 
 interface SourceSegment {
   start: number;
@@ -26,14 +28,26 @@ interface Insertion {
   text: string;
 }
 
+interface ReactFactoryBindings {
+  functions: Set<string>;
+  namespaces: Set<string>;
+}
+
 export interface InstrumentResult {
   code: string;
+  map: SourceMap | null;
   entries: IntentBinding[];
   transformMs: number;
 }
 
-function isIntrinsicTag(tagName: string): boolean {
-  return /^[a-z]/.test(tagName);
+interface InstrumentOptions {
+  append?: string;
+  prepend?: string;
+  sourceMap?: boolean;
+}
+
+function isIntrinsicTag(tagName: ts.JsxTagNameExpression): boolean {
+  return ts.isIdentifier(tagName) && /^[a-z]/.test(tagName.text);
 }
 
 function getTagNameText(
@@ -177,17 +191,32 @@ function tokensFromSegments(segments: SourceSegment[]): { value: string; tokens:
   return { value: combinedValue, tokens };
 }
 
-function insertText(code: string, insertions: Insertion[]): string {
-  if (insertions.length === 0) return code;
-
-  const parts: string[] = [];
-  let cursor = 0;
-  for (const insertion of insertions) {
-    parts.push(code.slice(cursor, insertion.position), insertion.text);
-    cursor = insertion.position;
+function transformText(
+  code: string,
+  file: string,
+  insertions: Insertion[],
+  options: InstrumentOptions
+): { code: string; map: SourceMap | null } {
+  if (insertions.length === 0 && !options.prepend && !options.append) {
+    return { code, map: null };
   }
-  parts.push(code.slice(cursor));
-  return parts.join("");
+
+  const transformed = new MagicString(code, { filename: file });
+  for (const insertion of [...insertions].sort((left, right) => left.position - right.position)) {
+    transformed.appendLeft(insertion.position, insertion.text);
+  }
+  if (options.prepend) transformed.prepend(options.prepend);
+  if (options.append) transformed.append(options.append);
+  return {
+    code: transformed.toString(),
+    map: options.sourceMap
+      ? transformed.generateMap({
+          hires: "boundary",
+          includeContent: true,
+          source: file
+        })
+      : null
+  };
 }
 
 function getClassNameBinding(
@@ -206,7 +235,14 @@ function getClassNameBinding(
 
   if (!ts.isJsxExpression(initializer) || !initializer.expression) return null;
 
-  const expression = initializer.expression;
+  return getExpressionClassNameBinding(initializer.expression, sourceFile);
+}
+
+function getExpressionClassNameBinding(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile
+): ClassNameBinding {
+
   const staticExpression = stringSegment(expression, sourceFile);
   if (staticExpression) {
     const { value, tokens } = tokensFromSegments([staticExpression]);
@@ -257,14 +293,87 @@ function getClassNameBinding(
   };
 }
 
+function propertyName(property: ts.ObjectLiteralElementLike): string | null {
+  if (!property.name) return null;
+  if (ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)) return property.name.text;
+  return null;
+}
+
+function reactFactoryBindings(sourceFile: ts.SourceFile): ReactFactoryBindings {
+  const functions = new Set<string>();
+  const namespaces = new Set<string>();
+  for (const statement of sourceFile.statements) {
+    if (
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteralLike(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === "react"
+    ) {
+      const clause = statement.importClause;
+      if (clause?.name) namespaces.add(clause.name.text);
+      if (clause?.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
+        namespaces.add(clause.namedBindings.name.text);
+      }
+      if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+        for (const element of clause.namedBindings.elements) {
+          if ((element.propertyName?.text ?? element.name.text) === "createElement") {
+            functions.add(element.name.text);
+          }
+        }
+      }
+    }
+  }
+  return { functions, namespaces };
+}
+
+function createElementCall(node: ts.CallExpression, bindings: ReactFactoryBindings): boolean {
+  if (ts.isIdentifier(node.expression)) return bindings.functions.has(node.expression.text);
+  return (
+    ts.isPropertyAccessExpression(node.expression) &&
+    node.expression.name.text === "createElement" &&
+    ts.isIdentifier(node.expression.expression) &&
+    bindings.namespaces.has(node.expression.expression.text)
+  );
+}
+
+function createElementInsertion(props: ts.ObjectLiteralExpression, id: string): Insertion {
+  const separator = props.properties.hasTrailingComma ? " " : props.properties.length > 0 ? ", " : "";
+  return {
+    position: props.getEnd() - 1,
+    text: `${separator}"data-intent-id": "${id}"`
+  };
+}
+
+function literalJsxTextBinding(node: ts.JsxElement, code: string): IntentLiteralTextBinding | null {
+  if (node.children.length !== 1 || !ts.isJsxText(node.children[0])) return null;
+  const child = node.children[0];
+  const start = child.getFullStart();
+  const end = child.getEnd();
+  const value = code.slice(start, end);
+  if (
+    value.length === 0 ||
+    value.length > 500 ||
+    value.trim() !== value ||
+    /[\r\n<>{}&]/.test(value)
+  ) {
+    return null;
+  }
+  return { kind: "literal", start, end, value };
+}
+
 export function instrumentSource(params: {
   code: string;
   file: string;
   rootDir: string;
+  options?: InstrumentOptions;
 }): InstrumentResult {
   const started = performance.now();
   if (!params.code.includes("className")) {
-    return { code: params.code, entries: [], transformMs: Number((performance.now() - started).toFixed(3)) };
+    const transformed = transformText(params.code, params.file, [], params.options ?? {});
+    return {
+      ...transformed,
+      entries: [],
+      transformMs: Number((performance.now() - started).toFixed(3))
+    };
   }
 
   const sourceFile = ts.createSourceFile(
@@ -275,13 +384,25 @@ export function instrumentSource(params: {
     ts.ScriptKind.TSX
   );
   const currentSourceHash = sourceHash(params.code);
+  const reactFactories = reactFactoryBindings(sourceFile);
   const insertions: Insertion[] = [];
   const entries: IntentBinding[] = [];
   const relativeFile = path.relative(params.rootDir, params.file).replace(/\\/g, "/");
+  const textByOpeningStart = new Map<number, IntentLiteralTextBinding>();
+
+  const collectLiteralText = (node: ts.Node) => {
+    if (ts.isJsxElement(node)) {
+      const textContent = literalJsxTextBinding(node, params.code);
+      if (textContent) textByOpeningStart.set(node.openingElement.getStart(sourceFile), textContent);
+    }
+    ts.forEachChild(node, collectLiteralText);
+  };
+  collectLiteralText(sourceFile);
 
   function visit(node: ts.Node, componentName: string | null) {
     let currentComponentName = componentName;
     if (ts.isFunctionDeclaration(node) && node.name) currentComponentName = node.name.text;
+    if (ts.isClassDeclaration(node) && node.name) currentComponentName = node.name.text;
     if (
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
@@ -296,11 +417,51 @@ export function instrumentSource(params: {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tagName = getTagNameText(node, sourceFile);
       const classNameAttribute = findAttribute(node, "className");
-      if (isIntrinsicTag(tagName) && classNameAttribute && !findAttribute(node, "data-intent-id")) {
+      if (isIntrinsicTag(node.tagName) && classNameAttribute && !findAttribute(node, "data-intent-id")) {
         const className = getClassNameBinding(classNameAttribute, sourceFile);
         if (className) {
           const id = `il_${shortHash(`${relativeFile}:${className.start}:${tagName}`)}`;
           insertions.push({ position: getInsertPosition(node), text: ` data-intent-id="${id}"` });
+          entries.push({
+            id,
+            file: params.file,
+            relativeFile,
+            tagName,
+            componentName: currentComponentName,
+            sourceHash: currentSourceHash,
+            transformMs: 0,
+            className: {
+              kind: className.kind,
+              start: className.start,
+              end: className.end,
+              value: className.value,
+              callee: className.callee,
+              dynamicSegments: className.dynamicSegments,
+              unsupportedReason: className.unsupportedReason
+            },
+            textContent: textByOpeningStart.get(node.getStart(sourceFile)),
+            tokens: className.tokens
+          });
+        }
+      }
+    }
+
+    if (ts.isCallExpression(node) && createElementCall(node, reactFactories)) {
+      const tag = node.arguments[0];
+      const props = node.arguments[1];
+      if (tag && ts.isStringLiteralLike(tag) && props && ts.isObjectLiteralExpression(props)) {
+        const classNameProperty = props.properties.find(
+          (property): property is ts.PropertyAssignment =>
+            ts.isPropertyAssignment(property) && propertyName(property) === "className"
+        );
+        const alreadyInstrumented = props.properties.some(
+          (property) => propertyName(property) === "data-intent-id"
+        );
+        if (classNameProperty && !alreadyInstrumented) {
+          const className = getExpressionClassNameBinding(classNameProperty.initializer, sourceFile);
+          const tagName = tag.text;
+          const id = `il_${shortHash(`${relativeFile}:${className.start}:${tagName}`)}`;
+          insertions.push(createElementInsertion(props, id));
           entries.push({
             id,
             file: params.file,
@@ -328,7 +489,17 @@ export function instrumentSource(params: {
   }
 
   visit(sourceFile, null);
+  let candidatesForProject: ((token: string) => string[]) | null = null;
+  for (const entry of entries) {
+    for (const token of entry.tokens) {
+      if (!token.editable && token.category !== null) {
+        candidatesForProject ??= createProjectCandidateResolver(params.rootDir);
+        token.editable = candidatesForProject(token.token).length > 1;
+      }
+    }
+  }
+  const transformed = transformText(params.code, params.file, insertions, params.options ?? {});
   const transformMs = Number((performance.now() - started).toFixed(3));
   for (const entry of entries) entry.transformMs = transformMs;
-  return { code: insertText(params.code, insertions), entries, transformMs };
+  return { ...transformed, entries, transformMs };
 }

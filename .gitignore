@@ -5,6 +5,9 @@
 .context-pack/local/
 .playwright-cli/
 output/playwright/
+test-results/
+playwright-report/
+reports/performance/product-ab-observations.jsonl
 
 # dependencies and build outputs
 node_modules/
@@ -25,6 +28,7 @@ demo-dist/
 .intent/agent/result_*.md
 .intent/agent/locks/
 .intent/tmp/
+.intent/runtime/
 .intent/external-corpus*/
 .intent-agent-queue.json
 .agents/skills/intent-layer-task-runner/

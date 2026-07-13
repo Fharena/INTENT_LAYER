@@ -1,29 +1,25 @@
 import fs from "node:fs";
 import path from "node:path";
+import { randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import type { Plugin, ViteDevServer } from "vite";
+import { normalizePath, type Plugin, type ViteDevServer } from "vite";
 import { launchAgentTask } from "./agentLaunch";
 import { claimAgentTask, failAgentTask, refreshAgentQueueSignal } from "./agentQueue";
 import { recordAgentResult } from "./agentResult";
 import { createAgentTask } from "./agentTask";
+import { IntentGraphStore, isIntentTargetFile } from "./graphStore";
+import { IntentService } from "./intentService";
 import { instrumentSource } from "./instrument";
-import { applyIntentSetup, intentSetupStatus } from "./setup";
 import {
-  applyTokenPatch,
-  discardPendingUndo,
-  pendingUndoStackFromOperationLog,
-  planTokenPatch,
-  readPatchConflictReport,
-  recordPatchApplyInOperationLog,
-  recordPatchRevertInOperationLog,
-  removeDiscardedPatchFromStack,
-  revertPendingUndo,
-  revertTokenPatch,
-  resolvePatchConflict,
-  undoHistoryFromStack
-} from "./patch";
+  readRuntimeSelection,
+  removeRuntimeSession,
+  writeRuntimeSelection,
+  writeRuntimeSession
+} from "./runtimeSession";
+import { applyIntentSetup, intentSetupStatus, legacyAgentQueueEnabled } from "./setup";
+import { projectCandidatesForToken, readProjectThemeCatalog } from "./themeCandidates";
 import type {
   AgentResultRequest,
   AgentLaunchRequest,
@@ -31,10 +27,16 @@ import type {
   AgentTaskRequest,
   AgentTaskStatusUpdateRequest,
   ClientMetric,
-  IntentBinding,
-  IntentGraph,
+  FlexLayoutApplyRequest,
+  FlexLayoutEditRequest,
+  FlexLayoutInspectRequest,
+  GridLayoutApplyRequest,
+  GridLayoutEditRequest,
+  GridLayoutInspectRequest,
   IntentSetupRequest,
-  PatchApplyResult,
+  IntentRuntimeSelectionRequest,
+  IntentRuntimeTokenResult,
+  LiteralTextEditRequest,
   PatchConflictResolveRequest,
   PatchRequest,
   PatchUndoDiscardRequest,
@@ -45,16 +47,11 @@ const virtualClientId = "virtual:intent-layer/client";
 const resolvedVirtualClientId = "\0virtual:intent-layer/client.ts";
 const virtualTailwindId = "virtual:intent-layer/tailwind";
 const resolvedVirtualTailwindId = "\0virtual:intent-layer/tailwind.ts";
+const intentMutationMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-interface IntentState {
-  rootDir: string;
-  entriesByFile: Map<string, IntentBinding[]>;
-  entriesById: Map<string, IntentBinding>;
-  undoStack: PatchApplyResult[];
+interface OverlayState {
   clientMetrics: ClientMetric[];
-  lastPublishedEntriesJson: string | null;
-  lastPublishedGeneratedAt: string | null;
 }
 
 function writeJson(response: ServerResponse, statusCode: number, value: unknown) {
@@ -74,100 +71,16 @@ function readBody(request: IncomingMessage): Promise<string> {
   });
 }
 
-function graphOutputPath(state: IntentState): string {
-  return path.join(state.rootDir, ".intent", "graph.intent.json");
+export function isLoopbackAddress(address: string | undefined): boolean {
+  if (!address) return false;
+  return address === "::1" || address.startsWith("127.") || address.startsWith("::ffff:127.");
 }
 
-function graphEntries(state: IntentState): Record<string, IntentBinding> {
-  const entries: Record<string, IntentBinding> = {};
-
-  for (const id of [...state.entriesById.keys()].sort()) {
-    const entry = state.entriesById.get(id);
-    if (entry) {
-      entries[id] = entry;
-    }
-  }
-
-  return entries;
-}
-
-function toGraph(state: IntentState): IntentGraph {
-  return {
-    version: 1,
-    generatedAt: state.lastPublishedGeneratedAt ?? new Date().toISOString(),
-    entries: graphEntries(state)
-  };
-}
-
-function nextGraphGeneratedAt(state: IntentState): string {
-  const next = new Date();
-  const previousMs = state.lastPublishedGeneratedAt ? Date.parse(state.lastPublishedGeneratedAt) : Number.NaN;
-
-  if (Number.isFinite(previousMs) && next.getTime() <= previousMs) {
-    next.setTime(previousMs + 1);
-  }
-
-  return next.toISOString();
-}
-
-function graphPublishFingerprint(entries: Record<string, IntentBinding>): string {
-  return JSON.stringify(entries, (key, value) => (key === "transformMs" ? 0 : value));
-}
-
-function publishGraph(state: IntentState) {
-  const entries = graphEntries(state);
-  const entriesJson = graphPublishFingerprint(entries);
-  const output = graphOutputPath(state);
-
-  if (
-    state.lastPublishedEntriesJson === entriesJson &&
-    state.lastPublishedGeneratedAt &&
-    fs.existsSync(output)
-  ) {
-    return;
-  }
-
-  const generatedAt = nextGraphGeneratedAt(state);
-  const graph: IntentGraph = {
-    version: 1,
-    generatedAt,
-    entries
-  };
-
-  fs.mkdirSync(path.dirname(output), { recursive: true });
-  fs.writeFileSync(output, `${JSON.stringify(graph, null, 2)}\n`);
-  state.lastPublishedEntriesJson = entriesJson;
-  state.lastPublishedGeneratedAt = generatedAt;
-}
-
-function replaceFileEntries(state: IntentState, file: string, entries: IntentBinding[]) {
-  const previous = state.entriesByFile.get(file) ?? [];
-  for (const entry of previous) {
-    state.entriesById.delete(entry.id);
-  }
-
-  state.entriesByFile.set(file, entries);
-  for (const entry of entries) {
-    state.entriesById.set(entry.id, entry);
-  }
-}
-
-function isTargetFile(id: string): boolean {
-  return /\.[jt]sx$/.test(id) && !id.includes("/node_modules/") && !id.includes("\\node_modules\\");
-}
-
-function refreshChangedFile(state: IntentState, file: string) {
-  if (!isTargetFile(file) || !fs.existsSync(file)) {
-    return;
-  }
-
-  const result = instrumentSource({
-    code: fs.readFileSync(file, "utf8"),
-    file,
-    rootDir: state.rootDir
-  });
-  replaceFileEntries(state, file, result.entries);
-  publishGraph(state);
+export function intentMutationRequestAllowed(request: IncomingMessage, sessionToken: string): boolean {
+  return (
+    isLoopbackAddress(request.socket.remoteAddress) &&
+    request.headers["x-intent-layer-token"] === sessionToken
+  );
 }
 
 function invalidateChangedFile(server: ViteDevServer, file: string) {
@@ -189,37 +102,17 @@ function invalidateChangedFile(server: ViteDevServer, file: string) {
   server.moduleGraph.invalidateAll();
 }
 
-function syncChangedFile(server: ViteDevServer, state: IntentState, file: string) {
-  refreshChangedFile(state, file);
-  invalidateChangedFile(server, file);
+function intentRuntimeWatchIgnorePatterns(rootDir: string): string[] {
+  const root = normalizePath(path.resolve(rootDir));
+  return [`${root}/.intent/**`, `${root}/.intent-agent-queue.json*`];
 }
 
-function isPatchInCurrentGraph(state: IntentState, patch: PatchApplyResult): boolean {
-  const entry = state.entriesById.get(patch.id);
-  if (!entry) {
-    return false;
-  }
-
-  return path.resolve(entry.file) === path.resolve(patch.file);
-}
-
-function scopeUndoStackToCurrentGraph(state: IntentState, stack: PatchApplyResult[]): PatchApplyResult[] {
-  return stack.filter((patch) => isPatchInCurrentGraph(state, patch));
-}
-
-function refreshUndoStackForCurrentGraph(state: IntentState): PatchApplyResult[] {
-  const sourceStack =
-    state.undoStack.length > 0 ? state.undoStack : pendingUndoStackFromOperationLog(state.rootDir);
-  state.undoStack = scopeUndoStackToCurrentGraph(state, sourceStack);
-  return state.undoStack;
-}
-
-function overlayBootstrapCode(code: string): string {
+function overlayBootstrapSuffix(code: string): string {
   if (code.includes(virtualClientId)) {
-    return code;
+    return "";
   }
 
-  return `${code}
+  return `
 import { initIntentOverlay as __intentLayerInitOverlay } from "${virtualClientId}";
 if (import.meta.env.DEV) {
   __intentLayerInitOverlay();
@@ -236,11 +129,12 @@ function runtimeModulePath(name: "client" | "tailwind"): string {
   return fs.existsSync(built) ? built : path.join(moduleDir, `${name}.ts`);
 }
 
-function readClientModule() {
+function readClientModule(sessionToken: string) {
   return stripTypeImports(
     fs
       .readFileSync(runtimeModulePath("client"), "utf8")
       .replace("./tailwind", virtualTailwindId)
+      .replaceAll("__INTENT_LAYER_SESSION_TOKEN__", sessionToken)
   );
 }
 
@@ -257,24 +151,29 @@ function transpileVirtualModule(source: string, fileName: string): string {
 }
 
 export function intentLayerSpike(): Plugin {
-  let isServe = false;
-  const state: IntentState = {
-    rootDir: process.cwd(),
-    entriesByFile: new Map(),
-    entriesById: new Map(),
-    undoStack: [],
-    clientMetrics: [],
-    lastPublishedEntriesJson: null,
-    lastPublishedGeneratedAt: null
-  };
+  let runtimeSessionId: string | null = null;
+  const runtimeToken = randomBytes(24).toString("hex");
+  const graphStore = new IntentGraphStore(process.cwd());
+  const intentService = new IntentService(graphStore);
+  const state: OverlayState = { clientMetrics: [] };
 
   return {
     name: "intent-layer",
+    apply: "serve",
     enforce: "pre",
 
+    config(config) {
+      return {
+        server: {
+          watch: {
+            ignored: intentRuntimeWatchIgnorePatterns(config.root ?? process.cwd())
+          }
+        }
+      };
+    },
+
     configResolved(config) {
-      state.rootDir = config.root;
-      isServe = config.command === "serve";
+      graphStore.setRootDir(config.root);
     },
 
     resolveId(id) {
@@ -289,7 +188,7 @@ export function intentLayerSpike(): Plugin {
 
     load(id) {
       if (id === resolvedVirtualClientId) {
-        return transpileVirtualModule(readClientModule(), "intent-layer-client.ts");
+        return transpileVirtualModule(readClientModule(runtimeToken), "intent-layer-client.ts");
       }
       if (id === resolvedVirtualTailwindId) {
         return transpileVirtualModule(
@@ -301,35 +200,189 @@ export function intentLayerSpike(): Plugin {
     },
 
     transform(code, id) {
-      if (!isTargetFile(id)) {
+      if (!isIntentTargetFile(id)) {
         return null;
       }
 
       const result = instrumentSource({
         code,
         file: id,
-        rootDir: state.rootDir
+        rootDir: graphStore.rootDir,
+        options: {
+          append: overlayBootstrapSuffix(code),
+          sourceMap: true
+        }
       });
 
-      replaceFileEntries(state, id, result.entries);
-      publishGraph(state);
+      graphStore.replaceFileEntries(id, result.entries);
+      graphStore.publish();
 
       if (result.entries.length === 0) {
         return null;
       }
 
       return {
-        code: isServe ? overlayBootstrapCode(result.code) : result.code,
-        map: null
+        code: result.code,
+        map: result.map
       };
     },
 
     configureServer(server) {
+      intentService.setSourceChanged((file) => invalidateChangedFile(server, file));
+      const pendingRuntimeQueries = new Map<
+        string,
+        {
+          resolve: (result: IntentRuntimeTokenResult) => void;
+          timer: ReturnType<typeof setTimeout>;
+        }
+      >();
+      server.ws.on("intent:runtime-result", (data: unknown) => {
+        if (!data || typeof data !== "object") return;
+        const result = data as IntentRuntimeTokenResult & { requestId?: string };
+        if (!result.requestId) return;
+        const pending = pendingRuntimeQueries.get(result.requestId);
+        if (!pending) return;
+        clearTimeout(pending.timer);
+        pendingRuntimeQueries.delete(result.requestId);
+        pending.resolve(result);
+      });
+
+      server.httpServer?.once("listening", () => {
+        const address = server.httpServer?.address();
+        if (!address || typeof address === "string") return;
+        runtimeSessionId = writeRuntimeSession(intentService.rootDir, {
+          url: `http://127.0.0.1:${address.port}`,
+          token: runtimeToken
+        }).sessionId;
+      });
+      server.httpServer?.once("close", () => {
+        removeRuntimeSession(intentService.rootDir, runtimeToken);
+      });
+
       server.middlewares.use(async (request, response, next) => {
         const url = new URL(request.url ?? "/", "http://intent-layer.local");
+        const mutation = intentMutationMethods.has(request.method ?? "");
+
+        if (
+          mutation &&
+          url.pathname.startsWith("/__intent/") &&
+          url.pathname !== "/__intent/runtime-query" &&
+          !intentMutationRequestAllowed(request, runtimeToken)
+        ) {
+          writeJson(response, 403, {
+            ok: false,
+            reason: "unsafe-intent-request",
+            detail: "Intent Layer source-changing requests require a loopback connection and session token."
+          });
+          return;
+        }
+
+        if (
+          url.pathname.startsWith("/__intent/agent-") &&
+          !legacyAgentQueueEnabled(intentService.rootDir)
+        ) {
+          writeJson(response, 404, {
+            ok: false,
+            reason: "legacy-agent-disabled",
+            detail: "Enable the advanced legacy agent queue in Intent Layer settings before using this route."
+          });
+          return;
+        }
+
+        if (url.pathname === "/__intent/runtime-query" && request.method === "POST") {
+          if (
+            !isLoopbackAddress(request.socket.remoteAddress) ||
+            request.headers.authorization !== `Bearer ${runtimeToken}`
+          ) {
+            writeJson(response, 401, { ok: false, reason: "unauthorized" });
+            return;
+          }
+          try {
+            const body = JSON.parse(await readBody(request)) as {
+              id?: string;
+              expectedToken?: string;
+            };
+            if (!body.id || !body.expectedToken || !intentService.getEntry(body.id)) {
+              writeJson(response, 400, { ok: false, reason: "invalid-runtime-query" });
+              return;
+            }
+            const requestId = randomUUID();
+            const result = await new Promise<IntentRuntimeTokenResult>((resolve) => {
+              const timer = setTimeout(() => {
+                pendingRuntimeQueries.delete(requestId);
+                resolve({
+                  ok: false,
+                  status: "unavailable",
+                  id: body.id!,
+                  expectedToken: body.expectedToken!,
+                  renderedInstanceCount: 0,
+                  matchingInstanceCount: 0,
+                  visibleInstanceCount: 0,
+                  route: null,
+                  detail: "No browser client answered the runtime query."
+                });
+              }, 1_500);
+              pendingRuntimeQueries.set(requestId, { resolve, timer });
+              server.ws.send("intent:runtime-query", {
+                requestId,
+                id: body.id,
+                expectedToken: body.expectedToken
+              });
+            });
+            writeJson(response, 200, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              status: "unavailable",
+              reason: "runtime-query-failed",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
 
         if (url.pathname === "/__intent/graph" && request.method === "GET") {
-          writeJson(response, 200, toGraph(state));
+          writeJson(response, 200, intentService.graph());
+          return;
+        }
+
+        if (url.pathname === "/__intent/candidates" && request.method === "GET") {
+          const token = url.searchParams.get("token")?.trim();
+          if (!token || token.length > 200) {
+            writeJson(response, 400, { ok: false, reason: "invalid-token" });
+            return;
+          }
+          writeJson(response, 200, {
+            ok: true,
+            token,
+            candidates: projectCandidatesForToken(intentService.rootDir, token),
+            themeFiles: readProjectThemeCatalog(intentService.rootDir).files
+          });
+          return;
+        }
+
+        if (url.pathname === "/__intent/selection" && request.method === "GET") {
+          writeJson(response, 200, readRuntimeSelection(intentService.rootDir, runtimeSessionId));
+          return;
+        }
+
+        if (url.pathname === "/__intent/selection" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as IntentRuntimeSelectionRequest;
+            const result = writeRuntimeSelection(
+              intentService.rootDir,
+              body.id ? intentService.getEntry(body.id) : undefined,
+              body,
+              runtimeSessionId
+            );
+            writeJson(response, 200, result);
+          } catch (error) {
+            writeJson(response, 409, {
+              ok: false,
+              reason: "invalid-selection",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
           return;
         }
 
@@ -338,8 +391,8 @@ export function intentLayerSpike(): Plugin {
           writeJson(
             response,
             200,
-            intentSetupStatus(state.rootDir, {
-              graphEntryCount: state.entriesById.size,
+            intentSetupStatus(intentService.rootDir, {
+              graphEntryCount: graphStore.size,
               language
             })
           );
@@ -349,8 +402,8 @@ export function intentLayerSpike(): Plugin {
         if (url.pathname === "/__intent/setup" && request.method === "POST") {
           try {
             const body = JSON.parse(await readBody(request)) as IntentSetupRequest;
-            const result = applyIntentSetup(state.rootDir, body, {
-              graphEntryCount: state.entriesById.size
+            const result = applyIntentSetup(intentService.rootDir, body, {
+              graphEntryCount: graphStore.size
             });
             writeJson(response, 200, result);
           } catch (error) {
@@ -398,12 +451,141 @@ export function intentLayerSpike(): Plugin {
         }
 
         if (url.pathname === "/__intent/undo-history" && request.method === "GET") {
-          writeJson(response, 200, undoHistoryFromStack(refreshUndoStackForCurrentGraph(state)));
+          writeJson(response, 200, intentService.undoHistory());
           return;
         }
 
         if (url.pathname === "/__intent/conflicts" && request.method === "GET") {
-          writeJson(response, 200, readPatchConflictReport(state.rootDir));
+          writeJson(response, 200, intentService.conflicts());
+          return;
+        }
+
+        if (
+          (url.pathname === "/__intent/text/preview" || url.pathname === "/__intent/text/apply") &&
+          request.method === "POST"
+        ) {
+          try {
+            const body = JSON.parse(await readBody(request)) as LiteralTextEditRequest;
+            if (url.pathname === "/__intent/text/apply") {
+              const result = intentService.applyLiteralText(body);
+              writeJson(
+                response,
+                result.ok ? 200 : 409,
+                result.ok ? { ...result, binding: intentService.getEntry(result.id) ?? null } : result
+              );
+            } else {
+              const result = intentService.previewLiteralText(body);
+              writeJson(response, result.ok ? 200 : 409, result);
+            }
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/grid-layout/inspect" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as GridLayoutInspectRequest;
+            const result = intentService.inspectGridLayout(body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/grid-layout/preview" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as GridLayoutEditRequest;
+            const result = intentService.previewGridLayout(body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/grid-layout/apply" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as GridLayoutApplyRequest;
+            const result = intentService.applyGridLayout(body);
+            writeJson(
+              response,
+              result.ok ? 200 : 409,
+              result.ok
+                ? { ...result, binding: intentService.getEntry(result.id) ?? null }
+                : result
+            );
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/flex-layout/inspect" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as FlexLayoutInspectRequest;
+            const result = intentService.inspectFlexLayout(body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/flex-layout/preview" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as FlexLayoutEditRequest;
+            const result = intentService.previewFlexLayout(body);
+            writeJson(response, result.ok ? 200 : 409, result);
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
+          return;
+        }
+
+        if (url.pathname === "/__intent/flex-layout/apply" && request.method === "POST") {
+          try {
+            const body = JSON.parse(await readBody(request)) as FlexLayoutApplyRequest;
+            const result = intentService.applyFlexLayout(body);
+            writeJson(
+              response,
+              result.ok ? 200 : 409,
+              result.ok
+                ? { ...result, binding: intentService.getEntry(result.id) ?? null }
+                : result
+            );
+          } catch (error) {
+            writeJson(response, 500, {
+              ok: false,
+              reason: "server-error",
+              detail: error instanceof Error ? error.message : String(error)
+            });
+          }
           return;
         }
 
@@ -413,23 +595,17 @@ export function intentLayerSpike(): Plugin {
         ) {
           try {
             const body = JSON.parse(await readBody(request)) as PatchRequest;
-            const entry = state.entriesById.get(body.id);
             if (url.pathname === "/__intent/apply") {
-              const result = applyTokenPatch(state.rootDir, entry, body);
-              if (result.ok) {
-                state.undoStack.push(result);
-                recordPatchApplyInOperationLog(state.rootDir, result);
-                syncChangedFile(server, state, result.file);
-              }
+              const result = intentService.applyToken(body);
               writeJson(
                 response,
                 result.ok ? 200 : 409,
                 result.ok
-                  ? { ...result, binding: state.entriesById.get(result.id) ?? null }
+                  ? { ...result, binding: intentService.getEntry(result.id) ?? null }
                   : result
               );
             } else {
-              const result = planTokenPatch(entry, body);
+              const result = intentService.previewToken(body);
               writeJson(response, result.ok ? 200 : 409, result);
             }
           } catch (error) {
@@ -444,20 +620,12 @@ export function intentLayerSpike(): Plugin {
 
         if (url.pathname === "/__intent/revert-last" && request.method === "POST") {
           try {
-            refreshUndoStackForCurrentGraph(state);
-            const lastPatch = state.undoStack[state.undoStack.length - 1] ?? null;
-            const entry = lastPatch ? state.entriesById.get(lastPatch.id) : undefined;
-            const result = revertTokenPatch(state.rootDir, lastPatch, entry);
-            if (result.ok) {
-              state.undoStack.pop();
-              recordPatchRevertInOperationLog(state.rootDir, result);
-              syncChangedFile(server, state, result.file);
-            }
+            const result = intentService.revertLatest();
             writeJson(
               response,
               result.ok ? 200 : 409,
               result.ok
-                ? { ...result, binding: state.entriesById.get(result.id) ?? null }
+                ? { ...result, binding: intentService.getEntry(result.id) ?? null }
                 : result
             );
           } catch (error) {
@@ -473,10 +641,7 @@ export function intentLayerSpike(): Plugin {
         if (url.pathname === "/__intent/resolve-conflict" && request.method === "POST") {
           try {
             const body = JSON.parse(await readBody(request)) as PatchConflictResolveRequest;
-            const result = resolvePatchConflict(state.rootDir, body);
-            if (result.ok) {
-              state.undoStack = removeDiscardedPatchFromStack(state.undoStack, result.discardedPatch);
-            }
+            const result = intentService.resolveConflict(body);
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
             writeJson(response, 500, {
@@ -491,10 +656,7 @@ export function intentLayerSpike(): Plugin {
         if (url.pathname === "/__intent/discard-undo" && request.method === "POST") {
           try {
             const body = JSON.parse(await readBody(request)) as PatchUndoDiscardRequest;
-            const result = discardPendingUndo(state.rootDir, body);
-            if (result.ok) {
-              state.undoStack = removeDiscardedPatchFromStack(state.undoStack, result.discardedPatch);
-            }
+            const result = intentService.discardUndo(body);
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
             writeJson(response, 500, {
@@ -509,19 +671,12 @@ export function intentLayerSpike(): Plugin {
         if (url.pathname === "/__intent/revert-undo" && request.method === "POST") {
           try {
             const body = JSON.parse(await readBody(request)) as PatchUndoRevertRequest;
-            refreshUndoStackForCurrentGraph(state);
-            const patch = state.undoStack.find((item) => item.operationFile === body.operationFile);
-            const entry = patch ? state.entriesById.get(patch.id) : undefined;
-            const result = revertPendingUndo(state.rootDir, entry, body);
-            if (result.ok) {
-              state.undoStack = state.undoStack.filter((item) => item.operationFile !== body.operationFile);
-              syncChangedFile(server, state, result.file);
-            }
+            const result = intentService.revertUndo(body);
             writeJson(
               response,
               result.ok ? 200 : 409,
               result.ok
-                ? { ...result, binding: state.entriesById.get(result.id) ?? null }
+                ? { ...result, binding: intentService.getEntry(result.id) ?? null }
                 : result
             );
           } catch (error) {
@@ -537,8 +692,8 @@ export function intentLayerSpike(): Plugin {
         if (url.pathname === "/__intent/agent-task" && request.method === "POST") {
           try {
             const body = JSON.parse(await readBody(request)) as AgentTaskRequest;
-            const entry = state.entriesById.get(body.id);
-            const result = createAgentTask(state.rootDir, entry, body);
+            const entry = intentService.getEntry(body.id);
+            const result = createAgentTask(intentService.rootDir, entry, body);
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
             writeJson(response, 500, {
@@ -552,7 +707,7 @@ export function intentLayerSpike(): Plugin {
 
         if (url.pathname === "/__intent/agent-queue" && request.method === "GET") {
           try {
-            writeJson(response, 200, refreshAgentQueueSignal(state.rootDir));
+            writeJson(response, 200, refreshAgentQueueSignal(intentService.rootDir));
           } catch (error) {
             writeJson(response, 500, {
               ok: false,
@@ -566,7 +721,7 @@ export function intentLayerSpike(): Plugin {
         if (url.pathname === "/__intent/agent-claim" && request.method === "POST") {
           try {
             const body = JSON.parse(await readBody(request)) as AgentTaskClaimRequest;
-            const result = claimAgentTask(state.rootDir, body);
+            const result = claimAgentTask(intentService.rootDir, body);
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
             writeJson(response, 500, {
@@ -581,7 +736,7 @@ export function intentLayerSpike(): Plugin {
         if (url.pathname === "/__intent/agent-fail" && request.method === "POST") {
           try {
             const body = JSON.parse(await readBody(request)) as AgentTaskStatusUpdateRequest;
-            const result = failAgentTask(state.rootDir, body);
+            const result = failAgentTask(intentService.rootDir, body);
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
             writeJson(response, 500, {
@@ -598,8 +753,8 @@ export function intentLayerSpike(): Plugin {
             const body = JSON.parse(await readBody(request)) as AgentLaunchRequest;
             let taskFile = body.taskFile;
             if (!taskFile && body.id && body.desiredChange) {
-              const entry = state.entriesById.get(body.id);
-              const task = createAgentTask(state.rootDir, entry, {
+              const entry = intentService.getEntry(body.id);
+              const task = createAgentTask(intentService.rootDir, entry, {
                 id: body.id,
                 desiredChange: body.desiredChange
               });
@@ -609,7 +764,7 @@ export function intentLayerSpike(): Plugin {
               }
               taskFile = task.taskFile;
             }
-            const result = launchAgentTask(state.rootDir, {
+            const result = launchAgentTask(intentService.rootDir, {
               ...body,
               taskFile
             });
@@ -627,8 +782,8 @@ export function intentLayerSpike(): Plugin {
         if (url.pathname === "/__intent/agent-result" && request.method === "POST") {
           try {
             const body = JSON.parse(await readBody(request)) as AgentResultRequest;
-            const entry = state.entriesById.get(body.id);
-            const result = recordAgentResult(state.rootDir, entry, body);
+            const entry = intentService.getEntry(body.id);
+            const result = recordAgentResult(intentService.rootDir, entry, body);
             writeJson(response, result.ok ? 200 : 409, result);
           } catch (error) {
             writeJson(response, 500, {

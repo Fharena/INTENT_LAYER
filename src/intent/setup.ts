@@ -2,12 +2,17 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { agentIntegrationStatus, ensureAgentIntegrations } from "./agentIntegrations";
+import {
+  ensureIntentMcpIntegrations,
+  intentMcpIntegrationStatus
+} from "./mcp/integrations";
 import type {
   IntentAgentCommandSource,
   IntentAgentRunSource,
   IntentAgentSettings,
   IntentLayerLanguage,
   IntentLayerSettings,
+  IntentMcpSettings,
   IntentOverlayDensity,
   IntentOverlayDock,
   IntentOverlaySettings,
@@ -65,13 +70,26 @@ export function defaultIntentSettings(language: IntentLayerLanguage = "en"): Int
       defaultCollapsed: false,
       autoOpenSetup: true
     },
+    mcp: {
+      codexEnabled: false,
+      claudeEnabled: false
+    },
     agent: {
+      legacyQueueEnabled: false,
       runEnabled: false,
       codexCommand: null,
       claudeCommand: null,
-      codexSkillEnabled: true,
-      claudeHookEnabled: true
+      codexSkillEnabled: false,
+      claudeHookEnabled: false
     }
+  };
+}
+
+function normalizeMcpSettings(value: unknown): IntentMcpSettings {
+  const raw = value && typeof value === "object" ? (value as Partial<IntentMcpSettings>) : {};
+  return {
+    codexEnabled: normalizeBoolean(raw.codexEnabled, false),
+    claudeEnabled: normalizeBoolean(raw.claudeEnabled, false)
   };
 }
 
@@ -87,12 +105,16 @@ function normalizeOverlaySettings(value: unknown): IntentOverlaySettings {
 
 function normalizeAgentSettings(value: unknown): IntentAgentSettings {
   const raw = value && typeof value === "object" ? (value as Partial<IntentAgentSettings>) : {};
+  const inferredLegacyQueue = Boolean(
+    raw.runEnabled || raw.codexSkillEnabled || raw.claudeHookEnabled
+  );
   return {
+    legacyQueueEnabled: normalizeBoolean(raw.legacyQueueEnabled, inferredLegacyQueue),
     runEnabled: normalizeBoolean(raw.runEnabled, false),
     codexCommand: normalizeCommand(raw.codexCommand),
     claudeCommand: normalizeCommand(raw.claudeCommand),
-    codexSkillEnabled: normalizeBoolean(raw.codexSkillEnabled, true),
-    claudeHookEnabled: normalizeBoolean(raw.claudeHookEnabled, true)
+    codexSkillEnabled: normalizeBoolean(raw.codexSkillEnabled, false),
+    claudeHookEnabled: normalizeBoolean(raw.claudeHookEnabled, false)
   };
 }
 
@@ -105,6 +127,7 @@ function normalizeSettings(value: Partial<IntentLayerSettings> | null, languageF
       typeof value?.onboardingCompletedAt === "string" ? value.onboardingCompletedAt : null,
     updatedAt: typeof value?.updatedAt === "string" ? value.updatedAt : fallback.updatedAt,
     overlay: normalizeOverlaySettings(value?.overlay),
+    mcp: normalizeMcpSettings(value?.mcp),
     agent: normalizeAgentSettings(value?.agent)
   };
 }
@@ -136,6 +159,37 @@ function createDirIfMissing(rootDir: string, dir: string, createdPaths: string[]
   createdPaths.push(relativeFromRoot(rootDir, dir));
 }
 
+function ensureRuntimeGitIgnore(
+  rootDir: string,
+  createdPaths: string[],
+  existingPaths: string[]
+): void {
+  const file = path.join(rootDir, ".gitignore");
+  const existed = fs.existsSync(file);
+  const contents = existed ? fs.readFileSync(file, "utf8") : "";
+  const ignored = new Set(
+    contents
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#") && !line.startsWith("!"))
+  );
+  if (
+    [
+      ".intent/runtime/",
+      "/.intent/runtime/",
+      ".intent/",
+      "/.intent/",
+      ".intent/**",
+      "/.intent/**"
+    ].some((pattern) => ignored.has(pattern))
+  ) {
+    return;
+  }
+  const prefix = contents && !contents.endsWith("\n") ? `${contents}\n` : contents;
+  fs.writeFileSync(file, `${prefix}.intent/runtime/\n`, "utf8");
+  (existed ? existingPaths : createdPaths).push(relativeFromRoot(rootDir, file));
+}
+
 export function initIntentWorkspace(rootDir: string): IntentWorkspaceInitResult {
   const createdPaths: string[] = [];
   const existingPaths: string[] = [];
@@ -152,6 +206,7 @@ export function initIntentWorkspace(rootDir: string): IntentWorkspaceInitResult 
   ]) {
     createDirIfMissing(rootDir, dir, createdPaths, existingPaths);
   }
+  ensureRuntimeGitIgnore(rootDir, createdPaths, existingPaths);
 
   writeFileIfMissing(
     rootDir,
@@ -181,13 +236,14 @@ export function initIntentWorkspace(rootDir: string): IntentWorkspaceInitResult 
         version: 1,
         kind: "intent-op.schema",
         required: ["version", "kind", "target", "change"],
-        supportedKinds: ["tailwind-token-replace"],
+        supportedKinds: ["tailwind-token-replace", "literal-text", "grid-layout", "flex-layout"],
         target: {
           required: ["id"],
           optional: ["componentName", "file", "tagName", "range"]
         },
         change: {
-          required: ["from", "to"]
+          scalarRequired: ["from", "to"],
+          groupedRequired: ["count", "edits"]
         }
       },
       null,
@@ -314,6 +370,10 @@ export function resolveAgentRunMode(rootDir: string): {
   return { enabled: false, source: "locked" };
 }
 
+export function legacyAgentQueueEnabled(rootDir: string): boolean {
+  return (readIntentSettings(rootDir) ?? defaultIntentSettings()).agent.legacyQueueEnabled;
+}
+
 export function intentSetupStatus(
   rootDir: string,
   options: { graphEntryCount?: number; language?: IntentLayerLanguage } = {}
@@ -343,6 +403,7 @@ export function intentSetupStatus(
   const codexCommand = agentCommands.codex.command;
   const claudeCommand = agentCommands.claude.command;
   const integrations = agentIntegrationStatus(rootDir, effectiveSettings.agent);
+  const mcp = intentMcpIntegrationStatus(rootDir, effectiveSettings.mcp);
 
   return {
     version: 1,
@@ -374,26 +435,24 @@ export function intentSetupStatus(
           : "Source bindings will appear after Vite transforms JSX/TSX files."
       },
       {
-        name: "agent-run",
-        status: agentRunMode.enabled ? "ready" : "warn",
-        detail:
-          agentRunMode.enabled
-            ? `Agent run is enabled by ${agentRunMode.source}. Run buttons may spawn local CLIs.`
-            : "Agent run is locked. Enable it in settings or set INTENT_LAYER_AGENT_RUN=1 to spawn local CLIs."
-      },
-      {
-        name: "agent-integrations",
+        name: "mcp-integrations",
         status:
-          integrations.queueSignalReady &&
-          (!integrations.codexSkillEnabled || integrations.codexSkillReady) &&
-          (!integrations.claudeHookEnabled || integrations.claudeHookReady)
-            ? "ready"
+          (!mcp.codexEnabled || mcp.codexReady) && (!mcp.claudeEnabled || mcp.claudeReady)
+            ? mcp.codexEnabled || mcp.claudeEnabled
+              ? "ready"
+              : "warn"
             : "warn",
         detail:
-          "Agent queue uses one shared signal file. Codex uses a project skill; Claude uses a FileChanged hook."
+          mcp.codexEnabled || mcp.claudeEnabled
+            ? mcp.serverReady
+              ? "Codex and Claude use the same local Intent Layer MCP tools."
+              : "The MCP client config exists, but the built Intent Layer MCP server is missing."
+            : "Connect Codex or Claude to let AI inspect and apply guarded UI edits."
       }
     ],
+    mcp,
     agent: {
+      legacyQueueEnabled: effectiveSettings.agent.legacyQueueEnabled,
       runEnabled: agentRunMode.enabled,
       runEnabledSource: agentRunMode.source,
       codexCommand,
@@ -435,10 +494,22 @@ export function applyIntentSetup(
     ...previous.overlay,
     ...(request.overlay ?? {})
   });
-  const nextAgent = normalizeAgentSettings({
+  const nextMcp = normalizeMcpSettings({
+    ...previous.mcp,
+    ...(request.mcp ?? {})
+  });
+  const normalizedAgent = normalizeAgentSettings({
     ...previous.agent,
     ...(request.agent ?? {})
   });
+  const nextAgent: IntentAgentSettings = normalizedAgent.legacyQueueEnabled
+    ? normalizedAgent
+    : {
+        ...normalizedAgent,
+        runEnabled: false,
+        codexSkillEnabled: false,
+        claudeHookEnabled: false
+      };
   const onboardingCompletedAt =
     request.resetOnboarding === true
       ? null
@@ -453,11 +524,13 @@ export function applyIntentSetup(
       onboardingCompletedAt,
       updatedAt: new Date().toISOString(),
       overlay: nextOverlay,
+      mcp: nextMcp,
       agent: nextAgent
     },
     createdPaths,
     existingPaths
   );
+  ensureIntentMcpIntegrations(rootDir, nextMcp, createdPaths, existingPaths);
   ensureAgentIntegrations(rootDir, nextAgent, createdPaths, existingPaths);
 
   return {

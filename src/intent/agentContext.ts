@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { agentArtifactsDir } from "./agentQueue";
 import type { IntentBinding, IntentGraph, IntentTokenCategory } from "./types";
 
 export interface AgentContextRequest {
@@ -191,7 +192,7 @@ export function createAgentContext(
   const createdAt = new Date().toISOString();
   const entries = Object.values(graph.entries);
   const summary = summarizeGraph(graph);
-  const agentDir = path.join(rootDir, ".intent", "agent");
+  const agentDir = agentArtifactsDir(rootDir);
   fs.mkdirSync(agentDir, { recursive: true });
   const contextFile = path.join(agentDir, `context_${timestampSlug()}.md`);
 

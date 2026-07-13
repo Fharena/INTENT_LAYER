@@ -3,11 +3,11 @@
 <!-- context-pack:fingerprint:start -->
 - Repo root: D:\SJWORK\INTENT_LAYER
 - Git repo: yes
-- Branch: main
-- HEAD: 4fc50614175a
-- Dirty files: none
-- Dirty diff hash: clean
-- Updated at: 2026-06-30T19:57:53+09:00
+- Branch: feat/ai-native-mcp
+- HEAD: 62624103a568
+- Dirty files: .claude/launch.json, AGENTS.md, README.md, README_KR.md, codex.md
+- Dirty diff hash: sha256:55abaa28a32fabd05f2d6150
+- Updated at: 2026-07-12T21:38:11+09:00
 <!-- context-pack:fingerprint:end -->
 ## Active Goal
 - Keep this short. Move details into `.context-pack/AREAS/*.md`.

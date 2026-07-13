@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { build } from "esbuild";
 
 const root = process.cwd();
@@ -10,12 +11,12 @@ fs.mkdirSync(outdir, { recursive: true });
 
 const nodeBuild = {
   bundle: true,
-  external: ["typescript", "vite"],
+  external: ["typescript", "vite", "@modelcontextprotocol/sdk/*", "zod", "zod/*"],
   format: "esm",
   legalComments: "none",
   platform: "node",
   sourcemap: false,
-  target: "node18"
+  target: "node20"
 };
 
 await build({
@@ -35,6 +36,12 @@ await build({
 });
 
 await build({
+  ...nodeBuild,
+  entryPoints: [path.join(root, "src", "intent", "mcp", "entry.ts")],
+  outfile: path.join(outdir, "mcp.js")
+});
+
+await build({
   bundle: false,
   entryPoints: {
     client: path.join(root, "src", "intent", "client.ts"),
@@ -48,4 +55,11 @@ await build({
   target: "es2020"
 });
 
+execFileSync(
+  process.execPath,
+  [path.join(root, "node_modules", "typescript", "bin", "tsc"), "--project", path.join(root, "tsconfig.package.json")],
+  { cwd: root, stdio: "inherit" }
+);
+
 fs.chmodSync(cliFile, 0o755);
+fs.chmodSync(path.join(outdir, "mcp.js"), 0o755);

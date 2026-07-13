@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-11T13:49:04.000Z",
+  "method": "Playwright browser selection plus a real stdio MCP client against the local Vite dev server",
+  "environment": {
+    "platform": "win32",
+    "browserViewport": {
+      "desktop": "1036x735",
+      "mobile": "390x844"
+    },
+    "viteUrl": "http://127.0.0.1:4177"
+  },
+  "selection": {
+    "intentId": "il_6579cd81ec",
+    "sourceFile": "src/App.tsx",
+    "tagName": "p",
+    "renderedText": "Click this card and change gap, padding, or radius."
+  },
+  "edit": {
+    "property": "typography.size",
+    "from": "sm",
+    "to": "xs",
+    "changedTokenCount": 1,
+    "fullFileRewrite": false
+  },
+  "verification": {
+    "source": "verified",
+    "runtime": "verified",
+    "renderedInstanceCount": 3,
+    "matchingInstanceCount": 3,
+    "multipleViteSessionsPresent": true,
+    "correctSessionResolved": true
+  },
+  "undo": {
+    "ok": true,
+    "restoredToken": "text-sm",
+    "trackedSourceDiffAfterUndo": false
+  },
+  "visualQa": {
+    "desktopSettingsPanelPass": true,
+    "mobileSettingsPanelPass": true,
+    "textOverflowObserved": false,
+    "controlOverlapObserved": false,
+    "onlyConsoleError": "favicon.ico 404"
+  },
+  "pass": true,
+  "limitations": "This is one local deterministic round trip. It does not measure independent agent task success or held-out repository coverage."
+}

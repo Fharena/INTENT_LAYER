@@ -1,9 +1,12 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { withIntentOperationLock } from "./fileLock";
 import { sourceHash } from "./hash";
 import type {
   IntentBinding,
   IntentToken,
+  LiteralTextEditRequest,
   PatchApplyResult,
   PatchConflictArtifact,
   PatchConflictReport,
@@ -12,9 +15,11 @@ import type {
   PatchConflictSummary,
   PatchFailure,
   PatchOperationLog,
+  PatchKind,
   PatchPreview,
   PatchRequest,
   PatchRevertResult,
+  PatchTextEdit,
   PatchUndoDiscardReference,
   PatchUndoDiscardRequest,
   PatchUndoDiscardResult,
@@ -113,6 +118,7 @@ export function planTokenPatch(
 
   return {
     ok: true,
+    kind: "tailwind-token-replace",
     id: request.id,
     file: entry.file,
     relativeFile: entry.relativeFile,
@@ -126,6 +132,68 @@ export function planTokenPatch(
     metrics: {
       previewMs: Number((performance.now() - started).toFixed(3))
     }
+  };
+}
+
+function validLiteralText(value: string): boolean {
+  return (
+    value.length > 0 &&
+    value.length <= 500 &&
+    value.trim() === value &&
+    !/[\r\n<>{}&]/.test(value)
+  );
+}
+
+export function planLiteralTextPatch(
+  entry: IntentBinding | undefined,
+  request: LiteralTextEditRequest
+): PatchPreview | PatchFailure {
+  const started = performance.now();
+  const failed = (reason: string, detail: string): PatchFailure => ({
+    ok: false,
+    id: request.id,
+    reason,
+    detail,
+    metrics: { previewMs: Number((performance.now() - started).toFixed(3)) }
+  });
+  if (!entry) return failed("missing-binding", "No source binding exists for the selected intent id.");
+  if (!entry.textContent) {
+    return failed(
+      "text-not-literal",
+      "Direct text editing requires one plain, single-line JSX text child with no expressions or nested elements."
+    );
+  }
+  if (!validLiteralText(request.nextText)) {
+    return failed(
+      "invalid-literal-text",
+      "Text must be 1-500 trimmed characters without line breaks, JSX delimiters, braces, or entities."
+    );
+  }
+  if (request.nextText === request.oldText) return failed("no-change", "The requested text already matches source.");
+  const source = fs.readFileSync(entry.file, "utf8");
+  const currentHash = sourceHash(source);
+  if (currentHash !== entry.sourceHash) {
+    return failed("source-hash-mismatch", "The file changed after selection. Re-select the element.");
+  }
+  const binding = entry.textContent;
+  if (request.oldText !== binding.value || source.slice(binding.start, binding.end) !== request.oldText) {
+    return failed("old-text-mismatch", "The stored JSX text no longer matches the requested original text.");
+  }
+  const patchedSource = `${source.slice(0, binding.start)}${request.nextText}${source.slice(binding.end)}`;
+  return {
+    ok: true,
+    kind: "literal-text",
+    id: entry.id,
+    file: entry.file,
+    relativeFile: entry.relativeFile,
+    oldToken: request.oldText,
+    nextToken: request.nextText,
+    range: { start: binding.start, end: binding.end },
+    before: lineSnippet(source, binding.start),
+    after: lineSnippet(patchedSource, binding.start),
+    sourceHashBefore: currentHash,
+    sourceHashAfter: sourceHash(patchedSource),
+    metrics: { previewMs: Number((performance.now() - started).toFixed(3)) }
   };
 }
 
@@ -208,32 +276,47 @@ function readOperationLog(rootDir: string): PatchOperationLog {
 function writeOperationLog(rootDir: string, log: PatchOperationLog): string {
   const file = operationLogPath(rootDir);
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(log, null, 2)}\n`);
+  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    fs.writeFileSync(temporary, `${JSON.stringify(log, null, 2)}\n`, "utf8");
+    fs.renameSync(temporary, file);
+  } catch (error) {
+    try {
+      fs.unlinkSync(temporary);
+    } catch {
+      // Preserve the operation-log write error.
+    }
+    throw error;
+  }
   return file;
 }
 
 export function recordPatchApplyInOperationLog(rootDir: string, patch: PatchApplyResult): string {
-  const log = readOperationLog(rootDir);
-  const now = new Date().toISOString();
-  log.updatedAt = now;
-  log.entries.push({
-    action: "apply",
-    createdAt: now,
-    patch
+  return withIntentOperationLock(rootDir, () => {
+    const log = readOperationLog(rootDir);
+    const now = new Date().toISOString();
+    log.updatedAt = now;
+    log.entries.push({
+      action: "apply",
+      createdAt: now,
+      patch
+    });
+    return writeOperationLog(rootDir, log);
   });
-  return writeOperationLog(rootDir, log);
 }
 
 export function recordPatchRevertInOperationLog(rootDir: string, patch: PatchRevertResult): string {
-  const log = readOperationLog(rootDir);
-  const now = new Date().toISOString();
-  log.updatedAt = now;
-  log.entries.push({
-    action: "revert",
-    createdAt: now,
-    patch
+  return withIntentOperationLock(rootDir, () => {
+    const log = readOperationLog(rootDir);
+    const now = new Date().toISOString();
+    log.updatedAt = now;
+    log.entries.push({
+      action: "revert",
+      createdAt: now,
+      patch
+    });
+    return writeOperationLog(rootDir, log);
   });
-  return writeOperationLog(rootDir, log);
 }
 
 export function pendingUndoStackFromOperationLog(rootDir: string): PatchApplyResult[] {
@@ -280,7 +363,9 @@ export function undoHistoryFromStack(stack: PatchApplyResult[]): UndoHistoryRepo
       nextToken: patch.nextToken,
       range: patch.range,
       operationFile: patch.operationFile,
-      diffFile: patch.diffFile
+      diffFile: patch.diffFile,
+      kind: patch.kind,
+      changeCount: patch.edits?.length
     }))
   };
 }
@@ -293,10 +378,10 @@ function writeIntentArtifacts(params: {
   rootDir: string;
   entry: IntentBinding;
   preview: PatchPreview;
-  kind?: "tailwind-token-replace" | "tailwind-token-revert";
+  kind?: PatchKind;
 }) {
   const { rootDir, entry, preview, kind = "tailwind-token-replace" } = params;
-  const timestamp = timestampSlug();
+  const timestamp = `${timestampSlug()}_${randomUUID()}`;
   const operationsDir = path.join(rootDir, ".intent", "operations");
   const diffsDir = path.join(rootDir, ".intent", "diffs");
   fs.mkdirSync(operationsDir, { recursive: true });
@@ -319,10 +404,22 @@ function writeIntentArtifacts(params: {
           tagName: entry.tagName,
           range: preview.range
         },
-        change: {
-          from: preview.oldToken,
-          to: preview.nextToken
-        },
+        change: preview.edits?.length
+          ? {
+              count: preview.edits.length,
+              edits: preview.edits.map((edit) => ({
+                id: edit.id,
+                label: edit.label,
+                range: edit.range,
+                appliedRange: edit.appliedRange,
+                from: edit.oldText,
+                to: edit.newText
+              }))
+            }
+          : {
+              from: preview.oldToken,
+              to: preview.nextToken
+            },
         sourceHash: {
           before: preview.sourceHashBefore,
           after: preview.sourceHashAfter
@@ -333,20 +430,24 @@ function writeIntentArtifacts(params: {
     )}\n`
   );
 
+  const changes = preview.edits?.length
+    ? preview.edits.flatMap((edit) => [
+        `  - target: ${edit.label}.${edit.id}`,
+        `    type: ${kind}`,
+        `    file: ${entry.relativeFile}`,
+        `    from: ${JSON.stringify(edit.oldText)}`,
+        `    to: ${JSON.stringify(edit.newText)}`
+      ])
+    : [
+        `  - target: ${entry.componentName ?? "Unknown"}.${entry.tagName}.${entry.id}`,
+        `    type: ${kind}`,
+        `    file: ${entry.relativeFile}`,
+        `    from: ${preview.oldToken}`,
+        `    to: ${preview.nextToken}`
+      ];
   fs.writeFileSync(
     diffFile,
-    [
-      "version: 1",
-      "kind: intent-diff",
-      `createdAt: ${new Date().toISOString()}`,
-      "changes:",
-      `  - target: ${entry.componentName ?? "Unknown"}.${entry.tagName}.${entry.id}`,
-      `    type: ${kind}`,
-      `    file: ${entry.relativeFile}`,
-      `    from: ${preview.oldToken}`,
-      `    to: ${preview.nextToken}`,
-      ""
-    ].join("\n")
+    ["version: 1", "kind: intent-diff", `createdAt: ${new Date().toISOString()}`, "changes:", ...changes, ""].join("\n")
   );
 
   return { operationFile, diffFile };
@@ -358,9 +459,16 @@ function writeRevertConflictArtifact(params: {
   source: string;
   actualToken: string;
   reason: string;
+  range?: { start: number; end: number };
+  expectedToken?: string;
+  restoreToken?: string;
 }): { conflictFile: string; conflictArtifact: PatchConflictArtifact } {
   const { rootDir, lastPatch, source, actualToken, reason } = params;
-  const timestamp = timestampSlug();
+  const range = params.range ?? {
+    start: lastPatch.range.start,
+    end: lastPatch.range.start + lastPatch.nextToken.length
+  };
+  const timestamp = `${timestampSlug()}_${randomUUID()}`;
   const conflictsDir = conflictsDirPath(rootDir);
   fs.mkdirSync(conflictsDir, { recursive: true });
 
@@ -373,16 +481,13 @@ function writeRevertConflictArtifact(params: {
     id: lastPatch.id,
     file: lastPatch.file,
     relativeFile: lastPatch.relativeFile,
-    range: {
-      start: lastPatch.range.start,
-      end: lastPatch.range.start + lastPatch.nextToken.length
-    },
-    expectedToken: lastPatch.nextToken,
+    range,
+    expectedToken: params.expectedToken ?? lastPatch.nextToken,
     actualToken,
     expectedSourceHash: lastPatch.sourceHashAfter,
     actualSourceHash: sourceHash(source),
-    restoreToken: lastPatch.oldToken,
-    beforeLine: lineSnippet(source, lastPatch.range.start),
+    restoreToken: params.restoreToken ?? lastPatch.oldToken,
+    beforeLine: lineSnippet(source, range.start),
     operationFile: lastPatch.operationFile,
     diffFile: lastPatch.diffFile,
     guidance: [
@@ -467,20 +572,22 @@ function recordPatchDiscardInOperationLog(
     note?: string;
   } = {}
 ): string {
-  const log = readOperationLog(rootDir);
-  const now = new Date().toISOString();
-  log.updatedAt = now;
-  log.entries.push({
-    action: "discard",
-    createdAt: now,
-    conflictFile: options.conflictFile,
-    note: options.note,
-    patch
+  return withIntentOperationLock(rootDir, () => {
+    const log = readOperationLog(rootDir);
+    const now = new Date().toISOString();
+    log.updatedAt = now;
+    log.entries.push({
+      action: "discard",
+      createdAt: now,
+      conflictFile: options.conflictFile,
+      note: options.note,
+      patch
+    });
+    return writeOperationLog(rootDir, log);
   });
-  return writeOperationLog(rootDir, log);
 }
 
-export function discardPendingUndo(
+function discardPendingUndoUnlocked(
   rootDir: string,
   request: PatchUndoDiscardRequest
 ): PatchUndoDiscardResult | PatchFailure {
@@ -516,7 +623,14 @@ export function discardPendingUndo(
   };
 }
 
-export function revertPendingUndo(
+export function discardPendingUndo(
+  rootDir: string,
+  request: PatchUndoDiscardRequest
+): PatchUndoDiscardResult | PatchFailure {
+  return withIntentOperationLock(rootDir, () => discardPendingUndoUnlocked(rootDir, request));
+}
+
+function revertPendingUndoUnlocked(
   rootDir: string,
   entry: IntentBinding | undefined,
   request: PatchUndoRevertRequest
@@ -559,7 +673,15 @@ export function revertPendingUndo(
   };
 }
 
-export function resolvePatchConflict(
+export function revertPendingUndo(
+  rootDir: string,
+  entry: IntentBinding | undefined,
+  request: PatchUndoRevertRequest
+): PatchUndoRevertResult | PatchFailure {
+  return withIntentOperationLock(rootDir, () => revertPendingUndoUnlocked(rootDir, entry, request));
+}
+
+function resolvePatchConflictUnlocked(
   rootDir: string,
   request: PatchConflictResolveRequest
 ): PatchConflictResolveResult | PatchFailure {
@@ -646,6 +768,13 @@ export function resolvePatchConflict(
   };
 }
 
+export function resolvePatchConflict(
+  rootDir: string,
+  request: PatchConflictResolveRequest
+): PatchConflictResolveResult | PatchFailure {
+  return withIntentOperationLock(rootDir, () => resolvePatchConflictUnlocked(rootDir, request));
+}
+
 export function removeDiscardedPatchFromStack(
   stack: PatchApplyResult[],
   discard: PatchUndoDiscardReference
@@ -658,6 +787,106 @@ export function removeDiscardedPatchFromStack(
   const nextStack = [...stack];
   nextStack.splice(nextStack.length - 1 - index, 1);
   return nextStack;
+}
+
+function sourceAfterEdits(source: string, edits: PatchTextEdit[], applied = false): string | null {
+  const rangeKey = applied ? "appliedRange" : "range";
+  const oldKey = applied ? "newText" : "oldText";
+  const newKey = applied ? "oldText" : "newText";
+  const sorted = [...edits].sort((left, right) => left[rangeKey].start - right[rangeKey].start);
+
+  for (let index = 0; index < sorted.length; index += 1) {
+    const edit = sorted[index];
+    const range = edit[rangeKey];
+    const previous = sorted[index - 1]?.[rangeKey];
+    if (range.start < 0 || range.end < range.start || range.end > source.length) return null;
+    if (previous && range.start < previous.end) return null;
+    if (source.slice(range.start, range.end) !== edit[oldKey]) return null;
+  }
+
+  let nextSource = source;
+  for (const edit of [...sorted].reverse()) {
+    const range = edit[rangeKey];
+    nextSource = `${nextSource.slice(0, range.start)}${edit[newKey]}${nextSource.slice(range.end)}`;
+  }
+  return nextSource;
+}
+
+export function applyPlannedPatch(
+  rootDir: string,
+  entry: IntentBinding | undefined,
+  preview: PatchPreview
+): PatchApplyResult | PatchFailure {
+  const applyStarted = performance.now();
+  if (!entry) {
+    return {
+      ok: false,
+      id: preview.id,
+      reason: "missing-binding",
+      detail: "No source binding exists for this planned patch.",
+      metrics: { previewMs: preview.metrics.previewMs, applyMs: Number((performance.now() - applyStarted).toFixed(3)) }
+    };
+  }
+  if (path.resolve(entry.file) !== path.resolve(preview.file)) {
+    return {
+      ok: false,
+      id: preview.id,
+      reason: "binding-file-mismatch",
+      detail: "The current source binding points to a different file.",
+      metrics: { previewMs: preview.metrics.previewMs, applyMs: Number((performance.now() - applyStarted).toFixed(3)) }
+    };
+  }
+
+  const source = fs.readFileSync(preview.file, "utf8");
+  if (sourceHash(source) !== preview.sourceHashBefore) {
+    return {
+      ok: false,
+      id: preview.id,
+      reason: "source-hash-mismatch",
+      detail: "The file changed after preview. Re-select the element and try again.",
+      metrics: {
+        previewMs: preview.metrics.previewMs,
+        applyMs: Number((performance.now() - applyStarted).toFixed(3))
+      }
+    };
+  }
+
+  const patchedSource = preview.edits?.length
+    ? sourceAfterEdits(source, preview.edits)
+    : source.slice(preview.range.start, preview.range.end) === preview.oldToken
+      ? `${source.slice(0, preview.range.start)}${preview.nextToken}${source.slice(preview.range.end)}`
+      : null;
+  if (patchedSource === null || sourceHash(patchedSource) !== preview.sourceHashAfter) {
+    return {
+      ok: false,
+      id: preview.id,
+      reason: "planned-range-mismatch",
+      detail: "One or more planned source ranges no longer contain the previewed text.",
+      metrics: {
+        previewMs: preview.metrics.previewMs,
+        applyMs: Number((performance.now() - applyStarted).toFixed(3))
+      }
+    };
+  }
+
+  fs.writeFileSync(preview.file, patchedSource, "utf8");
+  const artifacts = writeIntentArtifacts({
+    rootDir,
+    entry,
+    preview,
+    kind: preview.kind ?? "tailwind-token-replace"
+  });
+
+  return {
+    ...preview,
+    applied: true,
+    operationFile: artifacts.operationFile,
+    diffFile: artifacts.diffFile,
+    metrics: {
+      previewMs: preview.metrics.previewMs,
+      applyMs: Number((performance.now() - applyStarted).toFixed(3))
+    }
+  };
 }
 
 export function applyTokenPatch(
@@ -677,35 +906,125 @@ export function applyTokenPatch(
     };
   }
 
-  const source = fs.readFileSync(preview.file, "utf8");
-  if (sourceHash(source) !== preview.sourceHashBefore) {
+  const result = applyPlannedPatch(rootDir, entry, preview);
+  return result.ok
+    ? {
+        ...result,
+        metrics: {
+          ...result.metrics,
+          applyMs: Number((performance.now() - applyStarted).toFixed(3))
+        }
+      }
+    : result;
+}
+
+export function applyLiteralTextPatch(
+  rootDir: string,
+  entry: IntentBinding | undefined,
+  request: LiteralTextEditRequest
+): PatchApplyResult | PatchFailure {
+  const preview = planLiteralTextPatch(entry, request);
+  return preview.ok ? applyPlannedPatch(rootDir, entry, preview) : preview;
+}
+
+function revertKind(kind: PatchPreview["kind"]): PatchKind {
+  if (kind === "literal-text") return "literal-text-revert";
+  if (kind === "grid-layout") return "grid-layout-revert";
+  if (kind === "flex-layout") return "flex-layout-revert";
+  return "tailwind-token-revert";
+}
+
+function revertGroupedPatch(
+  rootDir: string,
+  lastPatch: PatchApplyResult,
+  entry: IntentBinding,
+  source: string,
+  currentHash: string,
+  started: number
+): PatchRevertResult | PatchFailure {
+  const inverseKind = revertKind(lastPatch.kind);
+  const edits = lastPatch.edits ?? [];
+  const mismatch = edits.find(
+    (edit) => source.slice(edit.appliedRange.start, edit.appliedRange.end) !== edit.newText
+  );
+  if (mismatch) {
+    const actualText = source.slice(mismatch.appliedRange.start, mismatch.appliedRange.end);
+    const conflict = writeRevertConflictArtifact({
+      rootDir,
+      lastPatch,
+      source,
+      actualToken: actualText,
+      reason: "revert-group-range-mismatch",
+      range: mismatch.appliedRange,
+      expectedToken: mismatch.newText,
+      restoreToken: mismatch.oldText
+    });
     return {
       ok: false,
-      id: preview.id,
-      reason: "source-hash-mismatch",
-      detail: "The file changed after preview. Re-select the element and try again.",
-      metrics: {
-        previewMs: preview.metrics.previewMs,
-        applyMs: Number((performance.now() - applyStarted).toFixed(3))
-      }
+      id: lastPatch.id,
+      reason: "revert-group-range-mismatch",
+      detail: "A grouped className range no longer matches the applied layout operation.",
+      conflictFile: conflict.conflictFile,
+      conflictArtifact: conflict.conflictArtifact,
+      metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
     };
   }
-  const patchedSource = `${source.slice(0, preview.range.start)}${preview.nextToken}${source.slice(
-    preview.range.end
-  )}`;
-  fs.writeFileSync(preview.file, patchedSource);
 
-  const artifacts = writeIntentArtifacts({ rootDir, entry: entry!, preview });
+  const revertedSource = sourceAfterEdits(source, edits, true);
+  if (revertedSource === null || sourceHash(revertedSource) !== lastPatch.sourceHashBefore) {
+    return {
+      ok: false,
+      id: lastPatch.id,
+      reason: "revert-group-hash-mismatch",
+      detail: "The grouped inverse patch did not reconstruct the original source.",
+      metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
+    };
+  }
+
+  const inverseEdits: PatchTextEdit[] = edits.map((edit) => ({
+    ...edit,
+    range: edit.appliedRange,
+    appliedRange: edit.range,
+    oldText: edit.newText,
+    newText: edit.oldText
+  }));
+  fs.writeFileSync(lastPatch.file, revertedSource, "utf8");
+  const preview: PatchPreview = {
+    ok: true,
+    kind: inverseKind,
+    id: lastPatch.id,
+    file: lastPatch.file,
+    relativeFile: lastPatch.relativeFile,
+    oldToken: lastPatch.nextToken,
+    nextToken: lastPatch.oldToken,
+    range: lastPatch.range,
+    before: lastPatch.after,
+    after: lastPatch.before,
+    sourceHashBefore: currentHash,
+    sourceHashAfter: sourceHash(revertedSource),
+    edits: inverseEdits,
+    metrics: { previewMs: 0 }
+  };
+  const artifacts = writeIntentArtifacts({ rootDir, entry, preview, kind: inverseKind });
 
   return {
-    ...preview,
-    applied: true,
+    ok: true,
+    reverted: true,
+    kind: inverseKind,
+    id: lastPatch.id,
+    file: lastPatch.file,
+    relativeFile: lastPatch.relativeFile,
+    oldToken: lastPatch.nextToken,
+    restoredToken: lastPatch.oldToken,
+    range: lastPatch.range,
+    before: lastPatch.after,
+    after: lastPatch.before,
+    sourceHashBefore: currentHash,
+    sourceHashAfter: sourceHash(revertedSource),
+    edits: inverseEdits,
     operationFile: artifacts.operationFile,
     diffFile: artifacts.diffFile,
-    metrics: {
-      previewMs: preview.metrics.previewMs,
-      applyMs: Number((performance.now() - applyStarted).toFixed(3))
-    }
+    metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
   };
 }
 
@@ -736,8 +1055,9 @@ export function revertTokenPatch(
   }
 
   const source = fs.readFileSync(lastPatch.file, "utf8");
-  const start = lastPatch.range.start;
-  const end = start + lastPatch.nextToken.length;
+  const firstEdit = lastPatch.edits?.[0];
+  const start = firstEdit?.appliedRange.start ?? lastPatch.range.start;
+  const end = firstEdit?.appliedRange.end ?? start + lastPatch.nextToken.length;
   const currentToken = source.slice(start, end);
   const currentHash = sourceHash(source);
 
@@ -750,7 +1070,10 @@ export function revertTokenPatch(
       lastPatch,
       source,
       actualToken: currentToken,
-      reason
+      reason,
+      range: firstEdit?.appliedRange,
+      expectedToken: firstEdit?.newText,
+      restoreToken: firstEdit?.oldText
     });
     return {
       ok: false,
@@ -763,6 +1086,10 @@ export function revertTokenPatch(
       conflictArtifact: conflict.conflictArtifact,
       metrics: { revertMs: Number((performance.now() - started).toFixed(3)) }
     };
+  }
+
+  if (lastPatch.edits?.length) {
+    return revertGroupedPatch(rootDir, lastPatch, entry, source, currentHash, started);
   }
 
   if (currentToken !== lastPatch.nextToken) {
@@ -791,6 +1118,7 @@ export function revertTokenPatch(
 
   const preview: PatchPreview = {
     ok: true,
+    kind: revertKind(lastPatch.kind),
     id: lastPatch.id,
     file: lastPatch.file,
     relativeFile: lastPatch.relativeFile,
@@ -812,12 +1140,13 @@ export function revertTokenPatch(
     rootDir,
     entry,
     preview,
-    kind: "tailwind-token-revert"
+    kind: preview.kind
   });
 
   return {
     ok: true,
     reverted: true,
+    kind: preview.kind,
     id: lastPatch.id,
     file: lastPatch.file,
     relativeFile: lastPatch.relativeFile,

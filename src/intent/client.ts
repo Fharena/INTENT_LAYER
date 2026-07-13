@@ -1,11 +1,27 @@
-import { candidatesForToken } from "./tailwind";
+import { candidatesForToken, describeTailwindToken, splitTailwindVariant } from "./tailwind";
 import type {
   AgentResultArtifact,
   AgentQueueSignal,
   ClientMetric,
   AgentTaskResult,
+  FlexLayoutAlign,
+  FlexLayoutAlignSelf,
+  FlexLayoutApplyRequest,
+  FlexLayoutDirection,
+  FlexLayoutEditRequest,
+  FlexLayoutInspection,
+  FlexLayoutJustify,
+  FlexLayoutPreviewResult,
+  FlexLayoutWrap,
+  GridLayoutApplyRequest,
+  GridLayoutBreakpoint,
+  GridLayoutEditRequest,
+  GridLayoutInspection,
+  GridLayoutPreviewResult,
   IntentBinding,
   IntentGraph,
+  IntentRuntimeSelectionRequest,
+  LiteralTextEditRequest,
   PatchRequest,
   IntentToken,
   PatchApplyResult,
@@ -37,10 +53,23 @@ type UndoDiscardResponse = PatchUndoDiscardResult | PatchFailure;
 type UndoRevertResponse = (PatchUndoRevertResult & { binding?: IntentBinding | null }) | PatchFailure;
 type SetupResponse = IntentSetupStatus;
 type SetupApplyResponse = IntentSetupResult | PatchFailure;
+type GridLayoutInspectResponse = GridLayoutInspection | PatchFailure;
+type GridLayoutPreviewResponse = GridLayoutPreviewResult | PatchFailure;
+type GridLayoutApplyResponse = (PatchApplyResult & { binding?: IntentBinding | null }) | PatchFailure;
+type FlexLayoutInspectResponse = FlexLayoutInspection | PatchFailure;
+type FlexLayoutPreviewResponse = FlexLayoutPreviewResult | PatchFailure;
+type FlexLayoutApplyResponse = (PatchApplyResult & { binding?: IntentBinding | null }) | PatchFailure;
+
+const intentSessionToken = "__INTENT_LAYER_SESSION_TOKEN__";
 
 interface RenderScope {
   renderedInstanceCount: number;
   isShared: boolean;
+  activeTokens: string[] | null;
+}
+
+interface RuntimeDomPreview {
+  elements: Array<{ element: HTMLElement; className: string | null; previewClassName: string | null }>;
 }
 
 interface BindingRefreshDetail {
@@ -52,6 +81,8 @@ type WorkflowState = "idle" | "done" | "active" | "blocked";
 type OverlayView = "editor" | "setup";
 
 type TextKey =
+  | "aiConnections"
+  | "aiConnectionsDetail"
   | "agentCreate"
   | "agentChange"
   | "agentCreated"
@@ -82,16 +113,19 @@ type TextKey =
   | "claudeCommand"
   | "claudeHook"
   | "claudeHookDetail"
+  | "claudeMcp"
   | "classMode"
   | "codexSubtool"
   | "codexCommand"
   | "codexSkill"
   | "codexSkillDetail"
+  | "codexMcp"
   | "component"
   | "commandInputPlaceholder"
   | "commandPlan"
   | "compact"
   | "density"
+  | "decreaseValue"
   | "conflicts"
   | "conflictsEmpty"
   | "comfortable"
@@ -109,13 +143,34 @@ type TextKey =
   | "english"
   | "expand"
   | "expertTrace"
+  | "flexAlign"
+  | "flexComposer"
+  | "flexDirection"
+  | "flexGap"
+  | "flexJustify"
+  | "flexLoading"
+  | "flexSelf"
+  | "flexWrap"
   | "guardedHandoff"
   | "healthReady"
   | "healthSetup"
   | "inspectableNoTokens"
+  | "increaseValue"
   | "intentMap"
   | "korean"
   | "language"
+  | "layoutAffected"
+  | "layoutApply"
+  | "layoutAuto"
+  | "layoutColumns"
+  | "layoutComposer"
+  | "layoutLoading"
+  | "layoutPreview"
+  | "layoutRatio"
+  | "layoutRows"
+  | "layoutHeight"
+  | "layoutSpan"
+  | "legacyAgent"
   | "minimize"
   | "nextStep"
   | "noBinding"
@@ -126,10 +181,12 @@ type TextKey =
   | "pickMode"
   | "preview"
   | "requestFailed"
+  | "resetPreview"
   | "ready"
   | "resetOnboarding"
   | "resetOnboardingDone"
   | "runLocked"
+  | "runtimeInactive"
   | "saveSettings"
   | "settingsSaved"
   | "selectSingle"
@@ -149,6 +206,9 @@ type TextKey =
   | "sourceHash"
   | "sharedSource"
   | "singleRender"
+  | "textApply"
+  | "textEdit"
+  | "textPreview"
   | "undo"
   | "undoHistory"
   | "undoHistoryEmpty"
@@ -159,7 +219,7 @@ type TextKey =
 
 const lastAgentTaskFileByIntentId = new Map<string, string>();
 const overlayStyleId = "intent-layer-overlay-style";
-const overlayRuntimeVersion = "visual-map-v2";
+const overlayRuntimeVersion = "visual-map-v3";
 const overlayBaseBottom = 18;
 const overlayAvoidanceGap = 14;
 let overlayPlacementFrame: number | null = null;
@@ -168,6 +228,7 @@ let overlayView: OverlayView = "editor";
 let overlayLanguage: IntentLayerLanguage = detectInitialLanguage();
 let overlaySettings: IntentOverlaySettings = defaultOverlaySettings();
 let latestSetupStatus: IntentSetupStatus | null = null;
+let runtimeDomPreview: RuntimeDomPreview | null = null;
 const devToolCandidateSelector = [
   "nextjs-portal",
   "vite-error-overlay",
@@ -187,6 +248,8 @@ declare global {
 
 const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
   ko: {
+    aiConnections: "AI 연결",
+    aiConnectionsDetail: "Codex와 Claude가 같은 안전 편집 도구와 현재 선택 정보를 사용합니다.",
     agentCreate: "작업 만들기",
     agentChange: "변경 요청",
     agentCreated: "Agent 작업 생성",
@@ -217,16 +280,19 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     claudeCommand: "Claude 명령",
     claudeHook: "Claude 자동 픽업",
     claudeHookDetail: "Claude Code가 열려 있으면 .intent-agent-queue.json 변경을 감지해 같은 작업 큐를 처리합니다.",
+    claudeMcp: "Claude 연결",
     classMode: "Class 모드",
     codexSubtool: "Codex 보조 도구",
     codexCommand: "Codex 명령",
     codexSkill: "Codex 작업 스킬",
     codexSkillDetail: "프로젝트에 Codex skill을 설치해 queued 작업을 같은 방식으로 claim하고 처리합니다.",
+    codexMcp: "Codex 연결",
     component: "컴포넌트",
     commandInputPlaceholder: "비워두면 기본값 또는 환경변수를 사용합니다",
     commandPlan: "명령 계획",
     compact: "컴팩트",
     density: "밀도",
+    decreaseValue: "이전 값",
     conflicts: "되돌리기 충돌",
     conflictsEmpty: "해결되지 않은 충돌이 없습니다.",
     comfortable: "기본",
@@ -244,13 +310,34 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     english: "English",
     expand: "펼치기",
     expertTrace: "검증 근거",
+    flexAlign: "교차축 정렬",
+    flexComposer: "Flex 배치",
+    flexDirection: "방향",
+    flexGap: "간격",
+    flexJustify: "주축 정렬",
+    flexLoading: "Flex source binding을 확인하는 중입니다.",
+    flexSelf: "개별 정렬",
+    flexWrap: "줄바꿈",
     guardedHandoff: "Agent 전달",
     healthReady: "준비",
     healthSetup: "설정 필요",
     inspectableNoTokens: "이 요소는 inspect 가능하지만 아직 직접 수정 가능한 토큰이 없습니다.",
+    increaseValue: "다음 값",
     intentMap: "Intent 맵",
     korean: "한국어",
     language: "언어",
+    layoutAffected: "영향 source",
+    layoutApply: "배치 적용",
+    layoutAuto: "자동 배치로 되돌리기",
+    layoutColumns: "열 수",
+    layoutComposer: "Grid 배치",
+    layoutLoading: "Grid source binding을 확인하는 중입니다.",
+    layoutPreview: "배치 미리보기",
+    layoutRatio: "비율",
+    layoutRows: "행 수",
+    layoutHeight: "높이",
+    layoutSpan: "너비",
+    legacyAgent: "기존 Agent 큐 (고급 호환성)",
     minimize: "접기",
     nextStep: "다음 행동",
     noBinding: "이 요소의 binding을 찾지 못했습니다",
@@ -261,10 +348,12 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     pickMode: "선택 모드입니다",
     preview: "미리보기",
     requestFailed: "요청에 실패했습니다",
+    resetPreview: "미리보기 원복",
     ready: "준비됐습니다. 요소를 선택하세요.",
     resetOnboarding: "온보딩 다시 보기",
     resetOnboardingDone: "다음 실행 때 설정 화면이 다시 열립니다",
     runLocked: "실행은 잠겨 있습니다. 설정에서 Agent 실행을 켜거나 INTENT_LAYER_AGENT_RUN=1일 때만 CLI가 실행됩니다.",
+    runtimeInactive: "현재 클릭한 렌더에서 비활성인 조건부 토큰은 숨겼습니다.",
     saveSettings: "설정 저장",
     settingsSaved: "설정을 저장했습니다",
     selectSingle: "이 렌더 인스턴스에만 연결됩니다.",
@@ -284,6 +373,9 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     sourceHash: "Source hash",
     sharedSource: "공유 source",
     singleRender: "단일 렌더",
+    textApply: "텍스트 적용",
+    textEdit: "문구 수정",
+    textPreview: "텍스트 미리보기",
     undo: "되돌리기",
     undoHistory: "되돌리기 기록",
     undoHistoryEmpty: "대기 중인 되돌리기 작업이 없습니다.",
@@ -293,6 +385,8 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     workflowReview: "검토"
   },
   en: {
+    aiConnections: "AI connections",
+    aiConnectionsDetail: "Codex and Claude share the same guarded editing tools and current selection.",
     agentCreate: "Create task",
     agentChange: "Change request",
     agentCreated: "Agent task created",
@@ -323,16 +417,19 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     claudeCommand: "Claude command",
     claudeHook: "Claude auto pickup",
     claudeHookDetail: "When Claude Code is open, it watches .intent-agent-queue.json and processes the same queue.",
+    claudeMcp: "Connect Claude",
     classMode: "Class mode",
     codexSubtool: "Codex subtool",
     codexCommand: "Codex command",
     codexSkill: "Codex task skill",
     codexSkillDetail: "Install a project Codex skill that claims and processes queued tasks through the shared queue.",
+    codexMcp: "Connect Codex",
     component: "Component",
     commandInputPlaceholder: "Leave blank to use the default or environment variable",
     commandPlan: "Command plan",
     compact: "Compact",
     density: "Density",
+    decreaseValue: "Previous value",
     conflicts: "Undo conflicts",
     conflictsEmpty: "No unresolved undo conflicts.",
     comfortable: "Comfortable",
@@ -350,13 +447,34 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     english: "English",
     expand: "Expand",
     expertTrace: "Validation trace",
+    flexAlign: "Cross-axis alignment",
+    flexComposer: "Flex layout",
+    flexDirection: "Direction",
+    flexGap: "Gap",
+    flexJustify: "Main-axis alignment",
+    flexLoading: "Checking flex source bindings.",
+    flexSelf: "Item alignment",
+    flexWrap: "Wrapping",
     guardedHandoff: "Agent handoff",
     healthReady: "Ready",
     healthSetup: "Setup needed",
     inspectableNoTokens: "This element is inspectable, but it has no direct-edit tokens yet.",
+    increaseValue: "Next value",
     intentMap: "Intent map",
     korean: "Korean",
     language: "Language",
+    layoutAffected: "Affected source",
+    layoutApply: "Apply layout",
+    layoutAuto: "Reset to automatic placement",
+    layoutColumns: "Columns",
+    layoutComposer: "Grid layout",
+    layoutLoading: "Checking grid source bindings.",
+    layoutPreview: "Preview layout",
+    layoutRatio: "Ratio",
+    layoutRows: "Rows",
+    layoutHeight: "Height",
+    layoutSpan: "Span",
+    legacyAgent: "Legacy agent queue (advanced compatibility)",
     minimize: "Minimize",
     nextStep: "Next step",
     noBinding: "No binding found for that element",
@@ -367,10 +485,12 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     pickMode: "Pick mode active",
     preview: "Preview",
     requestFailed: "Request failed",
+    resetPreview: "Reset preview",
     ready: "Ready. Start by picking an element.",
     resetOnboarding: "Show onboarding again",
     resetOnboardingDone: "Setup will open again on the next run",
     runLocked: "Agent run is locked. Agent CLIs run only when enabled in settings or INTENT_LAYER_AGENT_RUN=1 is set.",
+    runtimeInactive: "Conditional tokens inactive in the clicked render are hidden.",
     saveSettings: "Save settings",
     settingsSaved: "Settings saved",
     selectSingle: "Affects this rendered instance.",
@@ -390,6 +510,9 @@ const texts: Record<IntentLayerLanguage, Record<TextKey, string>> = {
     sourceHash: "Source hash",
     sharedSource: "Shared source",
     singleRender: "Single render",
+    textApply: "Apply text",
+    textEdit: "Edit copy",
+    textPreview: "Preview text",
     undo: "Undo",
     undoHistory: "Undo history",
     undoHistoryEmpty: "No pending undo operations.",
@@ -416,13 +539,19 @@ function t(key: TextKey): string {
 }
 
 async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, init);
+  const response = await intentFetch(input, init);
   const body = await response.text();
   try {
     return JSON.parse(body) as T;
   } catch {
     throw new Error(`${response.status} ${response.statusText}`.trim());
   }
+}
+
+function intentFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  headers.set("x-intent-layer-token", intentSessionToken);
+  return fetch(input, { ...init, headers });
 }
 
 function requestErrorMessage(error: unknown): string {
@@ -458,12 +587,55 @@ function syncSettings(settings: IntentLayerSettings) {
 
 function recordClientMetric(metric: ClientMetric) {
   window.__intentMetrics = [...(window.__intentMetrics ?? []), metric];
-  void fetch("/__intent/client-metric", {
+  void intentFetch("/__intent/client-metric", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(metric)
   }).catch(() => {
     // Metrics must never break the editing path.
+  });
+}
+
+function publishRuntimeSelection(binding: IntentBinding | null, element: HTMLElement | null) {
+  const rect = element?.getBoundingClientRect() ?? null;
+  const gridScope = binding ? runtimeLayoutScope(binding.id, "grid") : null;
+  const flexScope = gridScope || !binding ? null : runtimeLayoutScope(binding.id, "flex");
+  const layoutScope = gridScope ?? flexScope;
+  const hidesText =
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement;
+  const request: IntentRuntimeSelectionRequest = {
+    id: binding?.id ?? null,
+    route: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    text: hidesText ? "" : (element?.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 120),
+    role: element?.getAttribute("role") ?? null,
+    classTokens: element ? Array.from(element.classList) : [],
+    visible: Boolean(rect && rect.width > 0 && rect.height > 0),
+    rect: rect
+      ? {
+          x: Number(rect.x.toFixed(2)),
+          y: Number(rect.y.toFixed(2)),
+          width: Number(rect.width.toFixed(2)),
+          height: Number(rect.height.toFixed(2))
+        }
+      : null,
+    layout: layoutScope
+      ? {
+          kind: gridScope ? "grid" : "flex",
+          parentId: layoutScope.parentId,
+          childIds: layoutScope.childIds,
+          unboundChildCount: layoutScope.unboundChildCount,
+          renderedParentCount: layoutScope.renderedParentCount
+        }
+      : null
+  };
+  void intentFetch("/__intent/selection", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(request)
+  }).catch(() => {
+    // Selection sharing must not interrupt direct editing.
   });
 }
 
@@ -947,6 +1119,78 @@ function ensureOverlayStyles() {
   font-weight: 800 !important;
 }
 
+.intent-layer-token-controls {
+  grid-column: 1 / -1 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+}
+
+.intent-layer-token-stepper {
+  display: grid !important;
+  grid-template-columns: 28px minmax(0, 1fr) 28px !important;
+  align-items: center !important;
+  gap: 5px !important;
+  width: min(100%, 210px) !important;
+}
+
+[data-intent-overlay-root] .intent-layer-token-stepper button {
+  width: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 16px !important;
+}
+
+.intent-layer-token-stepper output {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: #cfd7eb !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 10px !important;
+  text-align: center !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.intent-layer-color-swatches {
+  display: flex !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  padding: 2px 0 !important;
+}
+
+[data-intent-overlay-root] .intent-layer-color-swatch {
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16) !important;
+}
+
+[data-intent-overlay-root] .intent-layer-color-swatch[data-intent-active="true"] {
+  border-color: #7edcff !important;
+  box-shadow: 0 0 0 2px rgba(98, 217, 255, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+.intent-layer-runtime-note {
+  margin-bottom: 8px !important;
+  color: #9ea9c2 !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+}
+
+[data-intent-preview-active="true"] {
+  outline: 2px solid rgba(98, 217, 255, 0.8) !important;
+  outline-offset: 2px !important;
+}
+
 [data-intent-overlay-root] select,
 [data-intent-overlay-root] input,
 [data-intent-overlay-root] textarea {
@@ -974,6 +1218,257 @@ function ensureOverlayStyles() {
 .intent-layer-preview-box {
   grid-column: 1 / -1 !important;
   display: none;
+}
+
+.intent-layer-layout-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-tabs button {
+  min-height: 27px !important;
+  padding: 4px 5px !important;
+  color: #9da8c1 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 10px !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-tabs button[data-intent-active="true"] {
+  border-color: rgba(98, 217, 255, 0.56) !important;
+  background: rgba(98, 217, 255, 0.12) !important;
+  color: #e9f8ff !important;
+}
+
+.intent-layer-layout-toolbar {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.intent-layer-layout-stepper {
+  display: grid !important;
+  grid-template-columns: 28px 34px 28px !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-stepper button {
+  width: 28px !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  font-size: 15px !important;
+}
+
+.intent-layer-layout-stepper output {
+  display: grid !important;
+  height: 28px !important;
+  place-items: center !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  background: rgba(3, 6, 14, 0.46) !important;
+  color: #f4f7ff !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+}
+
+.intent-layer-layout-tracks {
+  display: grid !important;
+  gap: 6px !important;
+}
+
+.intent-layer-layout-track {
+  display: grid !important;
+  grid-template-columns: 52px minmax(0, 1fr) 38px !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+.intent-layer-layout-track span,
+.intent-layer-layout-track output {
+  color: #b8c2d9 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 9px !important;
+}
+
+.intent-layer-layout-track output {
+  text-align: right !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-track input[type="range"] {
+  min-height: 22px !important;
+  padding: 0 !important;
+  accent-color: #7e82ff !important;
+}
+
+.intent-layer-layout-canvas {
+  display: grid !important;
+  min-height: 76px !important;
+  grid-auto-flow: row dense !important;
+  grid-auto-rows: 28px !important;
+  gap: 5px !important;
+  padding: 7px !important;
+  border: 1px solid rgba(98, 217, 255, 0.2) !important;
+  border-radius: 7px !important;
+  background:
+    linear-gradient(rgba(98, 217, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(98, 217, 255, 0.055) 1px, transparent 1px),
+    rgba(3, 6, 14, 0.44) !important;
+  background-size: 18px 18px !important;
+  overflow: hidden !important;
+}
+
+.intent-layer-layout-block {
+  display: grid !important;
+  min-width: 0 !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(142, 130, 255, 0.5) !important;
+  border-radius: 5px !important;
+  background: linear-gradient(135deg, rgba(125, 109, 255, 0.68), rgba(75, 166, 255, 0.5)) !important;
+  color: #ffffff !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+}
+
+.intent-layer-layout-block:nth-child(3n + 2) {
+  border-color: rgba(85, 230, 165, 0.5) !important;
+  background: linear-gradient(135deg, rgba(37, 180, 160, 0.58), rgba(77, 201, 255, 0.45)) !important;
+}
+
+.intent-layer-layout-block:nth-child(3n) {
+  border-color: rgba(255, 209, 102, 0.48) !important;
+  background: linear-gradient(135deg, rgba(216, 154, 74, 0.56), rgba(193, 105, 181, 0.42)) !important;
+}
+
+.intent-layer-flex-controls {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.intent-layer-flex-control {
+  display: grid !important;
+  gap: 5px !important;
+}
+
+.intent-layer-flex-segmented {
+  display: grid !important;
+  gap: 4px !important;
+}
+
+[data-intent-overlay-root] .intent-layer-flex-segmented button {
+  min-width: 0 !important;
+  min-height: 27px !important;
+  padding: 4px !important;
+  overflow: hidden !important;
+  font-size: 9px !important;
+  text-overflow: ellipsis !important;
+}
+
+[data-intent-overlay-root] .intent-layer-flex-segmented button[data-intent-active="true"] {
+  border-color: rgba(98, 217, 255, 0.56) !important;
+  background: rgba(98, 217, 255, 0.12) !important;
+  color: #eefaff !important;
+}
+
+.intent-layer-flex-canvas {
+  display: flex !important;
+  min-height: 92px !important;
+  align-content: flex-start !important;
+  overflow: auto !important;
+}
+
+.intent-layer-flex-canvas .intent-layer-layout-block {
+  min-width: 38px !important;
+  min-height: 30px !important;
+  padding: 5px !important;
+}
+
+.intent-layer-flex-item-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(112px, 0.65fr) !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 7px 0 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.intent-layer-layout-items {
+  display: grid !important;
+}
+
+.intent-layer-layout-item {
+  display: grid !important;
+  gap: 6px !important;
+  padding: 8px 0 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.intent-layer-layout-item-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.intent-layer-layout-item-name {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: #eef2ff !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+}
+
+.intent-layer-layout-item-meta {
+  color: #9ea9c2 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 9px !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-auto {
+  width: 25px !important;
+  min-height: 25px !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+}
+
+.intent-layer-layout-strip {
+  display: grid !important;
+  gap: 3px !important;
+  touch-action: none !important;
+  user-select: none !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-cell {
+  min-width: 0 !important;
+  min-height: 20px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-cell[data-intent-selected="true"] {
+  border-color: rgba(98, 217, 255, 0.62) !important;
+  background: linear-gradient(135deg, rgba(126, 110, 255, 0.7), rgba(68, 185, 255, 0.62)) !important;
+}
+
+[data-intent-overlay-root] .intent-layer-layout-cell[data-intent-auto="true"] {
+  border-style: dashed !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+}
+
+.intent-layer-layout-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 7px !important;
 }
 
 .intent-layer-list {
@@ -1022,6 +1517,20 @@ body[data-intent-layer-picking="true"] [data-intent-id]:hover {
 
   .intent-layer-token-row {
     grid-template-columns: 1fr 1fr !important;
+  }
+
+  .intent-layer-layout-item-head {
+    grid-template-columns: minmax(0, 1fr) 25px !important;
+  }
+
+  .intent-layer-layout-item-meta {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  .intent-layer-layout-auto {
+    grid-column: 2 !important;
+    grid-row: 1 / 3 !important;
   }
 }
 `;
@@ -1358,10 +1867,90 @@ function intentIdSelector(id: string): string {
   return `[data-intent-id="${escaped}"]`;
 }
 
+interface IntentRuntimeHot {
+  on(event: string, callback: (data: unknown) => void): void;
+  send(event: string, data: unknown): void;
+}
+
+let runtimeQueryRegistered = false;
+
+function registerRuntimeQueryHandler() {
+  if (runtimeQueryRegistered) return;
+  const hot = (import.meta as ImportMeta & { hot?: IntentRuntimeHot }).hot;
+  if (!hot) return;
+  runtimeQueryRegistered = true;
+  hot.on("intent:runtime-query", (data) => {
+    if (!data || typeof data !== "object") return;
+    const query = data as { requestId?: string; id?: string; expectedToken?: string };
+    if (!query.requestId || !query.id || !query.expectedToken) return;
+
+    const elements = elementsForIntentId(query.id);
+    const matching = elements.filter((element) => element.classList.contains(query.expectedToken!));
+    const visible = elements.filter((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    });
+    const status =
+      elements.length === 0
+        ? "unavailable"
+        : matching.length === elements.length
+          ? "verified"
+          : "drifted";
+    hot.send("intent:runtime-result", {
+      requestId: query.requestId,
+      ok: status === "verified",
+      status,
+      id: query.id,
+      expectedToken: query.expectedToken,
+      renderedInstanceCount: elements.length,
+      matchingInstanceCount: matching.length,
+      visibleInstanceCount: visible.length,
+      route: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+      detail:
+        status === "verified"
+          ? "Every rendered source instance contains the expected class token."
+          : status === "drifted"
+            ? "At least one rendered source instance is missing the expected class token."
+            : "The source element is not rendered on the current route."
+    });
+  });
+}
+
 function elementsForIntentId(id: string): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>(intentIdSelector(id))).filter(
     (element) => !element.closest("[data-intent-overlay-root]")
   );
+}
+
+function clearRuntimeDomPreview(): void {
+  if (!runtimeDomPreview) return;
+  for (const { element, className, previewClassName } of runtimeDomPreview.elements) {
+    if (element.getAttribute("class") === previewClassName) {
+      if (className === null) element.removeAttribute("class");
+      else element.setAttribute("class", className);
+    }
+    element.removeAttribute("data-intent-preview-active");
+  }
+  runtimeDomPreview = null;
+}
+
+function applyRuntimeDomPreview(id: string, oldToken: string, nextToken: string): number {
+  clearRuntimeDomPreview();
+  if (oldToken === nextToken) return 0;
+
+  const elements = elementsForIntentId(id).filter((element) => element.classList.contains(oldToken));
+  const snapshots = elements.map((element) => ({
+    element,
+    className: element.getAttribute("class"),
+    previewClassName: null as string | null
+  }));
+  for (const snapshot of snapshots) {
+    snapshot.element.classList.replace(oldToken, nextToken);
+    snapshot.element.setAttribute("data-intent-preview-active", "true");
+    snapshot.previewClassName = snapshot.element.getAttribute("class");
+  }
+  runtimeDomPreview = snapshots.length > 0 ? { elements: snapshots } : null;
+  return snapshots.length;
 }
 
 function clearSelectedIntentElements() {
@@ -1370,14 +1959,16 @@ function clearSelectedIntentElements() {
   }
 }
 
-function selectIntentElements(id: string): RenderScope {
+function selectIntentElements(id: string, clickedElement: HTMLElement | null = null): RenderScope {
   const elements = elementsForIntentId(id);
   for (const element of elements) {
     element.setAttribute("data-intent-selected", "true");
   }
+  const activeElement = clickedElement && elements.includes(clickedElement) ? clickedElement : elements[0] ?? null;
   return {
     renderedInstanceCount: Math.max(elements.length, 1),
-    isShared: elements.length > 1
+    isShared: elements.length > 1,
+    activeTokens: activeElement ? Array.from(activeElement.classList) : null
   };
 }
 
@@ -1404,6 +1995,1241 @@ function createPanel() {
   return panel;
 }
 
+interface RuntimeLayoutScope {
+  parentId: string;
+  renderedParentCount: number;
+  childIds: string[];
+  unboundChildCount: number;
+  labels: Map<string, string>;
+}
+
+interface GridComposerItemState {
+  id: string;
+  label: string;
+  start: number | null;
+  span: number;
+  startChanged: boolean;
+  spanChanged: boolean;
+  rowStart: number | null;
+  rowSpan: number;
+  rowStartChanged: boolean;
+  rowSpanChanged: boolean;
+}
+
+function runtimeLayoutScope(selectedId: string, expected: "grid" | "flex"): RuntimeLayoutScope | null {
+  const selected = elementsForIntentId(selectedId)[0];
+  if (!selected) return null;
+  let parent: HTMLElement | null = selected;
+  while (parent) {
+    if (parent.hasAttribute("data-intent-id")) {
+      const display = window.getComputedStyle(parent).display;
+      const kind = display === "grid" ? "grid" : display === "flex" || display === "inline-flex" ? "flex" : null;
+      if (kind) {
+        if (kind !== expected) return null;
+        break;
+      }
+    }
+    parent = parent.parentElement;
+  }
+  const parentId = parent?.getAttribute("data-intent-id");
+  if (!parent || !parentId) return null;
+  const childIds: string[] = [];
+  const labels = new Map<string, string>();
+  let unboundChildCount = 0;
+  for (const [index, child] of Array.from(parent.children).entries()) {
+    const id = child.getAttribute("data-intent-id");
+    if (!id) {
+      unboundChildCount += 1;
+      continue;
+    }
+    childIds.push(id);
+    const visibleText = child instanceof HTMLElement ? child.innerText : "";
+    const text = (visibleText || child.textContent || "").replace(/\s+/g, " ").trim();
+    labels.set(id, text ? `${index + 1}. ${text.slice(0, 28)}` : `${index + 1}. ${child.tagName.toLowerCase()}`);
+  }
+  return {
+    parentId,
+    renderedParentCount: elementsForIntentId(parentId).length,
+    childIds,
+    unboundChildCount,
+    labels
+  };
+}
+
+function viewportBreakpoint(): GridLayoutBreakpoint {
+  if (window.innerWidth >= 1536) return "2xl";
+  if (window.innerWidth >= 1280) return "xl";
+  if (window.innerWidth >= 1024) return "lg";
+  if (window.innerWidth >= 768) return "md";
+  if (window.innerWidth >= 640) return "sm";
+  return "base";
+}
+
+function renderLiteralTextEditor(
+  binding: IntentBinding,
+  setStatus: (message: string) => void,
+  rerender: (message: string, binding?: IntentBinding | null) => void
+): HTMLElement | null {
+  const sourceText = binding.textContent?.value;
+  if (!sourceText) return null;
+
+  const section = createSection(t("textEdit"), "ready");
+  section.dataset.intentTextEditor = "true";
+  const input = document.createElement("textarea");
+  input.value = sourceText;
+  input.rows = 2;
+  input.maxLength = 500;
+  input.dataset.intentTextInput = "true";
+  const actions = document.createElement("div");
+  actions.className = "intent-layer-layout-actions";
+  const preview = createButton(t("textPreview"));
+  preview.dataset.intentAction = "text-preview";
+  const apply = createButton(t("textApply"), "primary");
+  apply.dataset.intentAction = "text-apply";
+  apply.disabled = true;
+  const previewBox = document.createElement("pre");
+  previewBox.className = "intent-layer-code-box";
+  previewBox.style.display = "none";
+  let previewedText: string | null = null;
+
+  const requestBody = (): LiteralTextEditRequest => ({
+    id: binding.id,
+    oldText: sourceText,
+    nextText: input.value
+  });
+  input.addEventListener("input", () => {
+    if (input.value === previewedText) return;
+    previewedText = null;
+    apply.disabled = true;
+    previewBox.style.display = "none";
+  });
+  preview.addEventListener("click", async () => {
+    preview.disabled = true;
+    apply.disabled = true;
+    try {
+      const result = await requestJson<PreviewResponse>("/__intent/text/preview", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(requestBody())
+      });
+      previewBox.style.display = "block";
+      if (!result.ok) {
+        previewedText = null;
+        previewBox.textContent = result.detail ?? result.reason;
+        setStatus(`Text preview rejected: ${result.reason}`);
+        return;
+      }
+      previewedText = input.value;
+      apply.disabled = false;
+      previewBox.textContent = `- ${sourceText}\n+ ${input.value}`;
+      setStatus(
+        overlayLanguage === "ko"
+          ? "텍스트 source range를 확인했습니다."
+          : "Validated the literal text source range."
+      );
+    } catch (error) {
+      previewedText = null;
+      previewBox.style.display = "block";
+      previewBox.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+      setStatus(previewBox.textContent);
+    } finally {
+      preview.disabled = false;
+    }
+  });
+  apply.addEventListener("click", async () => {
+    if (previewedText === null || previewedText !== input.value) return;
+    apply.disabled = true;
+    try {
+      const result = await requestJson<PatchResponse>("/__intent/text/apply", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(requestBody())
+      });
+      if (!result.ok) {
+        setStatus(`Text apply rejected: ${result.reason}`);
+        return;
+      }
+      const message =
+        overlayLanguage === "ko"
+          ? "텍스트를 source에 적용했습니다."
+          : "Applied the literal text source patch.";
+      rerender(message, result.binding ?? binding);
+    } catch (error) {
+      setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
+    }
+  });
+
+  actions.append(preview, apply);
+  section.append(input, actions, previewBox);
+  return section;
+}
+
+function renderGridLayoutComposer(
+  binding: IntentBinding,
+  setStatus: (message: string) => void,
+  rerender: (message: string, binding?: IntentBinding | null) => void
+): HTMLElement | null {
+  const runtime = runtimeLayoutScope(binding.id, "grid");
+  if (!runtime) return null;
+
+  const section = createSection(t("layoutComposer"), "ready");
+  section.dataset.intentLayoutComposer = "true";
+  section.dataset.intentLayoutSelectedRole =
+    runtime.parentId === binding.id ? "parent" : runtime.childIds.includes(binding.id) ? "child" : "descendant";
+  const tabs = document.createElement("div");
+  tabs.className = "intent-layer-layout-tabs";
+  const body = document.createElement("div");
+  body.className = "intent-layer-control-grid";
+  const loading = document.createElement("p");
+  loading.textContent = t("layoutLoading");
+  body.appendChild(loading);
+  section.append(tabs, body);
+
+  let activeBreakpoint: GridLayoutBreakpoint = "base";
+  let requestSequence = 0;
+  const tabButtons = new Map<GridLayoutBreakpoint, HTMLButtonElement>();
+  function renderBreakpointTabs(breakpoints: GridLayoutBreakpoint[]) {
+    tabs.innerHTML = "";
+    tabButtons.clear();
+    for (const breakpoint of breakpoints) {
+      const button = createButton(breakpoint);
+      button.dataset.intentBreakpoint = breakpoint;
+      button.dataset.intentActive = breakpoint === activeBreakpoint ? "true" : "false";
+      button.title = breakpoint === "base" ? "Base styles" : `${breakpoint}: responsive styles`;
+      button.addEventListener("click", () => {
+        if (breakpoint === activeBreakpoint) return;
+        activeBreakpoint = breakpoint;
+        for (const [value, tab] of tabButtons) tab.dataset.intentActive = value === breakpoint ? "true" : "false";
+        void loadInspection();
+      });
+      tabButtons.set(breakpoint, button);
+      tabs.appendChild(button);
+    }
+  }
+
+  async function loadInspection() {
+    const sequence = ++requestSequence;
+    body.innerHTML = "";
+    const nextLoading = document.createElement("p");
+    nextLoading.textContent = t("layoutLoading");
+    body.appendChild(nextLoading);
+    try {
+      const result = await requestJson<GridLayoutInspectResponse>("/__intent/grid-layout/inspect", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          parentId: runtime!.parentId,
+          childIds: runtime!.childIds,
+          unboundChildCount: runtime!.unboundChildCount,
+          breakpoint: activeBreakpoint
+        })
+      });
+      if (sequence !== requestSequence || !body.isConnected) return;
+      if (!result.ok) {
+        body.innerHTML = "";
+        const blocked = document.createElement("p");
+        blocked.textContent = result.detail ?? result.reason;
+        body.appendChild(blocked);
+        section.dataset.intentState = "warn";
+        return;
+      }
+      if (tabButtons.size === 0) {
+        const preferred = viewportBreakpoint();
+        activeBreakpoint = result.supportedBreakpoints.includes(preferred) ? preferred : "base";
+        renderBreakpointTabs(result.supportedBreakpoints);
+        if (activeBreakpoint !== result.breakpoint) {
+          void loadInspection();
+          return;
+        }
+      }
+      section.dataset.intentState = "ready";
+      renderEditor(result);
+    } catch (error) {
+      if (sequence !== requestSequence || !body.isConnected) return;
+      body.innerHTML = "";
+      const failed = document.createElement("p");
+      failed.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+      body.appendChild(failed);
+      section.dataset.intentState = "warn";
+    }
+  }
+
+  function renderEditor(inspection: GridLayoutInspection) {
+    let columns = inspection.columns.effective ?? 1;
+    const initialColumns = columns;
+    let columnsChanged = false;
+    let rows = inspection.rows.effective ?? 1;
+    const initialRows = rows;
+    let rowsChanged = false;
+    let columnTemplate = inspection.columnTemplate.effective
+      ? [...inspection.columnTemplate.effective]
+      : null;
+    const initialColumnTemplate = columnTemplate ? [...columnTemplate] : null;
+    let templateChanged = false;
+    let previewId: string | null = null;
+    const items: GridComposerItemState[] = inspection.items.map((item) => ({
+      id: item.id,
+      label: runtime!.labels.get(item.id) ?? item.label,
+      start: item.columnStart.effective,
+      span: item.columnSpan.effective ?? 1,
+      startChanged: false,
+      spanChanged: false,
+      rowStart: item.rowStart.effective,
+      rowSpan: item.rowSpan.effective ?? 1,
+      rowStartChanged: false,
+      rowSpanChanged: false
+    }));
+
+    function hasChanges() {
+      return (
+        columnsChanged ||
+        rowsChanged ||
+        templateChanged ||
+        items.some(
+          (item) => item.startChanged || item.spanChanged || item.rowStartChanged || item.rowSpanChanged
+        )
+      );
+    }
+
+    function requestBody(): GridLayoutEditRequest {
+      const edit: GridLayoutEditRequest = {
+        parentId: runtime!.parentId,
+        childIds: runtime!.childIds,
+        unboundChildCount: runtime!.unboundChildCount,
+        breakpoint: inspection.breakpoint,
+        items: items
+          .filter(
+            (item) => item.startChanged || item.spanChanged || item.rowStartChanged || item.rowSpanChanged
+          )
+          .map((item) => ({
+            id: item.id,
+            ...(item.startChanged ? { columnStart: item.start } : {}),
+            ...(item.spanChanged ? { columnSpan: item.span } : {}),
+            ...(item.rowStartChanged ? { rowStart: item.rowStart } : {}),
+            ...(item.rowSpanChanged ? { rowSpan: item.rowSpan } : {})
+          }))
+      };
+      if (columnsChanged) edit.columns = columns;
+      if (rowsChanged) edit.rows = rows;
+      if (templateChanged) edit.columnTemplate = columnTemplate;
+      return edit;
+    }
+
+    body.innerHTML = "";
+    const toolbar = document.createElement("div");
+    toolbar.className = "intent-layer-layout-toolbar";
+    const columnsLabel = document.createElement("span");
+    columnsLabel.className = "intent-layer-section-title";
+    columnsLabel.textContent = t("layoutColumns");
+    const stepper = document.createElement("div");
+    stepper.className = "intent-layer-layout-stepper";
+    const removeColumn = createButton("−");
+    removeColumn.title = "Remove one grid column";
+    const columnOutput = document.createElement("output");
+    columnOutput.textContent = String(columns);
+    const addColumn = createButton("+");
+    addColumn.title = "Add one grid column";
+    removeColumn.disabled = Boolean(columnTemplate);
+    addColumn.disabled = Boolean(columnTemplate);
+    stepper.append(removeColumn, columnOutput, addColumn);
+    toolbar.append(columnsLabel, stepper);
+    const rowsLabel = document.createElement("span");
+    rowsLabel.className = "intent-layer-section-title";
+    rowsLabel.textContent = t("layoutRows");
+    const rowStepper = document.createElement("div");
+    rowStepper.className = "intent-layer-layout-stepper";
+    const removeRow = createButton("−");
+    removeRow.title = "Remove one grid row";
+    removeRow.dataset.intentAction = "grid-row-remove";
+    const rowOutput = document.createElement("output");
+    rowOutput.textContent = String(rows);
+    const addRow = createButton("+");
+    addRow.title = "Add one grid row";
+    addRow.dataset.intentAction = "grid-row-add";
+    rowStepper.append(removeRow, rowOutput, addRow);
+    toolbar.append(rowsLabel, rowStepper);
+
+    const trackEditor = document.createElement("div");
+    trackEditor.className = "intent-layer-layout-tracks";
+    if (columnTemplate) {
+      columnTemplate.forEach((weight, index) => {
+        const row = document.createElement("label");
+        row.className = "intent-layer-layout-track";
+        const name = document.createElement("span");
+        name.textContent = `${index + 1} ${t("layoutRatio")}`;
+        const input = document.createElement("input");
+        input.type = "range";
+        input.min = "0.25";
+        input.max = "4";
+        input.step = "0.05";
+        input.value = String(weight);
+        input.dataset.intentGridTrack = String(index + 1);
+        const output = document.createElement("output");
+        output.textContent = weight.toFixed(2).replace(/\.00$/, "");
+        input.addEventListener("input", () => {
+          if (!columnTemplate) return;
+          columnTemplate[index] = Number(input.value);
+          output.textContent = columnTemplate[index].toFixed(2).replace(/\.00$/, "");
+          templateChanged = Boolean(
+            initialColumnTemplate &&
+              columnTemplate.some((value, itemIndex) => value !== initialColumnTemplate[itemIndex])
+          );
+          invalidatePreview();
+          drawCanvas();
+        });
+        row.append(name, input, output);
+        trackEditor.appendChild(row);
+      });
+    }
+
+    const canvas = document.createElement("div");
+    canvas.className = "intent-layer-layout-canvas";
+    canvas.dataset.intentLayoutCanvas = "true";
+    const itemList = document.createElement("div");
+    itemList.className = "intent-layer-layout-items";
+    const actions = document.createElement("div");
+    actions.className = "intent-layer-layout-actions";
+    const preview = createButton(t("layoutPreview"));
+    preview.dataset.intentAction = "grid-preview";
+    const apply = createButton(t("layoutApply"), "primary");
+    apply.dataset.intentAction = "grid-apply";
+    apply.disabled = true;
+    const previewBox = document.createElement("pre");
+    previewBox.className = "intent-layer-code-box";
+    previewBox.style.display = "none";
+    actions.append(preview, apply);
+
+    function invalidatePreview() {
+      previewId = null;
+      apply.disabled = true;
+      previewBox.style.display = "none";
+      previewBox.textContent = "";
+    }
+
+    function drawCanvas() {
+      canvas.innerHTML = "";
+      canvas.style.gridTemplateColumns = columnTemplate
+        ? columnTemplate.map((weight) => `${weight}fr`).join(" ")
+        : `repeat(${columns}, minmax(0, 1fr))`;
+      canvas.style.gridTemplateRows = `repeat(${rows}, minmax(34px, auto))`;
+      items.forEach((item, index) => {
+        const block = document.createElement("div");
+        block.className = "intent-layer-layout-block";
+        const safeSpan = Math.max(1, Math.min(item.span, columns));
+        block.style.gridColumn = item.start === null ? `span ${safeSpan}` : `${item.start} / span ${safeSpan}`;
+        const safeRowSpan = Math.max(1, Math.min(item.rowSpan, rows));
+        block.style.gridRow =
+          item.rowStart === null ? `span ${safeRowSpan}` : `${item.rowStart} / span ${safeRowSpan}`;
+        block.textContent = String(index + 1);
+        block.title = `${item.label}; ${item.start === null ? "auto" : `column ${item.start}`}; span ${safeSpan}`;
+        canvas.appendChild(block);
+      });
+    }
+
+    function clampItemsToColumns() {
+      for (const item of items) {
+        if (item.span > columns) {
+          item.span = columns;
+          item.spanChanged = true;
+        }
+        if (item.start !== null && item.start + item.span - 1 > columns) {
+          item.start = Math.max(1, columns - item.span + 1);
+          item.startChanged = true;
+        }
+      }
+    }
+
+    function clampItemsToRows() {
+      for (const item of items) {
+        if (item.rowSpan > rows) {
+          item.rowSpan = rows;
+          item.rowSpanChanged = true;
+        }
+        if (item.rowStart !== null && item.rowStart + item.rowSpan - 1 > rows) {
+          item.rowStart = Math.max(1, rows - item.rowSpan + 1);
+          item.rowStartChanged = true;
+        }
+      }
+    }
+
+    function changeColumns(delta: number) {
+      if (columnTemplate) return;
+      const next = Math.max(1, Math.min(12, columns + delta));
+      if (next === columns) return;
+      columns = next;
+      columnsChanged = columns !== initialColumns;
+      columnOutput.textContent = String(columns);
+      clampItemsToColumns();
+      invalidatePreview();
+      drawCanvas();
+      renderItemControls();
+    }
+
+    removeColumn.addEventListener("click", () => changeColumns(-1));
+    addColumn.addEventListener("click", () => changeColumns(1));
+
+    function changeRows(delta: number) {
+      const next = Math.max(1, Math.min(12, rows + delta));
+      if (next === rows) return;
+      rows = next;
+      rowsChanged = rows !== initialRows;
+      rowOutput.textContent = String(rows);
+      clampItemsToRows();
+      invalidatePreview();
+      drawCanvas();
+      renderItemControls();
+    }
+
+    removeRow.addEventListener("click", () => changeRows(-1));
+    addRow.addEventListener("click", () => changeRows(1));
+
+    function renderItemControls() {
+      itemList.innerHTML = "";
+      items.forEach((item) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "intent-layer-layout-item";
+        const head = document.createElement("div");
+        head.className = "intent-layer-layout-item-head";
+        const name = document.createElement("span");
+        name.className = "intent-layer-layout-item-name";
+        name.textContent = item.label;
+        name.title = item.label;
+        const meta = document.createElement("span");
+        meta.className = "intent-layer-layout-item-meta";
+        const columnAuto = createButton("↺");
+        columnAuto.className += " intent-layer-layout-auto";
+        columnAuto.title = `${t("layoutAuto")} (${t("layoutColumns")})`;
+        head.append(name, meta, columnAuto);
+        const strip = document.createElement("div");
+        strip.className = "intent-layer-layout-strip";
+        strip.dataset.intentGridAxis = "column";
+        strip.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+        const cells: HTMLButtonElement[] = [];
+        const rowHead = document.createElement("div");
+        rowHead.className = "intent-layer-layout-item-head";
+        const rowLabel = document.createElement("span");
+        rowLabel.className = "intent-layer-layout-item-name";
+        rowLabel.textContent = t("layoutRows");
+        const rowAuto = createButton("↺");
+        rowAuto.className += " intent-layer-layout-auto";
+        rowAuto.title = `${t("layoutAuto")} (${t("layoutRows")})`;
+        rowHead.append(rowLabel, rowAuto);
+        const rowStrip = document.createElement("div");
+        rowStrip.className = "intent-layer-layout-strip";
+        rowStrip.dataset.intentGridAxis = "row";
+        rowStrip.style.gridTemplateColumns = `repeat(${rows}, minmax(0, 1fr))`;
+        const rowCells: HTMLButtonElement[] = [];
+        let dragStart: number | null = null;
+        let rowDragStart: number | null = null;
+
+        function updateVisuals() {
+          meta.textContent = `C ${item.start === null ? "auto" : item.start}×${item.span} · R ${
+            item.rowStart === null ? "auto" : item.rowStart
+          }×${item.rowSpan}`;
+          cells.forEach((cell, index) => {
+            const selected = item.start !== null && index + 1 >= item.start && index + 1 < item.start + item.span;
+            const autoWidth = item.start === null && index < item.span;
+            cell.dataset.intentSelected = selected ? "true" : "false";
+            cell.dataset.intentAuto = autoWidth ? "true" : "false";
+          });
+          rowCells.forEach((cell, index) => {
+            const selected =
+              item.rowStart !== null && index + 1 >= item.rowStart && index + 1 < item.rowStart + item.rowSpan;
+            const autoHeight = item.rowStart === null && index < item.rowSpan;
+            cell.dataset.intentSelected = selected ? "true" : "false";
+            cell.dataset.intentAuto = autoHeight ? "true" : "false";
+          });
+          drawCanvas();
+        }
+
+        function setRange(endIndex: number) {
+          if (dragStart === null) return;
+          const low = Math.min(dragStart, endIndex);
+          const high = Math.max(dragStart, endIndex);
+          item.start = low + 1;
+          item.span = high - low + 1;
+          item.startChanged = true;
+          item.spanChanged = true;
+          invalidatePreview();
+          updateVisuals();
+        }
+
+        strip.addEventListener("pointermove", (event) => {
+          if (dragStart === null) return;
+          const rect = strip.getBoundingClientRect();
+          const position = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
+          const endIndex = Math.max(0, Math.min(columns - 1, Math.floor((position / rect.width) * columns)));
+          setRange(endIndex);
+        });
+
+        function setRowRange(endIndex: number) {
+          if (rowDragStart === null) return;
+          const low = Math.min(rowDragStart, endIndex);
+          const high = Math.max(rowDragStart, endIndex);
+          item.rowStart = low + 1;
+          item.rowSpan = high - low + 1;
+          item.rowStartChanged = true;
+          item.rowSpanChanged = true;
+          invalidatePreview();
+          updateVisuals();
+        }
+
+        rowStrip.addEventListener("pointermove", (event) => {
+          if (rowDragStart === null) return;
+          const rect = rowStrip.getBoundingClientRect();
+          const position = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
+          const endIndex = Math.max(0, Math.min(rows - 1, Math.floor((position / rect.width) * rows)));
+          setRowRange(endIndex);
+        });
+
+        for (let index = 0; index < columns; index += 1) {
+          const cell = createButton("");
+          cell.className += " intent-layer-layout-cell";
+          cell.title = `Column ${index + 1}`;
+          cell.setAttribute("aria-label", `Column ${index + 1}`);
+          cell.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            dragStart = index;
+            setRange(index);
+            window.addEventListener(
+              "pointerup",
+              () => {
+                dragStart = null;
+              },
+              { once: true }
+            );
+          });
+          cells.push(cell);
+          strip.appendChild(cell);
+        }
+        for (let index = 0; index < rows; index += 1) {
+          const cell = createButton("");
+          cell.className += " intent-layer-layout-cell";
+          cell.title = `Row ${index + 1}`;
+          cell.setAttribute("aria-label", `Row ${index + 1}`);
+          cell.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            rowDragStart = index;
+            setRowRange(index);
+            window.addEventListener(
+              "pointerup",
+              () => {
+                rowDragStart = null;
+              },
+              { once: true }
+            );
+          });
+          rowCells.push(cell);
+          rowStrip.appendChild(cell);
+        }
+        columnAuto.addEventListener("click", () => {
+          item.start = null;
+          item.startChanged = true;
+          invalidatePreview();
+          updateVisuals();
+        });
+        rowAuto.addEventListener("click", () => {
+          item.rowStart = null;
+          item.rowStartChanged = true;
+          invalidatePreview();
+          updateVisuals();
+        });
+        updateVisuals();
+        wrapper.append(head, strip, rowHead, rowStrip);
+        itemList.appendChild(wrapper);
+      });
+    }
+
+    preview.addEventListener("click", async () => {
+      if (!hasChanges()) {
+        setStatus(overlayLanguage === "ko" ? "바뀐 배치가 없습니다." : "The layout has not changed.");
+        return;
+      }
+      clearRuntimeDomPreview();
+      preview.disabled = true;
+      try {
+        const result = await requestJson<GridLayoutPreviewResponse>("/__intent/grid-layout/preview", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(requestBody())
+        });
+        previewBox.style.display = "block";
+        if (!result.ok) {
+          previewBox.textContent = result.detail ?? result.reason;
+          setStatus(`Grid preview rejected: ${result.reason}`);
+          return;
+        }
+        previewId = result.previewId;
+        apply.disabled = false;
+        const impact = runtime!.renderedParentCount > 1
+          ? ` · ${runtime!.renderedParentCount} ${overlayLanguage === "ko" ? "개 렌더" : "renders"}`
+          : "";
+        previewBox.textContent = [
+          `${t("layoutAffected")}: ${result.affectedBindingCount}${impact}`,
+          ...(result.patch.edits ?? []).flatMap((edit) => [`- ${edit.oldText}`, `+ ${edit.newText}`])
+        ].join("\n");
+        setStatus(
+          overlayLanguage === "ko"
+            ? `Grid 배치 ${result.affectedBindingCount}개 source 범위를 확인했습니다.`
+            : `Previewed ${result.affectedBindingCount} grid source ranges.`
+        );
+      } catch (error) {
+        previewBox.style.display = "block";
+        previewBox.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+        setStatus(previewBox.textContent);
+      } finally {
+        preview.disabled = false;
+      }
+    });
+
+    apply.addEventListener("click", async () => {
+      if (!previewId) return;
+      clearRuntimeDomPreview();
+      apply.disabled = true;
+      const applyRequest: GridLayoutApplyRequest = { previewId };
+      try {
+        const result = await requestJson<GridLayoutApplyResponse>("/__intent/grid-layout/apply", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(applyRequest)
+        });
+        if (!result.ok) {
+          setStatus(`Grid apply rejected: ${result.reason}`);
+          return;
+        }
+        const message =
+          overlayLanguage === "ko"
+            ? `Grid 배치를 ${result.edits?.length ?? 0}개 source 범위에 적용했습니다.`
+            : `Applied the grid layout across ${result.edits?.length ?? 0} source ranges.`;
+        rerender(message, result.binding ?? binding);
+      } catch (error) {
+        setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
+      }
+    });
+
+    drawCanvas();
+    renderItemControls();
+    body.append(toolbar);
+    if (columnTemplate) body.append(trackEditor);
+    body.append(canvas, itemList, actions, previewBox);
+  }
+
+  void loadInspection();
+  return section;
+}
+
+interface FlexComposerItemState {
+  id: string;
+  label: string;
+  alignSelf: FlexLayoutAlignSelf;
+  initialAlignSelf: FlexLayoutAlignSelf;
+}
+
+function flexJustifyCss(value: FlexLayoutJustify): string {
+  const values: Record<FlexLayoutJustify, string> = {
+    normal: "normal",
+    start: "flex-start",
+    end: "flex-end",
+    center: "center",
+    between: "space-between",
+    around: "space-around",
+    evenly: "space-evenly",
+    stretch: "stretch"
+  };
+  return values[value];
+}
+
+function flexAlignCss(value: FlexLayoutAlign | FlexLayoutAlignSelf): string {
+  if (value === "auto") return "auto";
+  if (value === "start") return "flex-start";
+  if (value === "end") return "flex-end";
+  return value;
+}
+
+function flexGapPreview(token: string): { value: string; exact: boolean } {
+  const probe = document.createElement("div");
+  probe.className = token;
+  probe.style.position = "fixed";
+  probe.style.visibility = "hidden";
+  probe.style.pointerEvents = "none";
+  probe.style.display = "flex";
+  document.body.appendChild(probe);
+  const computedGap = getComputedStyle(probe).columnGap;
+  probe.remove();
+  if (computedGap && computedGap !== "normal" && (computedGap !== "0px" || token === "gap-0")) {
+    return { value: computedGap, exact: true };
+  }
+
+  const raw = /^gap-(.+)$/.exec(token)?.[1] ?? "0";
+  if (raw === "px") return { value: "1px", exact: true };
+  const arbitrary = /^\[(.+)\]$/.exec(raw)?.[1]?.replace(/_/g, " ");
+  if (arbitrary && CSS.supports("gap", arbitrary)) return { value: arbitrary, exact: true };
+  const variable = getComputedStyle(document.documentElement).getPropertyValue(`--spacing-${raw}`).trim();
+  if (variable && CSS.supports("gap", variable)) return { value: variable, exact: true };
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric)) {
+    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    return { value: `${Math.max(0, numeric * rootFontSize * 0.25)}px`, exact: false };
+  }
+  return { value: "8px", exact: false };
+}
+
+function renderFlexLayoutComposer(
+  binding: IntentBinding,
+  setStatus: (message: string) => void,
+  rerender: (message: string, binding?: IntentBinding | null) => void
+): HTMLElement | null {
+  const runtime = runtimeLayoutScope(binding.id, "flex");
+  if (!runtime) return null;
+
+  const section = createSection(t("flexComposer"), "ready");
+  section.dataset.intentFlexComposer = "true";
+  section.dataset.intentLayoutSelectedRole =
+    runtime.parentId === binding.id ? "parent" : runtime.childIds.includes(binding.id) ? "child" : "descendant";
+  const tabs = document.createElement("div");
+  tabs.className = "intent-layer-layout-tabs";
+  const body = document.createElement("div");
+  body.className = "intent-layer-control-grid";
+  const loading = document.createElement("p");
+  loading.textContent = t("flexLoading");
+  body.appendChild(loading);
+  section.append(tabs, body);
+
+  let activeBreakpoint: GridLayoutBreakpoint = "base";
+  let requestSequence = 0;
+  const tabButtons = new Map<GridLayoutBreakpoint, HTMLButtonElement>();
+
+  function renderBreakpointTabs(breakpoints: GridLayoutBreakpoint[]) {
+    tabs.innerHTML = "";
+    tabButtons.clear();
+    for (const breakpoint of breakpoints) {
+      const button = createButton(breakpoint);
+      button.dataset.intentBreakpoint = breakpoint;
+      button.dataset.intentActive = breakpoint === activeBreakpoint ? "true" : "false";
+      button.title = breakpoint === "base" ? "Base styles" : `${breakpoint}: responsive styles`;
+      button.addEventListener("click", () => {
+        if (breakpoint === activeBreakpoint) return;
+        activeBreakpoint = breakpoint;
+        for (const [value, tab] of tabButtons) tab.dataset.intentActive = value === breakpoint ? "true" : "false";
+        void loadInspection();
+      });
+      tabButtons.set(breakpoint, button);
+      tabs.appendChild(button);
+    }
+  }
+
+  async function loadInspection() {
+    const sequence = ++requestSequence;
+    body.innerHTML = "";
+    const nextLoading = document.createElement("p");
+    nextLoading.textContent = t("flexLoading");
+    body.appendChild(nextLoading);
+    try {
+      const result = await requestJson<FlexLayoutInspectResponse>("/__intent/flex-layout/inspect", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          parentId: runtime!.parentId,
+          childIds: runtime!.childIds,
+          unboundChildCount: runtime!.unboundChildCount,
+          breakpoint: activeBreakpoint
+        })
+      });
+      if (sequence !== requestSequence || !body.isConnected) return;
+      if (!result.ok) {
+        body.innerHTML = "";
+        const blocked = document.createElement("p");
+        blocked.textContent = result.detail ?? result.reason;
+        body.appendChild(blocked);
+        section.dataset.intentState = "warn";
+        return;
+      }
+      if (tabButtons.size === 0) {
+        const preferred = viewportBreakpoint();
+        activeBreakpoint = result.supportedBreakpoints.includes(preferred) ? preferred : "base";
+        renderBreakpointTabs(result.supportedBreakpoints);
+        if (activeBreakpoint !== result.breakpoint) {
+          void loadInspection();
+          return;
+        }
+      }
+      section.dataset.intentState = "ready";
+      renderEditor(result);
+    } catch (error) {
+      if (sequence !== requestSequence || !body.isConnected) return;
+      body.innerHTML = "";
+      const failed = document.createElement("p");
+      failed.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+      body.appendChild(failed);
+      section.dataset.intentState = "warn";
+    }
+  }
+
+  function renderEditor(inspection: FlexLayoutInspection) {
+    let direction = inspection.direction.effective;
+    const initialDirection = direction;
+    let wrap = inspection.wrap.effective;
+    const initialWrap = wrap;
+    let justify = inspection.justify.effective;
+    const initialJustify = justify;
+    let align = inspection.align.effective;
+    const initialAlign = align;
+    let gap = inspection.gap.effective ?? "gap-0";
+    const initialGap = gap;
+    let previewId: string | null = null;
+    const items: FlexComposerItemState[] = inspection.items.map((item) => ({
+      id: item.id,
+      label: runtime!.labels.get(item.id) ?? item.label,
+      alignSelf: item.alignSelf.effective,
+      initialAlignSelf: item.alignSelf.effective
+    }));
+
+    body.innerHTML = "";
+    const controls = document.createElement("div");
+    controls.className = "intent-layer-flex-controls";
+    const canvas = document.createElement("div");
+    canvas.className = "intent-layer-layout-canvas intent-layer-flex-canvas";
+    canvas.dataset.intentFlexCanvas = "true";
+    const itemList = document.createElement("div");
+    itemList.className = "intent-layer-layout-items";
+    const actions = document.createElement("div");
+    actions.className = "intent-layer-layout-actions";
+    const preview = createButton(t("layoutPreview"));
+    preview.dataset.intentAction = "flex-preview";
+    const apply = createButton(t("layoutApply"), "primary");
+    apply.dataset.intentAction = "flex-apply";
+    apply.disabled = true;
+    const previewBox = document.createElement("pre");
+    previewBox.className = "intent-layer-code-box";
+    previewBox.style.display = "none";
+    actions.append(preview, apply);
+
+    function hasChanges(): boolean {
+      return (
+        direction !== initialDirection ||
+        wrap !== initialWrap ||
+        justify !== initialJustify ||
+        align !== initialAlign ||
+        gap !== initialGap ||
+        items.some((item) => item.alignSelf !== item.initialAlignSelf)
+      );
+    }
+
+    function invalidatePreview(): void {
+      previewId = null;
+      apply.disabled = true;
+      previewBox.style.display = "none";
+      previewBox.textContent = "";
+    }
+
+    function requestBody(): FlexLayoutEditRequest {
+      return {
+        parentId: runtime!.parentId,
+        childIds: runtime!.childIds,
+        unboundChildCount: runtime!.unboundChildCount,
+        breakpoint: inspection.breakpoint,
+        ...(direction !== initialDirection ? { direction } : {}),
+        ...(wrap !== initialWrap ? { wrap } : {}),
+        ...(justify !== initialJustify ? { justify } : {}),
+        ...(align !== initialAlign ? { align } : {}),
+        ...(gap !== initialGap ? { gap } : {}),
+        items: items
+          .filter((item) => item.alignSelf !== item.initialAlignSelf)
+          .map((item) => ({ id: item.id, alignSelf: item.alignSelf }))
+      };
+    }
+
+    function drawCanvas(): void {
+      canvas.innerHTML = "";
+      canvas.style.flexDirection = direction === "col" ? "column" : direction === "col-reverse" ? "column-reverse" : direction;
+      canvas.style.flexWrap = wrap;
+      canvas.style.justifyContent = flexJustifyCss(justify);
+      canvas.style.alignItems = flexAlignCss(align);
+      const gapPreview = flexGapPreview(gap);
+      canvas.style.setProperty("gap", gapPreview.value, "important");
+      canvas.dataset.intentGapExact = String(gapPreview.exact);
+      items.forEach((item, index) => {
+        const block = document.createElement("div");
+        block.className = "intent-layer-layout-block";
+        block.style.alignSelf = flexAlignCss(item.alignSelf);
+        block.textContent = String(index + 1);
+        block.title = `${item.label}; self-${item.alignSelf}`;
+        canvas.appendChild(block);
+      });
+    }
+
+    function segmentedControl<T extends string>(
+      labelText: string,
+      property: string,
+      values: readonly T[],
+      current: () => T,
+      change: (value: T) => void
+    ): HTMLElement {
+      const wrapper = document.createElement("div");
+      wrapper.className = "intent-layer-flex-control";
+      const label = document.createElement("div");
+      label.className = "intent-layer-section-title";
+      label.textContent = labelText;
+      const group = document.createElement("div");
+      group.className = "intent-layer-flex-segmented";
+      group.style.gridTemplateColumns = `repeat(${values.length}, minmax(0, 1fr))`;
+      const buttons: HTMLButtonElement[] = [];
+      for (const value of values) {
+        const button = createButton(value);
+        button.dataset.intentFlexProperty = property;
+        button.dataset.intentFlexValue = value;
+        button.dataset.intentActive = value === current() ? "true" : "false";
+        button.addEventListener("click", () => {
+          change(value);
+          for (const candidate of buttons) {
+            candidate.dataset.intentActive = candidate.dataset.intentFlexValue === current() ? "true" : "false";
+          }
+          invalidatePreview();
+          drawCanvas();
+        });
+        buttons.push(button);
+        group.appendChild(button);
+      }
+      wrapper.append(label, group);
+      return wrapper;
+    }
+
+    function selectControl<T extends string>(
+      labelText: string,
+      property: string,
+      values: readonly T[],
+      current: T,
+      change: (value: T) => void
+    ): HTMLElement {
+      const label = document.createElement("label");
+      label.className = "intent-layer-flex-control";
+      const title = document.createElement("span");
+      title.textContent = labelText;
+      const select = document.createElement("select");
+      select.dataset.intentFlexProperty = property;
+      for (const value of values) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      }
+      select.value = current;
+      select.addEventListener("change", () => {
+        change(select.value as T);
+        invalidatePreview();
+        drawCanvas();
+      });
+      label.append(title, select);
+      return label;
+    }
+
+    controls.append(
+      segmentedControl(
+        t("flexDirection"),
+        "direction",
+        ["row", "row-reverse", "col", "col-reverse"] as const,
+        () => direction,
+        (value) => {
+          direction = value;
+        }
+      ),
+      segmentedControl(
+        t("flexWrap"),
+        "wrap",
+        ["nowrap", "wrap", "wrap-reverse"] as const,
+        () => wrap,
+        (value) => {
+          wrap = value;
+        }
+      ),
+      selectControl(
+        t("flexJustify"),
+        "justify",
+        ["normal", "start", "end", "center", "between", "around", "evenly", "stretch"] as const,
+        justify,
+        (value) => {
+          justify = value;
+        }
+      ),
+      selectControl(
+        t("flexAlign"),
+        "align",
+        ["start", "end", "center", "baseline", "stretch"] as const,
+        align,
+        (value) => {
+          align = value;
+        }
+      ),
+      selectControl(t("flexGap"), "gap", inspection.gap.candidates, gap, (value) => {
+        gap = value;
+      })
+    );
+
+    for (const item of items) {
+      const row = document.createElement("label");
+      row.className = "intent-layer-flex-item-row";
+      const name = document.createElement("span");
+      name.className = "intent-layer-layout-item-name";
+      name.textContent = item.label;
+      name.title = item.label;
+      const select = document.createElement("select");
+      select.dataset.intentFlexProperty = "align-self";
+      select.dataset.intentFlexItem = item.id;
+      for (const value of ["auto", "start", "end", "center", "stretch", "baseline"] as const) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      }
+      select.value = item.alignSelf;
+      select.title = t("flexSelf");
+      select.addEventListener("change", () => {
+        item.alignSelf = select.value as FlexLayoutAlignSelf;
+        invalidatePreview();
+        drawCanvas();
+      });
+      row.append(name, select);
+      itemList.appendChild(row);
+    }
+
+    preview.addEventListener("click", async () => {
+      if (!hasChanges()) {
+        setStatus(overlayLanguage === "ko" ? "바뀐 Flex 배치가 없습니다." : "The flex layout has not changed.");
+        return;
+      }
+      preview.disabled = true;
+      try {
+        const result = await requestJson<FlexLayoutPreviewResponse>("/__intent/flex-layout/preview", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(requestBody())
+        });
+        previewBox.style.display = "block";
+        if (!result.ok) {
+          previewId = null;
+          apply.disabled = true;
+          previewBox.textContent = result.detail ?? result.reason;
+          setStatus(`Flex preview rejected: ${result.reason}`);
+          return;
+        }
+        previewId = result.previewId;
+        apply.disabled = false;
+        const impact = runtime!.renderedParentCount > 1
+          ? ` · ${runtime!.renderedParentCount} ${overlayLanguage === "ko" ? "개 렌더" : "renders"}`
+          : "";
+        previewBox.textContent = [
+          `${t("layoutAffected")}: ${result.affectedBindingCount}${impact}`,
+          ...(result.patch.edits ?? []).flatMap((edit) => [`- ${edit.oldText}`, `+ ${edit.newText}`])
+        ].join("\n");
+        setStatus(
+          overlayLanguage === "ko"
+            ? `Flex 배치 ${result.affectedBindingCount}개 source 범위를 확인했습니다.`
+            : `Previewed ${result.affectedBindingCount} flex source ranges.`
+        );
+      } catch (error) {
+        previewId = null;
+        apply.disabled = true;
+        previewBox.style.display = "block";
+        previewBox.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
+        setStatus(previewBox.textContent);
+      } finally {
+        preview.disabled = false;
+      }
+    });
+
+    apply.addEventListener("click", async () => {
+      if (!previewId) return;
+      apply.disabled = true;
+      const request: FlexLayoutApplyRequest = { previewId };
+      try {
+        const result = await requestJson<FlexLayoutApplyResponse>("/__intent/flex-layout/apply", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(request)
+        });
+        if (!result.ok) {
+          setStatus(`Flex apply rejected: ${result.reason}`);
+          return;
+        }
+        const message =
+          overlayLanguage === "ko"
+            ? `Flex 배치를 ${result.edits?.length ?? 0}개 source 범위에 적용했습니다.`
+            : `Applied the flex layout across ${result.edits?.length ?? 0} source ranges.`;
+        rerender(message, result.binding ?? binding);
+      } catch (error) {
+        setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
+      }
+    });
+
+    drawCanvas();
+    body.append(controls, canvas, itemList, actions, previewBox);
+  }
+
+  void loadInspection();
+  return section;
+}
+
+function supportsTokenStepper(token: string): boolean {
+  const { base } = splitTailwindVariant(token);
+  return /^-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-/.test(base);
+}
+
+function orderedStepperCandidates(candidates: string[]): string[] {
+  return candidates
+    .map((candidate, index) => {
+      const { base } = splitTailwindVariant(candidate);
+      const match = /^-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y)-(.+)$/.exec(base);
+      const value = match?.[1] ?? "";
+      const numericValue = value === "px" ? 0.0625 : Number(value);
+      return {
+        candidate,
+        index,
+        order: Number.isFinite(numericValue) ? numericValue : Number.POSITIVE_INFINITY
+      };
+    })
+    .sort((left, right) => left.order - right.order || left.index - right.index)
+    .map((item) => item.candidate);
+}
+
+function candidateColor(token: string): string | null {
+  const { base } = splitTailwindVariant(token);
+  const match = /^(bg|text|border(?:-[trblxy])?|divide-[xy]|ring|ring-offset|outline|decoration|accent|caret|fill|stroke|shadow)-(.+)$/.exec(
+    base
+  );
+  if (!match) return null;
+  const value = match[2].split("/", 1)[0];
+  const variable = /^\[var\((--[^)]+)\)\]$/.exec(value)?.[1] ?? `--color-${value}`;
+  const themeValue = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
+  if (themeValue) return themeValue;
+
+  const probe = document.createElement("span");
+  probe.className = base;
+  probe.style.position = "fixed";
+  probe.style.pointerEvents = "none";
+  probe.style.visibility = "hidden";
+  document.body.appendChild(probe);
+  const style = getComputedStyle(probe);
+  const color =
+    match[1] === "bg"
+      ? style.backgroundColor
+      : match[1] === "fill"
+        ? style.fill
+        : match[1] === "stroke"
+          ? style.stroke
+          : match[1].startsWith("ring")
+            ? style.getPropertyValue("--tw-ring-color")
+            : match[1] === "shadow"
+              ? style.getPropertyValue("--tw-shadow-color")
+              : match[1].startsWith("border") || match[1].startsWith("divide") || match[1] === "outline"
+                ? style.borderTopColor
+                : style.color;
+  probe.remove();
+  const normalized = color.trim();
+  return normalized && normalized !== "transparent" && normalized !== "rgba(0, 0, 0, 0)"
+    ? normalized
+    : null;
+}
+
 function renderTokenRow(
   root: HTMLElement,
   binding: IntentBinding,
@@ -1415,50 +3241,33 @@ function renderTokenRow(
   const row = document.createElement("div");
   row.className = "intent-layer-token-row";
   row.dataset.intentTokenCategory = token.category ?? "unknown";
-  row.style.display = "grid";
-  row.style.gridTemplateColumns = "1fr 1fr auto auto";
-  row.style.gap = "8px";
-  row.style.alignItems = "center";
-  row.style.marginTop = "8px";
+  row.dataset.intentToken = token.token;
 
   const label = document.createElement("div");
   label.className = "intent-layer-token-label";
   label.textContent = `${token.category}: ${token.token}`;
-  label.style.fontSize = "12px";
-  label.style.fontWeight = "700";
 
   const select = document.createElement("select");
-  select.style.width = "100%";
-  select.style.border = "1px solid #cbd5e1";
-  select.style.borderRadius = "6px";
-  select.style.padding = "6px";
-  select.style.fontSize = "12px";
-
-  for (const candidate of candidatesForToken(token.token)) {
-    const option = document.createElement("option");
-    option.value = candidate;
-    option.textContent = candidate;
-    option.selected = candidate === token.token;
-    select.appendChild(option);
-  }
-
   const preview = createButton(t("preview"));
+  preview.dataset.intentAction = "token-preview";
   const apply = createButton(scope?.isShared ? t("applyAll") : t("apply"));
+  apply.dataset.intentAction = "token-apply";
+  apply.disabled = true;
   if (scope?.isShared) {
     const title = `This source binding is rendered ${scope.renderedInstanceCount} times on the page.`;
     preview.title = title;
     apply.title = title;
   }
+
+  const controls = document.createElement("div");
+  controls.className = "intent-layer-token-controls";
+  const reset = createButton(t("resetPreview"));
+  reset.dataset.intentAction = "reset-dom-preview";
+  reset.hidden = true;
+  let currentCandidates = candidatesForToken(token.token);
+
   const previewBox = document.createElement("pre");
   previewBox.className = "intent-layer-preview-box";
-  previewBox.style.gridColumn = "1 / -1";
-  previewBox.style.margin = "0";
-  previewBox.style.padding = "8px";
-  previewBox.style.borderRadius = "6px";
-  previewBox.style.background = "#f8fafc";
-  previewBox.style.border = "1px solid #e2e8f0";
-  previewBox.style.fontSize = "11px";
-  previewBox.style.whiteSpace = "pre-wrap";
   previewBox.style.display = "none";
 
   function patchRequest(): PatchRequest {
@@ -1471,10 +3280,127 @@ function renderTokenRow(
     };
   }
 
+  function chooseCandidate(candidate: string) {
+    if (!currentCandidates.includes(candidate)) return;
+    select.value = candidate;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function renderCandidateControls() {
+    controls.innerHTML = "";
+    if (supportsTokenStepper(token.token)) {
+      const stepperCandidates = orderedStepperCandidates(currentCandidates);
+      const stepper = document.createElement("div");
+      stepper.className = "intent-layer-token-stepper";
+      const previous = createButton("-");
+      previous.type = "button";
+      previous.title = t("decreaseValue");
+      previous.setAttribute("aria-label", t("decreaseValue"));
+      previous.dataset.intentAction = "candidate-previous";
+      const output = document.createElement("output");
+      output.textContent = select.value;
+      const next = createButton("+");
+      next.type = "button";
+      next.title = t("increaseValue");
+      next.setAttribute("aria-label", t("increaseValue"));
+      next.dataset.intentAction = "candidate-next";
+      const index = Math.max(0, stepperCandidates.indexOf(select.value));
+      previous.disabled = index <= 0;
+      next.disabled = index >= stepperCandidates.length - 1;
+      previous.addEventListener("click", () => chooseCandidate(stepperCandidates[index - 1]));
+      next.addEventListener("click", () => chooseCandidate(stepperCandidates[index + 1]));
+      stepper.append(previous, output, next);
+      controls.appendChild(stepper);
+    }
+
+    if (token.category === "color") {
+      const colorCandidates: Array<{ candidate: string; color: string }> = [];
+      for (const candidate of currentCandidates) {
+        const color = candidateColor(candidate);
+        if (color) colorCandidates.push({ candidate, color });
+        if (colorCandidates.length >= 18) break;
+      }
+      if (colorCandidates.length < 2) {
+        reset.hidden = select.value === token.token;
+        controls.appendChild(reset);
+        return;
+      }
+      const swatches = document.createElement("div");
+      swatches.className = "intent-layer-color-swatches";
+      for (const { candidate, color } of colorCandidates) {
+        const swatch = createButton("");
+        swatch.type = "button";
+        swatch.className += " intent-layer-color-swatch";
+        swatch.dataset.intentCandidate = candidate;
+        swatch.dataset.intentActive = candidate === select.value ? "true" : "false";
+        swatch.title = candidate;
+        swatch.setAttribute("aria-label", candidate);
+        swatch.style.setProperty("background", color, "important");
+        swatch.addEventListener("click", () => chooseCandidate(candidate));
+        swatches.appendChild(swatch);
+      }
+      controls.appendChild(swatches);
+    }
+    reset.hidden = select.value === token.token;
+    controls.appendChild(reset);
+  }
+
+  function renderCandidates(candidates: string[]) {
+    const selected = select.value || token.token;
+    currentCandidates = [...new Set([token.token, ...candidates])];
+    select.innerHTML = "";
+    for (const candidate of currentCandidates) {
+      const option = document.createElement("option");
+      option.value = candidate;
+      option.textContent = candidate;
+      option.selected = candidate === selected;
+      select.appendChild(option);
+    }
+    if (!currentCandidates.includes(selected)) select.value = token.token;
+    renderCandidateControls();
+  }
+
+  select.addEventListener("change", () => {
+    apply.disabled = true;
+    previewBox.style.display = "none";
+    previewBox.textContent = "";
+    const affected = applyRuntimeDomPreview(binding.id, token.token, select.value);
+    renderCandidateControls();
+    if (select.value !== token.token) {
+      setStatus(
+        overlayLanguage === "ko"
+          ? `DOM 미리보기: ${affected}개 렌더, source는 아직 바뀌지 않았습니다.`
+          : `DOM preview: ${affected} render(s); source is unchanged.`
+      );
+    }
+  });
+
+  reset.addEventListener("click", () => {
+    clearRuntimeDomPreview();
+    select.value = token.token;
+    apply.disabled = true;
+    previewBox.style.display = "none";
+    previewBox.textContent = "";
+    renderCandidateControls();
+    setStatus(t("resetPreview"));
+  });
+
+  renderCandidates(currentCandidates);
+  void intentFetch(`/__intent/candidates?token=${encodeURIComponent(token.token)}`)
+    .then((response) => response.json() as Promise<{ candidates?: string[] }>)
+    .then((result) => {
+      if (select.isConnected && result.candidates && result.candidates.length > 1) {
+        renderCandidates(result.candidates);
+      }
+    })
+    .catch(() => undefined);
+
   preview.addEventListener("click", async () => {
     const request = patchRequest();
+    if (request.nextToken === request.oldToken) return;
     const startedAt = performance.now();
     preview.disabled = true;
+    apply.disabled = true;
     try {
       const result = await requestJson<PreviewResponse>("/__intent/preview", {
         method: "POST",
@@ -1485,9 +3411,15 @@ function renderTokenRow(
       const renderStartedAt = performance.now();
       previewBox.style.display = "block";
       if (result.ok) {
+        const affected = applyRuntimeDomPreview(binding.id, token.token, select.value);
+        apply.disabled = false;
+        reset.hidden = false;
         previewBox.textContent = [`- ${result.before}`, `+ ${result.after}`].join("\n");
-        setStatus(`Preview ${result.oldToken} -> ${result.nextToken} in ${result.metrics.previewMs}ms`);
+        setStatus(
+          `Preview ${result.oldToken} -> ${result.nextToken} in ${result.metrics.previewMs}ms; ${affected} render(s)`
+        );
       } else {
+        clearRuntimeDomPreview();
         previewBox.textContent = result.detail ?? result.reason;
         setStatus(`Preview rejected: ${result.reason}`);
       }
@@ -1505,6 +3437,7 @@ function renderTokenRow(
         reason: result.ok ? undefined : result.reason
       });
     } catch (error) {
+      clearRuntimeDomPreview();
       previewBox.style.display = "block";
       previewBox.textContent = `${t("requestFailed")}: ${requestErrorMessage(error)}`;
       setStatus(previewBox.textContent);
@@ -1516,6 +3449,7 @@ function renderTokenRow(
   apply.addEventListener("click", async () => {
     const request = patchRequest();
     const startedAt = performance.now();
+    clearRuntimeDomPreview();
     apply.disabled = true;
     try {
       const result = await requestJson<PatchResponse>("/__intent/apply", {
@@ -1551,12 +3485,10 @@ function renderTokenRow(
       });
     } catch (error) {
       setStatus(`${t("requestFailed")}: ${requestErrorMessage(error)}`);
-    } finally {
-      apply.disabled = false;
     }
   });
 
-  row.append(label, select, preview, apply, previewBox);
+  row.append(label, select, preview, apply, controls, previewBox);
   root.appendChild(row);
 }
 
@@ -1604,7 +3536,7 @@ function renderAgentTaskForm(
   queueBox.textContent = "Loading...";
 
   async function renderQueueStatus() {
-    const response = await fetch("/__intent/agent-queue");
+    const response = await intentFetch("/__intent/agent-queue");
     const result = (await response.json()) as AgentQueueResponse;
     if (!("kind" in result)) {
       queueBox.textContent = result.detail ?? result.reason;
@@ -1633,7 +3565,7 @@ function renderAgentTaskForm(
   queueSection.append(queueHeader, queueBox);
 
   create.addEventListener("click", async () => {
-    const response = await fetch("/__intent/agent-task", {
+    const response = await intentFetch("/__intent/agent-task", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -1679,7 +3611,7 @@ function renderAgentTaskForm(
   const record = createButton(t("agentRecord"));
   record.style.marginTop = "8px";
   record.addEventListener("click", async () => {
-    const response = await fetch("/__intent/agent-result", {
+    const response = await intentFetch("/__intent/agent-result", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -1715,12 +3647,17 @@ function renderSetupPanel(
     onboardingCompletedAt: null,
     updatedAt: new Date().toISOString(),
     overlay: overlaySettings,
+    mcp: {
+      codexEnabled: false,
+      claudeEnabled: false
+    },
     agent: {
+      legacyQueueEnabled: false,
       runEnabled: false,
       codexCommand: null,
       claudeCommand: null,
-      codexSkillEnabled: true,
-      claudeHookEnabled: true
+      codexSkillEnabled: false,
+      claudeHookEnabled: false
     }
   };
   let draftLanguage = settings.language;
@@ -1728,6 +3665,9 @@ function renderSetupPanel(
   let draftDensity = settings.overlay.density;
   let draftDefaultCollapsed = settings.overlay.defaultCollapsed;
   let draftAutoOpenSetup = settings.overlay.autoOpenSetup;
+  let draftCodexMcpEnabled = settings.mcp.codexEnabled;
+  let draftClaudeMcpEnabled = settings.mcp.claudeEnabled;
+  let draftLegacyQueueEnabled = settings.agent.legacyQueueEnabled;
   let draftAgentRunEnabled = settings.agent.runEnabled;
   let draftCodexCommand = settings.agent.codexCommand ?? "";
   let draftClaudeCommand = settings.agent.claudeCommand ?? "";
@@ -1742,6 +3682,7 @@ function renderSetupPanel(
   });
 
   const currentAgentDraft = () => ({
+    legacyQueueEnabled: draftLegacyQueueEnabled,
     runEnabled: draftAgentRunEnabled,
     codexCommand: draftCodexCommand.trim() || null,
     claudeCommand: draftClaudeCommand.trim() || null,
@@ -1749,11 +3690,17 @@ function renderSetupPanel(
     claudeHookEnabled: draftClaudeHookEnabled
   });
 
+  const currentMcpDraft = () => ({
+    codexEnabled: draftCodexMcpEnabled,
+    claudeEnabled: draftClaudeMcpEnabled
+  });
+
   const saveDraft = (completeOnboarding: boolean, resetOnboarding = false) =>
     saveSetup(panel, setStatus, completeOnboarding, {
       resetOnboarding,
       language: draftLanguage,
       overlay: currentOverlayDraft(),
+      mcp: currentMcpDraft(),
       agent: currentAgentDraft()
     });
 
@@ -1799,8 +3746,10 @@ function renderSetupPanel(
         ? "Workspace"
         : check.name === "language"
           ? t("language")
-          : check.name === "graph"
+            : check.name === "graph"
             ? "Graph"
+            : check.name === "mcp-integrations"
+              ? t("aiConnections")
             : check.name === "agent-integrations"
               ? t("agentSettings")
               : "Agent";
@@ -1821,6 +3770,11 @@ function renderSetupPanel(
         `${status.agent.claudeHookEnabled ? t("claudeHook") : "Claude hook off"}: ${
           status.agent.claudeHookReady ? "ready" : "setup"
         }`
+      ].join(" / ");
+    } else if (check.name === "mcp-integrations" && status) {
+      detail.textContent = [
+        `Codex: ${status.mcp.codexEnabled ? (status.mcp.codexReady ? "ready" : "setup") : "off"}`,
+        `Claude: ${status.mcp.claudeEnabled ? (status.mcp.claudeReady ? "ready" : "setup") : "off"}`
       ].join(" / ");
     } else {
       detail.textContent = check.detail;
@@ -1904,6 +3858,40 @@ function renderSetupPanel(
     createSettingRow(t("autoOpenSetup"), t("autoOpenSetupDetail"), autoOpenToggle)
   );
 
+  const mcpSection = document.createElement("div");
+  mcpSection.className = "intent-layer-section";
+  const mcpTitle = document.createElement("div");
+  mcpTitle.className = "intent-layer-section-title";
+  mcpTitle.textContent = t("aiConnections");
+  const mcpNote = document.createElement("p");
+  mcpNote.textContent = t("aiConnectionsDetail");
+  const codexMcpToggle = createToggleButton(draftCodexMcpEnabled);
+  codexMcpToggle.addEventListener("click", () => {
+    draftCodexMcpEnabled = !draftCodexMcpEnabled;
+    void saveDraft(false);
+  });
+  const claudeMcpToggle = createToggleButton(draftClaudeMcpEnabled);
+  claudeMcpToggle.addEventListener("click", () => {
+    draftClaudeMcpEnabled = !draftClaudeMcpEnabled;
+    void saveDraft(false);
+  });
+  mcpSection.append(
+    mcpTitle,
+    mcpNote,
+    createSettingRow(t("codexMcp"), "", codexMcpToggle),
+    createSettingRow(t("claudeMcp"), "", claudeMcpToggle)
+  );
+  if (status) {
+    const connectionStatus = document.createElement("pre");
+    connectionStatus.className = "intent-layer-preview-box";
+    connectionStatus.textContent = [
+      `Codex: ${status.mcp.codexEnabled ? (status.mcp.codexReady ? "ready" : "setup") : "off"} (${status.mcp.codexConfigPath})`,
+      `Claude: ${status.mcp.claudeEnabled ? (status.mcp.claudeReady ? "ready" : "setup") : "off"} (${status.mcp.claudeConfigPath})`,
+      `MCP: ${status.mcp.serverCommand} ${status.mcp.serverArgs.join(" ")}`
+    ].join("\n");
+    mcpSection.appendChild(connectionStatus);
+  }
+
   const agentSection = document.createElement("div");
   agentSection.className = "intent-layer-section";
   const agentTitle = document.createElement("div");
@@ -1973,10 +3961,27 @@ function renderSetupPanel(
     createSettingRow(t("agentRunToggle"), t("agentRunToggleDetail"), runToggle),
     commandGrid
   );
+  const legacyAgent = document.createElement("div");
+  legacyAgent.className = "intent-layer-section";
+  const legacyAgentToggle = createToggleButton(draftLegacyQueueEnabled);
+  legacyAgentToggle.addEventListener("click", () => {
+    draftLegacyQueueEnabled = !draftLegacyQueueEnabled;
+    if (!draftLegacyQueueEnabled) {
+      draftAgentRunEnabled = false;
+      draftCodexSkillEnabled = false;
+      draftClaudeHookEnabled = false;
+    }
+    draftCodexCommand = codexInput.value;
+    draftClaudeCommand = claudeInput.value;
+    void saveDraft(false);
+  });
+  legacyAgent.append(createSettingRow(t("legacyAgent"), "", legacyAgentToggle));
+  if (draftLegacyQueueEnabled) legacyAgent.appendChild(agentSection);
 
   const actions = document.createElement("div");
   actions.className = "intent-layer-actions";
   const save = createButton(status?.settingsReady ? t("saveSettings") : t("setupApply"), "primary");
+  save.dataset.intentAction = "save-settings";
   save.addEventListener("click", () => {
     draftCodexCommand = codexInput.value;
     draftClaudeCommand = claudeInput.value;
@@ -1991,13 +3996,22 @@ function renderSetupPanel(
   });
   actions.append(save, reset);
 
-  wrapper.append(title, intro, statusSection, languageSection, panelSection, agentSection, actions);
+  wrapper.append(
+    title,
+    intro,
+    statusSection,
+    languageSection,
+    panelSection,
+    mcpSection,
+    legacyAgent,
+    actions
+  );
   root.appendChild(wrapper);
 }
 
 async function fetchSetupStatus(language = overlayLanguage): Promise<IntentSetupStatus | null> {
   try {
-    const response = await fetch(`/__intent/setup?language=${encodeURIComponent(language)}`);
+    const response = await intentFetch(`/__intent/setup?language=${encodeURIComponent(language)}`);
     const status = (await response.json()) as SetupResponse;
     latestSetupStatus = status;
     syncSettings(status.settings);
@@ -2014,7 +4028,12 @@ async function saveSetup(
   patch: {
     language?: IntentLayerLanguage;
     overlay?: IntentOverlaySettings;
+    mcp?: {
+      codexEnabled: boolean;
+      claudeEnabled: boolean;
+    };
     agent?: {
+      legacyQueueEnabled: boolean;
       runEnabled: boolean;
       codexCommand: string | null;
       claudeCommand: string | null;
@@ -2024,7 +4043,7 @@ async function saveSetup(
     resetOnboarding?: boolean;
   } = {}
 ) {
-  const response = await fetch("/__intent/setup", {
+  const response = await intentFetch("/__intent/setup", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -2033,6 +4052,7 @@ async function saveSetup(
       completeOnboarding,
       resetOnboarding: patch.resetOnboarding,
       overlay: patch.overlay,
+      mcp: patch.mcp,
       agent: patch.agent
     })
   });
@@ -2133,6 +4153,7 @@ function renderUndoHistory(
         revert.title = item.next ? "Revert latest patch" : "Revert newer patches first";
         revert.addEventListener("click", async () => {
           if (!item.next) return;
+          clearRuntimeDomPreview();
           revert.disabled = true;
           revert.style.cursor = "default";
           try {
@@ -2181,7 +4202,7 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
   wrapper.appendChild(body);
   root.appendChild(wrapper);
 
-  void fetch("/__intent/conflicts")
+  void intentFetch("/__intent/conflicts")
     .then((response) => response.json() as Promise<ConflictReportResponse>)
     .then((report) => {
       body.innerHTML = "";
@@ -2219,7 +4240,7 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
         action.addEventListener("click", async () => {
           action.disabled = true;
           action.style.cursor = "default";
-          const response = await fetch("/__intent/resolve-conflict", {
+          const response = await intentFetch("/__intent/resolve-conflict", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
@@ -2250,6 +4271,7 @@ function renderConflictPanel(root: HTMLElement, setStatus: (message: string) => 
 }
 
 function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status: string, scope: RenderScope | null = null) {
+  clearRuntimeDomPreview();
   panel.innerHTML = "";
   panel.dataset.intentCollapsed = overlayCollapsed ? "true" : "false";
   applyOverlaySettingsToPanel(panel);
@@ -2283,6 +4305,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   actions.className = "intent-layer-actions intent-layer-header-actions";
 
   const pick = createButton(t("pick"), "primary");
+  pick.dataset.intentAction = "pick";
   pick.title = "Pick an element on the page";
   pick.addEventListener("click", () => {
     overlayView = "editor";
@@ -2291,6 +4314,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   actions.appendChild(pick);
 
   const setup = createButton(t("setup"));
+  setup.dataset.intentAction = "setup";
   setup.title = t("setupOpen");
   setup.addEventListener("click", () => {
     overlayView = overlayView === "setup" ? "editor" : "setup";
@@ -2306,10 +4330,12 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   actions.appendChild(setup);
 
   const undo = createButton(t("undo"));
+  undo.dataset.intentAction = "undo";
   undo.title = "Revert the latest direct patch";
   undo.addEventListener("click", async () => {
     overlayView = "editor";
     const startedAt = performance.now();
+    clearRuntimeDomPreview();
     undo.disabled = true;
     try {
       const result = await requestJson<RevertResponse>("/__intent/revert-last", { method: "POST" });
@@ -2352,6 +4378,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   actions.appendChild(undo);
 
   const toggle = createButton(overlayCollapsed ? t("expand") : t("minimize"));
+  toggle.dataset.intentAction = "collapse";
   toggle.title = overlayCollapsed ? "Expand the Intent Layer panel" : "Minimize the Intent Layer panel";
   toggle.addEventListener("click", () => {
     overlayCollapsed = !overlayCollapsed;
@@ -2379,15 +4406,121 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
   } else {
     const effectiveScope = scope ?? {
       renderedInstanceCount: 1,
-      isShared: false
+      isShared: false,
+      activeTokens: null
     };
 
-    const editableTokens = binding.tokens.filter((item) => item.editable);
-    renderWorkflowRail(content, binding, editableTokens.length);
+    const allEditableTokens = binding.tokens.filter((item) => item.editable);
+    const runtimeActiveTokens =
+      binding.className.kind === "call-literals" && effectiveScope.activeTokens
+        ? new Set(effectiveScope.activeTokens)
+        : null;
+    const editableTokens = runtimeActiveTokens
+      ? allEditableTokens.filter((item) => runtimeActiveTokens.has(item.token))
+      : allEditableTokens;
+    const runtimeInactiveCount = allEditableTokens.length - editableTokens.length;
+    renderWorkflowRail(content, binding, editableTokens.length + (binding.textContent ? 1 : 0));
     renderIntentMap(content, binding, effectiveScope, editableTokens);
 
-    const directSection = createSection(t("directEdit"), editableTokens.length > 0 ? "ready" : "warn");
-    if (editableTokens.length === 0) {
+    const textEditor = renderLiteralTextEditor(
+      binding,
+      (message) => {
+        statusLine.textContent = message;
+      },
+      (message, refreshedBinding) => {
+        if (refreshedBinding) {
+          panel.dispatchEvent(
+            new CustomEvent<BindingRefreshDetail>("intent:binding-refreshed", {
+              detail: { binding: refreshedBinding, message }
+            })
+          );
+          return;
+        }
+        renderBinding(panel, binding, message, effectiveScope);
+      }
+    );
+    if (textEditor) content.appendChild(textEditor);
+
+    const layoutComposer = renderGridLayoutComposer(
+      binding,
+      (message) => {
+        statusLine.textContent = message;
+      },
+      (message, refreshedBinding) => {
+        if (refreshedBinding) {
+          panel.dispatchEvent(
+            new CustomEvent<BindingRefreshDetail>("intent:binding-refreshed", {
+              detail: { binding: refreshedBinding, message }
+            })
+          );
+          return;
+        }
+        renderBinding(panel, binding, message, effectiveScope);
+      }
+    );
+    if (layoutComposer) content.appendChild(layoutComposer);
+
+    const flexComposer = renderFlexLayoutComposer(
+      binding,
+      (message) => {
+        statusLine.textContent = message;
+      },
+      (message, refreshedBinding) => {
+        if (refreshedBinding) {
+          panel.dispatchEvent(
+            new CustomEvent<BindingRefreshDetail>("intent:binding-refreshed", {
+              detail: { binding: refreshedBinding, message }
+            })
+          );
+          return;
+        }
+        renderBinding(panel, binding, message, effectiveScope);
+      }
+    );
+    if (flexComposer) content.appendChild(flexComposer);
+
+    const composerManagedProperties = new Set<string>();
+    if (layoutComposer?.dataset.intentLayoutSelectedRole === "parent") {
+      composerManagedProperties.add("layout.display");
+      composerManagedProperties.add("layout.gridColumns");
+    } else if (layoutComposer?.dataset.intentLayoutSelectedRole === "child") {
+      composerManagedProperties.add("layout.columnStart");
+      composerManagedProperties.add("layout.columnSpan");
+    }
+    if (flexComposer?.dataset.intentLayoutSelectedRole === "parent") {
+      for (const property of [
+        "layout.display",
+        "layout.flexDirection",
+        "layout.flexWrap",
+        "layout.justifyContent",
+        "layout.alignItems",
+        "layout.gap"
+      ]) {
+        composerManagedProperties.add(property);
+      }
+    } else if (flexComposer?.dataset.intentLayoutSelectedRole === "child") {
+      composerManagedProperties.add("layout.alignSelf");
+    }
+    const directEditableTokens = editableTokens.filter((token) => {
+      const semantic = describeTailwindToken(token.token);
+      return !semantic || !composerManagedProperties.has(semantic.property);
+    });
+
+    const directSection = createSection(t("directEdit"), directEditableTokens.length > 0 ? "ready" : "warn");
+    directSection.dataset.intentDirectEdit = "true";
+    if (runtimeInactiveCount > 0) {
+      const runtimeNote = document.createElement("p");
+      runtimeNote.className = "intent-layer-runtime-note";
+      runtimeNote.dataset.intentRuntimeInactiveCount = String(runtimeInactiveCount);
+      runtimeNote.textContent = `${t("runtimeInactive")} (${runtimeInactiveCount})`;
+      directSection.appendChild(runtimeNote);
+    }
+    if (
+      directEditableTokens.length === 0 &&
+      !binding.textContent &&
+      !layoutComposer &&
+      !flexComposer
+    ) {
       const empty = document.createElement("p");
       empty.textContent = t("inspectableNoTokens");
       empty.style.fontSize = "12px";
@@ -2397,7 +4530,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
 
     const tokenList = document.createElement("div");
     tokenList.className = "intent-layer-token-list";
-    for (const token of editableTokens) {
+    for (const token of directEditableTokens) {
       renderTokenRow(
         tokenList,
         binding,
@@ -2419,14 +4552,28 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
         }
       );
     }
-    if (editableTokens.length > 0) {
+    if (directEditableTokens.length > 0) {
       directSection.appendChild(tokenList);
     }
-    content.appendChild(directSection);
+    if (
+      directEditableTokens.length > 0 ||
+      runtimeInactiveCount > 0 ||
+      (!binding.textContent && !layoutComposer && !flexComposer)
+    ) {
+      content.appendChild(directSection);
+    }
 
-    renderAgentTaskForm(content, binding, (message) => {
-      statusLine.textContent = message;
-    });
+    if (latestSetupStatus?.settings.agent.legacyQueueEnabled) {
+      const legacyHandoff = document.createElement("details");
+      const legacyHandoffSummary = document.createElement("summary");
+      legacyHandoffSummary.textContent = t("legacyAgent");
+      const legacyHandoffContent = document.createElement("div");
+      renderAgentTaskForm(legacyHandoffContent, binding, (message) => {
+        statusLine.textContent = message;
+      });
+      legacyHandoff.append(legacyHandoffSummary, legacyHandoffContent);
+      content.appendChild(legacyHandoff);
+    }
 
     renderUndoHistory(content, (message, refreshedBinding) => {
       if (refreshedBinding) {
@@ -2449,6 +4596,7 @@ function renderBinding(panel: HTMLElement, binding: IntentBinding | null, status
 
 export function initIntentOverlay() {
   if (typeof window === "undefined") return;
+  registerRuntimeQueryHandler();
   const existingPanel = document.querySelector<HTMLElement>("[data-intent-overlay-root]");
   if (existingPanel) {
     const hotReloading = Boolean((import.meta as ImportMeta & { hot?: unknown }).hot);
@@ -2502,7 +4650,7 @@ export function initIntentOverlay() {
   panel.addEventListener("intent:start-pick", async () => {
     overlayView = "editor";
     const graphStartedAt = performance.now();
-    const response = await fetch("/__intent/graph");
+    const response = await intentFetch("/__intent/graph");
     graph = (await response.json()) as IntentGraph;
     graphFetchMs = Number((performance.now() - graphStartedAt).toFixed(3));
     pickStartedAt = performance.now();
@@ -2519,6 +4667,10 @@ export function initIntentOverlay() {
     }
     clearSelectedIntentElements();
     selectedScope = selectIntentElements(detail.binding.id);
+    publishRuntimeSelection(
+      detail.binding,
+      document.querySelector<HTMLElement>(intentIdSelector(detail.binding.id))
+    );
     renderBinding(panel, selectedBinding, detail.message, selectedScope);
   });
 
@@ -2541,6 +4693,7 @@ export function initIntentOverlay() {
         clearSelectedIntentElements();
         selectedBinding = null;
         selectedScope = null;
+        publishRuntimeSelection(null, null);
         const renderStartedAt = performance.now();
         setStatus(t("noIntentElement"));
         const renderedAt = performance.now();
@@ -2561,8 +4714,9 @@ export function initIntentOverlay() {
       const lookupStartedAt = performance.now();
       const intentId = element.dataset.intentId ?? "";
       clearSelectedIntentElements();
-      selectedScope = intentId ? selectIntentElements(intentId) : null;
+      selectedScope = intentId ? selectIntentElements(intentId, element) : null;
       selectedBinding = graph.entries[intentId] ?? null;
+      publishRuntimeSelection(selectedBinding, selectedBinding ? element : null);
       const lookupEndedAt = performance.now();
       const renderStartedAt = performance.now();
       overlayCollapsed = false;

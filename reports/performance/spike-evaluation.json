@@ -1,37 +1,37 @@
 {
-  "generatedAt": "2026-07-11T10:22:34.784Z",
+  "generatedAt": "2026-07-13T13:50:06.071Z",
   "contextPackUsed": true,
   "corpus": {
-    "generatedAt": "2026-07-11T10:21:57.984Z",
+    "generatedAt": "2026-07-13T13:49:10.659Z",
     "filesScanned": 8,
-    "classNameOccurrences": 40,
+    "classNameOccurrences": 43,
     "classification": {
-      "static": 28,
+      "static": 31,
       "simple-cn-clsx": 5,
       "partial-cn-clsx": 2,
       "read-only": 5
     },
     "classificationRatio": {
-      "static": 0.7,
-      "simple-cn-clsx": 0.125,
-      "partial-cn-clsx": 0.05,
-      "read-only": 0.125
+      "static": 0.7209,
+      "simple-cn-clsx": 0.1163,
+      "partial-cn-clsx": 0.0465,
+      "read-only": 0.1163
     },
     "tokenTotals": {
-      "static": 137,
-      "staticEditable": 129,
-      "staticAndSimple": 175,
-      "staticAndSimpleEditable": 166,
-      "supportedDirect": 185,
-      "supportedDirectEditable": 173,
-      "all": 185,
-      "allEditable": 173
+      "static": 144,
+      "staticEditable": 136,
+      "staticAndSimple": 183,
+      "staticAndSimpleEditable": 174,
+      "supportedDirect": 193,
+      "supportedDirectEditable": 181,
+      "all": 193,
+      "allEditable": 181
     },
     "editableCoverage": {
-      "staticOnly": 0.9416,
-      "staticAndSimpleCnClsx": 0.9486,
-      "supportedDirect": 0.9351,
-      "allObservedTokens": 0.9351
+      "staticOnly": 0.9444,
+      "staticAndSimpleCnClsx": 0.9508,
+      "supportedDirect": 0.9378,
+      "allObservedTokens": 0.9378
     },
     "unsupportedReasons": {
       "variable-reference": 2,
@@ -334,96 +334,19 @@
       },
       {
         "file": "src/App.tsx",
-        "line": 27,
-        "classification": "static",
-        "reason": "static-jsx-string",
-        "stringValues": [
-          "min-h-screen bg-slate-50 px-8 py-10 text-slate-950"
-        ],
-        "tokenCount": 5,
-        "editableTokenCount": 5
-      },
-      {
-        "file": "src/App.tsx",
         "line": 28,
-        "classification": "static",
-        "reason": "static-jsx-string",
+        "classification": "simple-cn-clsx",
+        "reason": "simple-cn",
         "stringValues": [
-          "mx-auto flex max-w-5xl flex-col gap-8"
+          "flex h-full flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm",
+          "ring-2 ring-teal-200"
         ],
-        "tokenCount": 5,
-        "editableTokenCount": 5
-      },
-      {
-        "file": "src/App.tsx",
-        "line": 29,
-        "classification": "static",
-        "reason": "static-jsx-string",
-        "stringValues": [
-          "flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
-        ],
-        "tokenCount": 9,
-        "editableTokenCount": 8
-      },
-      {
-        "file": "src/App.tsx",
-        "line": 30,
-        "classification": "static",
-        "reason": "static-jsx-string",
-        "stringValues": [
-          "text-sm font-semibold uppercase tracking-wide text-teal-700"
-        ],
-        "tokenCount": 5,
-        "editableTokenCount": 3
+        "tokenCount": 12,
+        "editableTokenCount": 11
       },
       {
         "file": "src/App.tsx",
         "line": 33,
-        "classification": "static",
-        "reason": "static-jsx-string",
-        "stringValues": [
-          "text-4xl font-bold leading-tight text-slate-950"
-        ],
-        "tokenCount": 4,
-        "editableTokenCount": 4
-      },
-      {
-        "file": "src/App.tsx",
-        "line": 36,
-        "classification": "static",
-        "reason": "static-jsx-string",
-        "stringValues": [
-          "max-w-2xl text-base leading-7 text-slate-600"
-        ],
-        "tokenCount": 4,
-        "editableTokenCount": 4
-      },
-      {
-        "file": "src/App.tsx",
-        "line": 42,
-        "classification": "static",
-        "reason": "static-jsx-string",
-        "stringValues": [
-          "grid grid-cols-3 gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-        ],
-        "tokenCount": 9,
-        "editableTokenCount": 8
-      },
-      {
-        "file": "src/App.tsx",
-        "line": 46,
-        "classification": "simple-cn-clsx",
-        "reason": "simple-cn",
-        "stringValues": [
-          "flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm",
-          "ring-2 ring-teal-200"
-        ],
-        "tokenCount": 11,
-        "editableTokenCount": 10
-      },
-      {
-        "file": "src/App.tsx",
-        "line": 51,
         "classification": "static",
         "reason": "static-jsx-string",
         "stringValues": [
@@ -434,7 +357,7 @@
       },
       {
         "file": "src/App.tsx",
-        "line": 52,
+        "line": 34,
         "classification": "static",
         "reason": "static-jsx-string",
         "stringValues": [
@@ -445,7 +368,7 @@
       },
       {
         "file": "src/App.tsx",
-        "line": 53,
+        "line": 35,
         "classification": "static",
         "reason": "static-jsx-string",
         "stringValues": [
@@ -456,7 +379,7 @@
       },
       {
         "file": "src/App.tsx",
-        "line": 57,
+        "line": 39,
         "classification": "static",
         "reason": "static-jsx-string",
         "stringValues": [
@@ -467,7 +390,7 @@
       },
       {
         "file": "src/App.tsx",
-        "line": 59,
+        "line": 41,
         "classification": "simple-cn-clsx",
         "reason": "simple-clsx",
         "stringValues": [
@@ -476,11 +399,121 @@
         ],
         "tokenCount": 9,
         "editableTokenCount": 9
+      },
+      {
+        "file": "src/App.tsx",
+        "line": 54,
+        "classification": "static",
+        "reason": "static-jsx-string",
+        "stringValues": [
+          "min-h-screen bg-slate-50 px-8 py-10 text-slate-950"
+        ],
+        "tokenCount": 5,
+        "editableTokenCount": 5
+      },
+      {
+        "file": "src/App.tsx",
+        "line": 55,
+        "classification": "static",
+        "reason": "static-jsx-string",
+        "stringValues": [
+          "mx-auto flex max-w-5xl flex-col gap-8"
+        ],
+        "tokenCount": 5,
+        "editableTokenCount": 5
+      },
+      {
+        "file": "src/App.tsx",
+        "line": 56,
+        "classification": "static",
+        "reason": "static-jsx-string",
+        "stringValues": [
+          "flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
+        ],
+        "tokenCount": 9,
+        "editableTokenCount": 8
+      },
+      {
+        "file": "src/App.tsx",
+        "line": 57,
+        "classification": "static",
+        "reason": "static-jsx-string",
+        "stringValues": [
+          "text-sm font-semibold uppercase tracking-wide text-teal-700"
+        ],
+        "tokenCount": 5,
+        "editableTokenCount": 3
+      },
+      {
+        "file": "src/App.tsx",
+        "line": 60,
+        "classification": "static",
+        "reason": "static-jsx-string",
+        "stringValues": [
+          "text-4xl font-bold leading-tight text-slate-950"
+        ],
+        "tokenCount": 4,
+        "editableTokenCount": 4
+      },
+      {
+        "file": "src/App.tsx",
+        "line": 63,
+        "classification": "static",
+        "reason": "static-jsx-string",
+        "stringValues": [
+          "max-w-2xl text-base leading-7 text-slate-600"
+        ],
+        "tokenCount": 4,
+        "editableTokenCount": 4
+      },
+      {
+        "file": "src/App.tsx",
+        "line": 69,
+        "classification": "static",
+        "reason": "static-jsx-string",
+        "stringValues": [
+          "grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:grid-cols-12"
+        ],
+        "tokenCount": 10,
+        "editableTokenCount": 9
+      },
+      {
+        "file": "src/App.tsx",
+        "line": 70,
+        "classification": "static",
+        "reason": "static-jsx-string",
+        "stringValues": [
+          "col-span-1 sm:col-span-5"
+        ],
+        "tokenCount": 2,
+        "editableTokenCount": 2
+      },
+      {
+        "file": "src/App.tsx",
+        "line": 73,
+        "classification": "static",
+        "reason": "static-jsx-string",
+        "stringValues": [
+          "col-span-1 sm:col-span-3"
+        ],
+        "tokenCount": 2,
+        "editableTokenCount": 2
+      },
+      {
+        "file": "src/App.tsx",
+        "line": 76,
+        "classification": "static",
+        "reason": "static-jsx-string",
+        "stringValues": [
+          "col-span-1 sm:col-span-4"
+        ],
+        "tokenCount": 2,
+        "editableTokenCount": 2
       }
     ]
   },
   "aiGeneratedCorpus": {
-    "generatedAt": "2026-07-11T10:21:58.047Z",
+    "generatedAt": "2026-07-13T13:49:10.701Z",
     "filesScanned": 50,
     "classNameOccurrences": 390,
     "classification": {
@@ -530,7 +563,7 @@
   },
   "externalCorpusHarness": {
     "importExitCode": 0,
-    "importMs": 1311.323,
+    "importMs": 1131.896,
     "stdoutBytes": 2607,
     "stderrBytes": 0,
     "available": true,
@@ -582,29 +615,29 @@
     "measurements": [
       {
         "file": "src/App.tsx",
-        "entries": 13,
-        "coldMs": 2.88,
+        "entries": 16,
+        "coldMs": 4.675,
         "warmupSamples": [
-          4.535,
-          0.843
+          2.01,
+          1.173
         ],
         "samples": [
-          0.823,
-          0.837,
-          0.873,
-          1.149,
-          0.93
+          1.204,
+          1.547,
+          1.686,
+          1.422,
+          1.675
         ],
-        "averageMs": 0.922,
-        "p95Ms": 1.149,
-        "maxMs": 1.149
+        "averageMs": 1.507,
+        "p95Ms": 1.686,
+        "maxMs": 1.686
       },
       {
         "file": "src/main.tsx",
         "entries": 0,
-        "coldMs": 0.008,
+        "coldMs": 0.017,
         "warmupSamples": [
-          0.002,
+          0.004,
           0.001
         ],
         "samples": [
@@ -619,13 +652,13 @@
         "maxMs": 0.001
       }
     ],
-    "averageMs": 0.462,
-    "p95Ms": 1.149,
-    "maxMs": 1.149,
-    "coldMaxMs": 2.88,
-    "warmAverageMs": 0.462,
-    "warmP95Ms": 1.149,
-    "warmMaxMs": 1.149,
+    "averageMs": 0.754,
+    "p95Ms": 1.686,
+    "maxMs": 1.686,
+    "coldMaxMs": 4.675,
+    "warmAverageMs": 0.754,
+    "warmP95Ms": 1.686,
+    "warmMaxMs": 1.686,
     "warmTargetMs": 5,
     "coldTargetMs": 10
   },
@@ -635,38 +668,38 @@
     "entries": 401,
     "bytes": 45352,
     "iterations": 20,
-    "coldMs": 19.323,
+    "coldMs": 35.061,
     "coldTargetMs": 40,
     "coldPass": true,
     "warmupSamples": [
-      12.784,
-      12.498
+      18.78,
+      18.193
     ],
     "samples": [
-      13.034,
-      6.309,
-      7.487,
-      8.044,
-      13.341,
-      7.543,
-      5.334,
-      5.446,
-      4.699,
-      10.098,
-      5.334,
-      6.887,
-      5.311,
-      6.579,
-      3.959,
-      4.063,
-      5.186,
-      3.891,
-      6.466,
-      4.062
+      15.397,
+      15.604,
+      11.693,
+      13.723,
+      15.817,
+      16.731,
+      10.85,
+      10.122,
+      11.336,
+      12.706,
+      8.415,
+      10.948,
+      9.864,
+      10.502,
+      6.366,
+      6.293,
+      6.464,
+      9.855,
+      6.261,
+      7.075
     ],
-    "averageMs": 6.654,
-    "p95Ms": 13.034,
-    "maxMs": 13.341,
+    "averageMs": 10.801,
+    "p95Ms": 15.817,
+    "maxMs": 16.731,
     "targetMs": 20,
     "gateMetric": "p95",
     "pass": true
@@ -681,70 +714,70 @@
     "samples": [
       {
         "label": "initial",
-        "transformMs": 15.481,
+        "transformMs": 65.406,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.577Z",
+        "generatedAt": "2026-07-13T13:49:12.219Z",
         "entries": 401,
-        "graphBytes": 755518
+        "graphBytes": 796173
       },
       {
         "label": "repeat-1",
-        "transformMs": 9.964,
+        "transformMs": 25.725,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.577Z",
+        "generatedAt": "2026-07-13T13:49:12.219Z",
         "entries": 401,
-        "graphBytes": 755518
+        "graphBytes": 796173
       },
       {
         "label": "repeat-2",
-        "transformMs": 15.445,
+        "transformMs": 19.416,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.577Z",
+        "generatedAt": "2026-07-13T13:49:12.219Z",
         "entries": 401,
-        "graphBytes": 755518
+        "graphBytes": 796173
       },
       {
         "label": "repeat-3",
-        "transformMs": 11.286,
+        "transformMs": 20.759,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.577Z",
+        "generatedAt": "2026-07-13T13:49:12.219Z",
         "entries": 401,
-        "graphBytes": 755518
+        "graphBytes": 796173
       },
       {
         "label": "repeat-4",
-        "transformMs": 10.11,
+        "transformMs": 20.227,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.577Z",
+        "generatedAt": "2026-07-13T13:49:12.219Z",
         "entries": 401,
-        "graphBytes": 755518
+        "graphBytes": 796173
       },
       {
         "label": "changed-token",
-        "transformMs": 16.483,
+        "transformMs": 24.587,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.671Z",
+        "generatedAt": "2026-07-13T13:49:12.370Z",
         "entries": 401,
-        "graphBytes": 755518
+        "graphBytes": 796173
       },
       {
         "label": "changed-token-repeat",
-        "transformMs": 9.944,
+        "transformMs": 22.808,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.671Z",
+        "generatedAt": "2026-07-13T13:49:12.370Z",
         "entries": 401,
-        "graphBytes": 755518
+        "graphBytes": 796173
       }
     ],
-    "firstGeneratedAt": "2026-07-11T10:21:59.577Z",
+    "firstGeneratedAt": "2026-07-13T13:49:12.219Z",
     "repeatedGeneratedAt": [
-      "2026-07-11T10:21:59.577Z",
-      "2026-07-11T10:21:59.577Z",
-      "2026-07-11T10:21:59.577Z",
-      "2026-07-11T10:21:59.577Z"
+      "2026-07-13T13:49:12.219Z",
+      "2026-07-13T13:49:12.219Z",
+      "2026-07-13T13:49:12.219Z",
+      "2026-07-13T13:49:12.219Z"
     ],
-    "changedGeneratedAt": "2026-07-11T10:21:59.671Z",
-    "changedRepeatGeneratedAt": "2026-07-11T10:21:59.671Z",
+    "changedGeneratedAt": "2026-07-13T13:49:12.370Z",
+    "changedRepeatGeneratedAt": "2026-07-13T13:49:12.370Z",
     "sameCodeStable": true,
     "changedCodeUpdates": true,
     "changedRepeatStable": true,
@@ -763,7 +796,7 @@
     "repeatEntryCount": 624,
     "changedEntryCount": 624,
     "changedRepeatEntryCount": 624,
-    "graphBytes": 1161365,
+    "graphBytes": 1218787,
     "changedFile": "src/screens/ProductScreen07.tsx",
     "changedFileTokenBefore": "gap-4",
     "changedFileTokenAfter": "gap-8",
@@ -775,10 +808,10 @@
       "src/screens/ProductScreen04.tsx"
     ],
     "unchangedFilesRetained": true,
-    "generatedAtInitial": "2026-07-11T10:22:00.102Z",
-    "generatedAtRepeat": "2026-07-11T10:22:00.102Z",
-    "generatedAtChanged": "2026-07-11T10:22:00.588Z",
-    "generatedAtChangedRepeat": "2026-07-11T10:22:00.588Z",
+    "generatedAtInitial": "2026-07-13T13:49:12.859Z",
+    "generatedAtRepeat": "2026-07-13T13:49:12.859Z",
+    "generatedAtChanged": "2026-07-13T13:49:13.361Z",
+    "generatedAtChangedRepeat": "2026-07-13T13:49:13.361Z",
     "sameCodeStable": true,
     "changedCodeUpdates": true,
     "changedRepeatStable": true,
@@ -786,411 +819,411 @@
     "initialSamples": [
       {
         "relativeFile": "src/screens/ProductScreen00.tsx",
-        "transformMs": 3.177,
+        "transformMs": 5.585,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.716Z",
+        "generatedAt": "2026-07-13T13:49:12.438Z",
         "entries": 26,
-        "graphBytes": 48473
+        "graphBytes": 50861
       },
       {
         "relativeFile": "src/screens/ProductScreen01.tsx",
-        "transformMs": 4.132,
+        "transformMs": 4.593,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.723Z",
+        "generatedAt": "2026-07-13T13:49:12.445Z",
         "entries": 52,
-        "graphBytes": 96863
+        "graphBytes": 101639
       },
       {
         "relativeFile": "src/screens/ProductScreen02.tsx",
-        "transformMs": 4.311,
+        "transformMs": 5.178,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.730Z",
+        "generatedAt": "2026-07-13T13:49:12.451Z",
         "entries": 78,
-        "graphBytes": 145253
+        "graphBytes": 152417
       },
       {
         "relativeFile": "src/screens/ProductScreen03.tsx",
-        "transformMs": 4.327,
+        "transformMs": 5.602,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.737Z",
+        "generatedAt": "2026-07-13T13:49:12.459Z",
         "entries": 104,
-        "graphBytes": 193643
+        "graphBytes": 203195
       },
       {
         "relativeFile": "src/screens/ProductScreen04.tsx",
-        "transformMs": 5.749,
+        "transformMs": 6.662,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.745Z",
+        "generatedAt": "2026-07-13T13:49:12.467Z",
         "entries": 130,
-        "graphBytes": 242033
+        "graphBytes": 253973
       },
       {
         "relativeFile": "src/screens/ProductScreen05.tsx",
-        "transformMs": 6.36,
+        "transformMs": 7.364,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.764Z",
+        "generatedAt": "2026-07-13T13:49:12.477Z",
         "entries": 156,
-        "graphBytes": 290423
+        "graphBytes": 304751
       },
       {
         "relativeFile": "src/screens/ProductScreen06.tsx",
-        "transformMs": 6.268,
+        "transformMs": 7.945,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.774Z",
+        "generatedAt": "2026-07-13T13:49:12.488Z",
         "entries": 182,
-        "graphBytes": 338787
+        "graphBytes": 355529
       },
       {
         "relativeFile": "src/screens/ProductScreen07.tsx",
-        "transformMs": 7.946,
+        "transformMs": 10,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.785Z",
+        "generatedAt": "2026-07-13T13:49:12.500Z",
         "entries": 208,
-        "graphBytes": 387177
+        "graphBytes": 406307
       },
       {
         "relativeFile": "src/screens/ProductScreen08.tsx",
-        "transformMs": 8.347,
+        "transformMs": 9.127,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.798Z",
+        "generatedAt": "2026-07-13T13:49:12.514Z",
         "entries": 234,
-        "graphBytes": 435567
+        "graphBytes": 457085
       },
       {
         "relativeFile": "src/screens/ProductScreen09.tsx",
-        "transformMs": 9.778,
+        "transformMs": 11.27,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.812Z",
+        "generatedAt": "2026-07-13T13:49:12.528Z",
         "entries": 260,
-        "graphBytes": 483931
+        "graphBytes": 507863
       },
       {
         "relativeFile": "src/screens/ProductScreen10.tsx",
-        "transformMs": 9.11,
+        "transformMs": 10.623,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.827Z",
+        "generatedAt": "2026-07-13T13:49:12.546Z",
         "entries": 286,
-        "graphBytes": 532321
+        "graphBytes": 558647
       },
       {
         "relativeFile": "src/screens/ProductScreen11.tsx",
-        "transformMs": 10.303,
+        "transformMs": 11.863,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.842Z",
+        "generatedAt": "2026-07-13T13:49:12.561Z",
         "entries": 312,
-        "graphBytes": 580711
+        "graphBytes": 609431
       },
       {
         "relativeFile": "src/screens/ProductScreen12.tsx",
-        "transformMs": 11.583,
+        "transformMs": 11.896,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.859Z",
+        "generatedAt": "2026-07-13T13:49:12.578Z",
         "entries": 338,
-        "graphBytes": 629101
+        "graphBytes": 660215
       },
       {
         "relativeFile": "src/screens/ProductScreen13.tsx",
-        "transformMs": 16.021,
+        "transformMs": 11.912,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.877Z",
+        "generatedAt": "2026-07-13T13:49:12.594Z",
         "entries": 364,
-        "graphBytes": 677491
+        "graphBytes": 710999
       },
       {
         "relativeFile": "src/screens/ProductScreen14.tsx",
-        "transformMs": 11.906,
+        "transformMs": 14.703,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.899Z",
+        "generatedAt": "2026-07-13T13:49:12.612Z",
         "entries": 390,
-        "graphBytes": 725881
+        "graphBytes": 761783
       },
       {
         "relativeFile": "src/screens/ProductScreen15.tsx",
-        "transformMs": 12.411,
+        "transformMs": 16.2,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.917Z",
+        "generatedAt": "2026-07-13T13:49:12.634Z",
         "entries": 416,
-        "graphBytes": 774271
+        "graphBytes": 812567
       },
       {
         "relativeFile": "src/screens/ProductScreen16.tsx",
-        "transformMs": 13.88,
+        "transformMs": 21.027,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.935Z",
+        "generatedAt": "2026-07-13T13:49:12.659Z",
         "entries": 442,
-        "graphBytes": 822661
+        "graphBytes": 863351
       },
       {
         "relativeFile": "src/screens/ProductScreen17.tsx",
-        "transformMs": 11.938,
+        "transformMs": 16.861,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.956Z",
+        "generatedAt": "2026-07-13T13:49:12.687Z",
         "entries": 468,
-        "graphBytes": 871051
+        "graphBytes": 914135
       },
       {
         "relativeFile": "src/screens/ProductScreen18.tsx",
-        "transformMs": 14.893,
+        "transformMs": 16.948,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:21:59.977Z",
+        "generatedAt": "2026-07-13T13:49:12.710Z",
         "entries": 494,
-        "graphBytes": 919441
+        "graphBytes": 964919
       },
       {
         "relativeFile": "src/screens/ProductScreen19.tsx",
-        "transformMs": 14.399,
+        "transformMs": 20.2,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.002Z",
+        "generatedAt": "2026-07-13T13:49:12.737Z",
         "entries": 520,
-        "graphBytes": 967831
+        "graphBytes": 1015677
       },
       {
         "relativeFile": "src/screens/ProductScreen20.tsx",
-        "transformMs": 15.352,
+        "transformMs": 18.568,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.024Z",
+        "generatedAt": "2026-07-13T13:49:12.765Z",
         "entries": 546,
-        "graphBytes": 1016221
+        "graphBytes": 1066461
       },
       {
         "relativeFile": "src/screens/ProductScreen21.tsx",
-        "transformMs": 16.618,
+        "transformMs": 24.889,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.050Z",
+        "generatedAt": "2026-07-13T13:49:12.794Z",
         "entries": 572,
-        "graphBytes": 1064611
+        "graphBytes": 1117245
       },
       {
         "relativeFile": "src/screens/ProductScreen22.tsx",
-        "transformMs": 19.644,
+        "transformMs": 21.245,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.075Z",
+        "generatedAt": "2026-07-13T13:49:12.829Z",
         "entries": 598,
-        "graphBytes": 1113001
+        "graphBytes": 1168029
       },
       {
         "relativeFile": "src/screens/ProductScreen23.tsx",
-        "transformMs": 19.157,
+        "transformMs": 21.497,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       }
     ],
     "repeatSamples": [
       {
         "relativeFile": "src/screens/ProductScreen00.tsx",
-        "transformMs": 10.526,
+        "transformMs": 13.029,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen01.tsx",
-        "transformMs": 9.531,
+        "transformMs": 10.559,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen02.tsx",
-        "transformMs": 8.17,
+        "transformMs": 11.137,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen03.tsx",
-        "transformMs": 8.082,
+        "transformMs": 9.639,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen04.tsx",
-        "transformMs": 9.473,
+        "transformMs": 9.956,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen05.tsx",
-        "transformMs": 9.488,
+        "transformMs": 11.031,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen06.tsx",
-        "transformMs": 8.853,
+        "transformMs": 10.028,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen07.tsx",
-        "transformMs": 9.491,
+        "transformMs": 9.756,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen08.tsx",
-        "transformMs": 10.968,
+        "transformMs": 11.289,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen09.tsx",
-        "transformMs": 7.921,
+        "transformMs": 10.728,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen10.tsx",
-        "transformMs": 8.936,
+        "transformMs": 11.885,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen11.tsx",
-        "transformMs": 8.67,
+        "transformMs": 11.602,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen12.tsx",
-        "transformMs": 8.114,
+        "transformMs": 12.621,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen13.tsx",
-        "transformMs": 9.714,
+        "transformMs": 11.032,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen14.tsx",
-        "transformMs": 9.976,
+        "transformMs": 9.623,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen15.tsx",
-        "transformMs": 9.459,
+        "transformMs": 9.945,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen16.tsx",
-        "transformMs": 9.837,
+        "transformMs": 11.726,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen17.tsx",
-        "transformMs": 10.176,
+        "transformMs": 8.479,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen18.tsx",
-        "transformMs": 8.136,
+        "transformMs": 10.748,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen19.tsx",
-        "transformMs": 8.582,
+        "transformMs": 8.256,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen20.tsx",
-        "transformMs": 8.061,
+        "transformMs": 11.861,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen21.tsx",
-        "transformMs": 10.039,
+        "transformMs": 8.299,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen22.tsx",
-        "transformMs": 8.756,
+        "transformMs": 7.952,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       },
       {
         "relativeFile": "src/screens/ProductScreen23.tsx",
-        "transformMs": 8.62,
+        "transformMs": 11.827,
         "transformReturnedCode": true,
-        "generatedAt": "2026-07-11T10:22:00.102Z",
+        "generatedAt": "2026-07-13T13:49:12.859Z",
         "entries": 624,
-        "graphBytes": 1161365
+        "graphBytes": 1218813
       }
     ],
     "changedSample": {
       "relativeFile": "src/screens/ProductScreen07.tsx",
-      "transformMs": 16.699,
+      "transformMs": 20.443,
       "transformReturnedCode": true,
-      "generatedAt": "2026-07-11T10:22:00.588Z",
+      "generatedAt": "2026-07-13T13:49:13.361Z",
       "entries": 624,
-      "graphBytes": 1161365
+      "graphBytes": 1218787
     },
     "changedRepeatSample": {
       "relativeFile": "src/screens/ProductScreen07.tsx",
-      "transformMs": 9.339,
+      "transformMs": 8.775,
       "transformReturnedCode": true,
-      "generatedAt": "2026-07-11T10:22:00.588Z",
+      "generatedAt": "2026-07-13T13:49:13.361Z",
       "entries": 624,
-      "graphBytes": 1161365
+      "graphBytes": 1218787
     },
-    "initialTotalMs": 406.934,
-    "repeatTotalMs": 439.395,
-    "changedFileTransformMs": 16.699,
-    "changedRepeatTransformMs": 9.339,
+    "initialTotalMs": 445.136,
+    "repeatTotalMs": 455.021,
+    "changedFileTransformMs": 20.443,
+    "changedRepeatTransformMs": 8.775,
     "changedFileTargetMs": 50,
     "pass": true
   },
@@ -1212,7 +1245,7 @@
         "repeatEntryCount": 102,
         "changedEntryCount": 102,
         "changedRepeatEntryCount": 102,
-        "graphBytes": 169831,
+        "graphBytes": 170880,
         "changedFile": "src/external/001-external-001-apps-v4-app-app-root-cards-account-access.tsx",
         "changedTokenBefore": "flex",
         "changedTokenAfter": "grid",
@@ -1224,18 +1257,18 @@
           "src/external/006-external-006-apps-v4-app-app-root-cards-empty-distribute-track.tsx"
         ],
         "unchangedFilesRetained": true,
-        "generatedAtInitial": "2026-07-11T10:22:00.766Z",
-        "generatedAtRepeat": "2026-07-11T10:22:00.766Z",
-        "generatedAtChanged": "2026-07-11T10:22:00.852Z",
-        "generatedAtChangedRepeat": "2026-07-11T10:22:00.852Z",
+        "generatedAtInitial": "2026-07-13T13:49:13.585Z",
+        "generatedAtRepeat": "2026-07-13T13:49:13.585Z",
+        "generatedAtChanged": "2026-07-13T13:49:13.691Z",
+        "generatedAtChangedRepeat": "2026-07-13T13:49:13.691Z",
         "sameCodeStable": true,
         "changedCodeUpdates": true,
         "changedRepeatStable": true,
         "entryCountStable": true,
-        "initialTotalMs": 108.588,
-        "repeatTotalMs": 76.187,
-        "changedFileTransformMs": 4.855,
-        "changedRepeatTransformMs": 3.091,
+        "initialTotalMs": 134.954,
+        "repeatTotalMs": 97.047,
+        "changedFileTransformMs": 5.729,
+        "changedRepeatTransformMs": 4.014,
         "changedFileTargetMs": 50,
         "pass": true
       },
@@ -1252,7 +1285,7 @@
         "repeatEntryCount": 104,
         "changedEntryCount": 104,
         "changedRepeatEntryCount": 104,
-        "graphBytes": 171977,
+        "graphBytes": 172813,
         "changedFile": "src/external/001-external-001-src-app-auth-components-logout-buttons.tsx",
         "changedTokenBefore": "flex",
         "changedTokenAfter": "grid",
@@ -1264,18 +1297,18 @@
           "src/external/006-external-006-src-app-auth-components-signup-form.tsx"
         ],
         "unchangedFilesRetained": true,
-        "generatedAtInitial": "2026-07-11T10:22:00.966Z",
-        "generatedAtRepeat": "2026-07-11T10:22:00.966Z",
-        "generatedAtChanged": "2026-07-11T10:22:01.051Z",
-        "generatedAtChangedRepeat": "2026-07-11T10:22:01.051Z",
+        "generatedAtInitial": "2026-07-13T13:49:13.858Z",
+        "generatedAtRepeat": "2026-07-13T13:49:13.858Z",
+        "generatedAtChanged": "2026-07-13T13:49:13.977Z",
+        "generatedAtChangedRepeat": "2026-07-13T13:49:13.977Z",
         "sameCodeStable": true,
         "changedCodeUpdates": true,
         "changedRepeatStable": true,
         "entryCountStable": true,
-        "initialTotalMs": 86.815,
-        "repeatTotalMs": 76.041,
-        "changedFileTransformMs": 4.033,
-        "changedRepeatTransformMs": 2.122,
+        "initialTotalMs": 126.573,
+        "repeatTotalMs": 108.77,
+        "changedFileTransformMs": 6.624,
+        "changedRepeatTransformMs": 4.502,
         "changedFileTargetMs": 50,
         "pass": true
       },
@@ -1292,7 +1325,7 @@
         "repeatEntryCount": 135,
         "changedEntryCount": 135,
         "changedRepeatEntryCount": 135,
-        "graphBytes": 220412,
+        "graphBytes": 221220,
         "changedFile": "src/external/001-external-001-app-locale-workspaceid-chat-page.tsx",
         "changedTokenBefore": "w-full",
         "changedTokenAfter": "w-1/2",
@@ -1304,18 +1337,18 @@
           "src/external/006-external-006-app-locale-login-page.tsx"
         ],
         "unchangedFilesRetained": true,
-        "generatedAtInitial": "2026-07-11T10:22:01.223Z",
-        "generatedAtRepeat": "2026-07-11T10:22:01.223Z",
-        "generatedAtChanged": "2026-07-11T10:22:01.345Z",
-        "generatedAtChangedRepeat": "2026-07-11T10:22:01.345Z",
+        "generatedAtInitial": "2026-07-13T13:49:14.231Z",
+        "generatedAtRepeat": "2026-07-13T13:49:14.231Z",
+        "generatedAtChanged": "2026-07-13T13:49:14.383Z",
+        "generatedAtChangedRepeat": "2026-07-13T13:49:14.383Z",
         "sameCodeStable": true,
         "changedCodeUpdates": true,
         "changedRepeatStable": true,
         "entryCountStable": true,
-        "initialTotalMs": 146.503,
-        "repeatTotalMs": 111.31,
-        "changedFileTransformMs": 6.241,
-        "changedRepeatTransformMs": 2.745,
+        "initialTotalMs": 202.741,
+        "repeatTotalMs": 138.517,
+        "changedFileTransformMs": 7.877,
+        "changedRepeatTransformMs": 4.097,
         "changedFileTargetMs": 50,
         "pass": true
       }
@@ -1325,9 +1358,278 @@
   },
   "graphLookupProxy": {
     "iterations": 1000,
-    "totalMs": 0.098,
-    "averageMs": 0.000098,
+    "totalMs": 0.117,
+    "averageMs": 0.000117,
     "note": "This measures id-to-binding graph lookup only, not a real browser click event."
+  },
+  "gridLayout": {
+    "iterations": 20,
+    "childCount": 8,
+    "breakpoint": "dashboard",
+    "editsRows": true,
+    "completedRoundTrips": 20,
+    "partialWriteCount": 0,
+    "byteRestorePass": true,
+    "preview": {
+      "samples": [
+        6.046,
+        3.261,
+        2.825,
+        3.107,
+        1.687,
+        2.663,
+        2.06,
+        1.862,
+        1.848,
+        2.358,
+        3.378,
+        2.696,
+        2.243,
+        2.417,
+        2.223,
+        1.835,
+        2.033,
+        3.342,
+        2.186,
+        2.826
+      ],
+      "averageMs": 2.645,
+      "p95Ms": 3.378,
+      "targetMs": 20,
+      "pass": true
+    },
+    "apply": {
+      "samples": [
+        3.804,
+        2.656,
+        2.729,
+        3.799,
+        3.134,
+        2.659,
+        3.738,
+        2.652,
+        3.657,
+        2.672,
+        2.813,
+        3.287,
+        2.476,
+        2.115,
+        2.915,
+        3.22,
+        3.378,
+        4.87,
+        2.633,
+        2.699
+      ],
+      "averageMs": 3.095,
+      "p95Ms": 3.804,
+      "targetMs": 50,
+      "pass": true
+    },
+    "revert": {
+      "samples": [
+        3.721,
+        2.878,
+        3.043,
+        3.455,
+        2.524,
+        3.307,
+        3.096,
+        4.213,
+        2.671,
+        2.84,
+        2.813,
+        3.306,
+        2.915,
+        2.57,
+        3.84,
+        4.611,
+        3.057,
+        2.819,
+        2.865,
+        2.967
+      ],
+      "averageMs": 3.176,
+      "p95Ms": 4.213
+    }
+  },
+  "literalText": {
+    "iterations": 20,
+    "completedRoundTrips": 20,
+    "partialWriteCount": 0,
+    "byteRestorePass": true,
+    "preview": {
+      "samples": [
+        0.811,
+        0.563,
+        0.769,
+        0.703,
+        0.678,
+        0.528,
+        0.68,
+        0.61,
+        0.626,
+        0.524,
+        0.495,
+        0.527,
+        0.452,
+        0.511,
+        0.513,
+        0.634,
+        0.515,
+        0.682,
+        2.315,
+        0.828
+      ],
+      "averageMs": 0.698,
+      "p95Ms": 0.828,
+      "targetMs": 20,
+      "pass": true
+    },
+    "apply": {
+      "samples": [
+        2.613,
+        2.497,
+        2.11,
+        1.976,
+        2.027,
+        2.126,
+        2.022,
+        2.242,
+        2.753,
+        1.741,
+        2.101,
+        1.901,
+        2.2,
+        1.662,
+        2.028,
+        2.226,
+        2.815,
+        3.275,
+        4.036,
+        3.034
+      ],
+      "averageMs": 2.369,
+      "p95Ms": 3.275,
+      "targetMs": 50,
+      "pass": true
+    },
+    "revert": {
+      "samples": [
+        2.281,
+        2.345,
+        2.841,
+        2.03,
+        2.424,
+        1.997,
+        4.555,
+        2.271,
+        1.842,
+        2.215,
+        2.184,
+        1.803,
+        2.665,
+        1.87,
+        2.78,
+        2.345,
+        2.97,
+        5.351,
+        4.032,
+        2.915
+      ],
+      "averageMs": 2.686,
+      "p95Ms": 4.555
+    }
+  },
+  "flexLayout": {
+    "iterations": 20,
+    "childCount": 8,
+    "breakpoint": "dashboard",
+    "completedRoundTrips": 20,
+    "partialWriteCount": 0,
+    "byteRestorePass": true,
+    "preview": {
+      "samples": [
+        5.054,
+        2.058,
+        2.851,
+        1.773,
+        2.106,
+        0.941,
+        2.805,
+        2.252,
+        1.222,
+        1.502,
+        1.667,
+        1.753,
+        0.927,
+        1.618,
+        1.237,
+        1.357,
+        1.49,
+        1.531,
+        2.774,
+        1.369
+      ],
+      "averageMs": 1.914,
+      "p95Ms": 2.851,
+      "targetMs": 20,
+      "pass": true
+    },
+    "apply": {
+      "samples": [
+        2.822,
+        2.761,
+        2.845,
+        2.715,
+        2.359,
+        2.322,
+        3.218,
+        3.39,
+        3.164,
+        2.456,
+        3.231,
+        2.433,
+        2.573,
+        3.36,
+        3.881,
+        3.37,
+        2.542,
+        3.75,
+        3.434,
+        2.111
+      ],
+      "averageMs": 2.937,
+      "p95Ms": 3.75,
+      "targetMs": 50,
+      "pass": true
+    },
+    "revert": {
+      "samples": [
+        2.858,
+        2.566,
+        2.564,
+        2.893,
+        2.082,
+        2.405,
+        2.675,
+        3.051,
+        3.819,
+        2.363,
+        2.684,
+        3.685,
+        4.541,
+        3.133,
+        3.31,
+        2.897,
+        2.99,
+        3.371,
+        2.089,
+        2.478
+      ],
+      "averageMs": 2.923,
+      "p95Ms": 3.819
+    }
   },
   "cli": {
     "initExitCode": 0,
@@ -1362,7 +1664,7 @@
     "agentResultCommand": "agent-result",
     "initOk": true,
     "initCreatedPathCount": 0,
-    "initExistingPathCount": 10,
+    "initExistingPathCount": 11,
     "initSchemaExists": true,
     "doctorOk": true,
     "doctorPassCount": 10,
@@ -1370,7 +1672,7 @@
     "doctorFailCount": 0,
     "doctorCheckCount": 10,
     "doctorGuidanceCount": 0,
-    "doctorMs": 2.225,
+    "doctorMs": 4.134,
     "doctorMissingPluginExitCode": 1,
     "doctorMissingPluginOk": false,
     "doctorMissingPluginPassCount": 7,
@@ -1381,7 +1683,7 @@
     "doctorMissingPluginHasVitePluginFailure": true,
     "doctorMissingPluginSourceFilesPass": true,
     "doctorMissingPluginGuidanceIncludesVite": true,
-    "doctorMissingPluginMs": 2.076,
+    "doctorMissingPluginMs": 12.655,
     "devOk": true,
     "devDryRun": true,
     "devHost": "127.0.0.1",
@@ -1390,15 +1692,15 @@
     "devUsesLocalVite": true,
     "devExecutablePresent": true,
     "devArgCount": 5,
-    "devMs": 0.246,
+    "devMs": 0.181,
     "filesScanned": 8,
-    "bindingCount": 40,
-    "directEditBindingCount": 35,
+    "bindingCount": 43,
+    "directEditBindingCount": 38,
     "readOnlyBindingCount": 5,
-    "supportedDirectCoverage": 0.875,
-    "editableTokenCoverage": 0.9351,
+    "supportedDirectCoverage": 0.8837,
+    "editableTokenCoverage": 0.9378,
     "syntaxErrorCount": 0,
-    "maxTransformMs": 0.901,
+    "maxTransformMs": 1.779,
     "gates": {
       "filesScanned": {
         "pass": true,
@@ -1412,65 +1714,65 @@
       },
       "supportedDirectCoverage": {
         "pass": true,
-        "actual": 0.875,
+        "actual": 0.8837,
         "min": 0.5
       },
       "maxFileTransformMs": {
         "pass": true,
-        "actual": 0.901,
+        "actual": 1.779,
         "max": 20
       }
     },
     "graphFileExists": true,
-    "graphEntryCount": 40,
+    "graphEntryCount": 43,
     "agentContextSubject": "DynamicRuntime",
     "agentContextOk": true,
-    "agentContextFile": ".intent/agent/context_2026-07-11T10-22-15-439Z.md",
+    "agentContextFile": ".intent/tmp/evaluation-agent/context_2026-07-13T13-49-15-409Z.md",
     "agentContextSelectedBindingId": "il_aecb838907",
     "agentContextSelectedRelativeFile": "fixtures/corpus/DynamicRuntime.tsx",
-    "agentContextGraphEntryCount": 40,
-    "agentContextDirectEditBindingCount": 35,
+    "agentContextGraphEntryCount": 43,
+    "agentContextDirectEditBindingCount": 38,
     "agentContextReadOnlyBindingCount": 5,
-    "agentContextEditableTokenCoverage": 0.9351,
+    "agentContextEditableTokenCoverage": 0.9378,
     "agentContextMarkdownBytes": 9295,
-    "agentContextMs": 15.721,
+    "agentContextMs": 2.655,
     "agentContextSectionsPresent": true,
     "agentTaskBindingId": "il_aecb838907",
     "agentTaskOk": true,
-    "agentTaskFile": ".intent/agent/task_2026-07-11T10-22-15-457Z.md",
+    "agentTaskFile": ".intent/tmp/evaluation-agent/task_2026-07-13T13-49-15-414Z.md",
     "agentTaskRelativeFile": "fixtures/corpus/DynamicRuntime.tsx",
     "agentTaskMarkdownBytes": 3996,
-    "agentTaskMs": 589.188,
+    "agentTaskMs": 18.081,
     "agentTaskSectionsPresent": true,
     "agentQueueOk": true,
-    "agentQueuePendingTaskCount": 1527,
-    "agentQueueLatestTask": ".intent/agent/task_2026-07-11T10-22-15-457Z.md",
+    "agentQueuePendingTaskCount": 9,
+    "agentQueueLatestTask": ".intent/tmp/evaluation-agent/task_2026-07-13T13-49-15-414Z.md",
     "agentClaimCodexOk": true,
-    "agentClaimCodexTaskFile": ".intent/agent/task_2026-07-11T10-22-15-457Z.md",
+    "agentClaimCodexTaskFile": ".intent/tmp/evaluation-agent/task_2026-07-13T13-49-15-414Z.md",
     "agentClaimCodexStatus": "claimed",
-    "agentClaimCodexLockFile": ".intent/agent/locks/task_2026-07-11T10-22-15-457Z.lock.json",
+    "agentClaimCodexLockFile": ".intent/tmp/evaluation-agent/locks/task_2026-07-13T13-49-15-414Z.lock.json",
     "agentLaunchCodexOk": true,
     "agentLaunchCodexTaskCreated": true,
-    "agentLaunchCodexTaskFile": ".intent/agent/task_2026-07-11T10-22-17-182Z.md",
+    "agentLaunchCodexTaskFile": ".intent/tmp/evaluation-agent/task_2026-07-13T13-49-15-468Z.md",
     "agentLaunchCodexExecuted": false,
     "agentLaunchCodexEnabled": false,
-    "agentLaunchCodexCommandText": "codex exec --sandbox workspace-write \"Read .intent/agent/task_2026-07-11T10-22-17-182Z.md and implement the requested change. Keep edits scoped to files allowed by the task. Run the required checks from the task when practical. After editing, record the result with intent-layer agent-result if this workspace supports it.\"",
-    "agentLaunchCodexMs": 1.632,
+    "agentLaunchCodexCommandText": "codex exec --sandbox workspace-write \"Read .intent/tmp/evaluation-agent/task_2026-07-13T13-49-15-468Z.md and implement the requested change. Keep edits scoped to files allowed by the task. Run the required checks from the task when practical. After editing, record the result with intent-layer agent-result if this workspace supports it.\"",
+    "agentLaunchCodexMs": 12.605,
     "agentLaunchClaudeOk": true,
     "agentLaunchClaudeTaskCreated": false,
-    "agentLaunchClaudeTaskFile": ".intent/agent/task_2026-07-11T10-22-15-457Z.md",
+    "agentLaunchClaudeTaskFile": ".intent/tmp/evaluation-agent/task_2026-07-13T13-49-15-414Z.md",
     "agentLaunchClaudeExecuted": false,
     "agentLaunchClaudeEnabled": false,
-    "agentLaunchClaudeCommandText": "claude -p \"Read .intent/agent/task_2026-07-11T10-22-15-457Z.md and implement the requested change. Keep edits scoped to files allowed by the task. Run the required checks from the task when practical. After editing, record the result with intent-layer agent-result if this workspace supports it.\"",
-    "agentLaunchClaudeMs": 0.62,
+    "agentLaunchClaudeCommandText": "claude -p \"Read .intent/tmp/evaluation-agent/task_2026-07-13T13-49-15-414Z.md and implement the requested change. Keep edits scoped to files allowed by the task. Run the required checks from the task when practical. After editing, record the result with intent-layer agent-result if this workspace supports it.\"",
+    "agentLaunchClaudeMs": 0.67,
     "agentResultGraphScanExitCode": 0,
     "agentResultTaskExitCode": 0,
     "agentResultOk": true,
-    "agentResultFile": ".intent/agent/result_2026-07-11T10-22-18-351Z.md",
-    "agentResultDiffFile": ".intent/diffs/2026-07-11T10-22-18-351Z_agent.intent-diff.yml",
+    "agentResultFile": ".intent/tmp/evaluation-agent/result_2026-07-13T13-49-15-527Z.md",
+    "agentResultDiffFile": ".intent/diffs/2026-07-13T13-49-15-527Z_agent.intent-diff.yml",
     "agentResultRelativeFile": ".intent/tmp/CliAgentResultFixture.tsx",
-    "agentResultMarkdownBytes": 2607,
-    "agentResultMs": 621.387,
+    "agentResultMarkdownBytes": 2622,
+    "agentResultMs": 24.624,
     "agentResultSourceDiffLineCount": 2,
     "agentResultSemanticChangeCount": 1,
     "agentResultSectionsPresent": true,
@@ -1478,36 +1780,39 @@
     "applyBindingId": "il_d1c483e267",
     "applyOk": true,
     "applyRelativeFile": ".intent/tmp/CliApplyFixture.tsx",
-    "applyOperationFile": ".intent/operations/2026-07-11T10-22-18-987Z.intent-op.json",
-    "applyDiffFile": ".intent/diffs/2026-07-11T10-22-18-987Z.intent-diff.yml",
+    "applyOperationFile": ".intent/operations/2026-07-13T13-49-15-566Z_524ba356-e87c-4a01-96ec-202fc5b0c321.intent-op.json",
+    "applyDiffFile": ".intent/diffs/2026-07-13T13-49-15-566Z_524ba356-e87c-4a01-96ec-202fc5b0c321.intent-diff.yml",
     "applyOperationLogFile": ".intent/operations/operation-log.json",
-    "applyMs": 3.648,
+    "applyMs": 2.869,
     "applySyntaxErrors": 0,
     "diffOk": true,
-    "diffFile": ".intent/diffs/2026-07-11T10-22-18-987Z.intent-diff.yml",
+    "diffFile": ".intent/diffs/2026-07-13T13-49-15-566Z_524ba356-e87c-4a01-96ec-202fc5b0c321.intent-diff.yml",
     "diffBytes": 229,
     "diffChangeCount": 1,
-    "initStdoutBytes": 496,
+    "initStdoutBytes": 749,
     "devStdoutBytes": 499,
-    "scanStdoutBytes": 3259,
-    "checkStdoutBytes": 3657,
-    "applyStdoutBytes": 642,
-    "diffStdoutBytes": 366,
+    "scanStdoutBytes": 3295,
+    "checkStdoutBytes": 3692,
+    "applyStdoutBytes": 716,
+    "diffStdoutBytes": 403,
     "doctorStdoutBytes": 1806,
-    "doctorMissingPluginStdoutBytes": 2158,
-    "agentContextStdoutBytes": 578,
-    "agentTaskStdoutBytes": 443,
-    "agentQueueStdoutBytes": 34192,
-    "agentClaimCodexStdoutBytes": 396,
-    "agentLaunchCodexStdoutBytes": 1169,
-    "agentLaunchClaudeStdoutBytes": 1091,
-    "agentResultStdoutBytes": 723
+    "doctorMissingPluginStdoutBytes": 2159,
+    "agentContextStdoutBytes": 592,
+    "agentTaskStdoutBytes": 457,
+    "agentQueueStdoutBytes": 11835,
+    "agentClaimCodexStdoutBytes": 425,
+    "agentLaunchCodexStdoutBytes": 1215,
+    "agentLaunchClaudeStdoutBytes": 1136,
+    "agentResultStdoutBytes": 752
   },
   "packageInstall": {
     "packageName": "intent-layer",
     "packageVersion": "0.0.1",
     "binTarget": "dist/cli.js",
-    "viteExportTarget": "./dist/vite.js",
+    "viteExportTarget": {
+      "types": "./dist/types/vitePlugin.d.ts",
+      "import": "./dist/vite.js"
+    },
     "dryRunExitCode": 0,
     "packExitCode": 0,
     "installExitCode": 0,
@@ -1515,15 +1820,17 @@
     "viteImportExitCode": 0,
     "installedViteTransformExitCode": 0,
     "installedViteDevServerExitCode": 0,
-    "packageFileCount": 12,
-    "packageSize": 102028,
-    "packageUnpackedSize": 469731,
-    "tarballFile": ".intent/tmp/package-smoke/intent-layer-package-smoke-S8hpWS/intent-layer-0.0.1.tgz",
-    "installDir": ".intent/tmp/package-smoke/intent-layer-package-smoke-S8hpWS/install",
-    "binFile": ".intent/tmp/package-smoke/intent-layer-package-smoke-S8hpWS/install/node_modules/.bin/intent-layer.cmd",
+    "installedViteDevServerFailure": null,
+    "packageFileCount": 39,
+    "packageSize": 278521,
+    "packageUnpackedSize": 1277681,
+    "tarballFile": ".intent/tmp/package-smoke/intent-layer-package-smoke-8UZwMD/intent-layer-0.0.1.tgz",
+    "installDir": ".intent/tmp/package-smoke/intent-layer-package-smoke-8UZwMD/install",
+    "binFile": ".intent/tmp/package-smoke/intent-layer-package-smoke-8UZwMD/install/node_modules/.bin/intent-layer.cmd",
     "cliShebang": "#!/usr/bin/env node",
     "hasCliBundle": true,
     "hasViteBundle": true,
+    "hasViteTypes": true,
     "hasVirtualClientBundle": true,
     "hasContextPackFiles": false,
     "hasReadmeDocs": true,
@@ -1539,18 +1846,18 @@
     "installedViteTransformIncludesIntentId": true,
     "installedViteTransformGraphExists": true,
     "installedViteTransformGraphEntryCount": 1,
-    "installedViteTransformGraphBytes": 1682,
+    "installedViteTransformGraphBytes": 1829,
     "installedViteTransformFirstRelativeFile": "src/App.tsx",
     "installedViteTransformFirstToken": "flex",
-    "installedViteTransformHookMs": 15.384,
+    "installedViteTransformHookMs": 35.329,
     "installedViteDevServerOk": true,
-    "installedViteDevServerPort": 50481,
+    "installedViteDevServerPort": 23170,
     "installedViteDevServerHomeStatus": 200,
     "installedViteDevServerModuleStatus": 200,
     "installedViteDevServerGraphStatus": 200,
     "installedViteDevServerModuleIncludesIntentId": true,
     "installedViteDevServerGraphEntryCount": 1,
-    "installedViteDevServerGraphBytes": 1673,
+    "installedViteDevServerGraphBytes": 1820,
     "installedViteDevServerFirstRelativeFile": "src/App.tsx",
     "installedViteDevServerFirstToken": "flex",
     "installedViteDevServerSetupStatus": 200,
@@ -1561,12 +1868,12 @@
     "installedViteDevServerSetupGraphReady": true,
     "installedViteDevServerSetupSettingsFileExists": true,
     "installedViteDevServerSetupSchemaExists": true,
-    "installedViteDevServerSetupQueueSignalExists": true,
-    "installedViteDevServerSetupQueueStatus": 200,
+    "installedViteDevServerSetupQueueSignalExists": false,
+    "installedViteDevServerSetupQueueStatus": 404,
     "installedViteDevServerSetupQueuePendingCount": 0,
-    "installedViteDevServerSetupCodexSkillExists": true,
-    "installedViteDevServerSetupClaudeSettingsExists": true,
-    "installedViteDevServerSetupClaudeHookConfigured": true,
+    "installedViteDevServerSetupCodexSkillExists": false,
+    "installedViteDevServerSetupClaudeSettingsExists": false,
+    "installedViteDevServerSetupClaudeHookConfigured": false,
     "installedViteDevServerSettingsUpdateStatus": 200,
     "installedViteDevServerSettingsLanguage": "en",
     "installedViteDevServerSettingsDock": "left",
@@ -1585,6 +1892,8 @@
     "installedViteDevServerSettingsClaudeCommand": "claude-custom",
     "installedViteDevServerSettingsCommandSource": "settings",
     "installedViteDevServerSettingsUpdateOk": true,
+    "installedViteDevServerUnauthorizedMutationStatus": 403,
+    "installedViteDevServerUnauthorizedMutationRejected": true,
     "installedViteDevServerPreviewStatus": 200,
     "installedViteDevServerPreviewOk": true,
     "installedViteDevServerApplyStatus": 200,
@@ -1598,7 +1907,7 @@
     "installedViteDevServerGraphAfterApplyStatus": 200,
     "installedViteDevServerGraphAfterApplyEntryCount": 1,
     "installedViteDevServerGraphAfterApplyFirstToken": "gap-6",
-    "installedViteDevServerApplyRefreshMs": 192.351,
+    "installedViteDevServerApplyRefreshMs": 440.283,
     "installedViteDevServerApplyRefreshTargetMs": 2500,
     "installedViteDevServerApplyRefreshTargetPass": true,
     "installedViteDevServerUndoHistoryAfterApplyStatus": 200,
@@ -1612,7 +1921,7 @@
     "installedViteDevServerGraphAfterRevertFirstToken": "gap-4",
     "installedViteDevServerUndoHistoryAfterRevertStatus": 200,
     "installedViteDevServerUndoHistoryAfterRevertCount": 0,
-    "installedViteDevServerRevertRefreshMs": 132.857,
+    "installedViteDevServerRevertRefreshMs": 436.27,
     "installedViteDevServerRevertRefreshTargetMs": 2500,
     "installedViteDevServerRevertRefreshTargetPass": true,
     "installedViteDevServerMultiFileOk": true,
@@ -1623,35 +1932,35 @@
     "installedViteDevServerMultiFileUnchangedFilesRetained": true,
     "installedViteDevServerMultiFileGraphGeneratedAtChanged": true,
     "installedViteDevServerMultiFileModuleAfterChangeIncludesNextToken": true,
-    "installedViteDevServerMultiFileRefreshMs": 124.52,
+    "installedViteDevServerMultiFileRefreshMs": 151.768,
     "installedViteDevServerMultiFileRefreshTargetMs": 2500,
     "installedViteDevServerMultiFileRefreshTargetPass": true,
-    "installedViteDevServerMultiFileMs": 173.9,
-    "installedViteDevServerMs": 4244.387,
-    "dryRunMs": 3052.01,
-    "packMs": 3415.295,
-    "installMs": 3179.491,
-    "helpMs": 610.786,
-    "viteImportMs": 541.415,
-    "installedViteTransformMs": 608.157,
-    "stdoutBytes": 6973,
+    "installedViteDevServerMultiFileMs": 2293.412,
+    "installedViteDevServerMs": 9053.627,
+    "dryRunMs": 8333.777,
+    "packMs": 10626.583,
+    "installMs": 13558.783,
+    "helpMs": 1790.01,
+    "viteImportMs": 1659.404,
+    "installedViteTransformMs": 2029.327,
+    "stdoutBytes": 12767,
     "stderrBytes": 250
   },
   "patch": {
     "previewOk": true,
-    "previewMs": 0.691,
-    "previewRoundTripMs": 0.95,
+    "previewMs": 0.784,
+    "previewRoundTripMs": 1.047,
     "applyOk": true,
-    "applyMs": 3.261,
+    "applyMs": 2.876,
     "syntaxErrorsAfterPatch": 0,
     "revertOk": true,
-    "revertMs": 2.763,
+    "revertMs": 2.205,
     "syntaxErrorsAfterRevert": 0,
     "staleRejectionOk": true,
     "staleRejectionReason": "source-hash-mismatch",
     "simpleCnClsx": {
       "applyOk": true,
-      "applyMs": 3.008,
+      "applyMs": 2.937,
       "syntaxErrorsAfterPatch": 0,
       "bindingKind": "call-literals",
       "callee": "cn",
@@ -1679,7 +1988,7 @@
     "pendingAfterApply": 2,
     "historyAfterApplyCount": 2,
     "discardOk": true,
-    "discardMs": 3.813,
+    "discardMs": 3.949,
     "discardedToken": "gap-6",
     "pendingAfterDiscard": 1,
     "historyAfterDiscardCount": 1,
@@ -1716,7 +2025,7 @@
     "applyOk": true,
     "revertOk": false,
     "revertReason": "revert-source-hash-mismatch",
-    "conflictFile": ".intent/conflicts/2026-07-11T10-22-15-299Z.intent-conflict.json",
+    "conflictFile": ".intent/conflicts/2026-07-13T13-49-15-228Z_de854b81-37d9-43a9-a73a-13f626f19599.intent-conflict.json",
     "conflictFileExists": true,
     "conflictKind": "revert-conflict",
     "conflictExpectedToken": "gap-6",
@@ -1727,7 +2036,7 @@
     "activeConflictCountBeforeResolve": 1,
     "resolveOk": true,
     "resolveAction": "discard-pending-undo",
-    "resolveMs": 3.823,
+    "resolveMs": 4.054,
     "resolvedAtPresent": true,
     "resolutionAction": "discard-pending-undo",
     "pendingAfterResolve": 0,
@@ -1736,21 +2045,21 @@
   },
   "agentTask": {
     "ok": true,
-    "taskMs": 675.527,
+    "taskMs": 6.674,
     "sectionsPresent": true,
-    "taskFile": ".intent/agent/task_2026-07-11T10-22-01-433Z.md",
-    "taskId": "task_2026-07-11T10-22-01-433Z",
+    "taskFile": ".intent/tmp/evaluation-agent/task_2026-07-13T13-49-14-458Z.md",
+    "taskId": "task_2026-07-13T13-49-14-458Z",
     "initialStatus": "queued",
     "statusAfterResult": "done",
     "doneAfterResult": true
   },
   "agentResult": {
     "ok": true,
-    "resultMs": 593.659,
+    "resultMs": 20.463,
     "sectionsPresent": true,
     "filesExist": true,
-    "resultFile": ".intent/agent/result_2026-07-11T10-22-02-107Z.md",
-    "diffFile": ".intent/diffs/2026-07-11T10-22-02-107Z_agent.intent-diff.yml",
+    "resultFile": ".intent/tmp/evaluation-agent/result_2026-07-13T13-49-14-464Z.md",
+    "diffFile": ".intent/diffs/2026-07-13T13-49-14-464Z_agent.intent-diff.yml",
     "sourceHashChanged": true,
     "snapshotAvailable": true,
     "diffLineCount": 2,
@@ -1778,7 +2087,7 @@
         "entryCreated": true,
         "entryCount": 3,
         "taskOk": true,
-        "taskMs": 583.388,
+        "taskMs": 4.775,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotFunction",
         "markersPresent": true,
@@ -1790,7 +2099,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 611.584,
+        "taskMs": 5.406,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowBlock",
         "markersPresent": true,
@@ -1802,7 +2111,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 720.208,
+        "taskMs": 6.337,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowParen",
         "markersPresent": true,
@@ -1814,7 +2123,7 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 633.984,
+        "taskMs": 6.474,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotArrowJsx",
         "markersPresent": true,
@@ -1826,7 +2135,7 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 601.129,
+        "taskMs": 7.21,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotMemo",
         "markersPresent": true,
@@ -1838,7 +2147,7 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 574.78,
+        "taskMs": 8.28,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotForwardRef",
         "markersPresent": true,
@@ -1850,7 +2159,7 @@
         "entryCreated": true,
         "entryCount": 2,
         "taskOk": true,
-        "taskMs": 571.062,
+        "taskMs": 10.716,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotHoc",
         "markersPresent": true,
@@ -1862,7 +2171,7 @@
         "entryCreated": true,
         "entryCount": 1,
         "taskOk": true,
-        "taskMs": 567.985,
+        "taskMs": 9.47,
         "snapshotAvailable": true,
         "snapshotComponentName": "ComponentSnapshotNamespace",
         "markersPresent": true,
@@ -1876,9 +2185,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 568.3,
+    "taskMs": 10.047,
     "resultOk": true,
-    "resultMs": 580.629,
+    "resultMs": 15.633,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -1898,9 +2207,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 656.92,
+    "taskMs": 9.967,
     "resultOk": true,
-    "resultMs": 627.259,
+    "resultMs": 14.728,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -1920,9 +2229,9 @@
     "unsupportedReason": "variable-reference",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 633.666,
+    "taskMs": 10.782,
     "resultOk": true,
-    "resultMs": 592.497,
+    "resultMs": 18.936,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -1943,7 +2252,7 @@
     "value": "cardClass",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 580.102,
+    "taskMs": 12.691,
     "dependencySnapshotCount": 2,
     "dependencySnapshotFiles": [
       ".intent/tmp/CrossVariableDependencyFixture.tsx",
@@ -1956,7 +2265,7 @@
     "dependencySnapshotsReferenceCardClass": true,
     "dependencySnapshotsIncludeClassTokens": true,
     "resultOk": true,
-    "resultMs": 595.006,
+    "resultMs": 18.912,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -1979,14 +2288,14 @@
     "value": "shellClass",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 10.699,
+    "taskMs": 8.716,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/styles/cardClass.ts",
     "relatedSnapshotKind": "variable-declaration",
     "relatedSnapshotIdentifier": "cardClass",
     "relatedSnapshotIncludesClass": true,
     "resultOk": true,
-    "resultMs": 11.02,
+    "resultMs": 9.13,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -2008,7 +2317,7 @@
     "value": "shellClass",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 8.758,
+    "taskMs": 7.561,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/styles/cardClass.ts",
     "relatedSnapshotKind": "variable-declaration",
@@ -2027,7 +2336,7 @@
     "dependencySnapshotsAreImportedSource": true,
     "dependencySnapshotsIncludeClassTokens": true,
     "resultOk": true,
-    "resultMs": 12.474,
+    "resultMs": 10.45,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -2053,7 +2362,7 @@
     "value": "shellClass",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 12.064,
+    "taskMs": 10.495,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/styles/cardClass.ts",
     "relatedSnapshotKind": "variable-declaration",
@@ -2072,7 +2381,7 @@
     "dependencySnapshotsAreImportedTokenSource": true,
     "dependencySnapshotsIncludeClassTokens": true,
     "resultOk": true,
-    "resultMs": 11.841,
+    "resultMs": 11.348,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -2097,14 +2406,14 @@
     "value": "cardStyles.title",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 9.563,
+    "taskMs": 8.474,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/styles/titleStyles.ts",
     "relatedSnapshotKind": "object-property",
     "relatedSnapshotIdentifier": "styles.title",
     "relatedSnapshotIncludesPropertyClass": true,
     "resultOk": true,
-    "resultMs": 10.659,
+    "resultMs": 10.12,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -2126,7 +2435,7 @@
     "value": "buttonVariants({ variant: \"primary\" })",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 5.856,
+    "taskMs": 5.97,
     "relatedSnapshotAvailable": false,
     "externalReferenceAvailable": true,
     "externalReferenceKind": "external-package-import",
@@ -2144,7 +2453,7 @@
     "taskMentionsNodeModules": true,
     "taskMentionsExternalEditGuard": true,
     "resultOk": true,
-    "resultMs": 10.615,
+    "resultMs": 9.943,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 2,
     "sourceDiffPresent": true,
@@ -2163,7 +2472,7 @@
     "value": "packageCardClass",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 7.229,
+    "taskMs": 14.063,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "packages/ui/src/styles.ts",
     "relatedSnapshotKind": "variable-declaration",
@@ -2171,7 +2480,7 @@
     "relatedSnapshotIncludesClass": true,
     "relatedSnapshotIsWorkspacePackageSource": true,
     "resultOk": true,
-    "resultMs": 18.676,
+    "resultMs": 9.494,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -2192,13 +2501,13 @@
     "value": "buttonVariants({ variant: \"primary\" })",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 598.773,
+    "taskMs": 12.382,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotKind": "variant-function",
     "relatedSnapshotIdentifier": "buttonVariants",
     "relatedSnapshotIncludesCva": true,
     "resultOk": true,
-    "resultMs": 592.788,
+    "resultMs": 18.154,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -2219,14 +2528,14 @@
     "value": "buttonVariants({ variant: \"primary\" })",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 582.645,
+    "taskMs": 22.448,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": ".intent/tmp/ImportedVariantDefinition.ts",
     "relatedSnapshotKind": "variant-function",
     "relatedSnapshotIdentifier": "buttonVariants",
     "relatedSnapshotIncludesCva": true,
     "resultOk": true,
-    "resultMs": 575.163,
+    "resultMs": 19.82,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -2248,14 +2557,14 @@
     "value": "buttonVariants({ variant: \"primary\" })",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 8.745,
+    "taskMs": 8.443,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/ui/buttonVariants.ts",
     "relatedSnapshotKind": "variant-function",
     "relatedSnapshotIdentifier": "buttonVariants",
     "relatedSnapshotIncludesCva": true,
     "resultOk": true,
-    "resultMs": 10.561,
+    "resultMs": 10.695,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -2277,14 +2586,14 @@
     "value": "actionVariants({ variant: \"primary\" })",
     "tokenCount": 0,
     "taskOk": true,
-    "taskMs": 9.083,
+    "taskMs": 8.512,
     "relatedSnapshotAvailable": true,
     "relatedSnapshotFile": "src/tokens/buttonVariants.ts",
     "relatedSnapshotKind": "variant-function",
     "relatedSnapshotIdentifier": "buttonVariants",
     "relatedSnapshotIncludesCva": true,
     "resultOk": true,
-    "resultMs": 10.759,
+    "resultMs": 10.894,
     "syntaxErrorsAfterResult": 0,
     "sourceDiffLineCount": 0,
     "sourceDiffPresent": false,
@@ -2299,6 +2608,15 @@
     "relatedSemanticTokenRemovedCount": 5
   },
   "gates": {
+    "gridLayoutSafetyPass": true,
+    "gridLayoutPreviewPerformancePass": true,
+    "gridLayoutApplyPerformancePass": true,
+    "literalTextSafetyPass": true,
+    "literalTextPreviewPerformancePass": true,
+    "literalTextApplyPerformancePass": true,
+    "flexLayoutSafetyPass": true,
+    "flexLayoutPreviewPerformancePass": true,
+    "flexLayoutApplyPerformancePass": true,
     "staticEditableTokenCoveragePass": true,
     "staticAndSimpleCoveragePass": true,
     "supportedDirectCoveragePass": true,

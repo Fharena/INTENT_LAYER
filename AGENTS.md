@@ -12,7 +12,7 @@ The product helps users:
 2. Map them back to source code.
 3. Inspect semantic layout/style intent.
 4. Apply deterministic code patches for simple edits.
-5. Generate structured AI handoff tasks for complex edits.
+5. Expose the same guarded edit operations to Codex and Claude through local MCP.
 6. Review changes through intent diffs.
 
 ## Core Principle
@@ -63,10 +63,18 @@ Current module boundaries:
 ```text
 instrument.ts   TypeScript AST source binding
 tailwind.ts     token classification and candidates
+themeCandidates.ts static project Tailwind/CSS candidate provider
+gridLayout.ts   constrained CSS Grid inspection and grouped className planning
+flexLayout.ts   constrained CSS Flex inspection and grouped className planning
 patch.ts        preview, apply, operation log, and guarded undo
-vitePlugin.ts   Vite and HTTP adapter
+graphStore.ts   graph state, publish, and disk reload
+intentService.ts shared GUI, HTTP, CLI, and MCP use cases
+runtimeSession.ts browser selection and live verification
+viteSetup.ts    safe one-time Vite config registration
+vitePlugin.ts   Vite, HTTP, and HMR adapter
 client.ts       browser overlay
-agent*.ts       optional Agent handoff adapter
+mcp/            local stdio tools, resources, and provider setup
+agent*.ts       legacy Agent handoff compatibility
 ```
 
 Do not add another parser, semantic analyzer, queue command, or document format unless a failing user workflow or regression test requires it.
@@ -130,6 +138,28 @@ For direct edits:
 
 If confidence is low, do not patch directly. Generate an agent handoff task instead.
 
+For grouped Grid/Flex edits, require one source file, validate every original className plus the full source hash, write the file once, and store original and post-apply ranges for byte-for-byte grouped undo. Repeated runtime ids, cross-file children, dynamic className participants, or unsupported layout tokens are read-only boundaries.
+
+## AI Tool Rules
+
+Codex and Claude should use the local MCP tools for supported edits:
+
+```text
+property/text: find -> inspect_element -> preview_edit -> apply_edit -> verify_edit -> optional undo_edit
+Grid/Flex: browser select -> inspect_layout -> preview_layout -> apply_edit -> verify_edit -> optional undo_edit
+```
+
+- Never accept source offsets, raw patches, or arbitrary file paths from an AI client.
+- Never accept a Grid/Flex parent id or complete child scope from an AI client. Resolve the nearest layout scope from the fresh browser selection; only changed child ids returned by `inspect_layout` may appear in a preview request.
+- Resolve ranges from the current graph and semantic property on the server.
+- Require an expiring preview before apply.
+- Revalidate source hash inside a per-file atomic lock.
+- Serialize source mutation plus operation-journal recording with the project operation lock; publish the shared journal atomically.
+- Require loopback plus the Vite session token for every source-changing HTTP request. Do not enable remote/LAN mutation implicitly.
+- Treat browser runtime verification as unavailable, not successful, when Vite or the browser is disconnected.
+- Keep MCP on local stdio. Do not add remote HTTP, OAuth, or another agent scheduler without a demonstrated workflow.
+- Keep the legacy Markdown queue disabled by default. Its task UI and HTTP routes require explicit `legacyQueueEnabled` compatibility mode.
+
 ## Agent Handoff Rules
 
 When a change is too complex for deterministic direct edit, create a markdown task under:
@@ -164,7 +194,11 @@ Agent tasks also use a shared queue signal:
 .intent/agent/locks/*.lock.json
 ```
 
-Default pickup model:
+The Markdown queue is advanced compatibility, not the default AI integration. Preserve it for existing projects, but do not add queue commands, analyzers, or UI unless a regression requires them.
+
+Evaluation fixtures must use `.intent/tmp/evaluation-agent`; never write benchmark tasks into the real project queue.
+
+Legacy pickup model:
 
 - Codex uses `.agents/skills/intent-layer-task-runner/SKILL.md`.
 - Claude uses `.claude/settings.json` `FileChanged` hook when Claude Code is open.
@@ -175,6 +209,8 @@ Default pickup model:
 - If blocked, use `intent-layer agent-fail --provider codex|claude --task <task-file> --summary "<reason>"`.
 
 ## Performance Rules
+
+On Windows, all test fixtures and temporary artifacts must stay on `D:`. Use `D:\SJWORK\INTENT_LAYER\.intent\tmp` for temporary repositories, browser output, package smoke files, and benchmark scratch data. Set `TEMP` and `TMP` to that directory before running tools that otherwise use `C:\Users\...\Temp`.
 
 Avoid whole-project analysis by default.
 
@@ -188,6 +224,7 @@ Always:
 On selection:
   parse selected file only
   analyze selected node and nearby parents/children
+  resolve project theme candidates for selected tokens only
 
 On demand:
   repo-wide scan
@@ -201,6 +238,8 @@ Target performance:
 - simple patch: under 50ms
 - small intent diff: under 1s
 - Vite transform overhead: under 5ms per file target
+
+Do not serialize project candidate arrays into every graph token. Keep the graph compact and query candidates on selection.
 
 ## UX Rules
 
@@ -230,8 +269,21 @@ Keep only these active Korean/English document pairs:
 
 Do not create a new status, launch, handoff, or benchmark prose document when an active document or generated JSON report can hold the information. Numeric evaluation truth belongs in `reports/performance/*.json`.
 
-Korean docs should be practical and product-oriented.
-English docs should be suitable for external contributors and future open-source README expansion.
+`README_KR.md` / `README.md` are the canonical user manuals. Preserve both a short quick start and a detailed GUI-first guide.
+
+Any user-visible change to installation, setup, Settings, panel controls, editing workflows, MCP tools, verification, undo, update/reinstall, or support boundaries must update both manuals in the same commit. Do not mark the work complete while usage docs describe the previous behavior.
+
+For every changed workflow, document:
+
+- prerequisites and exact command or UI sequence
+- the visible success result
+- when source is still untouched and when it is mutated
+- approval, verification, undo, and recovery behavior
+- read-only and unsupported boundaries
+
+Update the Demo Walkthrough when the demonstrable sequence changes and Failure Modes when a new rejection or recovery path is introduced. Verify instructions against current source or an executable fixture; never document an intended control as if it already exists.
+
+Korean docs should be detailed, practical, and product-oriented. English docs should carry equivalent operational meaning for external contributors and future open-source README expansion.
 
 
 <!-- context-pack:rules:start -->

@@ -16,6 +16,13 @@ export interface IntentToken {
   editable: boolean;
 }
 
+export interface IntentLiteralTextBinding {
+  kind: "literal";
+  start: number;
+  end: number;
+  value: string;
+}
+
 export interface IntentBinding {
   id: string;
   file: string;
@@ -33,6 +40,7 @@ export interface IntentBinding {
     dynamicSegments: number;
     unsupportedReason?: string;
   };
+  textContent?: IntentLiteralTextBinding;
   tokens: IntentToken[];
 }
 
@@ -40,6 +48,72 @@ export interface IntentGraph {
   version: 1;
   generatedAt: string;
   entries: Record<string, IntentBinding>;
+}
+
+export interface IntentRuntimeLayoutScope {
+  kind: "grid" | "flex";
+  parentId: string;
+  childIds: string[];
+  unboundChildCount: number;
+  renderedParentCount: number;
+}
+
+export interface IntentRuntimeSelectionRequest {
+  id: string | null;
+  route?: string;
+  text?: string;
+  role?: string | null;
+  classTokens?: string[];
+  visible?: boolean;
+  rect?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
+  layout?: IntentRuntimeLayoutScope | null;
+}
+
+export interface IntentRuntimeSelection {
+  version: 1;
+  selectedAt: string;
+  sessionId: string | null;
+  freshUntil: string;
+  selection: null | {
+    id: string;
+    componentName: string | null;
+    tagName: string;
+    sourceFile: string;
+    route: string;
+    text: string;
+    role: string | null;
+    classTokens: string[];
+    visible: boolean;
+    rect: IntentRuntimeSelectionRequest["rect"];
+    layout: IntentRuntimeLayoutScope | null;
+  };
+}
+
+export interface IntentRuntimeSession {
+  version: 1;
+  sessionId: string;
+  root: string;
+  url: string;
+  token: string;
+  pid: number;
+  startedAt: string;
+}
+
+export interface IntentRuntimeTokenResult {
+  ok: boolean;
+  status: "verified" | "drifted" | "unavailable";
+  id: string;
+  expectedToken: string;
+  renderedInstanceCount: number;
+  matchingInstanceCount: number;
+  visibleInstanceCount: number;
+  route: string | null;
+  detail: string;
 }
 
 export interface ClickToPanelMetric {
@@ -89,11 +163,17 @@ export interface IntentOverlaySettings {
 }
 
 export interface IntentAgentSettings {
+  legacyQueueEnabled: boolean;
   runEnabled: boolean;
   codexCommand: string | null;
   claudeCommand: string | null;
   codexSkillEnabled: boolean;
   claudeHookEnabled: boolean;
+}
+
+export interface IntentMcpSettings {
+  codexEnabled: boolean;
+  claudeEnabled: boolean;
 }
 
 export interface IntentLayerSettings {
@@ -102,6 +182,7 @@ export interface IntentLayerSettings {
   onboardingCompletedAt: string | null;
   updatedAt: string;
   overlay: IntentOverlaySettings;
+  mcp: IntentMcpSettings;
   agent: IntentAgentSettings;
 }
 
@@ -123,7 +204,19 @@ export interface IntentSetupStatus {
   setupRequired: boolean;
   settings: IntentLayerSettings;
   checks: IntentSetupCheck[];
+  mcp: {
+    codexEnabled: boolean;
+    codexReady: boolean;
+    codexConfigPath: string;
+    claudeEnabled: boolean;
+    claudeReady: boolean;
+    claudeConfigPath: string;
+    serverCommand: string;
+    serverArgs: string[];
+    serverReady: boolean;
+  };
   agent: {
+    legacyQueueEnabled: boolean;
     runEnabled: boolean;
     runEnabledSource: IntentAgentRunSource;
     codexCommand: string;
@@ -149,6 +242,7 @@ export interface IntentSetupRequest {
   completeOnboarding?: boolean;
   resetOnboarding?: boolean;
   overlay?: Partial<IntentOverlaySettings>;
+  mcp?: Partial<IntentMcpSettings>;
   agent?: Partial<IntentAgentSettings>;
 }
 
@@ -171,8 +265,40 @@ export interface PatchRequest {
   sourceEnd?: number;
 }
 
+export interface LiteralTextEditRequest {
+  id: string;
+  oldText: string;
+  nextText: string;
+}
+
+export interface PatchTextEdit {
+  id: string;
+  label: string;
+  range: {
+    start: number;
+    end: number;
+  };
+  appliedRange: {
+    start: number;
+    end: number;
+  };
+  oldText: string;
+  newText: string;
+}
+
+export type PatchKind =
+  | "tailwind-token-replace"
+  | "tailwind-token-revert"
+  | "literal-text"
+  | "literal-text-revert"
+  | "grid-layout"
+  | "grid-layout-revert"
+  | "flex-layout"
+  | "flex-layout-revert";
+
 export interface PatchPreview {
   ok: true;
+  kind?: PatchKind;
   id: string;
   file: string;
   relativeFile: string;
@@ -186,9 +312,144 @@ export interface PatchPreview {
   after: string;
   sourceHashBefore: string;
   sourceHashAfter: string;
+  edits?: PatchTextEdit[];
   metrics: {
     previewMs: number;
   };
+}
+
+export type GridLayoutBreakpoint = string;
+
+export interface GridLayoutInspectRequest {
+  parentId: string;
+  childIds: string[];
+  unboundChildCount?: number;
+  breakpoint: GridLayoutBreakpoint;
+}
+
+export interface GridLayoutResolvedValue {
+  explicit: number | null;
+  effective: number | null;
+}
+
+export interface GridLayoutInspection {
+  ok: true;
+  parentId: string;
+  relativeFile: string;
+  breakpoint: GridLayoutBreakpoint;
+  supportedBreakpoints: GridLayoutBreakpoint[];
+  columns: GridLayoutResolvedValue;
+  rows: GridLayoutResolvedValue;
+  columnTemplate: {
+    explicit: number[] | null;
+    effective: number[] | null;
+  };
+  items: Array<{
+    id: string;
+    label: string;
+    columnStart: GridLayoutResolvedValue;
+    columnSpan: GridLayoutResolvedValue;
+    rowStart: GridLayoutResolvedValue;
+    rowSpan: GridLayoutResolvedValue;
+  }>;
+}
+
+export interface GridLayoutItemEdit {
+  id: string;
+  columnStart?: number | null;
+  columnSpan?: number | null;
+  rowStart?: number | null;
+  rowSpan?: number | null;
+}
+
+export interface GridLayoutEditRequest extends GridLayoutInspectRequest {
+  columns?: number | null;
+  rows?: number | null;
+  columnTemplate?: number[] | null;
+  items: GridLayoutItemEdit[];
+}
+
+export interface GridLayoutPreviewResult {
+  ok: true;
+  previewId: string;
+  expiresAt: string;
+  parentId: string;
+  breakpoint: GridLayoutBreakpoint;
+  affectedBindingCount: number;
+  patch: PatchPreview;
+}
+
+export interface GridLayoutApplyRequest {
+  previewId: string;
+}
+
+export type FlexLayoutBreakpoint = string;
+export type FlexLayoutDirection = "row" | "row-reverse" | "col" | "col-reverse";
+export type FlexLayoutWrap = "nowrap" | "wrap" | "wrap-reverse";
+export type FlexLayoutJustify = "normal" | "start" | "end" | "center" | "between" | "around" | "evenly" | "stretch";
+export type FlexLayoutAlign = "start" | "end" | "center" | "baseline" | "stretch";
+export type FlexLayoutAlignSelf = "auto" | "start" | "end" | "center" | "stretch" | "baseline";
+
+export interface FlexLayoutResolvedValue<T extends string> {
+  explicit: T | null;
+  effective: T;
+}
+
+export interface FlexLayoutInspectRequest {
+  parentId: string;
+  childIds: string[];
+  unboundChildCount?: number;
+  breakpoint: FlexLayoutBreakpoint;
+}
+
+export interface FlexLayoutInspection {
+  ok: true;
+  parentId: string;
+  relativeFile: string;
+  breakpoint: FlexLayoutBreakpoint;
+  supportedBreakpoints: FlexLayoutBreakpoint[];
+  direction: FlexLayoutResolvedValue<FlexLayoutDirection>;
+  wrap: FlexLayoutResolvedValue<FlexLayoutWrap>;
+  justify: FlexLayoutResolvedValue<FlexLayoutJustify>;
+  align: FlexLayoutResolvedValue<FlexLayoutAlign>;
+  gap: {
+    explicit: string | null;
+    effective: string | null;
+    candidates: string[];
+  };
+  items: Array<{
+    id: string;
+    label: string;
+    alignSelf: FlexLayoutResolvedValue<FlexLayoutAlignSelf>;
+  }>;
+}
+
+export interface FlexLayoutItemEdit {
+  id: string;
+  alignSelf?: FlexLayoutAlignSelf | null;
+}
+
+export interface FlexLayoutEditRequest extends FlexLayoutInspectRequest {
+  direction?: FlexLayoutDirection | null;
+  wrap?: FlexLayoutWrap | null;
+  justify?: FlexLayoutJustify | null;
+  align?: FlexLayoutAlign | null;
+  gap?: string | null;
+  items: FlexLayoutItemEdit[];
+}
+
+export interface FlexLayoutPreviewResult {
+  ok: true;
+  previewId: string;
+  expiresAt: string;
+  parentId: string;
+  breakpoint: FlexLayoutBreakpoint;
+  affectedBindingCount: number;
+  patch: PatchPreview;
+}
+
+export interface FlexLayoutApplyRequest {
+  previewId: string;
 }
 
 export interface PatchFailure {
@@ -302,6 +563,8 @@ export interface UndoHistoryItem {
   };
   operationFile: string;
   diffFile: string;
+  kind?: PatchPreview["kind"];
+  changeCount?: number;
 }
 
 export interface UndoHistoryReport {
@@ -314,6 +577,7 @@ export interface UndoHistoryReport {
 export interface PatchRevertResult {
   ok: true;
   reverted: true;
+  kind?: PatchPreview["kind"];
   id: string;
   file: string;
   relativeFile: string;
@@ -327,6 +591,7 @@ export interface PatchRevertResult {
   after: string;
   sourceHashBefore: string;
   sourceHashAfter: string;
+  edits?: PatchTextEdit[];
   operationFile: string;
   diffFile: string;
   metrics: {

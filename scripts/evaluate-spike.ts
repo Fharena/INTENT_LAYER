@@ -8,12 +8,17 @@ import { runCli } from "../src/intent/cli";
 import { readAgentTaskMetadata, refreshAgentQueueSignal } from "../src/intent/agentQueue";
 import { recordAgentResult } from "../src/intent/agentResult";
 import { createAgentTask } from "../src/intent/agentTask";
+import { planFlexLayout } from "../src/intent/flexLayout";
+import { planGridLayout } from "../src/intent/gridLayout";
 import { instrumentSource } from "../src/intent/instrument";
 import {
+  applyPlannedPatch,
+  applyLiteralTextPatch,
   applyTokenPatch,
   discardPendingUndo,
   pendingUndoHistoryFromOperationLog,
   pendingUndoStackFromOperationLog,
+  planLiteralTextPatch,
   planTokenPatch,
   readPatchConflictReport,
   recordPatchApplyInOperationLog,
@@ -24,16 +29,19 @@ import {
 } from "../src/intent/patch";
 import type { IntentBinding, IntentGraph } from "../src/intent/types";
 import { intentLayer } from "../src/intent/vitePlugin";
+import { candidatesForToken } from "../src/intent/tailwind";
 
 const rootDir = process.cwd();
 const reportsDir = path.join(rootDir, "reports", "performance");
 const tmpDir = path.join(rootDir, ".intent", "tmp");
+const evaluationAgentDir = path.join(tmpDir, "evaluation-agent");
+process.env.INTENT_LAYER_AGENT_ARTIFACT_DIR = path.relative(rootDir, evaluationAgentDir);
 const aiCorpusMinFiles = 50;
 const aiCorpusCoverageTarget = 0.5;
 const externalCorpusHarnessMinFiles = 3;
 const externalCorpusHarnessCoverageTarget = 0.5;
 const runtimeArtifactRoots = [
-  path.join(rootDir, ".intent", "agent"),
+  evaluationAgentDir,
   path.join(rootDir, ".intent", "operations"),
   path.join(rootDir, ".intent", "diffs"),
   path.join(rootDir, ".intent", "conflicts")
@@ -59,7 +67,9 @@ process.once("exit", () => {
     for (const file of runtimeArtifactFiles()) {
       if (!runtimeArtifactsBeforeEvaluation.has(file) && fs.existsSync(file)) fs.unlinkSync(file);
     }
-    refreshAgentQueueSignal(rootDir);
+    if (fs.existsSync(evaluationAgentDir)) {
+      fs.rmSync(evaluationAgentDir, { recursive: true, force: true });
+    }
   } catch {
     // Evaluation cleanup must not mask the gate result.
   }
@@ -76,7 +86,7 @@ interface PackageSmokeResult {
   packageName: string | null;
   packageVersion: string | null;
   binTarget: string | null;
-  viteExportTarget: string | null;
+  viteExportTarget: string | { types?: string; import?: string } | null;
   dryRunExitCode: number | null;
   packExitCode: number | null;
   installExitCode: number | null;
@@ -84,6 +94,12 @@ interface PackageSmokeResult {
   viteImportExitCode: number | null;
   installedViteTransformExitCode: number | null;
   installedViteDevServerExitCode: number | null;
+  installedViteDevServerFailure: {
+    error: string | null;
+    stdout: string;
+    stderr: string;
+    processStderr: string;
+  } | null;
   packageFileCount: number;
   packageSize: number;
   packageUnpackedSize: number;
@@ -93,6 +109,7 @@ interface PackageSmokeResult {
   cliShebang: string | null;
   hasCliBundle: boolean;
   hasViteBundle: boolean;
+  hasViteTypes: boolean;
   hasVirtualClientBundle: boolean;
   hasContextPackFiles: boolean;
   hasReadmeDocs: boolean;
@@ -154,6 +171,8 @@ interface PackageSmokeResult {
   installedViteDevServerSettingsClaudeCommand: string | null;
   installedViteDevServerSettingsCommandSource: string | null;
   installedViteDevServerSettingsUpdateOk: boolean;
+  installedViteDevServerUnauthorizedMutationStatus: number | null;
+  installedViteDevServerUnauthorizedMutationRejected: boolean;
   installedViteDevServerPreviewStatus: number | null;
   installedViteDevServerPreviewOk: boolean;
   installedViteDevServerApplyStatus: number | null;
@@ -268,6 +287,7 @@ function reportPath(file: string): string {
 
 function packageSmoke(): PackageSmokeResult {
   const packageSmokeRoot = path.join(tmpDir, "package-smoke");
+  fs.rmSync(packageSmokeRoot, { recursive: true, force: true });
   fs.mkdirSync(packageSmokeRoot, { recursive: true });
   const packageRoot = fs.mkdtempSync(path.join(packageSmokeRoot, "intent-layer-package-smoke-"));
   const installDir = path.join(packageRoot, "install");
@@ -323,7 +343,7 @@ function packageSmoke(): PackageSmokeResult {
       : { exitCode: null, stdout: "", stderr: "missing installed bin", ms: 0 };
   const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf8")) as {
     bin?: Record<string, string>;
-    exports?: Record<string, string>;
+    exports?: Record<string, string | { types?: string; import?: string }>;
   };
   const files = dryRunPackage?.files ?? [];
   const packageName = dryRunPackage?.name ?? "intent-layer";
@@ -480,10 +500,13 @@ function packageSmoke(): PackageSmokeResult {
       "  throw lastError ?? new Error(`Timed out fetching ${url}`);",
       "}",
       "",
-      "async function postJson(url, body) {",
+      "async function postJson(url, body, token = null) {",
       "  const response = await fetch(url, {",
       "    method: \"POST\",",
-      "    headers: { \"content-type\": \"application/json\" },",
+      "    headers: {",
+      "      \"content-type\": \"application/json\",",
+      "      ...(token ? { \"x-intent-layer-token\": token } : {})",
+      "    },",
       "    body: JSON.stringify(body)",
       "  });",
       "  const text = await response.text();",
@@ -494,6 +517,25 @@ function packageSmoke(): PackageSmokeResult {
       "    json = null;",
       "  }",
       "  return { status: response.status, text, json };",
+      "}",
+      "",
+      "async function waitRuntimeToken(root, timeoutMs) {",
+      "  const deadline = Date.now() + timeoutMs;",
+      "  const sessionsDir = path.join(root, \".intent\", \"runtime\", \"sessions\");",
+      "  while (Date.now() < deadline) {",
+      "    if (fs.existsSync(sessionsDir)) {",
+      "      for (const name of fs.readdirSync(sessionsDir)) {",
+      "        try {",
+      "          const session = JSON.parse(fs.readFileSync(path.join(sessionsDir, name), \"utf8\"));",
+      "          if (session?.token) return session.token;",
+      "        } catch {",
+      "          // Wait for an atomic runtime-session publish.",
+      "        }",
+      "      }",
+      "    }",
+      "    await new Promise((resolve) => setTimeout(resolve, 50));",
+      "  }",
+      "  throw new Error(\"Timed out waiting for the Intent Layer runtime token.\");",
       "}",
       "",
       "async function waitFetchMatch(url, timeoutMs, predicate) {",
@@ -560,6 +602,7 @@ function packageSmoke(): PackageSmokeResult {
       "let stdout = \"\";",
       "let stderr = \"\";",
       "let port = null;",
+      "let stage = \"initialize\";",
       "",
       "try {",
       "  if (!fs.existsSync(viteBin)) throw new Error(`Missing Vite bin: ${viteBin}`);",
@@ -603,9 +646,11 @@ function packageSmoke(): PackageSmokeResult {
       "  child.stderr.on(\"data\", (chunk) => { stderr += chunk; });",
       "",
       "  const baseUrl = `http://127.0.0.1:${port}`;",
+      "  stage = \"initial-module\";",
       "  const home = await waitFetch(`${baseUrl}/`, 10000);",
       "  const module = await waitFetch(`${baseUrl}/src/App.tsx`, 10000);",
       "  const graph = await waitFetch(`${baseUrl}/__intent/graph`, 10000);",
+      "  const intentToken = await waitRuntimeToken(root, 10000);",
       "  const parsedGraph = graph.status === 200 ? JSON.parse(graph.body) : null;",
       "  const entries = parsedGraph ? Object.values(parsedGraph.entries ?? {}) : [];",
       "  const first = entries[0] ?? null;",
@@ -617,7 +662,7 @@ function packageSmoke(): PackageSmokeResult {
       "    language: \"ko\",",
       "    createWorkspace: true,",
       "    completeOnboarding: true",
-      "  });",
+      "  }, intentToken);",
       "  const setupAfter = await waitFetch(`${baseUrl}/__intent/setup?language=ko`, 10000);",
       "  const setupAfterJson = setupAfter.status === 200 ? JSON.parse(setupAfter.body) : null;",
       "  const setupSettingsFileExists = fs.existsSync(path.join(root, \".intent\", \"settings.json\"));",
@@ -642,13 +687,14 @@ function packageSmoke(): PackageSmokeResult {
       "      autoOpenSetup: false",
       "    },",
       "    agent: {",
+      "      legacyQueueEnabled: true,",
       "      runEnabled: true,",
       "      codexCommand: \"codex-custom\",",
       "      claudeCommand: \"claude-custom\",",
       "      codexSkillEnabled: true,",
       "      claudeHookEnabled: true",
       "    }",
-      "  });",
+      "  }, intentToken);",
       "  const settingsAfter = await waitFetch(`${baseUrl}/__intent/setup`, 10000);",
       "  const settingsAfterJson = settingsAfter.status === 200 ? JSON.parse(settingsAfter.body) : null;",
       "  const settingsUpdateOk =",
@@ -678,15 +724,18 @@ function packageSmoke(): PackageSmokeResult {
       "    sourceStart: patchToken?.sourceStart,",
       "    sourceEnd: patchToken?.sourceEnd",
       "  };",
-      "  const preview = await postJson(`${baseUrl}/__intent/preview`, patchRequest);",
-      "  const apply = await postJson(`${baseUrl}/__intent/apply`, patchRequest);",
+      "  const unauthorizedApply = await postJson(`${baseUrl}/__intent/apply`, patchRequest);",
+      "  const preview = await postJson(`${baseUrl}/__intent/preview`, patchRequest, intentToken);",
+      "  const apply = await postJson(`${baseUrl}/__intent/apply`, patchRequest, intentToken);",
       "  const sourceAfterApply = fs.readFileSync(path.join(root, \"src\", \"App.tsx\"), \"utf8\");",
       "  const applyRefreshStarted = performance.now();",
+      "  stage = \"module-after-apply\";",
       "  const moduleAfterApply = await waitFetchMatch(",
       "    () => moduleRequestUrl(baseUrl, \"src/App.tsx\"),",
       "    10000,",
       "    (result) => result.status === 200 && result.body.includes(\"gap-6\")",
       "  );",
+      "  stage = \"graph-after-apply\";",
       "  const graphAfterApply = await waitFetchMatch(",
       "    `${baseUrl}/__intent/graph`,",
       "    10000,",
@@ -714,13 +763,15 @@ function packageSmoke(): PackageSmokeResult {
       "        ? parsedUndoHistoryAfterApply.entries.length",
       "        : 0;",
       "  const revertRefreshStarted = performance.now();",
-      "  const revertLast = await postJson(`${baseUrl}/__intent/revert-last`, {});",
+      "  const revertLast = await postJson(`${baseUrl}/__intent/revert-last`, {}, intentToken);",
       "  const sourceAfterRevert = fs.readFileSync(path.join(root, \"src\", \"App.tsx\"), \"utf8\");",
+      "  stage = \"module-after-revert\";",
       "  const moduleAfterRevert = await waitFetchMatch(",
       "    () => moduleRequestUrl(baseUrl, \"src/App.tsx\"),",
       "    10000,",
       "    (result) => result.status === 200 && result.body.includes(\"gap-4\") && !result.body.includes(\"gap-6\")",
       "  );",
+      "  stage = \"graph-after-revert\";",
       "  const graphAfterRevert = await waitFetchMatch(",
       "    `${baseUrl}/__intent/graph`,",
       "    10000,",
@@ -762,6 +813,7 @@ function packageSmoke(): PackageSmokeResult {
       "      \"\"",
       "    ].join(\"\\n\")",
       "  );",
+      "  stage = \"multi-file-app\";",
       "  const multiApp = await waitFetchMatch(",
       "    () => moduleRequestUrl(baseUrl, \"src/App.tsx\"),",
       "    10000,",
@@ -782,11 +834,13 @@ function packageSmoke(): PackageSmokeResult {
       "    path.join(root, \"src\", \"Card.tsx\"),",
       "    fs.readFileSync(path.join(root, \"src\", \"Card.tsx\"), \"utf8\").replace(\"gap-4\", \"gap-8\")",
       "  );",
+      "  stage = \"multi-file-card-after-change\";",
       "  const multiCardAfterChange = await waitFetchMatch(",
       "    () => moduleRequestUrl(baseUrl, \"src/Card.tsx\"),",
       "    10000,",
       "    (result) => result.status === 200 && result.body.includes(\"gap-8\")",
       "  );",
+      "  stage = \"multi-file-graph-after-change\";",
       "  const multiGraphAfterChange = await waitFetchMatch(",
       "    `${baseUrl}/__intent/graph`,",
       "    10000,",
@@ -830,9 +884,10 @@ function packageSmoke(): PackageSmokeResult {
       "    setupAfter.status === 200 && setupAfterJson?.language === \"ko\" &&",
       "    setupAfterJson?.workspaceReady === true && setupAfterJson?.settingsReady === true &&",
       "    setupAfterJson?.graphReady === true && setupSettingsFileExists && setupSchemaExists &&",
-      "    setupQueueSignalExists && setupCodexSkillExists && setupClaudeSettingsExists && setupClaudeHookConfigured &&",
-      "    agentQueue.status === 200 && agentQueueJson?.kind === \"intent-agent-queue\" &&",
+      "    !setupQueueSignalExists && !setupCodexSkillExists && !setupClaudeSettingsExists && !setupClaudeHookConfigured &&",
+      "    agentQueue.status === 404 && agentQueueJson === null &&",
       "    settingsUpdateOk &&",
+      "    unauthorizedApply.status === 403 && unauthorizedApply.json?.reason === \"unsafe-intent-request\" &&",
       "    preview.status === 200 && preview.json?.ok === true &&",
       "    apply.status === 200 && apply.json?.ok === true &&",
       "    sourceAfterApply.includes(\"gap-6\") && !sourceAfterApply.includes(\"gap-4\") &&",
@@ -891,6 +946,8 @@ function packageSmoke(): PackageSmokeResult {
       "    settingsClaudeCommand: settingsAfterJson?.settings?.agent?.claudeCommand ?? null,",
       "    settingsCommandSource: settingsAfterJson?.agent?.codexCommandSource ?? null,",
       "    settingsUpdateOk,",
+      "    unauthorizedMutationStatus: unauthorizedApply.status,",
+      "    unauthorizedMutationRejected: unauthorizedApply.json?.reason === \"unsafe-intent-request\",",
       "    previewStatus: preview.status,",
       "    previewOk: preview.json?.ok === true,",
       "    applyStatus: apply.status,",
@@ -1011,7 +1068,7 @@ function packageSmoke(): PackageSmokeResult {
       "    multiFileRefreshTargetPass: false,",
       "    multiFileMs: 0,",
       "    ms: Number((performance.now() - started).toFixed(3)),",
-      "    error: error instanceof Error ? error.message : String(error),",
+      "    error: `${stage}: ${error instanceof Error ? error.message : String(error)}`,",
       "    stdout: truncate(stdout),",
       "    stderr: truncate(stderr)",
       "  }));",
@@ -1069,6 +1126,8 @@ function packageSmoke(): PackageSmokeResult {
     settingsClaudeCommand?: string | null;
     settingsCommandSource?: string | null;
     settingsUpdateOk?: boolean;
+    unauthorizedMutationStatus?: number | null;
+    unauthorizedMutationRejected?: boolean;
     previewStatus?: number | null;
     previewOk?: boolean;
     applyStatus?: number | null;
@@ -1112,6 +1171,9 @@ function packageSmoke(): PackageSmokeResult {
     multiFileRefreshTargetPass?: boolean;
     multiFileMs?: number;
     ms?: number;
+    error?: string;
+    stdout?: string;
+    stderr?: string;
   } = {};
   try {
     installedViteDevServerReport = JSON.parse(installedViteDevServer.stdout) as typeof installedViteDevServerReport;
@@ -1123,7 +1185,7 @@ function packageSmoke(): PackageSmokeResult {
     ? fs.readFileSync(builtCliFile, "utf8").split(/\r?\n/, 1)[0] ?? null
     : null;
 
-  return {
+  const result: PackageSmokeResult = {
     packageName: dryRunPackage?.name ?? null,
     packageVersion: dryRunPackage?.version ?? null,
     binTarget: packageJson.bin?.["intent-layer"] ?? null,
@@ -1135,6 +1197,15 @@ function packageSmoke(): PackageSmokeResult {
     viteImportExitCode: viteImport.exitCode,
     installedViteTransformExitCode: installedViteTransform.exitCode,
     installedViteDevServerExitCode: installedViteDevServer.exitCode,
+    installedViteDevServerFailure:
+      installedViteDevServer.exitCode === 0 && installedViteDevServerReport.ok === true
+        ? null
+        : {
+            error: installedViteDevServerReport.error ?? null,
+            stdout: installedViteDevServerReport.stdout ?? "",
+            stderr: installedViteDevServerReport.stderr ?? "",
+            processStderr: installedViteDevServer.stderr.slice(0, 1200)
+          },
     packageFileCount: files.length,
     packageSize: dryRunPackage?.size ?? 0,
     packageUnpackedSize: dryRunPackage?.unpackedSize ?? 0,
@@ -1144,6 +1215,7 @@ function packageSmoke(): PackageSmokeResult {
     cliShebang,
     hasCliBundle: files.some((file) => file.path === "dist/cli.js"),
     hasViteBundle: files.some((file) => file.path === "dist/vite.js"),
+    hasViteTypes: files.some((file) => file.path === "dist/types/vitePlugin.d.ts"),
     hasVirtualClientBundle:
       files.some((file) => file.path === "dist/client.js") &&
       files.some((file) => file.path === "dist/tailwind.js"),
@@ -1235,6 +1307,10 @@ function packageSmoke(): PackageSmokeResult {
     installedViteDevServerSettingsCommandSource:
       installedViteDevServerReport.settingsCommandSource ?? null,
     installedViteDevServerSettingsUpdateOk: installedViteDevServerReport.settingsUpdateOk === true,
+    installedViteDevServerUnauthorizedMutationStatus:
+      installedViteDevServerReport.unauthorizedMutationStatus ?? null,
+    installedViteDevServerUnauthorizedMutationRejected:
+      installedViteDevServerReport.unauthorizedMutationRejected === true,
     installedViteDevServerPreviewStatus: installedViteDevServerReport.previewStatus ?? null,
     installedViteDevServerPreviewOk: installedViteDevServerReport.previewOk === true,
     installedViteDevServerApplyStatus: installedViteDevServerReport.applyStatus ?? null,
@@ -1330,6 +1406,8 @@ function packageSmoke(): PackageSmokeResult {
       installedViteTransform.stderr.length +
       installedViteDevServer.stderr.length
   };
+  fs.rmSync(packageRoot, { recursive: true, force: true });
+  return result;
 }
 
 function sourceFiles(input: string): string[] {
@@ -4529,6 +4607,207 @@ for (let index = 0; index < graphLookupIterations; index += 1) {
 }
 const graphLookupTotalMs = performance.now() - lookupStarted;
 
+const gridLayoutFixtureDir = path.join(tmpDir, "grid-layout-benchmark");
+const gridLayoutFixtureFile = path.join(gridLayoutFixtureDir, "src", "Grid.tsx");
+const gridLayoutChildCount = 8;
+const gridLayoutIterations = 20;
+const gridLayoutPreviewTargetMs = 20;
+const gridLayoutApplyTargetMs = 50;
+const gridLayoutSource = [
+  "export function Grid(){ return (",
+  '  <section className="grid grid-cols-12 grid-rows-2 gap-4">',
+  ...Array.from(
+    { length: gridLayoutChildCount },
+    (_, index) => `    <article className="col-span-1 rounded-lg bg-slate-${index + 1}00">${index + 1}</article>`
+  ),
+  "  </section>",
+  "); }"
+].join("\n");
+fs.rmSync(gridLayoutFixtureDir, { recursive: true, force: true });
+fs.mkdirSync(path.dirname(gridLayoutFixtureFile), { recursive: true });
+const gridLayoutPreviewTimes: number[] = [];
+const gridLayoutApplyTimes: number[] = [];
+const gridLayoutRevertTimes: number[] = [];
+let gridLayoutRoundTripsPassed = 0;
+let gridLayoutPartialWriteCount = 0;
+for (let iteration = 0; iteration < gridLayoutIterations; iteration += 1) {
+  fs.writeFileSync(gridLayoutFixtureFile, gridLayoutSource, "utf8");
+  const instrumented = instrumentSource({
+    code: gridLayoutSource,
+    file: gridLayoutFixtureFile,
+    rootDir: gridLayoutFixtureDir
+  });
+  const parent = instrumented.entries.find((entry) => entry.tokens.some((token) => token.token === "grid-cols-12"));
+  const children = instrumented.entries
+    .filter((entry) => entry.tagName === "article")
+    .sort((left, right) => left.className.start - right.className.start);
+  if (!parent || children.length !== gridLayoutChildCount) continue;
+  const entries = new Map(instrumented.entries.map((entry) => [entry.id, entry]));
+  const plan = planGridLayout((id) => entries.get(id), {
+    parentId: parent.id,
+    childIds: children.map((child) => child.id),
+    breakpoint: "dashboard",
+    columns: 10,
+    rows: 4,
+    items: children.map((child, index) => ({
+      id: child.id,
+      columnStart: (index % 5) + 1,
+      columnSpan: index % 2 === 0 ? 2 : 1,
+      rowStart: Math.floor(index / 2) + 1,
+      rowSpan: 1
+    }))
+  }, ["base", "sm", "md", "lg", "dashboard"]);
+  if (!plan.ok) continue;
+  gridLayoutPreviewTimes.push(plan.patch.metrics.previewMs);
+  const applied = applyPlannedPatch(gridLayoutFixtureDir, parent, plan.patch);
+  if (!applied.ok) {
+    if (fs.readFileSync(gridLayoutFixtureFile, "utf8") !== gridLayoutSource) gridLayoutPartialWriteCount += 1;
+    continue;
+  }
+  gridLayoutApplyTimes.push(applied.metrics.applyMs);
+  const changedSource = fs.readFileSync(gridLayoutFixtureFile, "utf8");
+  const currentParent = instrumentSource({
+    code: changedSource,
+    file: gridLayoutFixtureFile,
+    rootDir: gridLayoutFixtureDir
+  }).entries.find((entry) => entry.id === parent.id);
+  const reverted = revertTokenPatch(gridLayoutFixtureDir, applied, currentParent);
+  if (!reverted.ok) continue;
+  gridLayoutRevertTimes.push(reverted.metrics.revertMs);
+  if (fs.readFileSync(gridLayoutFixtureFile, "utf8") === gridLayoutSource) gridLayoutRoundTripsPassed += 1;
+}
+const gridLayoutPreviewP95Ms = percentile(gridLayoutPreviewTimes, 0.95);
+const gridLayoutApplyP95Ms = percentile(gridLayoutApplyTimes, 0.95);
+const gridLayoutRevertP95Ms = percentile(gridLayoutRevertTimes, 0.95);
+
+const literalTextFixtureDir = path.join(tmpDir, "literal-text-benchmark");
+const literalTextFixtureFile = path.join(literalTextFixtureDir, "src", "Title.tsx");
+const literalTextIterations = 20;
+const literalTextPreviewTargetMs = 20;
+const literalTextApplyTargetMs = 50;
+const literalTextSource = 'export function Title(){ return <h2 className="font-semibold">Original heading</h2>; }';
+fs.rmSync(literalTextFixtureDir, { recursive: true, force: true });
+fs.mkdirSync(path.dirname(literalTextFixtureFile), { recursive: true });
+const literalTextPreviewTimes: number[] = [];
+const literalTextApplyTimes: number[] = [];
+const literalTextRevertTimes: number[] = [];
+let literalTextRoundTripsPassed = 0;
+let literalTextPartialWriteCount = 0;
+for (let iteration = 0; iteration < literalTextIterations; iteration += 1) {
+  fs.writeFileSync(literalTextFixtureFile, literalTextSource, "utf8");
+  const entry = instrumentSource({
+    code: literalTextSource,
+    file: literalTextFixtureFile,
+    rootDir: literalTextFixtureDir
+  }).entries[0];
+  if (!entry?.textContent) continue;
+  const request = {
+    id: entry.id,
+    oldText: "Original heading",
+    nextText: "Edited heading"
+  };
+  const preview = planLiteralTextPatch(entry, request);
+  if (!preview.ok) continue;
+  literalTextPreviewTimes.push(preview.metrics.previewMs);
+  const applied = applyLiteralTextPatch(literalTextFixtureDir, entry, request);
+  if (!applied.ok) {
+    if (fs.readFileSync(literalTextFixtureFile, "utf8") !== literalTextSource) literalTextPartialWriteCount += 1;
+    continue;
+  }
+  literalTextApplyTimes.push(applied.metrics.applyMs);
+  const changedSource = fs.readFileSync(literalTextFixtureFile, "utf8");
+  const currentEntry = instrumentSource({
+    code: changedSource,
+    file: literalTextFixtureFile,
+    rootDir: literalTextFixtureDir
+  }).entries.find((candidate) => candidate.id === entry.id);
+  const reverted = revertTokenPatch(literalTextFixtureDir, applied, currentEntry);
+  if (!reverted.ok) continue;
+  literalTextRevertTimes.push(reverted.metrics.revertMs);
+  if (fs.readFileSync(literalTextFixtureFile, "utf8") === literalTextSource) literalTextRoundTripsPassed += 1;
+}
+const literalTextPreviewP95Ms = percentile(literalTextPreviewTimes, 0.95);
+const literalTextApplyP95Ms = percentile(literalTextApplyTimes, 0.95);
+const literalTextRevertP95Ms = percentile(literalTextRevertTimes, 0.95);
+
+const flexLayoutFixtureDir = path.join(tmpDir, "flex-layout-benchmark");
+const flexLayoutFixtureFile = path.join(flexLayoutFixtureDir, "src", "Flex.tsx");
+const flexLayoutChildCount = 8;
+const flexLayoutIterations = 20;
+const flexLayoutPreviewTargetMs = 20;
+const flexLayoutApplyTargetMs = 50;
+const flexLayoutSource = [
+  "export function Flex(){ return (",
+  '  <section className="flex flex-row flex-nowrap items-stretch justify-start gap-4">',
+  ...Array.from(
+    { length: flexLayoutChildCount },
+    (_, index) => `    <article className="rounded-lg bg-slate-${index + 1}00">${index + 1}</article>`
+  ),
+  "  </section>",
+  "); }"
+].join("\n");
+fs.rmSync(flexLayoutFixtureDir, { recursive: true, force: true });
+fs.mkdirSync(path.dirname(flexLayoutFixtureFile), { recursive: true });
+const flexLayoutPreviewTimes: number[] = [];
+const flexLayoutApplyTimes: number[] = [];
+const flexLayoutRevertTimes: number[] = [];
+let flexLayoutRoundTripsPassed = 0;
+let flexLayoutPartialWriteCount = 0;
+for (let iteration = 0; iteration < flexLayoutIterations; iteration += 1) {
+  fs.writeFileSync(flexLayoutFixtureFile, flexLayoutSource, "utf8");
+  const instrumented = instrumentSource({
+    code: flexLayoutSource,
+    file: flexLayoutFixtureFile,
+    rootDir: flexLayoutFixtureDir
+  });
+  const parent = instrumented.entries.find((entry) => entry.tagName === "section");
+  const children = instrumented.entries
+    .filter((entry) => entry.tagName === "article")
+    .sort((left, right) => left.className.start - right.className.start);
+  if (!parent || children.length !== flexLayoutChildCount) continue;
+  const entries = new Map(instrumented.entries.map((entry) => [entry.id, entry]));
+  const plan = planFlexLayout(
+    (id) => entries.get(id),
+    {
+      parentId: parent.id,
+      childIds: children.map((child) => child.id),
+      breakpoint: "dashboard",
+      direction: "col",
+      wrap: "wrap",
+      justify: "between",
+      align: "center",
+      gap: "gap-6",
+      items: children.map((child, index) => ({
+        id: child.id,
+        alignSelf: index % 2 === 0 ? "start" : "end"
+      }))
+    },
+    ["base", "sm", "md", "lg", "dashboard"],
+    candidatesForToken("gap-4")
+  );
+  if (!plan.ok) continue;
+  flexLayoutPreviewTimes.push(plan.patch.metrics.previewMs);
+  const applied = applyPlannedPatch(flexLayoutFixtureDir, parent, plan.patch);
+  if (!applied.ok) {
+    if (fs.readFileSync(flexLayoutFixtureFile, "utf8") !== flexLayoutSource) flexLayoutPartialWriteCount += 1;
+    continue;
+  }
+  flexLayoutApplyTimes.push(applied.metrics.applyMs);
+  const changedSource = fs.readFileSync(flexLayoutFixtureFile, "utf8");
+  const currentParent = instrumentSource({
+    code: changedSource,
+    file: flexLayoutFixtureFile,
+    rootDir: flexLayoutFixtureDir
+  }).entries.find((entry) => entry.id === parent.id);
+  const reverted = revertTokenPatch(flexLayoutFixtureDir, applied, currentParent);
+  if (!reverted.ok) continue;
+  flexLayoutRevertTimes.push(reverted.metrics.revertMs);
+  if (fs.readFileSync(flexLayoutFixtureFile, "utf8") === flexLayoutSource) flexLayoutRoundTripsPassed += 1;
+}
+const flexLayoutPreviewP95Ms = percentile(flexLayoutPreviewTimes, 0.95);
+const flexLayoutApplyP95Ms = percentile(flexLayoutApplyTimes, 0.95);
+const flexLayoutRevertP95Ms = percentile(flexLayoutRevertTimes, 0.95);
+
 const report = {
   generatedAt: new Date().toISOString(),
   contextPackUsed: true,
@@ -4620,6 +4899,94 @@ const report = {
     totalMs: Number(graphLookupTotalMs.toFixed(3)),
     averageMs: Number((graphLookupTotalMs / graphLookupIterations).toFixed(6)),
     note: "This measures id-to-binding graph lookup only, not a real browser click event."
+  },
+  gridLayout: {
+    iterations: gridLayoutIterations,
+    childCount: gridLayoutChildCount,
+    breakpoint: "dashboard",
+    editsRows: true,
+    completedRoundTrips: gridLayoutRoundTripsPassed,
+    partialWriteCount: gridLayoutPartialWriteCount,
+    byteRestorePass: gridLayoutRoundTripsPassed === gridLayoutIterations,
+    preview: {
+      samples: gridLayoutPreviewTimes,
+      averageMs: average(gridLayoutPreviewTimes),
+      p95Ms: gridLayoutPreviewP95Ms,
+      targetMs: gridLayoutPreviewTargetMs,
+      pass: gridLayoutPreviewTimes.length === gridLayoutIterations && gridLayoutPreviewP95Ms <= gridLayoutPreviewTargetMs
+    },
+    apply: {
+      samples: gridLayoutApplyTimes,
+      averageMs: average(gridLayoutApplyTimes),
+      p95Ms: gridLayoutApplyP95Ms,
+      targetMs: gridLayoutApplyTargetMs,
+      pass: gridLayoutApplyTimes.length === gridLayoutIterations && gridLayoutApplyP95Ms <= gridLayoutApplyTargetMs
+    },
+    revert: {
+      samples: gridLayoutRevertTimes,
+      averageMs: average(gridLayoutRevertTimes),
+      p95Ms: gridLayoutRevertP95Ms
+    }
+  },
+  literalText: {
+    iterations: literalTextIterations,
+    completedRoundTrips: literalTextRoundTripsPassed,
+    partialWriteCount: literalTextPartialWriteCount,
+    byteRestorePass: literalTextRoundTripsPassed === literalTextIterations,
+    preview: {
+      samples: literalTextPreviewTimes,
+      averageMs: average(literalTextPreviewTimes),
+      p95Ms: literalTextPreviewP95Ms,
+      targetMs: literalTextPreviewTargetMs,
+      pass:
+        literalTextPreviewTimes.length === literalTextIterations &&
+        literalTextPreviewP95Ms <= literalTextPreviewTargetMs
+    },
+    apply: {
+      samples: literalTextApplyTimes,
+      averageMs: average(literalTextApplyTimes),
+      p95Ms: literalTextApplyP95Ms,
+      targetMs: literalTextApplyTargetMs,
+      pass:
+        literalTextApplyTimes.length === literalTextIterations &&
+        literalTextApplyP95Ms <= literalTextApplyTargetMs
+    },
+    revert: {
+      samples: literalTextRevertTimes,
+      averageMs: average(literalTextRevertTimes),
+      p95Ms: literalTextRevertP95Ms
+    }
+  },
+  flexLayout: {
+    iterations: flexLayoutIterations,
+    childCount: flexLayoutChildCount,
+    breakpoint: "dashboard",
+    completedRoundTrips: flexLayoutRoundTripsPassed,
+    partialWriteCount: flexLayoutPartialWriteCount,
+    byteRestorePass: flexLayoutRoundTripsPassed === flexLayoutIterations,
+    preview: {
+      samples: flexLayoutPreviewTimes,
+      averageMs: average(flexLayoutPreviewTimes),
+      p95Ms: flexLayoutPreviewP95Ms,
+      targetMs: flexLayoutPreviewTargetMs,
+      pass:
+        flexLayoutPreviewTimes.length === flexLayoutIterations &&
+        flexLayoutPreviewP95Ms <= flexLayoutPreviewTargetMs
+    },
+    apply: {
+      samples: flexLayoutApplyTimes,
+      averageMs: average(flexLayoutApplyTimes),
+      p95Ms: flexLayoutApplyP95Ms,
+      targetMs: flexLayoutApplyTargetMs,
+      pass:
+        flexLayoutApplyTimes.length === flexLayoutIterations &&
+        flexLayoutApplyP95Ms <= flexLayoutApplyTargetMs
+    },
+    revert: {
+      samples: flexLayoutRevertTimes,
+      averageMs: average(flexLayoutRevertTimes),
+      p95Ms: flexLayoutRevertP95Ms
+    }
   },
   cli: {
     initExitCode: cliInit.exitCode,
@@ -5732,6 +6099,30 @@ const report = {
       : 0
   },
   gates: {
+    gridLayoutSafetyPass:
+      gridLayoutRoundTripsPassed === gridLayoutIterations && gridLayoutPartialWriteCount === 0,
+    gridLayoutPreviewPerformancePass:
+      gridLayoutPreviewTimes.length === gridLayoutIterations &&
+      gridLayoutPreviewP95Ms <= gridLayoutPreviewTargetMs,
+    gridLayoutApplyPerformancePass:
+      gridLayoutApplyTimes.length === gridLayoutIterations &&
+      gridLayoutApplyP95Ms <= gridLayoutApplyTargetMs,
+    literalTextSafetyPass:
+      literalTextRoundTripsPassed === literalTextIterations && literalTextPartialWriteCount === 0,
+    literalTextPreviewPerformancePass:
+      literalTextPreviewTimes.length === literalTextIterations &&
+      literalTextPreviewP95Ms <= literalTextPreviewTargetMs,
+    literalTextApplyPerformancePass:
+      literalTextApplyTimes.length === literalTextIterations &&
+      literalTextApplyP95Ms <= literalTextApplyTargetMs,
+    flexLayoutSafetyPass:
+      flexLayoutRoundTripsPassed === flexLayoutIterations && flexLayoutPartialWriteCount === 0,
+    flexLayoutPreviewPerformancePass:
+      flexLayoutPreviewTimes.length === flexLayoutIterations &&
+      flexLayoutPreviewP95Ms <= flexLayoutPreviewTargetMs,
+    flexLayoutApplyPerformancePass:
+      flexLayoutApplyTimes.length === flexLayoutIterations &&
+      flexLayoutApplyP95Ms <= flexLayoutApplyTargetMs,
     staticEditableTokenCoveragePass: corpus.editableCoverage.staticOnly >= 0.3,
     staticAndSimpleCoveragePass: corpus.editableCoverage.staticAndSimpleCnClsx >= 0.5,
     supportedDirectCoveragePass: corpus.editableCoverage.supportedDirect >= 0.5,
@@ -5806,10 +6197,14 @@ const report = {
       packageInstallSmoke.installedViteTransformExitCode === 0 &&
       packageInstallSmoke.installedViteDevServerExitCode === 0 &&
       packageInstallSmoke.binTarget === "dist/cli.js" &&
-      packageInstallSmoke.viteExportTarget === "./dist/vite.js" &&
+      (typeof packageInstallSmoke.viteExportTarget === "string"
+        ? packageInstallSmoke.viteExportTarget === "./dist/vite.js"
+        : packageInstallSmoke.viteExportTarget?.import === "./dist/vite.js" &&
+          packageInstallSmoke.viteExportTarget.types === "./dist/types/vitePlugin.d.ts") &&
       packageInstallSmoke.cliShebang === "#!/usr/bin/env node" &&
       packageInstallSmoke.hasCliBundle &&
       packageInstallSmoke.hasViteBundle &&
+      packageInstallSmoke.hasViteTypes &&
       packageInstallSmoke.hasVirtualClientBundle &&
       !packageInstallSmoke.hasContextPackFiles &&
       packageInstallSmoke.hasReadmeDocs &&
@@ -5844,11 +6239,11 @@ const report = {
       packageInstallSmoke.installedViteDevServerSetupGraphReady &&
       packageInstallSmoke.installedViteDevServerSetupSettingsFileExists &&
       packageInstallSmoke.installedViteDevServerSetupSchemaExists &&
-      packageInstallSmoke.installedViteDevServerSetupQueueSignalExists &&
-      packageInstallSmoke.installedViteDevServerSetupQueueStatus === 200 &&
-      packageInstallSmoke.installedViteDevServerSetupCodexSkillExists &&
-      packageInstallSmoke.installedViteDevServerSetupClaudeSettingsExists &&
-      packageInstallSmoke.installedViteDevServerSetupClaudeHookConfigured &&
+      !packageInstallSmoke.installedViteDevServerSetupQueueSignalExists &&
+      packageInstallSmoke.installedViteDevServerSetupQueueStatus === 404 &&
+      !packageInstallSmoke.installedViteDevServerSetupCodexSkillExists &&
+      !packageInstallSmoke.installedViteDevServerSetupClaudeSettingsExists &&
+      !packageInstallSmoke.installedViteDevServerSetupClaudeHookConfigured &&
       packageInstallSmoke.installedViteDevServerSettingsUpdateStatus === 200 &&
       packageInstallSmoke.installedViteDevServerSettingsLanguage === "en" &&
       packageInstallSmoke.installedViteDevServerSettingsDock === "left" &&
@@ -5867,6 +6262,8 @@ const report = {
       packageInstallSmoke.installedViteDevServerSettingsClaudeCommand === "claude-custom" &&
       packageInstallSmoke.installedViteDevServerSettingsCommandSource === "settings" &&
       packageInstallSmoke.installedViteDevServerSettingsUpdateOk &&
+      packageInstallSmoke.installedViteDevServerUnauthorizedMutationStatus === 403 &&
+      packageInstallSmoke.installedViteDevServerUnauthorizedMutationRejected &&
       packageInstallSmoke.installedViteDevServerPreviewStatus === 200 &&
       packageInstallSmoke.installedViteDevServerPreviewOk &&
       packageInstallSmoke.installedViteDevServerApplyStatus === 200 &&
@@ -5971,7 +6368,10 @@ const report = {
       cliAgentLaunchCodexReport.taskCreated &&
       cliAgentLaunchCodexReport.executed === false &&
       cliAgentLaunchCodexReport.commandPlan?.slice(1, 4).join(" ") === "exec --sandbox workspace-write" &&
-      Boolean(cliAgentLaunchCodexReport.commandText?.includes("Read .intent/agent/")) &&
+      Boolean(
+        cliAgentLaunchCodexReport.taskFile &&
+          cliAgentLaunchCodexReport.commandText?.includes(`Read ${cliAgentLaunchCodexReport.taskFile}`)
+      ) &&
       cliAgentLaunchClaude.exitCode === 0 &&
       cliAgentLaunchClaudeReport?.command === "agent-launch" &&
       cliAgentLaunchClaudeReport.ok &&

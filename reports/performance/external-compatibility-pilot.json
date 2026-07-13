@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-12T07:52:25.891Z",
+  "status": "completed",
+  "scope": "Operator-run compatibility pilot on pinned public React/Vite/Tailwind repositories that were not product fixtures.",
+  "productAbEligible": false,
+  "productAbExclusionReasons": [
+    "The product author operated both setup and edit flows.",
+    "No paired prompt-only condition was run.",
+    "The pilot measures compatibility and defect discovery, not product advantage."
+  ],
+  "summary": {
+    "repositoryCount": 5,
+    "initSuccessCount": 5,
+    "filesScanned": 193,
+    "filesWithBindings": 161,
+    "bindingCount": 1706,
+    "directEditBindingCount": 1443,
+    "weightedDirectEditBindingCoverage": 0.8458,
+    "tokenCount": 6598,
+    "editableTokenCount": 5548,
+    "weightedEditableTokenCoverage": 0.8409,
+    "syntaxErrorCount": 0,
+    "fileWeightedAverageTransformMs": 3.642,
+    "maximumObservedFileTransformMs": 32.748,
+    "productionBuildCount": 2,
+    "productionMarkerMatchCount": 0,
+    "completeBrowserApplyUndoRoundTripCount": 1,
+    "defectCount": 2,
+    "defectsFixedCount": 2
+  },
+  "repositories": [
+    {
+      "name": "cruip-dashboard",
+      "url": "https://github.com/cruip/tailwind-dashboard-template",
+      "commit": "173f64183e3f5488e8e22d3a3f6a8de75bf63d7a",
+      "stack": "React 19 / Vite 6 / Tailwind CSS 4 / pnpm",
+      "scan": {
+        "filesScanned": 43,
+        "filesWithBindings": 35,
+        "bindingCount": 728,
+        "directEditBindingCount": 619,
+        "readOnlyBindingCount": 64,
+        "tokenCount": 2391,
+        "editableTokenCount": 2015,
+        "supportedDirectCoverage": 0.8503,
+        "editableTokenCoverage": 0.8427,
+        "syntaxErrorCount": 0,
+        "averageTransformMs": 3.989,
+        "maxTransformMs": 32.748
+      },
+      "runtime": {
+        "initSucceeded": true,
+        "productionBuildSucceeded": true,
+        "productionMarkerMatches": 0,
+        "liveBindingCount": 716,
+        "selectedSource": "src/partials/dashboard/DashboardCard01.jsx",
+        "tokenChange": "mb-2 -> mb-2.5",
+        "domPreviewLeftSourceUnchanged": true,
+        "applySucceeded": true,
+        "operatorObservedApplyRoundTripMs": 2845,
+        "undoSucceeded": true,
+        "operatorObservedUndoRoundTripMs": 2221,
+        "sourceExactlyRestored": true
+      }
+    },
+    {
+      "name": "radix-template",
+      "url": "https://github.com/zetavg/react-vite-radix-tailwind-typescript-template",
+      "commit": "d8520aaff1a8cfe8f6b3a3cf8a4cff2a13fcc265",
+      "stack": "React 18 / Vite 5 / Tailwind CSS 3",
+      "scan": {
+        "filesScanned": 7,
+        "filesWithBindings": 3,
+        "bindingCount": 19,
+        "directEditBindingCount": 18,
+        "readOnlyBindingCount": 0,
+        "tokenCount": 78,
+        "editableTokenCount": 63,
+        "supportedDirectCoverage": 0.9474,
+        "editableTokenCoverage": 0.8077,
+        "syntaxErrorCount": 0,
+        "averageTransformMs": 4.874,
+        "maxTransformMs": 10.011
+      },
+      "runtime": {
+        "initSucceeded": true,
+        "browserRoundTripRun": false
+      }
+    },
+    {
+      "name": "react-vite-tailwind",
+      "url": "https://github.com/danielbatres/react-vite-tailwind",
+      "commit": "0380d3c2a51a58225812fd6b6cf3717ae9129c3a",
+      "stack": "React 18 / Vite 4 / Tailwind CSS 3",
+      "scan": {
+        "filesScanned": 18,
+        "filesWithBindings": 13,
+        "bindingCount": 72,
+        "directEditBindingCount": 66,
+        "readOnlyBindingCount": 4,
+        "tokenCount": 241,
+        "editableTokenCount": 214,
+        "supportedDirectCoverage": 0.9167,
+        "editableTokenCoverage": 0.888,
+        "syntaxErrorCount": 0,
+        "averageTransformMs": 3.182,
+        "maxTransformMs": 10.548
+      },
+      "runtime": {
+        "initSucceeded": true,
+        "browserRoundTripRun": false
+      }
+    },
+    {
+      "name": "simple-react-ecommerce",
+      "url": "https://github.com/alim1496/simple-react-ecommerce",
+      "commit": "971db13cb0503d036e2a8b37453d459167008fe5",
+      "stack": "React 18 / Vite 5 / Tailwind CSS 3",
+      "scan": {
+        "filesScanned": 33,
+        "filesWithBindings": 28,
+        "bindingCount": 222,
+        "directEditBindingCount": 202,
+        "readOnlyBindingCount": 5,
+        "tokenCount": 835,
+        "editableTokenCount": 643,
+        "supportedDirectCoverage": 0.9099,
+        "editableTokenCoverage": 0.7701,
+        "syntaxErrorCount": 0,
+        "averageTransformMs": 3.938,
+        "maxTransformMs": 17.077
+      },
+      "runtime": {
+        "initSucceeded": true,
+        "browserRoundTripRun": false
+      }
+    },
+    {
+      "name": "tailadmin",
+      "url": "https://github.com/TailAdmin/free-react-tailwind-admin-dashboard",
+      "commit": "21dc917cb6cb22b5f1d12e5af57359a849d19aa8",
+      "stack": "React 19 / Vite 6 / Tailwind CSS 4 / npm",
+      "scan": {
+        "filesScanned": 92,
+        "filesWithBindings": 82,
+        "bindingCount": 665,
+        "directEditBindingCount": 538,
+        "readOnlyBindingCount": 59,
+        "tokenCount": 3053,
+        "editableTokenCount": 2613,
+        "supportedDirectCoverage": 0.809,
+        "editableTokenCoverage": 0.8559,
+        "syntaxErrorCount": 0,
+        "averageTransformMs": 3.37,
+        "maxTransformMs": 24.25
+      },
+      "runtime": {
+        "initSucceeded": true,
+        "productionBuildSucceeded": true,
+        "productionMarkerMatches": 0,
+        "liveBindingCount": 638,
+        "runtimeArtifactReloadCountAfterFix": 0,
+        "stableOverlayRendered": true,
+        "completeApplyUndoRoundTripRun": false
+      }
+    }
+  ],
+  "defects": [
+    {
+      "id": "vite-runtime-artifact-reload-loop",
+      "observedIn": "tailadmin",
+      "fixed": true,
+      "regressionGate": "src/intent/vitePlugin.test.ts"
+    },
+    {
+      "id": "pnpm-file-dependency-stale-package-cache",
+      "observedIn": "modern-tailwind-v4 compatibility gate",
+      "fixed": true,
+      "regressionGate": "npm run test:compat-pnpm"
+    }
+  ]
+}

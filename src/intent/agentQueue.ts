@@ -55,15 +55,26 @@ function isInsideRoot(rootDir: string, file: string): boolean {
 }
 
 export function agentQueueSignalPath(rootDir: string): string {
-  return path.join(rootDir, ".intent-agent-queue.json");
+  const override = agentArtifactOverride(rootDir);
+  return override ? path.join(override, "queue.json") : path.join(rootDir, ".intent-agent-queue.json");
 }
 
-function agentDir(rootDir: string): string {
-  return path.join(rootDir, ".intent", "agent");
+function agentArtifactOverride(rootDir: string): string | null {
+  const configured = process.env.INTENT_LAYER_AGENT_ARTIFACT_DIR?.trim();
+  if (!configured) return null;
+  const resolved = path.resolve(rootDir, configured);
+  if (!isInsideRoot(path.resolve(rootDir), resolved)) {
+    throw new Error("INTENT_LAYER_AGENT_ARTIFACT_DIR must stay inside the project root.");
+  }
+  return resolved;
+}
+
+export function agentArtifactsDir(rootDir: string): string {
+  return agentArtifactOverride(rootDir) ?? path.join(rootDir, ".intent", "agent");
 }
 
 function locksDir(rootDir: string): string {
-  return path.join(agentDir(rootDir), "locks");
+  return path.join(agentArtifactsDir(rootDir), "locks");
 }
 
 function renameAtomicWithRetry(source: string, destination: string): void {
@@ -331,7 +342,7 @@ function taskFromMetadata(rootDir: string, absoluteTaskFile: string, metadata: A
 }
 
 export function listAgentTasks(rootDir: string, limit = 50): AgentQueueTask[] {
-  const dir = agentDir(rootDir);
+  const dir = agentArtifactsDir(rootDir);
   if (!fs.existsSync(dir)) return [];
 
   const tasks = fs
@@ -357,7 +368,7 @@ export function listAgentTasks(rootDir: string, limit = 50): AgentQueueTask[] {
 }
 
 export function refreshAgentQueueSignal(rootDir: string): AgentQueueSignal {
-  const dir = agentDir(rootDir);
+  const dir = agentArtifactsDir(rootDir);
   fs.mkdirSync(dir, { recursive: true });
   fs.mkdirSync(locksDir(rootDir), { recursive: true });
 
@@ -367,8 +378,8 @@ export function refreshAgentQueueSignal(rootDir: string): AgentQueueSignal {
     version: 1,
     kind: "intent-agent-queue",
     updatedAt: nowIso(),
-    queueFile: ".intent-agent-queue.json",
-    agentDir: ".intent/agent",
+    queueFile: relativeFromRoot(rootDir, agentQueueSignalPath(rootDir)),
+    agentDir: relativeFromRoot(rootDir, dir),
     totalTaskCount: allTasks.length,
     pendingTaskCount: allTasks.filter((task) => task.status === "queued").length,
     runningTaskCount: allTasks.filter((task) => runningStatuses.has(task.status)).length,
@@ -554,7 +565,7 @@ export function pruneAgentArtifacts(rootDir: string, olderThanDays: number): Age
     prunedTaskCount += 1;
   }
 
-  const dir = agentDir(rootDir);
+  const dir = agentArtifactsDir(rootDir);
   if (fs.existsSync(dir)) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       if (!entry.isFile() || !/^(?:context|result)_.*\.md$/.test(entry.name)) continue;

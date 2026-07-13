@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-12T03:13:37.757Z",
+  "scope": "Local mechanical latency only; this does not measure agent task success or product value.",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.16.0",
+    "cpu": "AMD Ryzen 9 5900HX with Radeon Graphics",
+    "logicalCpuCount": 16
+  },
+  "sample": {
+    "files": 1,
+    "bindings": 1,
+    "className": "gap-4 bg-slate-50 p-4"
+  },
+  "latency": {
+    "inspect": {
+      "count": 200,
+      "minMs": 1.742,
+      "medianMs": 2.291,
+      "p95Ms": 3.277,
+      "maxMs": 6.803,
+      "meanMs": 2.429
+    },
+    "preview": {
+      "count": 100,
+      "minMs": 1.906,
+      "medianMs": 2.291,
+      "p95Ms": 3.237,
+      "maxMs": 3.717,
+      "meanMs": 2.4
+    },
+    "apply": {
+      "count": 20,
+      "minMs": 11.665,
+      "medianMs": 12.659,
+      "p95Ms": 14.718,
+      "maxMs": 15.965,
+      "meanMs": 13.006
+    },
+    "undo": {
+      "count": 20,
+      "minMs": 13.727,
+      "medianMs": 15.917,
+      "p95Ms": 17.553,
+      "maxMs": 18.093,
+      "meanMs": 15.909
+    },
+    "mcpFind": {
+      "count": 100,
+      "minMs": 1.652,
+      "medianMs": 2.307,
+      "p95Ms": 3.293,
+      "maxMs": 6.181,
+      "meanMs": 2.445
+    }
+  },
+  "safety": {
+    "sourceRestoredExactly": true,
+    "wrongFileWrites": 0,
+    "wrongRangeWrites": 0
+  },
+  "gates": {
+    "inspectP95Under10Ms": true,
+    "previewP95Under10Ms": true,
+    "applyP95Under100Ms": true,
+    "undoP95Under100Ms": true,
+    "mcpFindP95Under25Ms": true,
+    "sourceRestoredExactly": true
+  },
+  "pass": true
+}

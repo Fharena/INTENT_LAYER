@@ -236,10 +236,16 @@ export function ensureAgentIntegrations(
   createdPaths: string[],
   existingPaths: string[]
 ): AgentIntegrationStatus {
-  const queue = refreshAgentQueueSignal(rootDir);
-  const queuePath = path.join(rootDir, queue.queueFile);
-  if (fs.existsSync(queuePath)) {
-    existingPaths.push(relativeFromRoot(rootDir, queuePath));
+  if (
+    settings.codexSkillEnabled ||
+    settings.claudeHookEnabled ||
+    fs.existsSync(agentQueueSignalPath(rootDir))
+  ) {
+    const queue = refreshAgentQueueSignal(rootDir);
+    const queuePath = path.join(rootDir, queue.queueFile);
+    if (fs.existsSync(queuePath)) {
+      existingPaths.push(relativeFromRoot(rootDir, queuePath));
+    }
   }
 
   if (settings.codexSkillEnabled) {
