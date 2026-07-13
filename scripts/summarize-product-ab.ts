@@ -5,7 +5,10 @@ import { pathToFileURL } from "node:url";
 export type ProductAbCondition = "intent-layer" | "prompt-only";
 
 export interface ProductAbObservation {
-  version: 1;
+  version: 2;
+  participantId: string;
+  runOrder: number;
+  agentProfile: string;
   taskId: string;
   repository: string;
   repositoryCommit: string;
@@ -33,11 +36,12 @@ interface ConditionSummary {
 }
 
 export interface ProductAbReport {
-  version: 1;
+  version: 2;
   generatedAt: string;
   status: "collecting" | "complete";
   scope: string;
   inputFile: string;
+  participantCount: number;
   repositoryCount: number;
   pairedTaskCount: number;
   observationCount: number;
@@ -51,9 +55,14 @@ export interface ProductAbReport {
     medianIntentMinusPromptMs: number | null;
   };
   gates: {
+    atLeastFiveParticipants: boolean;
     atLeastFiveRepositories: boolean;
     atLeastTwentyPairedTasks: boolean;
     everyTaskHasBothConditions: boolean;
+    differentParticipantPerPair: boolean;
+    everyParticipantHasBothConditions: boolean;
+    balancedConditionsPerParticipant: boolean;
+    sameAgentProfilePerPair: boolean;
     complete: boolean;
   };
 }
@@ -70,6 +79,10 @@ function percentile(values: number[], ratio: number): number | null {
 
 function average(values: number[]): number {
   return values.length === 0 ? 0 : rounded(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 function summarizeCondition(observations: ProductAbObservation[]): ConditionSummary {
@@ -93,13 +106,27 @@ function validObservation(value: unknown): value is ProductAbObservation {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<ProductAbObservation>;
   return (
-    item.version === 1 &&
-    Boolean(item.taskId && item.repository && item.repositoryCommit && item.evaluator && item.recordedAt) &&
+    item.version === 2 &&
+    [
+      item.participantId,
+      item.agentProfile,
+      item.taskId,
+      item.repository,
+      item.repositoryCommit,
+      item.evaluator,
+      item.recordedAt
+    ].every(nonEmptyString) &&
+    Number.isFinite(Date.parse(item.recordedAt as string)) &&
+    Number.isInteger(item.runOrder) &&
+    Number(item.runOrder) >= 1 &&
     (item.condition === "intent-layer" || item.condition === "prompt-only") &&
     typeof item.success === "boolean" &&
     typeof item.unsupported === "boolean" &&
-    [item.durationMs, item.retryCount, item.wrongTargetCount, item.undoCount].every(
-      (number) => typeof number === "number" && Number.isFinite(number) && number >= 0
+    typeof item.durationMs === "number" &&
+    Number.isFinite(item.durationMs) &&
+    item.durationMs >= 0 &&
+    [item.retryCount, item.wrongTargetCount, item.undoCount].every(
+      (number) => typeof number === "number" && Number.isInteger(number) && number >= 0
     )
   );
 }
@@ -125,6 +152,7 @@ export function summarizeProductAb(
   const taskKey = (observation: ProductAbObservation) =>
     `${observation.repository}\0${observation.repositoryCommit}\0${observation.taskId}`;
   const unique = new Set<string>();
+  const participantRunOrders = new Set<string>();
   for (const observation of observations) {
     const key = `${taskKey(observation)}\0${observation.condition}`;
     if (unique.has(key)) {
@@ -133,6 +161,13 @@ export function summarizeProductAb(
       );
     }
     unique.add(key);
+    const runOrderKey = `${observation.participantId}\0${observation.runOrder}`;
+    if (participantRunOrders.has(runOrderKey)) {
+      throw new Error(
+        `Duplicate product A/B runOrder for ${observation.participantId}:${observation.runOrder}.`
+      );
+    }
+    participantRunOrders.add(runOrderKey);
   }
 
   const byTask = new Map<string, Partial<Record<ProductAbCondition, ProductAbObservation>>>();
@@ -150,18 +185,55 @@ export function summarizeProductAb(
     .filter((pair) => pair["intent-layer"].success && pair["prompt-only"].success)
     .map((pair) => pair["intent-layer"].durationMs - pair["prompt-only"].durationMs);
   const repositoryCount = new Set(observations.map((item) => item.repository)).size;
-  const everyTaskHasBothConditions = pairs.length === byTask.size;
+  const participantCount = new Set(observations.map((item) => item.participantId)).size;
+  const participantConditions = new Map<string, Set<ProductAbCondition>>();
+  const participantConditionCounts = new Map<string, Record<ProductAbCondition, number>>();
+  for (const observation of observations) {
+    const conditions = participantConditions.get(observation.participantId) ?? new Set<ProductAbCondition>();
+    conditions.add(observation.condition);
+    participantConditions.set(observation.participantId, conditions);
+    const counts = participantConditionCounts.get(observation.participantId) ?? {
+      "intent-layer": 0,
+      "prompt-only": 0
+    };
+    counts[observation.condition] += 1;
+    participantConditionCounts.set(observation.participantId, counts);
+  }
+  const atLeastFiveParticipants = participantCount >= 5;
+  const everyTaskHasBothConditions = byTask.size > 0 && pairs.length === byTask.size;
+  const differentParticipantPerPair =
+    pairs.length > 0 &&
+    pairs.every((pair) => pair["intent-layer"].participantId !== pair["prompt-only"].participantId);
+  const everyParticipantHasBothConditions =
+    participantConditions.size > 0 && [...participantConditions.values()].every((conditions) => conditions.size === 2);
+  const balancedConditionsPerParticipant =
+    participantConditionCounts.size > 0 &&
+    [...participantConditionCounts.values()].every(
+      (counts) => Math.abs(counts["intent-layer"] - counts["prompt-only"]) <= 1
+    );
+  const sameAgentProfilePerPair =
+    pairs.length > 0 &&
+    pairs.every((pair) => pair["intent-layer"].agentProfile === pair["prompt-only"].agentProfile);
   const atLeastFiveRepositories = repositoryCount >= 5;
   const atLeastTwentyPairedTasks = pairs.length >= 20;
-  const complete = atLeastFiveRepositories && atLeastTwentyPairedTasks && everyTaskHasBothConditions;
+  const complete =
+    atLeastFiveParticipants &&
+    atLeastFiveRepositories &&
+    atLeastTwentyPairedTasks &&
+    everyTaskHasBothConditions &&
+    differentParticipantPerPair &&
+    everyParticipantHasBothConditions &&
+    balancedConditionsPerParticipant &&
+    sameAgentProfilePerPair;
 
   return {
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     status: complete ? "complete" : "collecting",
     scope:
-      "Independent paired user-task outcomes only. Corpus coverage, synthetic fixtures, and mechanical latency are excluded.",
+      "Independent paired user-task outcomes only. Completion requires different participants and one agent profile per pair. Corpus coverage, synthetic fixtures, and mechanical latency are excluded.",
     inputFile,
+    participantCount,
     repositoryCount,
     pairedTaskCount: pairs.length,
     observationCount: observations.length,
@@ -182,9 +254,14 @@ export function summarizeProductAb(
       medianIntentMinusPromptMs: percentile(deltas, 0.5)
     },
     gates: {
+      atLeastFiveParticipants,
       atLeastFiveRepositories,
       atLeastTwentyPairedTasks,
       everyTaskHasBothConditions,
+      differentParticipantPerPair,
+      everyParticipantHasBothConditions,
+      balancedConditionsPerParticipant,
+      sameAgentProfilePerPair,
       complete
     }
   };

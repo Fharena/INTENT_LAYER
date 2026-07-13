@@ -1,9 +1,10 @@
 {
-  "version": 1,
-  "generatedAt": "2026-07-12T12:16:19.097Z",
+  "version": 2,
+  "generatedAt": "2026-07-13T13:53:26.127Z",
   "status": "collecting",
-  "scope": "Independent paired user-task outcomes only. Corpus coverage, synthetic fixtures, and mechanical latency are excluded.",
+  "scope": "Independent paired user-task outcomes only. Completion requires different participants and one agent profile per pair. Corpus coverage, synthetic fixtures, and mechanical latency are excluded.",
   "inputFile": "reports/performance/product-ab-observations.jsonl",
+  "participantCount": 0,
   "repositoryCount": 0,
   "pairedTaskCount": 0,
   "observationCount": 0,
@@ -40,9 +41,14 @@
     "medianIntentMinusPromptMs": null
   },
   "gates": {
+    "atLeastFiveParticipants": false,
     "atLeastFiveRepositories": false,
     "atLeastTwentyPairedTasks": false,
-    "everyTaskHasBothConditions": true,
+    "everyTaskHasBothConditions": false,
+    "differentParticipantPerPair": false,
+    "everyParticipantHasBothConditions": false,
+    "balancedConditionsPerParticipant": false,
+    "sameAgentProfilePerPair": false,
     "complete": false
   }
 }
